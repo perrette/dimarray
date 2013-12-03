@@ -1,0 +1,539 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<html><head><title>Python: module laxarray</title>
+</head><body bgcolor="#f0f0f8">
+
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="heading">
+<tr bgcolor="#7799ee">
+<td valign=bottom>&nbsp;<br>
+<font color="#ffffff" face="helvetica, arial">&nbsp;<br><big><big><strong>laxarray</strong></big></big></font></td
+><td align=right valign=bottom
+><font color="#ffffff" face="helvetica, arial"><a href=".">index</a><br><a href="file:/home/perrette/Projects/laxarray/laxarray.py">/home/perrette/Projects/laxarray/laxarray.py</a></font></td></tr></table>
+    <p><tt>This&nbsp;module&nbsp;emulates&nbsp;a&nbsp;numpy&nbsp;array&nbsp;with&nbsp;named&nbsp;axes</tt></p>
+<p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#aa55cc">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#ffffff" face="helvetica, arial"><big><strong>Modules</strong></big></font></td></tr>
+    
+<tr><td bgcolor="#aa55cc"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
+<td width="100%"><table width="100%" summary="list"><tr><td width="25%" valign=top><a href="copy.html">copy</a><br>
+</td><td width="25%" valign=top><a href="numpy.html">numpy</a><br>
+</td><td width="25%" valign=top></td><td width="25%" valign=top></td></tr></table></td></tr></table><p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#ee77aa">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#ffffff" face="helvetica, arial"><big><strong>Classes</strong></big></font></td></tr>
+    
+<tr><td bgcolor="#ee77aa"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
+<td width="100%"><dl>
+<dt><font face="helvetica, arial"><a href="__builtin__.html#object">__builtin__.object</a>
+</font></dt><dd>
+<dl>
+<dt><font face="helvetica, arial"><a href="laxarray.html#Laxarray">Laxarray</a>
+</font></dt><dt><font face="helvetica, arial"><a href="laxarray.html#Laxarray">Laxarray</a>
+</font></dt></dl>
+</dd>
+</dl>
+ <p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#ffc8d8">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#000000" face="helvetica, arial"><a name="Laxarray">class <strong>Laxarray</strong></a>(<a href="__builtin__.html#object">__builtin__.object</a>)</font></td></tr>
+    
+<tr bgcolor="#ffc8d8"><td rowspan=2><tt>&nbsp;&nbsp;&nbsp;</tt></td>
+<td colspan=2><tt>Contains&nbsp;a&nbsp;numpy&nbsp;array&nbsp;with&nbsp;named&nbsp;axes,&nbsp;and&nbsp;treat&nbsp;nans&nbsp;as&nbsp;missing&nbsp;values<br>
+&nbsp;<br>
+a&nbsp;=&nbsp;<a href="#laxarray">laxarray</a>(values,&nbsp;("lat","lon"))<br>
+&nbsp;<br>
+Most&nbsp;usual&nbsp;numpy&nbsp;axis-transforms&nbsp;are&nbsp;implemented&nbsp;in&nbsp;<a href="#Laxarray">Laxarray</a>&nbsp;<br>
+The&nbsp;new&nbsp;feature&nbsp;is&nbsp;that&nbsp;the&nbsp;`axis`&nbsp;parameter&nbsp;can&nbsp;now&nbsp;be&nbsp;given&nbsp;an&nbsp;axis&nbsp;name&nbsp;instead<br>
+of&nbsp;just&nbsp;an&nbsp;integer&nbsp;index&nbsp;!<br>
+&nbsp;<br>
+a.<a href="#Laxarray-mean">mean</a>(axis='lon')&nbsp;::&nbsp;a.<a href="#Laxarray-mean">mean</a>(axis=1)<br>
+&nbsp;<br>
+The&nbsp;transforms&nbsp;return&nbsp;a&nbsp;<a href="#Laxarray">Laxarray</a>,&nbsp;except&nbsp;when&nbsp;`axis`&nbsp;is&nbsp;None,&nbsp;in&nbsp;which&nbsp;case&nbsp;<br>
+they&nbsp;will&nbsp;return&nbsp;a&nbsp;numpy&nbsp;array.&nbsp;<br>
+&nbsp;<br>
+As&nbsp;a&nbsp;difference&nbsp;to&nbsp;numpy,&nbsp;the&nbsp;default&nbsp;value&nbsp;for&nbsp;an&nbsp;axis&nbsp;is&nbsp;0&nbsp;instead&nbsp;<br>
+of&nbsp;None,&nbsp;as&nbsp;it&nbsp;is&nbsp;natural&nbsp;in&nbsp;many&nbsp;cases&nbsp;and&nbsp;more&nbsp;consistent&nbsp;for&nbsp;named&nbsp;axes,&nbsp;<br>
+in&nbsp;that&nbsp;sense&nbsp;that&nbsp;a&nbsp;flattened&nbsp;array&nbsp;(numpy's&nbsp;axis=None)&nbsp;mixes&nbsp;up&nbsp;dimensions<br>
+which&nbsp;is&nbsp;opposite&nbsp;to&nbsp;the&nbsp;spirit&nbsp;of&nbsp;a&nbsp;<a href="#Laxarray">Laxarray</a>&nbsp;where&nbsp;every&nbsp;labelled&nbsp;axis<br>
+may&nbsp;have&nbsp;a&nbsp;physical&nbsp;meaning.<br>
+&nbsp;<br>
+If&nbsp;a&nbsp;numpy&nbsp;like&nbsp;behaviour&nbsp;is&nbsp;desired&nbsp;(with&nbsp;None&nbsp;as&nbsp;default),&nbsp;it&nbsp;is&nbsp;always&nbsp;<br>
+possible&nbsp;to&nbsp;call&nbsp;the&nbsp;underlying&nbsp;numpy&nbsp;<a href="__builtin__.html#object">object</a>.<br>
+&nbsp;<br>
+a.<a href="#Laxarray-mean">mean</a>(axis=None)&nbsp;::&nbsp;a.values.<a href="#Laxarray-mean">mean</a>()<br>
+&nbsp;<br>
+Examples:<br>
+--------<br>
+Let's&nbsp;make&nbsp;some&nbsp;example&nbsp;data<br>
+&gt;&gt;&gt;&nbsp;lat&nbsp;=&nbsp;np.arange(5)<br>
+&gt;&gt;&gt;&nbsp;lon&nbsp;=&nbsp;np.arange(6)<br>
+&gt;&gt;&gt;&nbsp;lon2,&nbsp;lat2&nbsp;=&nbsp;np.meshgrid(lon,&nbsp;lat)<br>
+&gt;&gt;&gt;&nbsp;values&nbsp;=&nbsp;np.array(lon2+lat2,&nbsp;dtype=float)&nbsp;#&nbsp;use&nbsp;floats&nbsp;for&nbsp;the&nbsp;sake&nbsp;of&nbsp;the&nbsp;example<br>
+&nbsp;<br>
+Here&nbsp;without&nbsp;explict&nbsp;naming&nbsp;of&nbsp;the&nbsp;axes,&nbsp;just&nbsp;as&nbsp;np.array&nbsp;<br>
+(note&nbsp;<a href="#laxarray">laxarray</a>&nbsp;is&nbsp;an&nbsp;alias&nbsp;for&nbsp;the&nbsp;<a href="#Laxarray">Laxarray</a>&nbsp;class)<br>
+&nbsp;<br>
+&gt;&gt;&gt;&nbsp;a&nbsp;=&nbsp;<a href="#laxarray">laxarray</a>(values)<br>
+&gt;&gt;&gt;&nbsp;a<br>
+dimensions(5,&nbsp;6):&nbsp;x0,&nbsp;x1<br>
+array([[&nbsp;0.,&nbsp;&nbsp;1.,&nbsp;&nbsp;2.,&nbsp;&nbsp;3.,&nbsp;&nbsp;4.,&nbsp;&nbsp;5.],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;1.,&nbsp;&nbsp;2.,&nbsp;&nbsp;3.,&nbsp;&nbsp;4.,&nbsp;&nbsp;5.,&nbsp;&nbsp;6.],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;2.,&nbsp;&nbsp;3.,&nbsp;&nbsp;4.,&nbsp;&nbsp;5.,&nbsp;&nbsp;6.,&nbsp;&nbsp;7.],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;3.,&nbsp;&nbsp;4.,&nbsp;&nbsp;5.,&nbsp;&nbsp;6.,&nbsp;&nbsp;7.,&nbsp;&nbsp;8.],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;4.,&nbsp;&nbsp;5.,&nbsp;&nbsp;6.,&nbsp;&nbsp;7.,&nbsp;&nbsp;8.,&nbsp;&nbsp;9.]])<br>
+&nbsp;<br>
+Or&nbsp;more&nbsp;meaningfull:<br>
+&gt;&gt;&gt;&nbsp;a&nbsp;=&nbsp;<a href="#laxarray">laxarray</a>(values,&nbsp;("lat","lon"))<br>
+&gt;&gt;&gt;&nbsp;a<br>
+dimensions(5,&nbsp;6):&nbsp;lat,&nbsp;lon<br>
+array([[&nbsp;0.,&nbsp;&nbsp;1.,&nbsp;&nbsp;2.,&nbsp;&nbsp;3.,&nbsp;&nbsp;4.,&nbsp;&nbsp;5.],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;1.,&nbsp;&nbsp;2.,&nbsp;&nbsp;3.,&nbsp;&nbsp;4.,&nbsp;&nbsp;5.,&nbsp;&nbsp;6.],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;2.,&nbsp;&nbsp;3.,&nbsp;&nbsp;4.,&nbsp;&nbsp;5.,&nbsp;&nbsp;6.,&nbsp;&nbsp;7.],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;3.,&nbsp;&nbsp;4.,&nbsp;&nbsp;5.,&nbsp;&nbsp;6.,&nbsp;&nbsp;7.,&nbsp;&nbsp;8.],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;4.,&nbsp;&nbsp;5.,&nbsp;&nbsp;6.,&nbsp;&nbsp;7.,&nbsp;&nbsp;8.,&nbsp;&nbsp;9.]])<br>&nbsp;</tt></td></tr>
+<tr><td>&nbsp;</td>
+<td width="100%">Methods defined here:<br>
+<dl><dt><a name="Laxarray-__getitem__"><strong>__getitem__</strong></a>(self, item)</dt><dd><tt>slice&nbsp;array&nbsp;and&nbsp;return&nbsp;the&nbsp;new&nbsp;<a href="__builtin__.html#object">object</a>&nbsp;with&nbsp;correct&nbsp;labels<br>
+&nbsp;<br>
+note&nbsp;with&nbsp;pure&nbsp;slicing&nbsp;(slice&nbsp;<a href="__builtin__.html#object">object</a>)&nbsp;there&nbsp;is&nbsp;no&nbsp;error&nbsp;bound&nbsp;check&nbsp;!</tt></dd></dl>
+
+<dl><dt><a name="Laxarray-__init__"><strong>__init__</strong></a>(self, values, names<font color="#909090">=None</font>, dtype<font color="#909090">=None</font>, copy<font color="#909090">=False</font>)</dt><dd><tt>instantiate&nbsp;a&nbsp;ndarray&nbsp;with&nbsp;values:&nbsp;note&nbsp;values&nbsp;must&nbsp;be&nbsp;numpy&nbsp;array<br>
+&nbsp;<br>
+values,&nbsp;dtype,&nbsp;copy:&nbsp;passed&nbsp;to&nbsp;np.array&nbsp;<br>
+names&nbsp;:&nbsp;axis&nbsp;names</tt></dd></dl>
+
+<dl><dt><a name="Laxarray-__repr__"><strong>__repr__</strong></a>(self)</dt><dd><tt>screen&nbsp;printing<br>
+&nbsp;<br>
+Example:<br>
+-------<br>
+&gt;&gt;&gt;&nbsp;<a href="#laxarray">laxarray</a>(np.zeros((5,6)),["lat","lon"])<br>
+dimensions(5,&nbsp;6):&nbsp;lat,&nbsp;lon<br>
+array([[&nbsp;0.,&nbsp;&nbsp;0.,&nbsp;&nbsp;0.,&nbsp;&nbsp;0.,&nbsp;&nbsp;0.,&nbsp;&nbsp;0.],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;0.,&nbsp;&nbsp;0.,&nbsp;&nbsp;0.,&nbsp;&nbsp;0.,&nbsp;&nbsp;0.,&nbsp;&nbsp;0.],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;0.,&nbsp;&nbsp;0.,&nbsp;&nbsp;0.,&nbsp;&nbsp;0.,&nbsp;&nbsp;0.,&nbsp;&nbsp;0.],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;0.,&nbsp;&nbsp;0.,&nbsp;&nbsp;0.,&nbsp;&nbsp;0.,&nbsp;&nbsp;0.,&nbsp;&nbsp;0.],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;0.,&nbsp;&nbsp;0.,&nbsp;&nbsp;0.,&nbsp;&nbsp;0.,&nbsp;&nbsp;0.,&nbsp;&nbsp;0.]])</tt></dd></dl>
+
+<dl><dt><a name="Laxarray-clip"><strong>clip</strong></a>(self, a_min, a_max, out<font color="#909090">=None</font>)</dt><dd><tt>analogous&nbsp;to&nbsp;numpy's&nbsp;`clip`&nbsp;method</tt></dd></dl>
+
+<dl><dt><a name="Laxarray-compress"><strong>compress</strong></a>(self, condition, axis<font color="#909090">=0</font>, out<font color="#909090">=None</font>)</dt><dd><tt>logical&nbsp;indexing&nbsp;along&nbsp;an&nbsp;axis&nbsp;(analogous&nbsp;to&nbsp;numpy)</tt></dd></dl>
+
+<dl><dt><a name="Laxarray-copy"><strong>copy</strong></a>(self)</dt></dl>
+
+<dl><dt><a name="Laxarray-mean"><strong>mean</strong></a>(self, axis<font color="#909090">=0</font>, skipna<font color="#909090">=True</font>)</dt><dd><tt>Return&nbsp;the&nbsp;mean&nbsp;along&nbsp;an&nbsp;axis<br>
+&nbsp;<br>
+input:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;axis&nbsp;&nbsp;&nbsp;:&nbsp;int&nbsp;or&nbsp;str&nbsp;(the&nbsp;axis&nbsp;label),&nbsp;or&nbsp;None&nbsp;[default&nbsp;0]&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;skipna&nbsp;:&nbsp;if&nbsp;True,&nbsp;skip&nbsp;the&nbsp;NaNs&nbsp;in&nbsp;the&nbsp;computation<br>
+&nbsp;<br>
+return:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#laxarray">laxarray</a>:&nbsp;meaned&nbsp;<a href="#Laxarray">Laxarray</a>&nbsp;(if&nbsp;axis&nbsp;is&nbsp;not&nbsp;None,&nbsp;else&nbsp;np.ndarray)<br>
+&nbsp;<br>
+Examples:<br>
+--------<br>
+&nbsp;<br>
+&gt;&gt;&gt;&nbsp;a.<a href="#Laxarray-mean">mean</a>(axis='lon')<br>
+dimensions(5,):&nbsp;lat<br>
+array([&nbsp;2.5,&nbsp;&nbsp;3.5,&nbsp;&nbsp;4.5,&nbsp;&nbsp;5.5,&nbsp;&nbsp;6.5])<br>
+&nbsp;<br>
+Default&nbsp;to&nbsp;axis=0&nbsp;(here&nbsp;"lat")<br>
+&nbsp;<br>
+&gt;&gt;&gt;&nbsp;a.<a href="#Laxarray-mean">mean</a>()<br>
+dimensions(6,):&nbsp;lon<br>
+array([&nbsp;2.,&nbsp;&nbsp;3.,&nbsp;&nbsp;4.,&nbsp;&nbsp;5.,&nbsp;&nbsp;6.,&nbsp;&nbsp;7.])<br>
+&nbsp;<br>
+&gt;&gt;&gt;&nbsp;a.<a href="#Laxarray-mean">mean</a>(axis=None)<br>
+4.5</tt></dd></dl>
+
+<dl><dt><a name="Laxarray-median"><strong>median</strong></a>(self, axis<font color="#909090">=0</font>, skipna<font color="#909090">=True</font>)</dt><dd><tt>Return&nbsp;the&nbsp;median&nbsp;along&nbsp;an&nbsp;axis<br>
+&nbsp;<br>
+see&nbsp;`mean`&nbsp;documentation&nbsp;for&nbsp;more&nbsp;information</tt></dd></dl>
+
+<dl><dt><a name="Laxarray-squeeze"><strong>squeeze</strong></a>(self, axis<font color="#909090">=None</font>)</dt><dd><tt>remove&nbsp;singleton&nbsp;dimensions</tt></dd></dl>
+
+<dl><dt><a name="Laxarray-take"><strong>take</strong></a>(self, indices, axis<font color="#909090">=0</font>, out<font color="#909090">=None</font>)</dt><dd><tt>Analogous&nbsp;to&nbsp;numpy's&nbsp;`take`&nbsp;method,&nbsp;but&nbsp;allow&nbsp;axis&nbsp;label<br>
+in&nbsp;addition&nbsp;to&nbsp;axis&nbsp;index.<br>
+&nbsp;<br>
+By&nbsp;contrast&nbsp;to&nbsp;numpy,&nbsp;default&nbsp;value&nbsp;for&nbsp;axis&nbsp;is&nbsp;0&nbsp;because&nbsp;axis&nbsp;names<br>
+&nbsp;<br>
+input:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;indices:&nbsp;array-like<br>
+&nbsp;&nbsp;&nbsp;&nbsp;axis&nbsp;&nbsp;&nbsp;:&nbsp;axis&nbsp;label&nbsp;or&nbsp;integer&nbsp;index&nbsp;or&nbsp;None<br>
+&nbsp;<br>
+output:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#laxarray">laxarray</a>&nbsp;(if&nbsp;axis&nbsp;is&nbsp;not&nbsp;None,&nbsp;else&nbsp;numpy&nbsp;array)</tt></dd></dl>
+
+<dl><dt><a name="Laxarray-xs"><strong>xs</strong></a>(self, slice_<font color="#909090">=None</font>, axis<font color="#909090">=0</font>, keepdims<font color="#909090">=False</font>, **kwargs)</dt><dd><tt>Multi-dimensional&nbsp;slicing<br>
+&nbsp;<br>
+First&nbsp;mode:<br>
+&nbsp;<br>
+slice_&nbsp;&nbsp;:&nbsp;integer,&nbsp;list,&nbsp;slice&nbsp;or&nbsp;tuple<br>
+axis&nbsp;&nbsp;&nbsp;&nbsp;:&nbsp;axis&nbsp;to&nbsp;slice<br>
+keepdims:&nbsp;[False]&nbsp;keep&nbsp;initial&nbsp;dimensions<br>
+**kwargs:&nbsp;keyword&nbsp;arguemnts&nbsp;with&nbsp;axis&nbsp;names&nbsp;as&nbsp;keys&nbsp;"&lt;axis&gt;&nbsp;=&nbsp;&lt;slice_&gt;"<br>
+&nbsp;<br>
+Various&nbsp;behaviours&nbsp;depending&nbsp;on&nbsp;the&nbsp;type&nbsp;slice_<br>
+int&nbsp;&nbsp;:&nbsp;&nbsp;slice&nbsp;along&nbsp;axis,&nbsp;squeeze&nbsp;it&nbsp;out<br>
+list&nbsp;:&nbsp;&nbsp;sample&nbsp;several&nbsp;int&nbsp;slices,&nbsp;same&nbsp;shape&nbsp;as&nbsp;before<br>
+tuple:&nbsp;&nbsp;([start,]&nbsp;stop[,&nbsp;step]),&nbsp;similar&nbsp;to&nbsp;slice,&nbsp;except&nbsp;that&nbsp;the&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;stop&nbsp;element&nbsp;*is*&nbsp;included&nbsp;and&nbsp;a&nbsp;bound&nbsp;check&nbsp;is&nbsp;performed<br>
+slice:&nbsp;&nbsp;(experimental):&nbsp;similar&nbsp;to&nbsp;a[start:stop:step]&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;where&nbsp;start,&nbsp;stop&nbsp;and&nbsp;step&nbsp;are&nbsp;slice&nbsp;attributes<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Note&nbsp;that&nbsp;in&nbsp;numpy,&nbsp;bounds&nbsp;are&nbsp;not&nbsp;checked&nbsp;when&nbsp;performing&nbsp;slicing,&nbsp;beware&nbsp;!<br>
+&nbsp;<br>
+Examples:<br>
+--------<br>
+&gt;&gt;&gt;&nbsp;a<br>
+dimensions(5,&nbsp;6):&nbsp;lat,&nbsp;lon<br>
+array([[&nbsp;0.,&nbsp;&nbsp;1.,&nbsp;&nbsp;2.,&nbsp;&nbsp;3.,&nbsp;&nbsp;4.,&nbsp;&nbsp;5.],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;1.,&nbsp;&nbsp;2.,&nbsp;&nbsp;3.,&nbsp;&nbsp;4.,&nbsp;&nbsp;5.,&nbsp;&nbsp;6.],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;2.,&nbsp;&nbsp;3.,&nbsp;&nbsp;4.,&nbsp;&nbsp;5.,&nbsp;&nbsp;6.,&nbsp;&nbsp;7.],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;3.,&nbsp;&nbsp;4.,&nbsp;&nbsp;5.,&nbsp;&nbsp;6.,&nbsp;&nbsp;7.,&nbsp;&nbsp;8.],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;4.,&nbsp;&nbsp;5.,&nbsp;&nbsp;6.,&nbsp;&nbsp;7.,&nbsp;&nbsp;8.,&nbsp;&nbsp;9.]])<br>
+&nbsp;<br>
+Equivalent&nbsp;expressions&nbsp;to&nbsp;get&nbsp;the&nbsp;3rd&nbsp;line:<br>
+&nbsp;<br>
+&gt;&gt;&gt;&nbsp;a.<a href="#Laxarray-xs">xs</a>(3,&nbsp;axis=0)&nbsp;&nbsp;&nbsp;#&nbsp;integer&nbsp;axis<br>
+dimensions(6,):&nbsp;lon<br>
+array([&nbsp;3.,&nbsp;&nbsp;4.,&nbsp;&nbsp;5.,&nbsp;&nbsp;6.,&nbsp;&nbsp;7.,&nbsp;&nbsp;8.])<br>
+&nbsp;<br>
+&gt;&gt;&gt;&nbsp;a.<a href="#Laxarray-xs">xs</a>(3,&nbsp;axis='lat')&nbsp;&nbsp;#&nbsp;labelled&nbsp;axis<br>
+dimensions(6,):&nbsp;lon<br>
+array([&nbsp;3.,&nbsp;&nbsp;4.,&nbsp;&nbsp;5.,&nbsp;&nbsp;6.,&nbsp;&nbsp;7.,&nbsp;&nbsp;8.])<br>
+&nbsp;<br>
+&gt;&gt;&gt;&nbsp;a.<a href="#Laxarray-xs">xs</a>(lat=3,&nbsp;lon=5)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;#&nbsp;multiple&nbsp;keyword&nbsp;arguments<br>
+dimensions():&nbsp;<br>
+array(8.0)<br>
+&nbsp;<br>
+Take&nbsp;several&nbsp;columns<br>
+&nbsp;<br>
+&gt;&gt;&gt;&nbsp;a.<a href="#Laxarray-xs">xs</a>(lon=[0,3,4])&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;#&nbsp;as&nbsp;a&nbsp;list<br>
+dimensions(5,&nbsp;3):&nbsp;lat,&nbsp;lon<br>
+array([[&nbsp;0.,&nbsp;&nbsp;3.,&nbsp;&nbsp;4.],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;1.,&nbsp;&nbsp;4.,&nbsp;&nbsp;5.],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;2.,&nbsp;&nbsp;5.,&nbsp;&nbsp;6.],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;3.,&nbsp;&nbsp;6.,&nbsp;&nbsp;7.],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;4.,&nbsp;&nbsp;7.,&nbsp;&nbsp;8.]])<br>
+&nbsp;<br>
+&gt;&gt;&gt;&nbsp;a.<a href="#Laxarray-xs">xs</a>((3,5),&nbsp;axis='lon')&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;#&nbsp;as&nbsp;a&nbsp;tuple&nbsp;3&nbsp;to&nbsp;5&nbsp;(included)<br>
+dimensions(5,&nbsp;3):&nbsp;lat,&nbsp;lon<br>
+array([[&nbsp;3.,&nbsp;&nbsp;4.,&nbsp;&nbsp;5.],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;4.,&nbsp;&nbsp;5.,&nbsp;&nbsp;6.],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;5.,&nbsp;&nbsp;6.,&nbsp;&nbsp;7.],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;6.,&nbsp;&nbsp;7.,&nbsp;&nbsp;8.],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;7.,&nbsp;&nbsp;8.,&nbsp;&nbsp;9.]])<br>
+&nbsp;<br>
+&gt;&gt;&gt;&nbsp;a.<a href="#Laxarray-xs">xs</a>((3,5),&nbsp;axis='lon')&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;#&nbsp;as&nbsp;a&nbsp;tuple&nbsp;3&nbsp;to&nbsp;5&nbsp;(included)<br>
+dimensions(5,&nbsp;3):&nbsp;lat,&nbsp;lon<br>
+array([[&nbsp;3.,&nbsp;&nbsp;4.,&nbsp;&nbsp;5.],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;4.,&nbsp;&nbsp;5.,&nbsp;&nbsp;6.],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;5.,&nbsp;&nbsp;6.,&nbsp;&nbsp;7.],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;6.,&nbsp;&nbsp;7.,&nbsp;&nbsp;8.],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;7.,&nbsp;&nbsp;8.,&nbsp;&nbsp;9.]])<br>
+&nbsp;<br>
+&gt;&gt;&gt;&nbsp;a.<a href="#Laxarray-xs">xs</a>(lon=(3,5,2))&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;#&nbsp;as&nbsp;a&nbsp;tuple&nbsp;step&nbsp;&gt;&nbsp;1<br>
+&nbsp;<br>
+&gt;&gt;&gt;&nbsp;a.<a href="#Laxarray-xs">xs</a>(slice(3,5,2),&nbsp;axis='lon')&nbsp;#&nbsp;as&nbsp;a&nbsp;slice&nbsp;(last&nbsp;index&nbsp;missing,&nbsp;no&nbsp;error&nbsp;)<br>
+dimensions(5,&nbsp;3):&nbsp;lat,&nbsp;lon<br>
+array([[&nbsp;3.,&nbsp;&nbsp;4.],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;4.,&nbsp;&nbsp;5.],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;5.,&nbsp;&nbsp;6.],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;6.,&nbsp;&nbsp;7.],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;7.,&nbsp;&nbsp;8.]])<br>
+&nbsp;<br>
+&gt;&gt;&gt;&nbsp;a.<a href="#Laxarray-xs">xs</a>(lon=4,&nbsp;lat=(3,6,2))&nbsp;&nbsp;#&nbsp;multi-dimensional&nbsp;<br>
+dimensions(5,&nbsp;2):&nbsp;lat,&nbsp;lon<br>
+array([[&nbsp;3.,&nbsp;&nbsp;5.],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;4.,&nbsp;&nbsp;6.],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;5.,&nbsp;&nbsp;7.],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;6.,&nbsp;&nbsp;8.],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;7.,&nbsp;&nbsp;9.]])<br>
+&nbsp;<br>
+&gt;&gt;&gt;&nbsp;a.<a href="#Laxarray-xs">xs</a>(lon=(3,6,2))&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;#&nbsp;equivalent&nbsp;to&nbsp;above<br>
+&gt;&gt;&gt;&nbsp;a.<a href="#Laxarray-xs">xs</a>(lon=slice(3,6,2))&nbsp;&nbsp;&nbsp;&nbsp;#&nbsp;equivalent&nbsp;to&nbsp;above<br>
+&nbsp;<br>
+Beware,&nbsp;no&nbsp;bound&nbsp;check&nbsp;with&nbsp;slices&nbsp;!<br>
+&nbsp;<br>
+&gt;&gt;&gt;&nbsp;a.<a href="#Laxarray-xs">xs</a>(lon=(3,100))&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<br>
+Exception<br>
+&gt;&gt;&gt;&nbsp;a.<a href="#Laxarray-xs">xs</a>(lon=slice(3,6,2))&nbsp;&nbsp;&nbsp;&nbsp;#&nbsp;equivalent&nbsp;to&nbsp;above<br>
+Fine</tt></dd></dl>
+
+<hr>
+Data descriptors defined here:<br>
+<dl><dt><strong>__array__</strong></dt>
+</dl>
+<dl><dt><strong>__dict__</strong></dt>
+<dd><tt>dictionary&nbsp;for&nbsp;instance&nbsp;variables&nbsp;(if&nbsp;defined)</tt></dd>
+</dl>
+<dl><dt><strong>__weakref__</strong></dt>
+<dd><tt>list&nbsp;of&nbsp;weak&nbsp;references&nbsp;to&nbsp;the&nbsp;object&nbsp;(if&nbsp;defined)</tt></dd>
+</dl>
+<dl><dt><strong>dtype</strong></dt>
+</dl>
+<dl><dt><strong>ndim</strong></dt>
+</dl>
+<dl><dt><strong>shape</strong></dt>
+</dl>
+<dl><dt><strong>size</strong></dt>
+</dl>
+</td></tr></table> <p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#ffc8d8">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#000000" face="helvetica, arial"><strong>laxarray</strong> = <a name="laxarray">class Laxarray</a>(<a href="__builtin__.html#object">__builtin__.object</a>)</font></td></tr>
+    
+<tr bgcolor="#ffc8d8"><td rowspan=2><tt>&nbsp;&nbsp;&nbsp;</tt></td>
+<td colspan=2><tt>Contains&nbsp;a&nbsp;numpy&nbsp;array&nbsp;with&nbsp;named&nbsp;axes,&nbsp;and&nbsp;treat&nbsp;nans&nbsp;as&nbsp;missing&nbsp;values<br>
+&nbsp;<br>
+a&nbsp;=&nbsp;<a href="#laxarray">laxarray</a>(values,&nbsp;("lat","lon"))<br>
+&nbsp;<br>
+Most&nbsp;usual&nbsp;numpy&nbsp;axis-transforms&nbsp;are&nbsp;implemented&nbsp;in&nbsp;<a href="#Laxarray">Laxarray</a>&nbsp;<br>
+The&nbsp;new&nbsp;feature&nbsp;is&nbsp;that&nbsp;the&nbsp;`axis`&nbsp;parameter&nbsp;can&nbsp;now&nbsp;be&nbsp;given&nbsp;an&nbsp;axis&nbsp;name&nbsp;instead<br>
+of&nbsp;just&nbsp;an&nbsp;integer&nbsp;index&nbsp;!<br>
+&nbsp;<br>
+a.<a href="#laxarray-mean">mean</a>(axis='lon')&nbsp;::&nbsp;a.<a href="#laxarray-mean">mean</a>(axis=1)<br>
+&nbsp;<br>
+The&nbsp;transforms&nbsp;return&nbsp;a&nbsp;<a href="#Laxarray">Laxarray</a>,&nbsp;except&nbsp;when&nbsp;`axis`&nbsp;is&nbsp;None,&nbsp;in&nbsp;which&nbsp;case&nbsp;<br>
+they&nbsp;will&nbsp;return&nbsp;a&nbsp;numpy&nbsp;array.&nbsp;<br>
+&nbsp;<br>
+As&nbsp;a&nbsp;difference&nbsp;to&nbsp;numpy,&nbsp;the&nbsp;default&nbsp;value&nbsp;for&nbsp;an&nbsp;axis&nbsp;is&nbsp;0&nbsp;instead&nbsp;<br>
+of&nbsp;None,&nbsp;as&nbsp;it&nbsp;is&nbsp;natural&nbsp;in&nbsp;many&nbsp;cases&nbsp;and&nbsp;more&nbsp;consistent&nbsp;for&nbsp;named&nbsp;axes,&nbsp;<br>
+in&nbsp;that&nbsp;sense&nbsp;that&nbsp;a&nbsp;flattened&nbsp;array&nbsp;(numpy's&nbsp;axis=None)&nbsp;mixes&nbsp;up&nbsp;dimensions<br>
+which&nbsp;is&nbsp;opposite&nbsp;to&nbsp;the&nbsp;spirit&nbsp;of&nbsp;a&nbsp;<a href="#Laxarray">Laxarray</a>&nbsp;where&nbsp;every&nbsp;labelled&nbsp;axis<br>
+may&nbsp;have&nbsp;a&nbsp;physical&nbsp;meaning.<br>
+&nbsp;<br>
+If&nbsp;a&nbsp;numpy&nbsp;like&nbsp;behaviour&nbsp;is&nbsp;desired&nbsp;(with&nbsp;None&nbsp;as&nbsp;default),&nbsp;it&nbsp;is&nbsp;always&nbsp;<br>
+possible&nbsp;to&nbsp;call&nbsp;the&nbsp;underlying&nbsp;numpy&nbsp;<a href="__builtin__.html#object">object</a>.<br>
+&nbsp;<br>
+a.<a href="#laxarray-mean">mean</a>(axis=None)&nbsp;::&nbsp;a.values.<a href="#laxarray-mean">mean</a>()<br>
+&nbsp;<br>
+Examples:<br>
+--------<br>
+Let's&nbsp;make&nbsp;some&nbsp;example&nbsp;data<br>
+&gt;&gt;&gt;&nbsp;lat&nbsp;=&nbsp;np.arange(5)<br>
+&gt;&gt;&gt;&nbsp;lon&nbsp;=&nbsp;np.arange(6)<br>
+&gt;&gt;&gt;&nbsp;lon2,&nbsp;lat2&nbsp;=&nbsp;np.meshgrid(lon,&nbsp;lat)<br>
+&gt;&gt;&gt;&nbsp;values&nbsp;=&nbsp;np.array(lon2+lat2,&nbsp;dtype=float)&nbsp;#&nbsp;use&nbsp;floats&nbsp;for&nbsp;the&nbsp;sake&nbsp;of&nbsp;the&nbsp;example<br>
+&nbsp;<br>
+Here&nbsp;without&nbsp;explict&nbsp;naming&nbsp;of&nbsp;the&nbsp;axes,&nbsp;just&nbsp;as&nbsp;np.array&nbsp;<br>
+(note&nbsp;<a href="#laxarray">laxarray</a>&nbsp;is&nbsp;an&nbsp;alias&nbsp;for&nbsp;the&nbsp;<a href="#Laxarray">Laxarray</a>&nbsp;class)<br>
+&nbsp;<br>
+&gt;&gt;&gt;&nbsp;a&nbsp;=&nbsp;<a href="#laxarray">laxarray</a>(values)<br>
+&gt;&gt;&gt;&nbsp;a<br>
+dimensions(5,&nbsp;6):&nbsp;x0,&nbsp;x1<br>
+array([[&nbsp;0.,&nbsp;&nbsp;1.,&nbsp;&nbsp;2.,&nbsp;&nbsp;3.,&nbsp;&nbsp;4.,&nbsp;&nbsp;5.],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;1.,&nbsp;&nbsp;2.,&nbsp;&nbsp;3.,&nbsp;&nbsp;4.,&nbsp;&nbsp;5.,&nbsp;&nbsp;6.],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;2.,&nbsp;&nbsp;3.,&nbsp;&nbsp;4.,&nbsp;&nbsp;5.,&nbsp;&nbsp;6.,&nbsp;&nbsp;7.],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;3.,&nbsp;&nbsp;4.,&nbsp;&nbsp;5.,&nbsp;&nbsp;6.,&nbsp;&nbsp;7.,&nbsp;&nbsp;8.],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;4.,&nbsp;&nbsp;5.,&nbsp;&nbsp;6.,&nbsp;&nbsp;7.,&nbsp;&nbsp;8.,&nbsp;&nbsp;9.]])<br>
+&nbsp;<br>
+Or&nbsp;more&nbsp;meaningfull:<br>
+&gt;&gt;&gt;&nbsp;a&nbsp;=&nbsp;<a href="#laxarray">laxarray</a>(values,&nbsp;("lat","lon"))<br>
+&gt;&gt;&gt;&nbsp;a<br>
+dimensions(5,&nbsp;6):&nbsp;lat,&nbsp;lon<br>
+array([[&nbsp;0.,&nbsp;&nbsp;1.,&nbsp;&nbsp;2.,&nbsp;&nbsp;3.,&nbsp;&nbsp;4.,&nbsp;&nbsp;5.],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;1.,&nbsp;&nbsp;2.,&nbsp;&nbsp;3.,&nbsp;&nbsp;4.,&nbsp;&nbsp;5.,&nbsp;&nbsp;6.],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;2.,&nbsp;&nbsp;3.,&nbsp;&nbsp;4.,&nbsp;&nbsp;5.,&nbsp;&nbsp;6.,&nbsp;&nbsp;7.],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;3.,&nbsp;&nbsp;4.,&nbsp;&nbsp;5.,&nbsp;&nbsp;6.,&nbsp;&nbsp;7.,&nbsp;&nbsp;8.],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;4.,&nbsp;&nbsp;5.,&nbsp;&nbsp;6.,&nbsp;&nbsp;7.,&nbsp;&nbsp;8.,&nbsp;&nbsp;9.]])<br>&nbsp;</tt></td></tr>
+<tr><td>&nbsp;</td>
+<td width="100%">Methods defined here:<br>
+<dl><dt><a name="Laxarray-__getitem__"><strong>__getitem__</strong></a>(self, item)</dt><dd><tt>slice&nbsp;array&nbsp;and&nbsp;return&nbsp;the&nbsp;new&nbsp;<a href="__builtin__.html#object">object</a>&nbsp;with&nbsp;correct&nbsp;labels<br>
+&nbsp;<br>
+note&nbsp;with&nbsp;pure&nbsp;slicing&nbsp;(slice&nbsp;<a href="__builtin__.html#object">object</a>)&nbsp;there&nbsp;is&nbsp;no&nbsp;error&nbsp;bound&nbsp;check&nbsp;!</tt></dd></dl>
+
+<dl><dt><a name="Laxarray-__init__"><strong>__init__</strong></a>(self, values, names<font color="#909090">=None</font>, dtype<font color="#909090">=None</font>, copy<font color="#909090">=False</font>)</dt><dd><tt>instantiate&nbsp;a&nbsp;ndarray&nbsp;with&nbsp;values:&nbsp;note&nbsp;values&nbsp;must&nbsp;be&nbsp;numpy&nbsp;array<br>
+&nbsp;<br>
+values,&nbsp;dtype,&nbsp;copy:&nbsp;passed&nbsp;to&nbsp;np.array&nbsp;<br>
+names&nbsp;:&nbsp;axis&nbsp;names</tt></dd></dl>
+
+<dl><dt><a name="Laxarray-__repr__"><strong>__repr__</strong></a>(self)</dt><dd><tt>screen&nbsp;printing<br>
+&nbsp;<br>
+Example:<br>
+-------<br>
+&gt;&gt;&gt;&nbsp;<a href="#laxarray">laxarray</a>(np.zeros((5,6)),["lat","lon"])<br>
+dimensions(5,&nbsp;6):&nbsp;lat,&nbsp;lon<br>
+array([[&nbsp;0.,&nbsp;&nbsp;0.,&nbsp;&nbsp;0.,&nbsp;&nbsp;0.,&nbsp;&nbsp;0.,&nbsp;&nbsp;0.],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;0.,&nbsp;&nbsp;0.,&nbsp;&nbsp;0.,&nbsp;&nbsp;0.,&nbsp;&nbsp;0.,&nbsp;&nbsp;0.],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;0.,&nbsp;&nbsp;0.,&nbsp;&nbsp;0.,&nbsp;&nbsp;0.,&nbsp;&nbsp;0.,&nbsp;&nbsp;0.],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;0.,&nbsp;&nbsp;0.,&nbsp;&nbsp;0.,&nbsp;&nbsp;0.,&nbsp;&nbsp;0.,&nbsp;&nbsp;0.],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;0.,&nbsp;&nbsp;0.,&nbsp;&nbsp;0.,&nbsp;&nbsp;0.,&nbsp;&nbsp;0.,&nbsp;&nbsp;0.]])</tt></dd></dl>
+
+<dl><dt><a name="Laxarray-clip"><strong>clip</strong></a>(self, a_min, a_max, out<font color="#909090">=None</font>)</dt><dd><tt>analogous&nbsp;to&nbsp;numpy's&nbsp;`clip`&nbsp;method</tt></dd></dl>
+
+<dl><dt><a name="Laxarray-compress"><strong>compress</strong></a>(self, condition, axis<font color="#909090">=0</font>, out<font color="#909090">=None</font>)</dt><dd><tt>logical&nbsp;indexing&nbsp;along&nbsp;an&nbsp;axis&nbsp;(analogous&nbsp;to&nbsp;numpy)</tt></dd></dl>
+
+<dl><dt><a name="Laxarray-copy"><strong>copy</strong></a>(self)</dt></dl>
+
+<dl><dt><a name="Laxarray-mean"><strong>mean</strong></a>(self, axis<font color="#909090">=0</font>, skipna<font color="#909090">=True</font>)</dt><dd><tt>Return&nbsp;the&nbsp;mean&nbsp;along&nbsp;an&nbsp;axis<br>
+&nbsp;<br>
+input:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;axis&nbsp;&nbsp;&nbsp;:&nbsp;int&nbsp;or&nbsp;str&nbsp;(the&nbsp;axis&nbsp;label),&nbsp;or&nbsp;None&nbsp;[default&nbsp;0]&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;skipna&nbsp;:&nbsp;if&nbsp;True,&nbsp;skip&nbsp;the&nbsp;NaNs&nbsp;in&nbsp;the&nbsp;computation<br>
+&nbsp;<br>
+return:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#laxarray">laxarray</a>:&nbsp;meaned&nbsp;<a href="#Laxarray">Laxarray</a>&nbsp;(if&nbsp;axis&nbsp;is&nbsp;not&nbsp;None,&nbsp;else&nbsp;np.ndarray)<br>
+&nbsp;<br>
+Examples:<br>
+--------<br>
+&nbsp;<br>
+&gt;&gt;&gt;&nbsp;a.<a href="#laxarray-mean">mean</a>(axis='lon')<br>
+dimensions(5,):&nbsp;lat<br>
+array([&nbsp;2.5,&nbsp;&nbsp;3.5,&nbsp;&nbsp;4.5,&nbsp;&nbsp;5.5,&nbsp;&nbsp;6.5])<br>
+&nbsp;<br>
+Default&nbsp;to&nbsp;axis=0&nbsp;(here&nbsp;"lat")<br>
+&nbsp;<br>
+&gt;&gt;&gt;&nbsp;a.<a href="#laxarray-mean">mean</a>()<br>
+dimensions(6,):&nbsp;lon<br>
+array([&nbsp;2.,&nbsp;&nbsp;3.,&nbsp;&nbsp;4.,&nbsp;&nbsp;5.,&nbsp;&nbsp;6.,&nbsp;&nbsp;7.])<br>
+&nbsp;<br>
+&gt;&gt;&gt;&nbsp;a.<a href="#laxarray-mean">mean</a>(axis=None)<br>
+4.5</tt></dd></dl>
+
+<dl><dt><a name="Laxarray-median"><strong>median</strong></a>(self, axis<font color="#909090">=0</font>, skipna<font color="#909090">=True</font>)</dt><dd><tt>Return&nbsp;the&nbsp;median&nbsp;along&nbsp;an&nbsp;axis<br>
+&nbsp;<br>
+see&nbsp;`mean`&nbsp;documentation&nbsp;for&nbsp;more&nbsp;information</tt></dd></dl>
+
+<dl><dt><a name="Laxarray-squeeze"><strong>squeeze</strong></a>(self, axis<font color="#909090">=None</font>)</dt><dd><tt>remove&nbsp;singleton&nbsp;dimensions</tt></dd></dl>
+
+<dl><dt><a name="Laxarray-take"><strong>take</strong></a>(self, indices, axis<font color="#909090">=0</font>, out<font color="#909090">=None</font>)</dt><dd><tt>Analogous&nbsp;to&nbsp;numpy's&nbsp;`take`&nbsp;method,&nbsp;but&nbsp;allow&nbsp;axis&nbsp;label<br>
+in&nbsp;addition&nbsp;to&nbsp;axis&nbsp;index.<br>
+&nbsp;<br>
+By&nbsp;contrast&nbsp;to&nbsp;numpy,&nbsp;default&nbsp;value&nbsp;for&nbsp;axis&nbsp;is&nbsp;0&nbsp;because&nbsp;axis&nbsp;names<br>
+&nbsp;<br>
+input:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;indices:&nbsp;array-like<br>
+&nbsp;&nbsp;&nbsp;&nbsp;axis&nbsp;&nbsp;&nbsp;:&nbsp;axis&nbsp;label&nbsp;or&nbsp;integer&nbsp;index&nbsp;or&nbsp;None<br>
+&nbsp;<br>
+output:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#laxarray">laxarray</a>&nbsp;(if&nbsp;axis&nbsp;is&nbsp;not&nbsp;None,&nbsp;else&nbsp;numpy&nbsp;array)</tt></dd></dl>
+
+<dl><dt><a name="Laxarray-xs"><strong>xs</strong></a>(self, slice_<font color="#909090">=None</font>, axis<font color="#909090">=0</font>, keepdims<font color="#909090">=False</font>, **kwargs)</dt><dd><tt>Multi-dimensional&nbsp;slicing<br>
+&nbsp;<br>
+First&nbsp;mode:<br>
+&nbsp;<br>
+slice_&nbsp;&nbsp;:&nbsp;integer,&nbsp;list,&nbsp;slice&nbsp;or&nbsp;tuple<br>
+axis&nbsp;&nbsp;&nbsp;&nbsp;:&nbsp;axis&nbsp;to&nbsp;slice<br>
+keepdims:&nbsp;[False]&nbsp;keep&nbsp;initial&nbsp;dimensions<br>
+**kwargs:&nbsp;keyword&nbsp;arguemnts&nbsp;with&nbsp;axis&nbsp;names&nbsp;as&nbsp;keys&nbsp;"&lt;axis&gt;&nbsp;=&nbsp;&lt;slice_&gt;"<br>
+&nbsp;<br>
+Various&nbsp;behaviours&nbsp;depending&nbsp;on&nbsp;the&nbsp;type&nbsp;slice_<br>
+int&nbsp;&nbsp;:&nbsp;&nbsp;slice&nbsp;along&nbsp;axis,&nbsp;squeeze&nbsp;it&nbsp;out<br>
+list&nbsp;:&nbsp;&nbsp;sample&nbsp;several&nbsp;int&nbsp;slices,&nbsp;same&nbsp;shape&nbsp;as&nbsp;before<br>
+tuple:&nbsp;&nbsp;([start,]&nbsp;stop[,&nbsp;step]),&nbsp;similar&nbsp;to&nbsp;slice,&nbsp;except&nbsp;that&nbsp;the&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;stop&nbsp;element&nbsp;*is*&nbsp;included&nbsp;and&nbsp;a&nbsp;bound&nbsp;check&nbsp;is&nbsp;performed<br>
+slice:&nbsp;&nbsp;(experimental):&nbsp;similar&nbsp;to&nbsp;a[start:stop:step]&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;where&nbsp;start,&nbsp;stop&nbsp;and&nbsp;step&nbsp;are&nbsp;slice&nbsp;attributes<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Note&nbsp;that&nbsp;in&nbsp;numpy,&nbsp;bounds&nbsp;are&nbsp;not&nbsp;checked&nbsp;when&nbsp;performing&nbsp;slicing,&nbsp;beware&nbsp;!<br>
+&nbsp;<br>
+Examples:<br>
+--------<br>
+&gt;&gt;&gt;&nbsp;a<br>
+dimensions(5,&nbsp;6):&nbsp;lat,&nbsp;lon<br>
+array([[&nbsp;0.,&nbsp;&nbsp;1.,&nbsp;&nbsp;2.,&nbsp;&nbsp;3.,&nbsp;&nbsp;4.,&nbsp;&nbsp;5.],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;1.,&nbsp;&nbsp;2.,&nbsp;&nbsp;3.,&nbsp;&nbsp;4.,&nbsp;&nbsp;5.,&nbsp;&nbsp;6.],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;2.,&nbsp;&nbsp;3.,&nbsp;&nbsp;4.,&nbsp;&nbsp;5.,&nbsp;&nbsp;6.,&nbsp;&nbsp;7.],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;3.,&nbsp;&nbsp;4.,&nbsp;&nbsp;5.,&nbsp;&nbsp;6.,&nbsp;&nbsp;7.,&nbsp;&nbsp;8.],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;4.,&nbsp;&nbsp;5.,&nbsp;&nbsp;6.,&nbsp;&nbsp;7.,&nbsp;&nbsp;8.,&nbsp;&nbsp;9.]])<br>
+&nbsp;<br>
+Equivalent&nbsp;expressions&nbsp;to&nbsp;get&nbsp;the&nbsp;3rd&nbsp;line:<br>
+&nbsp;<br>
+&gt;&gt;&gt;&nbsp;a.<a href="#laxarray-xs">xs</a>(3,&nbsp;axis=0)&nbsp;&nbsp;&nbsp;#&nbsp;integer&nbsp;axis<br>
+dimensions(6,):&nbsp;lon<br>
+array([&nbsp;3.,&nbsp;&nbsp;4.,&nbsp;&nbsp;5.,&nbsp;&nbsp;6.,&nbsp;&nbsp;7.,&nbsp;&nbsp;8.])<br>
+&nbsp;<br>
+&gt;&gt;&gt;&nbsp;a.<a href="#laxarray-xs">xs</a>(3,&nbsp;axis='lat')&nbsp;&nbsp;#&nbsp;labelled&nbsp;axis<br>
+dimensions(6,):&nbsp;lon<br>
+array([&nbsp;3.,&nbsp;&nbsp;4.,&nbsp;&nbsp;5.,&nbsp;&nbsp;6.,&nbsp;&nbsp;7.,&nbsp;&nbsp;8.])<br>
+&nbsp;<br>
+&gt;&gt;&gt;&nbsp;a.<a href="#laxarray-xs">xs</a>(lat=3,&nbsp;lon=5)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;#&nbsp;multiple&nbsp;keyword&nbsp;arguments<br>
+dimensions():&nbsp;<br>
+array(8.0)<br>
+&nbsp;<br>
+Take&nbsp;several&nbsp;columns<br>
+&nbsp;<br>
+&gt;&gt;&gt;&nbsp;a.<a href="#laxarray-xs">xs</a>(lon=[0,3,4])&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;#&nbsp;as&nbsp;a&nbsp;list<br>
+dimensions(5,&nbsp;3):&nbsp;lat,&nbsp;lon<br>
+array([[&nbsp;0.,&nbsp;&nbsp;3.,&nbsp;&nbsp;4.],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;1.,&nbsp;&nbsp;4.,&nbsp;&nbsp;5.],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;2.,&nbsp;&nbsp;5.,&nbsp;&nbsp;6.],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;3.,&nbsp;&nbsp;6.,&nbsp;&nbsp;7.],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;4.,&nbsp;&nbsp;7.,&nbsp;&nbsp;8.]])<br>
+&nbsp;<br>
+&gt;&gt;&gt;&nbsp;a.<a href="#laxarray-xs">xs</a>((3,5),&nbsp;axis='lon')&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;#&nbsp;as&nbsp;a&nbsp;tuple&nbsp;3&nbsp;to&nbsp;5&nbsp;(included)<br>
+dimensions(5,&nbsp;3):&nbsp;lat,&nbsp;lon<br>
+array([[&nbsp;3.,&nbsp;&nbsp;4.,&nbsp;&nbsp;5.],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;4.,&nbsp;&nbsp;5.,&nbsp;&nbsp;6.],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;5.,&nbsp;&nbsp;6.,&nbsp;&nbsp;7.],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;6.,&nbsp;&nbsp;7.,&nbsp;&nbsp;8.],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;7.,&nbsp;&nbsp;8.,&nbsp;&nbsp;9.]])<br>
+&nbsp;<br>
+&gt;&gt;&gt;&nbsp;a.<a href="#laxarray-xs">xs</a>((3,5),&nbsp;axis='lon')&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;#&nbsp;as&nbsp;a&nbsp;tuple&nbsp;3&nbsp;to&nbsp;5&nbsp;(included)<br>
+dimensions(5,&nbsp;3):&nbsp;lat,&nbsp;lon<br>
+array([[&nbsp;3.,&nbsp;&nbsp;4.,&nbsp;&nbsp;5.],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;4.,&nbsp;&nbsp;5.,&nbsp;&nbsp;6.],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;5.,&nbsp;&nbsp;6.,&nbsp;&nbsp;7.],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;6.,&nbsp;&nbsp;7.,&nbsp;&nbsp;8.],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;7.,&nbsp;&nbsp;8.,&nbsp;&nbsp;9.]])<br>
+&nbsp;<br>
+&gt;&gt;&gt;&nbsp;a.<a href="#laxarray-xs">xs</a>(lon=(3,5,2))&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;#&nbsp;as&nbsp;a&nbsp;tuple&nbsp;step&nbsp;&gt;&nbsp;1<br>
+&nbsp;<br>
+&gt;&gt;&gt;&nbsp;a.<a href="#laxarray-xs">xs</a>(slice(3,5,2),&nbsp;axis='lon')&nbsp;#&nbsp;as&nbsp;a&nbsp;slice&nbsp;(last&nbsp;index&nbsp;missing,&nbsp;no&nbsp;error&nbsp;)<br>
+dimensions(5,&nbsp;3):&nbsp;lat,&nbsp;lon<br>
+array([[&nbsp;3.,&nbsp;&nbsp;4.],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;4.,&nbsp;&nbsp;5.],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;5.,&nbsp;&nbsp;6.],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;6.,&nbsp;&nbsp;7.],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;7.,&nbsp;&nbsp;8.]])<br>
+&nbsp;<br>
+&gt;&gt;&gt;&nbsp;a.<a href="#laxarray-xs">xs</a>(lon=4,&nbsp;lat=(3,6,2))&nbsp;&nbsp;#&nbsp;multi-dimensional&nbsp;<br>
+dimensions(5,&nbsp;2):&nbsp;lat,&nbsp;lon<br>
+array([[&nbsp;3.,&nbsp;&nbsp;5.],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;4.,&nbsp;&nbsp;6.],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;5.,&nbsp;&nbsp;7.],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;6.,&nbsp;&nbsp;8.],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;7.,&nbsp;&nbsp;9.]])<br>
+&nbsp;<br>
+&gt;&gt;&gt;&nbsp;a.<a href="#laxarray-xs">xs</a>(lon=(3,6,2))&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;#&nbsp;equivalent&nbsp;to&nbsp;above<br>
+&gt;&gt;&gt;&nbsp;a.<a href="#laxarray-xs">xs</a>(lon=slice(3,6,2))&nbsp;&nbsp;&nbsp;&nbsp;#&nbsp;equivalent&nbsp;to&nbsp;above<br>
+&nbsp;<br>
+Beware,&nbsp;no&nbsp;bound&nbsp;check&nbsp;with&nbsp;slices&nbsp;!<br>
+&nbsp;<br>
+&gt;&gt;&gt;&nbsp;a.<a href="#laxarray-xs">xs</a>(lon=(3,100))&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<br>
+Exception<br>
+&gt;&gt;&gt;&nbsp;a.<a href="#laxarray-xs">xs</a>(lon=slice(3,6,2))&nbsp;&nbsp;&nbsp;&nbsp;#&nbsp;equivalent&nbsp;to&nbsp;above<br>
+Fine</tt></dd></dl>
+
+<hr>
+Data descriptors defined here:<br>
+<dl><dt><strong>__array__</strong></dt>
+</dl>
+<dl><dt><strong>__dict__</strong></dt>
+<dd><tt>dictionary&nbsp;for&nbsp;instance&nbsp;variables&nbsp;(if&nbsp;defined)</tt></dd>
+</dl>
+<dl><dt><strong>__weakref__</strong></dt>
+<dd><tt>list&nbsp;of&nbsp;weak&nbsp;references&nbsp;to&nbsp;the&nbsp;object&nbsp;(if&nbsp;defined)</tt></dd>
+</dl>
+<dl><dt><strong>dtype</strong></dt>
+</dl>
+<dl><dt><strong>ndim</strong></dt>
+</dl>
+<dl><dt><strong>shape</strong></dt>
+</dl>
+<dl><dt><strong>size</strong></dt>
+</dl>
+</td></tr></table></td></tr></table><p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#eeaa77">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#ffffff" face="helvetica, arial"><big><strong>Functions</strong></big></font></td></tr>
+    
+<tr><td bgcolor="#eeaa77"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
+<td width="100%"><dl><dt><a name="-debug"><strong>debug</strong></a>(raise_on_error<font color="#909090">=False</font>, **kwargs)</dt><dd><tt>#&nbsp;For&nbsp;debugging</tt></dd></dl>
+</td></tr></table>
+</body></html>
