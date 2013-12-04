@@ -25,6 +25,11 @@ def debug(raise_on_error=False, **kwargs):
     # just get this module
     m = sys.modules[__name__]
 
+    # to test apply_recursive
+    def f(x):
+	assert set(x.names) == set(("lon","lat")), "error"
+	return x #  some 2D transform, return itself
+
     if 'globs' not in kwargs:
 	kwargs['globs'] = globals()
 	kwargs['globs'].update(locals())
@@ -47,6 +52,29 @@ class Desc(object):
 	newmethod = partial(self.apply, obj, self.nm)
 	newmethod.__doc__ = self.apply.__doc__.replace("`func`","`"+self.nm+"`")
 	return newmethod
+
+#
+# Recursively apply a transformation on an Dimarray
+#
+# ... decorator to make a function recursive
+# 
+def DescRecursive(object):
+    """ Decorator to make an Dimarray method recursive via apply_recursive
+    """
+    def __init__(self, trans, dims):
+
+	assert type(dims) is tuple, "dims must be a tuple"
+	self.trans = trans
+	self.dims = dims # dimensions to which it applies
+
+    def __get__(self, obj, cls=None):
+	""" 
+	"""
+	newmethod = partial(self.apply, obj, self.dims, self.trans)
+	newmethod.__doc__ = "Wrapper for recursive application of this function\n\n"+self.apply_recursive.__doc__
+	return newmethod
+
+    return 
 
 class Laxarray(object):
     """ Contains a numpy array with named axes, and treat nans as missing values
@@ -460,13 +488,13 @@ class Laxarray(object):
 	    res = res.filled()
 	return res
 
-    def apply(self, func, axis=0, skipna=True):
+    def apply(self, funcname, axis=0, skipna=True):
 	""" apply `func` along an axis
 
 	Generic description:
 
 	input:
-	    func   : string representation of the function to apply
+	    funcname : string name of the function to apply (must be a numpy method)
 	    axis   : int or str (the axis label), or None [default 0] 
 	    skipna : if True, skip the NaNs in the computation
 
@@ -492,7 +520,7 @@ class Laxarray(object):
 	values = self._ma(skipna)
 
 	# retrive bound method
-	method = getattr(values, func)
+	method = getattr(values, funcname)
 
 	# return a float if axis is None
 	if axis is None:
@@ -502,7 +530,7 @@ class Laxarray(object):
 	res_ma = method(axis=axis)
 	res = self._array(res_ma) # fill nans back in if necessary
 
-	if func.startswith("cum"):
+	if funcname.startswith("cum"):
 	    names = self.names
 	else:
 	    names = self._get_reduced_names(axis) # name after reduction
@@ -647,6 +675,109 @@ class Laxarray(object):
     def __eq__(self, other): 
 	return isinstance(other, Laxarray) and np.all(self.values == other.values) and self.names == other.names
 
+    #
+    # Experimental: recursively apply a transformation which takes a laxarray as argument 
+    # and returns a laxarray: apply low dimensional functions and build up
+    #
+    def apply_recursive(self, axes, trans, *args, **kwargs):
+	""" recursively apply a multi-axes transform
+
+	input:
+	    axes   : tuple of axis names representing the dimensions accepted by fun
+			Recursive call until dimensions match
+
+	    trans     : transformation from Dimarray to Dimarray to (recursively) apply
+
+	    *args, **kwargs: arguments passed to trans in addition to the axes
+
+	Examples: 2-D interpolation on a 3D array... (TO TEST)
+
+	1-D example, for testing the function
+	>>> f = lambda x : x.mean('lon') # dummy function applying along "lon"
+	>>> a.apply_recursive(('lon',), f)
+	dimensions(5,): lat
+	array([ 2.5,  3.5,  4.5,  5.5,  6.5])
+
+	We verify that:	
+
+	>>> a.mean('lon')
+	dimensions(5,): lat
+	array([ 2.5,  3.5,  4.5,  5.5,  6.5])
+
+	Now a 2D function applied on a 4D array, for the sake of the example but with litte demonstrative value 
+	(TO DO in dimarray with acutall interpolation)
+
+	>>> d = laxarray(np.arange(2), ['time']) 
+	>>> e = laxarray(np.arange(2), ['sample']) 
+	>>> a4D = d * a * e # some 4D data over time, lat, lon, sample
+
+	a4D has dimensions:
+	dimensions(2, 5, 6, 2): time, lat, lon, sample
+
+	Let's consider the 2D => 2D identity function on lat, lon
+	(it returns an error if called on something else)
+
+	def f(x):
+	    assert set(x.names) == set(("lon","lat")), "error"
+	    return x #  some 2D transform, return itself
+
+	>>> res = a4D.apply_recursive(('lon','lat'), f)
+
+	Note lat and lon are now last dimensions:
+	dimensions(2, 2, 5, 6): time, sample, lat, lon
+	"""
+	#
+	# Check that dimensions are fine
+	# 
+	assert type(axes) is tuple, "axes must be a tuple of axis names"
+	assert type(axes[0]) is str, "axes must be a tuple of axis names"
+
+	assert set(axes).issubset(set(self.names)), \
+		"dimensions ({}) not found in the object ({})!".format(axes, self.names)
+
+	#
+	# If axes exactly matches: Done !
+	# 
+	if len(self.names) == len(axes):
+	    #assert set(self.names) == set(axes), "something went wrong"
+	    return trans(self, *args, **kwargs)
+
+	#
+	# otherwise recursive call
+	#
+
+	# search for an axis which is not in axes
+	i = 0
+	while self.names[i] in axes:
+	    i+=1 
+
+	# make sure it worked
+	assert self.names[i] not in axes, "something went wrong"
+
+	# now make a slice along this axis
+	axis = self.names[i]
+
+	# Loop over one axis
+	data = []
+	for k in range(self.shape[i]): # first axis
+
+	    # take a slice of the data (exact matching)
+	    slice_ = self.xs(k, axis=axis)
+
+	    # apply the transform recursively
+	    res = slice_.apply_recursive(axes, trans, *args, **kwargs)
+
+	    data.append(res.values)
+
+	newnames = (axis,) + res.names # new axes
+
+	# automatically sort in the appropriate order
+	new = self._laxarray_api(data, newnames)
+
+	return new
+
+
+
 
 laxarray = Laxarray # as convenience function
 
@@ -705,3 +836,4 @@ def _operation(func, o1, o2, align=True, order=None, laxarray=laxarray):
     res = func(o1.values, o2.values) # just to the job
 
     return laxarray(res, order)
+
