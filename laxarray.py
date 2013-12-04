@@ -858,7 +858,7 @@ def _operation(func, o1, o2, align=True, order=None, laxarray=laxarray):
 	Laxarray
     """
     # second operand is not a Laxarray: let numpy do the job 
-    if not isinstance(o2, Laxarray): 
+    if not hasattr(o2, 'values') or not hasattr(o2,'names'): 
 	if np.ndim(o2) > o1.ndim:
 	    raise ValueError("bad input: second operand's dimensions not documented")
 	res = func(o1.values, np.array(o2))

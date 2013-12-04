@@ -77,6 +77,25 @@ Unless specified otherwise:
     dimensions(6,): lon
     array([ nan,  nan,  nan,  nan,  nan,  nan])
 
+Combine array with different dimensions:
+
+    >>> ts = la.laxarray(np.arange(10), ('time',))
+    >>> ts*a
+    dimensions(10, 5, 6): time, lat, lon
+    ...
+
+It is not commutative !
+
+    >>> a*ts
+    dimensions(5, 6, 10): lat, lon, time
+    ...
+
+But it is easy to permute the dimensions to the desired order:
+
+    >>> (a*ts).transpose(('time','lat','lon'))
+    dimensions(10, 5, 6): time, lat, lon
+    ...
+
 
 Short Feature list:
 -------------------
@@ -211,5 +230,5 @@ a container of data, but its dimensions now also have a meaning attached to it
 The main consequence of that is it allows to forget how the data is arranged 
 on disk (which column is first or second) and concentrate on what you aim at doing.
 
-This is achieved by provided the axis by axis label and standard transformations
-and also by the additional axis slicing method xs. 
+This is achieved by providing the `axis=` parameter by axis label and standard 
+transformations and also by the additional axis slicing method xs. 
