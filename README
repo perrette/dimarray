@@ -2,7 +2,10 @@
 laxarray:    Labelled Axis Array 
 ================================
 
-* numpy's ndarrays like with a name per axis and NaNs treated as missing values
+In three points:
+----------------
+
+* numpy's ndarrays-like with a name per axis and NaNs treated as missing values
 
 * Forget which axis is first or second and concentrate on what you aim at doing.
 
@@ -31,7 +34,7 @@ Everything happens in one class LaxArray located into the laxarray module (singl
 Say we have a 2-D numpy array `values`. A labelled array is straightforward to 
 define with numpy-like syntax:
 
->>> a = la.array(values)
+>>> a = la.array(values)    # think of np.array() or np.ma.array()
 >>> a
 dimensions(5, 6): x0, x1
 array([[ 0.,  1.,  2.,  3.,  4.,  5.],
@@ -55,7 +58,7 @@ array([[ 0.,  1.,  2.,  3.,  4.,  5.],
 
 whose actual data content is made of a `values` and a `names` attribute.
 
->>> a.values
+>>> a.values	    # `values´ like in pandas
 array([[ 0.,  1.,  2.,  3.,  4.,  5.],
        [ 1.,  2.,  3.,  4.,  5.,  6.],
        [ 2.,  3.,  4.,  5.,  6.,  7.],
@@ -156,8 +159,8 @@ dimensions(10, 5, 6): time, lat, lon
 array(...)
 
 
-Short Feature list:
--------------------
+Main features:
+--------------
 * each axis has a label (or name), displayed on string for quick data inspection
 
 * the data structure simply consists of two attributes directly accessible: 
@@ -181,7 +184,7 @@ Short Feature list:
 * multi-dimensional slicing via the `xs` method where axis names and values can 
   be provided as keyword arguments (`lon=..., lat=..., time=`). xs understands a 
   variety of types of parameters for each axis (`int`, `list`, `tuple`, `slice`)
-  with a correspondly rich range of effects (see doc: help(a.xs))
+  with a corresponding range of effects (see doc: help(a.xs))
 
 
 Comparison to other packages
@@ -207,13 +210,14 @@ array([ 2.,  3.,  4.,  5.,  6.,  7.])
   pandas is a package for low-dimensional and mixed-type data with many handy
   methods for data analysis and plotting
 
-* laxarray shares with *larry* the concept of sticking to the essential and doing 
+* laxarray shares with **larry** the concept of sticking to the essential and doing 
   that well. It just adds one name per axis and makes the most out of it. I am 
   not a user of larry, so I cannot tell much more, appart that data are stored 
   under an `x` attribute instead of `values`, and also has labelled axis 
   *values* but it seems to have less functionalites regarding slicing/axis labelling 
+  (no `xs` method, no argument name-based slicing). The rest is a matter of taste.
 
-* laxarray is developped as a building block for a companion package called `dimarray` 
+* laxarray is developped as a building block for a companion package called **dimarray** 
   which also includes axis values on top of axis names and offer a full netCDF I/O, 
   particularly suited for geophysical applications.
 
