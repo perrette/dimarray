@@ -1,60 +1,13 @@
 """ This module emulates a numpy array with named axes
 """
-
 import numpy as np
 import copy
 from functools import partial
 
-# 
-# For debugging
-#
-# CHECK README FORMATTING python setup.py --long-description | rst2html.py > output.html
-
-def get_testdata():
-    # basic dataset used for debugging
-    lat = np.arange(5)
-    lon = np.arange(6)
-    lon2, lat2 = np.meshgrid(lon, lat)
-    values = np.array(lon2+lat2, dtype=float) # use floats for the sake of the example
-    a = Laxarray(values, ("lat","lon"))
-    return a
-
-def _load_debug_glob():
-    """ return globs parameter for doctest.testmod
-    """
-    # also go into locals()
-    import doctest
-    import numpy as np
-    import laxarray as la
-    laxarray = la.laxarray
-
-    a = get_testdata()
-    values = a.values
-
-    # to test apply_recursive
-    def f(x):
-	assert set(x.names) == set(("lon","lat")), "error"
-	return x #  some 2D transform, return itself
-
-    return locals()
-
-def debug(raise_on_error=False, globs={}, **kwargs):
-    import doctest
-    import laxarray as la
-
-    kwargs['globs'] = _load_debug_glob()
-
-    return doctest.testmod(la, raise_on_error=raise_on_error, **kwargs)
-
-def debug_readme(optionflags=1,**kwargs):
-    import doctest, sys
-    doctest.ELLIPSIS = True
-    return doctest.testfile("README", optionflags=optionflags,globs=_load_debug_glob(),**kwargs)
-
 #
 # Descriptors to add functions following same patterns
 #
-class Desc(object):
+class _Desc(object):
     """ to apply a numpy function which reduces an axis
     """
     def __init__(self, apply, nm):
@@ -73,8 +26,8 @@ class Desc(object):
 #
 # ... decorator to make a function recursive
 # 
-def DescRecursive(object):
-    """ Decorator to make an Dimarray method recursive via apply_recursive
+def _DescRecursive(object):
+    """ Decorator to make a Dimarray method recursive via apply_recursive
     """
     def __init__(self, trans, dims):
 
@@ -91,114 +44,31 @@ def DescRecursive(object):
 
     return 
 
-class Laxarray(object):
+class LaxArray(object):
     """ Contains a numpy array with named axes, and treat nans as missing values
 
-    a = laxarray(values, ("lat","lon"))
+    a = LaxArray(values, ("lat","lon"))
 
-    Most usual numpy axis-transforms are implemented in Laxarray 
+    Most usual numpy axis-transforms are implemented in LaxArray 
     The new feature is that the `axis` parameter can now be given an axis name instead
     of just an integer index !
 
     a.mean(axis='lon') :: a.mean(axis=1)
 
-    The transforms return a Laxarray, except when `axis` is None, in which case 
+    The transforms return a LaxArray, except when `axis` is None, in which case 
     they will return a numpy array. 
 
     As a difference to numpy, the default value for an axis is 0 instead 
     of None, as it is natural in many cases and more consistent for named axes, 
     in that sense that a flattened array (numpy's axis=None) mixes up dimensions
-    which is opposite to the spirit of a Laxarray where every labelled axis
+    which is opposite to the spirit of a LaxArray where every labelled axis
     may have a physical meaning.
 
     If a numpy like behaviour is desired (with None as default), it is always 
     possible to call the underlying numpy object.
 
     a.mean(axis=None) :: a.values.mean()
-
-    Examples:
-    --------
-    Let's make some example data
-    >>> lat = np.arange(5)
-    >>> lon = np.arange(6)
-    >>> lon2, lat2 = np.meshgrid(lon, lat)
-    >>> values = np.array(lon2+lat2, dtype=float) # use floats for the sake of the example
-
-    Here without explict naming of the axes, just as np.array 
-    (note laxarray is an alias for the Laxarray class)
-
-    >>> a = laxarray(values)
-    >>> a
-    dimensions(5, 6): x0, x1
-    array([[ 0.,  1.,  2.,  3.,  4.,  5.],
-	   [ 1.,  2.,  3.,  4.,  5.,  6.],
-	   [ 2.,  3.,  4.,  5.,  6.,  7.],
-	   [ 3.,  4.,  5.,  6.,  7.,  8.],
-	   [ 4.,  5.,  6.,  7.,  8.,  9.]])
-
-    Or more meaningfull:
-    >>> a = laxarray(values, ("lat","lon"))
-    >>> a
-    dimensions(5, 6): lat, lon
-    array([[ 0.,  1.,  2.,  3.,  4.,  5.],
-	   [ 1.,  2.,  3.,  4.,  5.,  6.],
-	   [ 2.,  3.,  4.,  5.,  6.,  7.],
-	   [ 3.,  4.,  5.,  6.,  7.,  8.],
-	   [ 4.,  5.,  6.,  7.,  8.,  9.]])
-
-    Like a numpy array:
-    >>> a.shape
-    (5, 6)
-    >>> a.ndim
-    2
-    >>> a.size
-    30
-
-    >>> b = a + 2
-    >>> b = a - a
-    >>> b = a / 2
-    >>> b = a ** 2
-    >>> a * np.array(a)
-    dimensions(5, 6): lat, lon
-    array([[  0.,   1.,   4.,   9.,  16.,  25.],
-           [  1.,   4.,   9.,  16.,  25.,  36.],
-           [  4.,   9.,  16.,  25.,  36.,  49.],
-           [  9.,  16.,  25.,  36.,  49.,  64.],
-           [ 16.,  25.,  36.,  49.,  64.,  81.]])
-
-    Including axis alignment:
-    >>> c = laxarray(lon, ['lon'])
-    >>> c
-    dimensions(6,): lon
-    array([0, 1, 2, 3, 4, 5])
-
-    >>> c*a
-    dimensions(6, 5): lon, lat
-    array([[  0.,   0.,   0.,   0.,   0.],
-           [  1.,   2.,   3.,   4.,   5.],
-           [  4.,   6.,   8.,  10.,  12.],
-           [  9.,  12.,  15.,  18.,  21.],
-           [ 16.,  20.,  24.,  28.,  32.],
-           [ 25.,  30.,  35.,  40.,  45.]])
-
-    Even with new dimensions
-    >>> d = laxarray(np.arange(2), ['time']) 
-    >>> d * a
-    dimensions(2, 5, 6): time, lat, lon
-    array([[[ 0.,  0.,  0.,  0.,  0.,  0.],
-            [ 0.,  0.,  0.,  0.,  0.,  0.],
-            [ 0.,  0.,  0.,  0.,  0.,  0.],
-            [ 0.,  0.,  0.,  0.,  0.,  0.],
-            [ 0.,  0.,  0.,  0.,  0.,  0.]],
-    <BLANKLINE>
-           [[ 0.,  1.,  2.,  3.,  4.,  5.],
-            [ 1.,  2.,  3.,  4.,  5.,  6.],
-            [ 2.,  3.,  4.,  5.,  6.,  7.],
-            [ 3.,  4.,  5.,  6.,  7.,  8.],
-            [ 4.,  5.,  6.,  7.,  8.,  9.]]])
-
-    """ 
-    _debug = False  # for debugging (rather use denbug function above)
+    """
 
     def __init__(self, values, names=None, dtype=None, copy=False):
 	""" instantiate a ndarray with values: note values must be numpy array
@@ -237,7 +107,7 @@ class Laxarray(object):
 
 	Example:
 	-------
-	>>> laxarray(np.zeros((5,6)),["lat","lon"])
+	>>> la.array(np.zeros((5,6)),["lat","lon"])
 	dimensions(5, 6): lat, lon
 	array([[ 0.,  0.,  0.,  0.,  0.,  0.],
 	       [ 0.,  0.,  0.,  0.,  0.,  0.],
@@ -271,10 +141,10 @@ class Laxarray(object):
 	for slice_, axis in args:
 	    obj = obj.xs(slice_, axis)
 
-	### Testing ###
-	if self._debug:
-	    val = self.values[item]
-	    assert np.all(obj.values == val), "error while slicing !"
+	#### Testing ###
+	#if self._debug:
+	#    val = self.values[item]
+	#    assert np.all(obj.values == val), "error while slicing !"
 
 	return obj
 
@@ -309,9 +179,23 @@ class Laxarray(object):
 	    **kwargs: keyword arguemnts with axis names as keys "<axis> = <slice_>"
 
 	output.
-	    laxarray or scalar
+	    LaxArray or scalar
 
 	Various behaviours depending on the type slice_
+	  xs understands a variety of types of parameters:
+
+	    * `int`   : as above
+
+	    * `list`  : similar to numpy's take method (take is also implemented in LaxArray)
+
+	    * `tuple` : `(stop)` or `(start,stop)` or `(start,stop,step)` to obtain an 
+	       effect similar to the `[]` operator, except that it checks array bounds 
+
+	       a.xs((start,stop,step), axis=0) :: a[start:stop:step]  *if stop < a.shape[0]*
+
+	    * `slice`: can also provide an actual slice object, to have exact same effect as `[]`
+	       (no bound checking)
+
 	int  :  slice along axis, squeeze it out, return a scalar if 
 	list :  sample several int slices, same shape as before
 	tuple:  ([start,] stop[, step]), similar to slice, except that the 
@@ -380,9 +264,8 @@ class Laxarray(object):
 	       [ 3.,  5.,  7.],
 	       [ 4.,  6.,  8.]])
 	"""
-	# recursive definition
 
-	# keyword arguments
+	# keyword arguments: recursive definition
 	if slice_ is None:
 
 	    if len(kwargs) == 0:
@@ -459,7 +342,7 @@ class Laxarray(object):
 	slice_ = slice(*t)
 
 	if slice_.stop is not None:
-	    assert slice_.stop < n, "beyond max axis bounds !"
+	    assert slice_.stop <= n, "beyond max axis bounds, set stop to None or use slice to avoid this error message!"
 	    slice_ = slice(slice_.start, slice_.stop, slice_.step) 
 
 	if slice_.start is not None:
@@ -470,7 +353,7 @@ class Laxarray(object):
     def _check_scalar(self):
 	""" export to python scalar if size == 1
 	"""
-	if isinstance(self, Laxarray) and self.size == 1:
+	if isinstance(self, LaxArray) and self.size == 1:
 	    type_ = _convert_dtype(self.dtype)
 	    res = type_(self.values)
 	else:
@@ -559,7 +442,7 @@ class Laxarray(object):
 	    skipna : if True, skip the NaNs in the computation
 
 	return:
-	    laxarray: transformed Laxarray (if axis is not None, else np.ndarray)
+	    LaxArray: transformed LaxArray (if axis is not None, else np.ndarray)
 
 	Examples:
 	--------
@@ -600,16 +483,16 @@ class Laxarray(object):
     #
     # Add numpy transforms
     #
-    mean = Desc(apply, "mean")
-    median = Desc(apply, "median")
-    sum  = Desc(apply, "sum")
-    diff = Desc(apply, "diff")
-    prod = Desc(apply, "prod")
-    min = Desc(apply, "min")
-    max = Desc(apply, "max")
-    ptp = Desc(apply, "ptp")
-    cumsum = Desc(apply, "cumsum")
-    cumprod = Desc(apply, "cumprod")
+    mean = _Desc(apply, "mean")
+    median = _Desc(apply, "median")
+    sum  = _Desc(apply, "sum")
+    diff = _Desc(apply, "diff")
+    prod = _Desc(apply, "prod")
+    min = _Desc(apply, "min")
+    max = _Desc(apply, "max")
+    ptp = _Desc(apply, "ptp")
+    cumsum = _Desc(apply, "cumsum")
+    cumprod = _Desc(apply, "cumprod")
 
     #
     # Lower-level numpy functions so select a subset of the array
@@ -626,7 +509,7 @@ class Laxarray(object):
 	    axis   : axis label or integer index or None
 	
 	output:
-	    laxarray (if axis is not None, else numpy array)
+	    LaxArray (if axis is not None, else numpy array)
 	"""
 	if axis is None:
 	    return self.values.take(indices, out=out)
@@ -691,6 +574,8 @@ class Laxarray(object):
 	"""
 	dims = tuple(dims)
 	assert type(dims[0]) is str, "input dimensions must be strings"
+	if not set(self.names).issubset(dims):
+	    raise ValueError("dimensions missing! {} cannot conform to {}. \nDid you mean {}?".format(self.names, dims, tuple(_unique(self.names+dims))))
 
 	if self.names == dims:
 	    return self
@@ -706,9 +591,6 @@ class Laxarray(object):
 
 	    obj = self._laxarray_api(val, newnames)
 
-	else:
-	    obj = self
-
 	# and transpose to the desired dimension
 	obj = obj.transpose(dims)
 	assert obj.names == dims, "problem in transpose"
@@ -722,18 +604,18 @@ class Laxarray(object):
     # basic operattions
     #
 
-    def __add__(self, other): return _operation(np.add, self, other, laxarray=self._laxarray_api)
+    def __add__(self, other): return _operation(np.add, self, other, _constructor=self._laxarray_api)
 
-    def __mul__(self, other): return _operation(np.multiply, self, other, laxarray=self._laxarray_api)
+    def __mul__(self, other): return _operation(np.multiply, self, other, _constructor=self._laxarray_api)
 
-    def __sub__(self, other): return _operation(np.subtract, self, other, laxarray=self._laxarray_api)
+    def __sub__(self, other): return _operation(np.subtract, self, other, _constructor=self._laxarray_api)
 
-    def __div__(self, other): return _operation(np.divide, self, other, laxarray=self._laxarray_api)
+    def __div__(self, other): return _operation(np.divide, self, other, _constructor=self._laxarray_api)
 
-    def __pow__(self, other): return _operation(np.power, self, other, laxarray=self._laxarray_api)
+    def __pow__(self, other): return _operation(np.power, self, other, _constructor=self._laxarray_api)
 
     def __eq__(self, other): 
-	return isinstance(other, Laxarray) and np.all(self.values == other.values) and self.names == other.names
+	return isinstance(other, LaxArray) and np.all(self.values == other.values) and self.names == other.names
 
     def __float__(self):  return float(self.values)
     def __int__(self):  return int(self.values)
@@ -747,7 +629,7 @@ class Laxarray(object):
 
 	input:
 	    axes   : tuple of axis names representing the dimensions accepted by fun
-			Recursive call until dimensions match
+			Recursive call until the `set` of dimensions match (no order required)
 
 	    trans     : transformation from Dimarray to Dimarray to (recursively) apply
 
@@ -770,8 +652,8 @@ class Laxarray(object):
 	Now a 2D function applied on a 4D array, for the sake of the example but with litte demonstrative value 
 	(TO DO in dimarray with acutall interpolation)
 
-	>>> d = laxarray(np.arange(2), ['time']) 
-	>>> e = laxarray(np.arange(2), ['sample']) 
+	>>> d = la.array(np.arange(2), ['time']) 
+	>>> e = la.array(np.arange(2), ['sample']) 
 	>>> a4D = d * a * e # some 4D data over time, lat, lon, sample
 
 	a4D has dimensions:
@@ -840,9 +722,7 @@ class Laxarray(object):
 	return new
 
 
-
-
-laxarray = Laxarray # as convenience function
+array = LaxArray # as convenience function
 
 # Update doc of descripted functions
 
@@ -858,8 +738,8 @@ def _unique(nm):
 	    new.append(k)
     return new
 
-def _operation(func, o1, o2, align=True, order=None, laxarray=laxarray):
-    """ operation on Laxarray objects
+def _operation(func, o1, o2, align=True, order=None, _constructor=array):
+    """ operation on LaxArray objects
 
     input:
 	func	: operator
@@ -867,22 +747,22 @@ def _operation(func, o1, o2, align=True, order=None, laxarray=laxarray):
 	align, optional: if True, use pandas to align the axes
 	order	: if order is True, align the dimensions along a particular order
 
-	laxarray: constructor (takes values and axes)
+	_constructor: constructor (takes values and axes)
 
     output:
-	Laxarray
+	LaxArray
     """
-    # second operand is not a Laxarray: let numpy do the job 
+    # second operand is not a LaxArray: let numpy do the job 
     if not hasattr(o2, 'values') or not hasattr(o2,'names'): 
 	if np.ndim(o2) > o1.ndim:
 	    raise ValueError("bad input: second operand's dimensions not documented")
 	res = func(o1.values, np.array(o2))
-	return laxarray(res, o1.names)
+	return _constructor(res, o1.names)
 
     # if same dimension: easy
     if o1.names == o2.names:
 	res = func(o1.values, o2.values)
-	return laxarray(res, o1.names)
+	return _constructor(res, o1.names)
 
     # otherwise determine the dimensions of the result
     if order is None:
@@ -898,7 +778,7 @@ def _operation(func, o1, o2, align=True, order=None, laxarray=laxarray):
     assert o1.names == o2.names, "problem in transpose"
     res = func(o1.values, o2.values) # just to the job
 
-    return laxarray(res, order)
+    return _constructor(res, order)
 
 def _convert_dtype(dtype):
     """ convert a python type
@@ -911,7 +791,53 @@ def _convert_dtype(dtype):
 
     return type_
 
+# 
+# For testing
+#
+# CHECK README FORMATTING python setup.py --long-description | rst2html.py > output.html
+
+def get_testdata():
+    # basic dataset used for testing
+    lat = np.arange(5)
+    lon = np.arange(6)
+    lon2, lat2 = np.meshgrid(lon, lat)
+    values = np.array(lon2+lat2, dtype=float) # use floats for the sake of the example
+    a = LaxArray(values, ("lat","lon"))
+    return a
+
+def _load_test_glob():
+    """ return globs parameter for doctest.testmod
+    """
+    # also go into locals()
+    import doctest
+    import numpy as np
+    from laxarray import LaxArray
+    import laxarray as la
+
+    a = get_testdata()
+    values = a.values
+
+    # to test apply_recursive
+    def f(x):
+	assert set(x.names) == set(("lon","lat")), "error"
+	return x #  some 2D transform, return itself
+
+    return locals()
+
+def test_doc(raise_on_error=False, globs={}, **kwargs):
+    import doctest
+    import laxarray as la
+
+    kwargs['globs'] = _load_test_glob()
+
+    return doctest.testmod(la, raise_on_error=raise_on_error, **kwargs)
+
+def test_readme(optionflags=1,**kwargs):
+    import doctest, sys
+    doctest.ELLIPSIS = True
+    return doctest.testfile("README", optionflags=optionflags,globs=_load_test_glob(),**kwargs)
+
 
 if __name__ == "__main__":
-    debug()
+    debug_doc()
     debug_readme()

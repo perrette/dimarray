@@ -5,11 +5,15 @@ with open('README') as file:
 
 setup(name='laxarray',
       version='1.2',
-      py_modules=['laxarray'],
-      description='Labelled Axis Array',
-      long_description=long_description,
       author='Mahe Perrette',
       author_email='mahe.perrette@pik-potsdam.de',
+      description='Labelled Axis Array',
+      keywords=('labelled array','numpy','larry','pandas')
+      py_modules=['laxarray'],
+      long_description=long_description,
       url='https://github.com/perrette/laxarray',
-      license = "BSD 2-Clause"
+      license = "BSD 2-Clause",
+      classifier = [
+	  "Development Status :: 3 - Alpha"
+	  ]
       )
