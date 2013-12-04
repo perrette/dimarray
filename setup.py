@@ -1,7 +1,7 @@
 from distutils.core import setup
 setup(name='laxarray',
       version='1.0',
-      py_module=['laxarray'],
+      py_modules=['laxarray'],
       description='Labelled Axis Array',
       long_description="numpy's ndarrays like with a name per axis and nan treated as missing values",
       author='Mahe Perrette',

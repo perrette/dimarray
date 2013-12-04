@@ -94,9 +94,9 @@ shape of the array:
     - int   : as above
     - list  : similar to numpy's take method (take is also implemented in laxarray)
     - tuple : new method compared to numpy array: it is similar to a slice except
-	      that the equivalent start (first) and stop (second) parameters 
-	      involve bound checking (which is not the case by standard slicing 
-	      or an array with the [] operator !). 
+that the equivalent start (first) and stop (second) parameters 
+involve bound checking (which is not the case by standard slicing 
+or an array with the [] operator !). 
 
 * it treats nans as missing values in all operations by default, via a skipna
     parameter attached to every transformation, doing conversions back 
@@ -113,7 +113,7 @@ with the aim of being a light-weight building block in other packages and more.
 and allows an instantaneous access to the data. 
 
 * it is the building block for a companion package called `dimarray` which
-deals more fully with indexed axis
+deals with `indexed` axis
 
 Summary
 -------
