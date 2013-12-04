@@ -264,6 +264,11 @@ class Laxarray(object):
 	return obj
 
 
+    def __setitem__(self, item, val):
+	""" set item: numpy method
+	"""
+	self.values[item] = val
+
     def _get_axis_idx(self, axis):
 	""" always return an integer axis
 	"""
@@ -278,10 +283,8 @@ class Laxarray(object):
 	axis = self._get_axis_idx(axis) # just in case
 	return [nm for nm in self.names if nm != self.names[axis]]
 
-    def xs(self, slice_=None, axis=0, keepdims=False, **kwargs):
+    def xs(self, slice_=None, axis=0, _export_scalar=True, keepdims=False, **kwargs):
 	""" Multi-dimensional slicing
-
-	First mode:
 
 	slice_  : integer, list, slice or tuple
 	axis    : axis to slice
@@ -365,8 +368,11 @@ class Laxarray(object):
 
 	    else:
 		axis, slice_ = kwargs.popitem()
-		obj = self.xs(slice_, axis=axis, keepdims=keepdims)
-		newobj = obj.xs(keepdims=keepdims, **kwargs)
+		obj = self.xs(slice_, axis=axis, keepdims=keepdims, _export_scalar=False)
+		newobj = obj.xs(keepdims=keepdims, _export_scalar=_export_scalar, **kwargs)
+
+	    if np.ndim(newobj) == 0 and _export_scalar:
+		newobj = float(newobj) # check int case
 
 	    return newobj
 
@@ -414,6 +420,9 @@ class Laxarray(object):
 	# if collapsed axis, drop the name
 	if not keepdims and squeeze:
 	    res = res.squeeze(axis)
+
+	if res.ndim == 0 and _export_scalar:
+	    res = float(res) # check int case
 
 	return res
 
@@ -674,6 +683,9 @@ class Laxarray(object):
 
     def __eq__(self, other): 
 	return isinstance(other, Laxarray) and np.all(self.values == other.values) and self.names == other.names
+
+    def __float__(self):  return float(self.values)
+    def __int__(self):  return int(self.values)
 
     #
     # Experimental: recursively apply a transformation which takes a laxarray as argument 

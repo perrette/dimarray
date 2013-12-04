@@ -2,9 +2,77 @@
 laxarray
 ========
 
-numpy array with named axes, and treat nans as missing values
+numpy's ndarrays like with a name per axis and nan treated as missing values
 
-This module implements a ndarray like class with the following features:
+It is more powerful than you would think !
+
+Install:
+-------
+python setup.py install
+
+Get started:
+-----------
+
+    >>> import numpy as np
+    >>> import laxarray as la
+
+Define a numpy array 
+
+    >>> values = array([[ 0.,  1.,  2.,  3.,  4.,  5.],
+           [ 1.,  2.,  3.,  4.,  5.,  6.],
+           [ 2.,  3.,  4.,  5.,  6.,  7.],
+           [ 3.,  4.,  5.,  6.,  7.,  8.],
+           [ 4.,  5.,  6.,  7.,  8.,  9.]])
+
+And a laxarray:
+
+    >>> a = la.laxarray(values, ("lat","lon"))
+    >>> a
+    dimensions(5, 6): lat, lon
+    array([[ 0.,  1.,  2.,  3.,  4.,  5.],
+           [ 1.,  2.,  3.,  4.,  5.,  6.],
+           [ 2.,  3.,  4.,  5.,  6.,  7.],
+           [ 3.,  4.,  5.,  6.,  7.,  8.],
+           [ 4.,  5.,  6.,  7.,  8.,  9.]])
+
+Now use labels to slice, and note how the label is conserved:
+
+    >>> a.xs(2, axis="lon") # lons are columns
+    dimensions(5,): lat
+    array([ 2.,  3.,  4.,  5.,  6.])
+
+Also multidimensional slicing
+
+    >>> a.xs(lon=1, lat=3)
+    4.0
+
+And have all numpy operations (via an "apply" method), where `axis=` can be the axis name !
+
+    >>> a.mean(axis="lon")  # same as a.mean(axis=1)
+    dimensions(5,): lat
+    array([ 2.5,  3.5,  4.5,  5.5,  6.5])
+
+    >>> a[2] = np.nan
+    >>> a 
+    dimensions(5, 6): lat, lon
+    array([[  0.,   1.,   2.,   3.,   4.,   5.],
+	   [  1.,   2.,   3.,   4.,   5.,   6.],
+	   [ nan,  nan,  nan,  nan,  nan,  nan],
+	   [  3.,   4.,   5.,   6.,   7.,   8.],
+	   [  4.,   5.,   6.,   7.,   8.,   9.]])
+
+Deal with NaNs
+
+    >>> a.sum(axis="lat")
+    dimensions(6,): lon
+    array([  8.,  12.,  16.,  20.,  24.,  28.])
+
+Unless specified otherwise:
+
+    >>> a.sum(axis="lat", skipna=False)
+    dimensions(6,): lon
+    array([ nan,  nan,  nan,  nan,  nan,  nan])
+
 
 Short list:
 ----------
@@ -115,6 +183,10 @@ and allows an instantaneous access to the data.
 * it is the building block for a companion package called `dimarray` which
 deals with `indexed` axis
 
+* bonus: there is one apply_recursive function which recursively apply any 
+multi-dimensional transformation from laxarray to laxarray, with potential 
+application for interpolation (see dimarray)
+
 Summary
 -------
 
@@ -126,5 +198,4 @@ The main consequence of that is it allows to forget how the data is arranged
 on disk (which column is first or second) and concentrate on what you aim at doing.
 
 This is achieved by provided the axis by axis label and standard transformations
-and also by the additional axis slicing method xs Most importantly by allowing you The second consequence is that it allows straightforward slicing by axis name
-without you having to know where is what.
+and also by the additional axis slicing method xs. 
