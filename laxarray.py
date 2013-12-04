@@ -565,14 +565,20 @@ class Laxarray(object):
 	res = self.values.compress(condition, axis=axis, out=out) # does not reduce
 	return self._laxarray_api(res, names=self.names)
 
-    def permute(self, axes, inplace=False):
-	"""  permute an array and its axes (like numpy's transpose, see transpose method which handles the 2D case)
+    def transpose(self, axes=None, inplace=False):
+	""" analogous to numpy's transpose
 
 	input:
 	    axes: new axes order, can be a list of str names or of integers
-	
-	note: axes must include all dimensions, but can include more of them w/o error raising
 	"""
+	if axes is None:
+	    # do nothing for 1-D arrays (like numpy)
+	    if self.ndim == 1:
+		return self
+
+	    assert self.ndim == 2, "transpose only 2D unless axes is provided"
+	    axes = 1,0
+
 	axes = [self._get_axis_idx(ax) for ax in axes]
 
 	# re-arrange array
@@ -588,16 +594,10 @@ class Laxarray(object):
 	else:
 	    return self._laxarray_api(newvalues, newnames)
 
-    def transpose(self, axes=None, **kwargs):
-	""" to be consistent with numpy 
-	""" 
-	if axes is None:
-	    assert self.ndim == 2, "transpose only 2D unless axes is provided"
-	    axes = 1,0
-	return self.permute(axes, **kwargs)
 
     def conform_to(self, dims):
-	""" make the array conform to a list of dimension names
+	""" make the array conform to a list of dimension names by transposing
+	dimensions and adding new ones if necessary
 
 	dims: str, list or tuple of names
 	"""
