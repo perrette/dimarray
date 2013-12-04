@@ -2,6 +2,7 @@
 """
 import numpy as np
 import copy
+from functools import partial
 
 # 
 # For debugging
@@ -30,48 +31,22 @@ def debug(raise_on_error=False, **kwargs):
 
     return doctest.testmod(m, raise_on_error=raise_on_error, **kwargs)
 
-def _take_slice(values, names, slice_nd):
-    """ take a slice in a numpy array with labels
-
-    input:
-	values: array-like
-	names : axis labels
-	slice_nd: tuple of slices or integers, or single slice or integer
-
-    returns:
-	sliced_values : values[slice_nd]
-	sliced_names  : corresponding names
-    
-    aim: make sure new object with correct labels
+#
+# Descriptors to add functions following same patterns
+#
+class Desc(object):
+    """ to apply a numpy function which reduces an axis
     """
-    if type(slice_nd) is not tuple:
-	slice_nd = (slice_nd, )
+    def __init__(self, apply, nm):
+	self.nm = nm
+	self.apply = apply
 
-    for slice_ in slice_nd:
-	if type(slice_) not in [int, slice]:
-	    raise ValueError("`slice_nd` must be a tuple of slices or integers")
-
-    msg = "`values` argument must be array-like"
-    assert hasattr(values, "ndim"), msg
-    assert hasattr(values, "shape"), msg
-
-    sliced_values = values[slice_nd] # not affected by the above processing
-
-    # get the names
-    sliced_names = []
-    for i in range(values.ndim):
-	axis = np.arange(values.shape[i])
-
-	if i >= len(slice_nd): 
-	    newaxis = axis[:]
-	else:
-	    newaxis = axis[slice_nd[i]]
-
-	# if collapsed axis, drop the name
-	if np.iterable(newaxis):
-	    sliced_names.append(names[i])
-
-    return sliced_values, sliced_names
+    def __get__(self, obj, cls=None):
+	"""
+	"""
+	newmethod = partial(self.apply, obj, self.nm)
+	newmethod.__doc__ = self.apply.__doc__.replace("`func`","`"+self.nm+"`")
+	return newmethod
 
 class Laxarray(object):
     """ Contains a numpy array with named axes, and treat nans as missing values
@@ -140,9 +115,7 @@ class Laxarray(object):
     >>> b = a - a
     >>> b = a / 2
     >>> b = a ** 2
-    >>> b = a * np.array(a)
-
-    >>> b
+    >>> a * np.array(a)
     dimensions(5, 6): lat, lon
     array([[  0.,   1.,   4.,   9.,  16.,  25.],
            [  1.,   4.,   9.,  16.,  25.,  36.],
@@ -156,17 +129,31 @@ class Laxarray(object):
     dimensions(6,): lon
     array([0, 1, 2, 3, 4, 5])
 
-    >>> c*b
+    >>> c*a
     dimensions(6, 5): lon, lat
-    array([[   0.,    0.,    0.,    0.,    0.],
-           [   1.,    4.,    9.,   16.,   25.],
-           [   8.,   18.,   32.,   50.,   72.],
-           [  27.,   48.,   75.,  108.,  147.],
-           [  64.,  100.,  144.,  196.,  256.],
-           [ 125.,  180.,  245.,  320.,  405.]])
+    array([[  0.,   0.,   0.,   0.,   0.],
+           [  1.,   2.,   3.,   4.,   5.],
+           [  4.,   6.,   8.,  10.,  12.],
+           [  9.,  12.,  15.,  18.,  21.],
+           [ 16.,  20.,  24.,  28.,  32.],
+           [ 25.,  30.,  35.,  40.,  45.]])
 
     Even with new dimensions
     >>> d = laxarray(np.arange(2), ['time']) 
+    >>> d * a
+    dimensions(2, 5, 6): time, lat, lon
+    array([[[ 0.,  0.,  0.,  0.,  0.,  0.],
+            [ 0.,  0.,  0.,  0.,  0.,  0.],
+            [ 0.,  0.,  0.,  0.,  0.,  0.],
+            [ 0.,  0.,  0.,  0.,  0.,  0.],
+            [ 0.,  0.,  0.,  0.,  0.,  0.]],
+    <BLANKLINE>
+           [[ 0.,  1.,  2.,  3.,  4.,  5.],
+            [ 1.,  2.,  3.,  4.,  5.,  6.],
+            [ 2.,  3.,  4.,  5.,  6.,  7.],
+            [ 3.,  4.,  5.,  6.,  7.,  8.],
+            [ 4.,  5.,  6.,  7.,  8.,  9.]]])
+
     """ 
     _debug = False  # for debugging (rather use denbug function above)
 
@@ -473,15 +460,18 @@ class Laxarray(object):
 	    res = res.filled()
 	return res
 
-    def mean(self, axis=0, skipna=True):
-	""" Return the mean along an axis
+    def apply(self, func, axis=0, skipna=True):
+	""" apply `func` along an axis
+
+	Generic description:
 
 	input:
+	    func   : string representation of the function to apply
 	    axis   : int or str (the axis label), or None [default 0] 
 	    skipna : if True, skip the NaNs in the computation
 
 	return:
-	    laxarray: meaned Laxarray (if axis is not None, else np.ndarray)
+	    laxarray: transformed Laxarray (if axis is not None, else np.ndarray)
 
 	Examples:
 	--------
@@ -501,33 +491,37 @@ class Laxarray(object):
 	"""
 	values = self._ma(skipna)
 
-	# return a float if axis is None
-	if axis is None:
-	    return values.mean()
-
-	axis = self._get_axis_idx(axis) 
-	res_ma = values.mean(axis=axis)
-	res = self._array(res_ma) # fill nans back in if necessary
-
-	names = self._get_reduced_names(axis) # name after reduction
-	return self._laxarray_api(res, names=names)
-
-    def median(self, axis=0, skipna=True):
-	""" Return the median along an axis
-
-	see `mean` documentation for more information
-	"""
-	values = self._values(skipna)
+	# retrive bound method
+	method = getattr(values, func)
 
 	# return a float if axis is None
 	if axis is None:
-	    return values.mean()
+	    return method()
 
 	axis = self._get_axis_idx(axis) 
-	res_ma = values.median(axis=axis)
+	res_ma = method(axis=axis)
 	res = self._array(res_ma) # fill nans back in if necessary
-	names = self._get_reduced_names(axis) # name after reduction
+
+	if func.startswith("cum"):
+	    names = self.names
+	else:
+	    names = self._get_reduced_names(axis) # name after reduction
+
 	return self._laxarray_api(res, names=names)
+
+    #
+    # Add numpy transforms
+    #
+    mean = Desc(apply, "mean")
+    median = Desc(apply, "median")
+    sum  = Desc(apply, "sum")
+    diff = Desc(apply, "diff")
+    prod = Desc(apply, "prod")
+    min = Desc(apply, "min")
+    max = Desc(apply, "max")
+    ptp = Desc(apply, "ptp")
+    cumsum = Desc(apply, "cumsum")
+    cumprod = Desc(apply, "cumprod")
 
     #
     # Lower-level numpy functions so select a subset of the array
@@ -656,6 +650,7 @@ class Laxarray(object):
 
 laxarray = Laxarray # as convenience function
 
+# Update doc of descripted functions
 
 #
 # Handle operations 
@@ -710,53 +705,3 @@ def _operation(func, o1, o2, align=True, order=None, laxarray=laxarray):
     res = func(o1.values, o2.values) # just to the job
 
     return laxarray(res, order)
-
-# # For later
-# 
-# #    Many usual numpy axis-transforms are aliased on a Laxarray. The additional
-# #    new feature is that the `axis` parameter can now be given an axis name instead
-# #    of just an integer index !
-# #
-# #    >>> a.mean(axis='lon')
-# #    dimensions(5,): lat
-# #
-# #    But the integer index also work
-# #
-# #	>>> la.mean(axis=1)
-# #	dimensions(5,),: lat
-# #
-# #    Cumulative transformation also works:
-# #
-# #	>>> la.cumsum(axis='lat')
-# #	dimensions(5,6): lat x lon
-# #
-# #    As well as taking percentiles (note 'lat' becomes 'pct_lat'):
-# #
-# #	>>> la.percentile([5,50,95],axis='lat')
-# #	dimensions(3,6): pct_lat x lon
-# #
-# #    There is additionally a new xs method which takes slice along a given axis
-# #
-# #	>>> a.xs(4, axis="lon")
-# #	>>> a.xs(lon=, lat=45.5)
-# #	dimarray: 30 non-null elements (0 null)
-# #	name: "", units: "", descr: "", lat: "45.5"
-# #	dimensions: lon
-# #	lon (30): 30.5 to 59.5
-# #
-# #    Note the tuple here indicates a slice, whereas a list just samples individual
-# #    data points, quite consistently with what you would expect from standard slicing.
-# #
-# #	>>> a.xs(lon=[30.5, 60.5], lat=45.5)
-# #	dimarray: array([ 0.76372818,  2.15288386])
-# #	name: "", units: "", descr: "", lat: "45.5"
-# #	dimensions: lon
-# #	lon (2): 30.5 to 60.5
-# #
-# #    Let's check the consistency just in case:
-# #
-# #	>>> a.xs(lon=(30.5, 60.5), lat=45.5).mean()
-# #	dimarray: array(-0.00802083197740012)
-# #
-# #	>>> a[45.5, 30.5:60.5].mean()
-# #	dimarray: array(-0.00802083197740012)
