@@ -8,93 +8,101 @@ It is more powerful than you would think !
 
 Install:
 --------
-python setup.py install
+
+using pip (at each new release):
+
+    sudo pip install laxarray -U
+
+or downloading the tar.gz from this page (most up-to-date)
+
+    python setup.py install
 
 Get started:
 ------------
 
-    >>> import numpy as np
-    >>> import laxarray as la
+>>> import numpy as np
+>>> import laxarray as la
 
 Say we have a 2-D numpy array `values`. A laxarray is straightforward to define:
 
-    >>> a = la.laxarray(values, ("lat","lon"))
-    >>> a
-    dimensions(5, 6): lat, lon
-    array([[ 0.,  1.,  2.,  3.,  4.,  5.],
-           [ 1.,  2.,  3.,  4.,  5.,  6.],
-           [ 2.,  3.,  4.,  5.,  6.,  7.],
-           [ 3.,  4.,  5.,  6.,  7.,  8.],
-           [ 4.,  5.,  6.,  7.,  8.,  9.]])
+>>> a = la.laxarray(values, ("lat","lon"))
+>>> a
+dimensions(5, 6): lat, lon
+array([[ 0.,  1.,  2.,  3.,  4.,  5.],
+       [ 1.,  2.,  3.,  4.,  5.,  6.],
+       [ 2.,  3.,  4.,  5.,  6.,  7.],
+       [ 3.,  4.,  5.,  6.,  7.,  8.],
+       [ 4.,  5.,  6.,  7.,  8.,  9.]])
 
 whose actual data content is made of a `values` and a `names` attribute:
 
-    >>> a.values
-    array([[ 0.,  1.,  2.,  3.,  4.,  5.],
-           [ 1.,  2.,  3.,  4.,  5.,  6.],
-           [ 2.,  3.,  4.,  5.,  6.,  7.],
-           [ 3.,  4.,  5.,  6.,  7.,  8.],
-           [ 4.,  5.,  6.,  7.,  8.,  9.]])
+>>> a.values
+array([[ 0.,  1.,  2.,  3.,  4.,  5.],
+       [ 1.,  2.,  3.,  4.,  5.,  6.],
+       [ 2.,  3.,  4.,  5.,  6.,  7.],
+       [ 3.,  4.,  5.,  6.,  7.,  8.],
+       [ 4.,  5.,  6.,  7.,  8.,  9.]])
 
-    >>> a.names
-    ('lat', 'lon')
+>>> a.names
+('lat', 'lon')
 
 Now use labels to slice, and note how the label is conserved:
 
-    >>> a.xs(2, axis="lon") # lons are columns
-    dimensions(5,): lat
-    array([ 2.,  3.,  4.,  5.,  6.])
+>>> a.xs(2, axis="lon") # lons are columns
+dimensions(5,): lat
+array([ 2.,  3.,  4.,  5.,  6.])
 
 Also multidimensional slicing
 
-    >>> a.xs(lon=1, lat=3)
-    4.0
+>>> a.xs(lon=1, lat=3)
+4.0
 
 And have all numpy operations (via an "apply" method), where `axis=` can be the axis name !
 
-    >>> a.mean(axis="lon")  # same as a.mean(axis=1)
-    dimensions(5,): lat
-    array([ 2.5,  3.5,  4.5,  5.5,  6.5])
+>>> a.mean(axis="lon")  # same as a.mean(axis=1)
+dimensions(5,): lat
+array([ 2.5,  3.5,  4.5,  5.5,  6.5])
 
-    >>> a[2] = np.nan
-    >>> a 
-    dimensions(5, 6): lat, lon
-    array([[  0.,   1.,   2.,   3.,   4.,   5.],
-	   [  1.,   2.,   3.,   4.,   5.,   6.],
-	   [ nan,  nan,  nan,  nan,  nan,  nan],
-	   [  3.,   4.,   5.,   6.,   7.,   8.],
-	   [  4.,   5.,   6.,   7.,   8.,   9.]])
+>>> b = a.copy()
+>>> b[2] = np.nan
+>>> b 
+dimensions(5, 6): lat, lon
+array([[  0.,   1.,   2.,   3.,   4.,   5.],
+       [  1.,   2.,   3.,   4.,   5.,   6.],
+       [ nan,  nan,  nan,  nan,  nan,  nan],
+       [  3.,   4.,   5.,   6.,   7.,   8.],
+       [  4.,   5.,   6.,   7.,   8.,   9.]])
 
 Deal with NaNs
 
-    >>> a.sum(axis="lat")
-    dimensions(6,): lon
-    array([  8.,  12.,  16.,  20.,  24.,  28.])
+>>> b.sum(axis="lat")
+dimensions(6,): lon
+array([  8.,  12.,  16.,  20.,  24.,  28.])
 
 Unless specified otherwise:
 
-    >>> a.sum(axis="lat", skipna=False)
-    dimensions(6,): lon
-    array([ nan,  nan,  nan,  nan,  nan,  nan])
+>>> b.sum(axis="lat", skipna=False)
+dimensions(6,): lon
+array([ nan,  nan,  nan,  nan,  nan,  nan])
 
 Combine array with different dimensions:
 
-    >>> ts = la.laxarray(np.arange(10), ('time',))
-    >>> ts*a
-    dimensions(10, 5, 6): time, lat, lon
-    ...
+>>> ts = la.laxarray(np.arange(10), ('time',))
+>>> ts*a
+dimensions(10, 5, 6): time, lat, lon
+array(...)
 
 It is not commutative !
 
-    >>> a*ts
-    dimensions(5, 6, 10): lat, lon, time
-    ...
+>>> a*ts
+dimensions(5, 6, 10): lat, lon, time
+array(...)
 
 But it is easy to permute the dimensions to the desired order:
 
-    >>> (a*ts).transpose(('time','lat','lon'))
-    dimensions(10, 5, 6): time, lat, lon
-    ...
+>>> (a*ts).transpose(('time','lat','lon'))
+dimensions(10, 5, 6): time, lat, lon
+array(...)
 
 
 Short Feature list:
@@ -129,14 +137,14 @@ Longer list with examples:
 
 * each axis is labelled by a unique string
 
-    >>> a = laxarray(values, ("lat","lon"))
-    >>> a
-    dimensions(5, 6): lat, lon
-    array([[ 0.,  1.,  2.,  3.,  4.,  5.],
-	   [ 1.,  2.,  3.,  4.,  5.,  6.],
-	   [ 2.,  3.,  4.,  5.,  6.,  7.],
-	   [ 3.,  4.,  5.,  6.,  7.,  8.],
-	   [ 4.,  5.,  6.,  7.,  8.,  9.]])
+>>> a = laxarray(values, ("lat","lon"))
+>>> a
+dimensions(5, 6): lat, lon
+array([[ 0.,  1.,  2.,  3.,  4.,  5.],
+       [ 1.,  2.,  3.,  4.,  5.,  6.],
+       [ 2.,  3.,  4.,  5.,  6.,  7.],
+       [ 3.,  4.,  5.,  6.,  7.,  8.],
+       [ 4.,  5.,  6.,  7.,  8.,  9.]])
 
     (if no names are given, it follows an automatic naming "x0", "x1" etc...)
 
@@ -144,8 +152,10 @@ Longer list with examples:
   enhanced data alignment capability compared to numpy arrays since named axes 
   allow non-ambiguous telescoping of the dimensions
 
-    >>> b = laxarray(values[0], ("lon"))
+    >>> b = laxarray(values[0], ("lon",))
     >>> a*b
+    dimensions(5, 6): lat, lon
+    array(...)
 
 * most axis operations (min, max, mean, var, cumsum, ...) are implemented and 
   return a laxarray (unless it involves flattening the array). laxarray
@@ -155,37 +165,32 @@ Longer list with examples:
 
 * the `axis=` parameter can be given as an integer but also via the axis name
 
-    a.mean(axis='lon') :: a.mean(axis=1)
+a.mean(axis='lon') :: a.mean(axis=1)
 
-    >>> a.mean(axis='lon')
-    dimensions(5,): lat
-    array([ 2.5,  3.5,  4.5,  5.5,  6.5])
-    
-    >>> a.mean() # default to axis=0 (here "lat")
-    dimensions(6,): lon
-    array([ 2.,  3.,  4.,  5.,  6.,  7.])
-    
-    >>> a.mean(axis=None) # return result from numpy transform
-    4.5
+>>> a.mean(axis='lon')
+dimensions(5,): lat
+array([ 2.5,  3.5,  4.5,  5.5,  6.5])
+>>> a.mean() # default to axis=0 (here "lat")
+dimensions(6,): lon
+array([ 2.,  3.,  4.,  5.,  6.,  7.])
+>>> a.mean(axis=None) # return result from numpy transform
+4.5
 
 
 * it provides a new slicing method `xs` to slice along a dimension regardless 
   of the order of the dimension, so it is possible not to worry about the exact
   shape of the array:
 
-    >>> a.xs(3, axis=0)      # integer axis
-    dimensions(6,): lon
-    array([ 3.,  4.,  5.,  6.,  7.,  8.])
+>>> a.xs(3, axis=0)      # integer axis
+dimensions(6,): lon
+array([ 3.,  4.,  5.,  6.,  7.,  8.])
+>>> a.xs(3, axis='lat')  # labelled axis
+dimensions(6,): lon
+array([ 3.,  4.,  5.,  6.,  7.,  8.])
+>>> a.xs(lat=3, lon=5)   # keyword argument + multidimensional slicing
+8.0
 
-    >>> a.xs(3, axis='lat')  # labelled axis
-    dimensions(6,): lon
-    array([ 3.,  4.,  5.,  6.,  7.,  8.])
-
-    >>> a.xs(lat=3, lon=5)   # keyword argument + multidimensional slicing
-    dimensions(): 
-    array(8.0)
-
-    xs understands a variety of types of parameters:
+  xs understands a variety of types of parameters:
 
     * `int`   : as above
 

@@ -1,5 +1,6 @@
 """ This module emulates a numpy array with named axes
 """
+
 import numpy as np
 import copy
 from functools import partial
@@ -7,6 +8,8 @@ from functools import partial
 # 
 # For debugging
 #
+# CHECK README FORMATTING python setup.py --long-description | rst2html.py > output.html
+
 def get_testdata():
     # basic dataset used for debugging
     lat = np.arange(5)
@@ -16,25 +19,37 @@ def get_testdata():
     a = Laxarray(values, ("lat","lon"))
     return a
 
-def debug(raise_on_error=False, **kwargs):
-    import doctest, sys, ipdb
+def _load_debug_glob():
+    """ return globs parameter for doctest.testmod
+    """
+    # also go into locals()
+    import doctest
+    import numpy as np
     import laxarray as la
+    laxarray = la.laxarray
 
     a = get_testdata()
-
-    # just get this module
-    m = sys.modules[__name__]
+    values = a.values
 
     # to test apply_recursive
     def f(x):
 	assert set(x.names) == set(("lon","lat")), "error"
 	return x #  some 2D transform, return itself
 
-    if 'globs' not in kwargs:
-	kwargs['globs'] = globals()
-	kwargs['globs'].update(locals())
+    return locals()
 
-    return doctest.testmod(m, raise_on_error=raise_on_error, **kwargs)
+def debug(raise_on_error=False, globs={}, **kwargs):
+    import doctest
+    import laxarray as la
+
+    kwargs['globs'] = _load_debug_glob()
+
+    return doctest.testmod(la, raise_on_error=raise_on_error, **kwargs)
+
+def debug_readme(optionflags=1,**kwargs):
+    import doctest, sys
+    doctest.ELLIPSIS = True
+    return doctest.testfile("README", optionflags=optionflags,globs=_load_debug_glob(),**kwargs)
 
 #
 # Descriptors to add functions following same patterns
@@ -504,7 +519,7 @@ class Laxarray(object):
 	return self.values.__array__
 
     def copy(self):
-	return self._laxarray_api(res.copy(), names=copy.copy(self.names))
+	return self._laxarray_api(self.values.copy(), names=copy.copy(self.names))
 
     #
     # Operations on array that require dealing with NaNs
@@ -895,3 +910,8 @@ def _convert_dtype(dtype):
 	type_ = float
 
     return type_
+
+
+if __name__ == "__main__":
+    debug()
+    debug_readme()
