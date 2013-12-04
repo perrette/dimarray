@@ -1,11 +1,3 @@
-#-----------------------------------------------------------------------------
-# Copyright (c) 2013, Mahe Perrette
-# All rights reserved.
-#
-# Distributed under the terms of the BSD Clause-2 License
-#
-# The full license is in the LICENSE file, distributed with this software.
-#-----------------------------------------------------------------------------
 """ This module emulates a numpy array with named axes
 """
 import numpy as np
@@ -14,15 +6,20 @@ import copy
 # 
 # For debugging
 #
-def debug(raise_on_error=False, **kwargs):
-    import doctest, sys, ipdb
-
+def get_testdata():
     # basic dataset used for debugging
     lat = np.arange(5)
     lon = np.arange(6)
     lon2, lat2 = np.meshgrid(lon, lat)
     values = np.array(lon2+lat2, dtype=float) # use floats for the sake of the example
-    a = laxarray(values, ("lat","lon"))
+    a = Laxarray(values, ("lat","lon"))
+    return a
+
+def debug(raise_on_error=False, **kwargs):
+    import doctest, sys, ipdb
+    import laxarray as la
+
+    a = get_testdata()
 
     # just get this module
     m = sys.modules[__name__]
@@ -131,7 +128,48 @@ class Laxarray(object):
 	   [ 3.,  4.,  5.,  6.,  7.,  8.],
 	   [ 4.,  5.,  6.,  7.,  8.,  9.]])
 
+    Like a numpy array:
+    >>> a.shape
+    (5, 6)
+    >>> a.ndim
+    2
+    >>> a.size
+    30
+
+    >>> b = a + 2
+    >>> b = a - a
+    >>> b = a / 2
+    >>> b = a ** 2
+    >>> b = a * np.array(a)
+
+    >>> b
+    dimensions(5, 6): lat, lon
+    array([[  0.,   1.,   4.,   9.,  16.,  25.],
+           [  1.,   4.,   9.,  16.,  25.,  36.],
+           [  4.,   9.,  16.,  25.,  36.,  49.],
+           [  9.,  16.,  25.,  36.,  49.,  64.],
+           [ 16.,  25.,  36.,  49.,  64.,  81.]])
+
+    Including axis alignment:
+    >>> c = laxarray(lon, ['lon'])
+    >>> c
+    dimensions(6,): lon
+    array([0, 1, 2, 3, 4, 5])
+
+    >>> c*b
+    dimensions(6, 5): lon, lat
+    array([[   0.,    0.,    0.,    0.,    0.],
+           [   1.,    4.,    9.,   16.,   25.],
+           [   8.,   18.,   32.,   50.,   72.],
+           [  27.,   48.,   75.,  108.,  147.],
+           [  64.,  100.,  144.,  196.,  256.],
+           [ 125.,  180.,  245.,  320.,  405.]])
+
+    Even with new dimensions
+    >>> d = laxarray(np.arange(2), ['time']) 
     """ 
+    _debug = False  # for debugging (rather use denbug function above)
+
     def __init__(self, values, names=None, dtype=None, copy=False):
 	""" instantiate a ndarray with values: note values must be numpy array
 
@@ -185,22 +223,31 @@ class Laxarray(object):
 	""" slice array and return the new object with correct labels
 
 	note with pure slicing (slice object) there is no error bound check !
+
+	>>> a[:,-200:5:2]  # check against equivalent xs example
+	dimensions(5, 3): lat, lon
+	array([[ 0.,  2.,  4.],
+	       [ 1.,  3.,  5.],
+	       [ 2.,  4.,  6.],
+	       [ 3.,  5.,  7.],
+	       [ 4.,  6.,  8.]])
 	"""
 	# make sure we have a tuple
 	item = np.index_exp[item]
 
+	args = [(slice_, self.names[i]) for i,slice_ in enumerate(item)]
+
+	obj = self
+	for slice_, axis in args:
+	    obj = obj.xs(slice_, axis)
+
 	### Testing ###
-	debug = 1
-	if debug:
-	    args = [(slice_, self.names[i]) for i,slice_ in enumerate(item)]
-
-	    obj = self
-	    for slice_, axis in args:
-		obj = obj.xs(slice_, axis)
-
-	newval = self.values[item]
+	if self._debug:
+	    val = self.values[item]
+	    assert np.all(obj.values == val), "error while slicing !"
 
 	return obj
+
 
     def _get_axis_idx(self, axis):
 	""" always return an integer axis
@@ -277,25 +324,7 @@ class Laxarray(object):
 	       [ 6.,  7.,  8.],
 	       [ 7.,  8.,  9.]])
 
-	>>> a.xs((3,5), axis='lon')	# as a tuple 3 to 5 (included)
-	dimensions(5, 3): lat, lon
-	array([[ 3.,  4.,  5.],
-	       [ 4.,  5.,  6.],
-	       [ 5.,  6.,  7.],
-	       [ 6.,  7.,  8.],
-	       [ 7.,  8.,  9.]])
-
 	>>> a.xs(lon=(3,5,2))		# as a tuple step > 1
-
-	>>> a.xs(slice(3,5,2), axis='lon') # as a slice (last index missing, no error )
-	dimensions(5, 3): lat, lon
-	array([[ 3.,  4.],
-	       [ 4.,  5.],
-	       [ 5.,  6.],
-	       [ 6.,  7.],
-	       [ 7.,  8.]])
-
-	>>> a.xs(lon=4, lat=(3,6,2))  # multi-dimensional 
 	dimensions(5, 2): lat, lon
 	array([[ 3.,  5.],
 	       [ 4.,  6.],
@@ -303,15 +332,13 @@ class Laxarray(object):
 	       [ 6.,  8.],
 	       [ 7.,  9.]])
 
-	>>> a.xs(lon=(3,6,2))	      # equivalent to above
-	>>> a.xs(lon=slice(3,6,2))    # equivalent to above
-
-	Beware, no bound check with slices !
-
-	>>> a.xs(lon=(3,100))	      
-	Exception
-	>>> a.xs(lon=slice(3,6,2))    # equivalent to above
-	Fine
+	>>> a.xs(slice(-200,5,2), axis='lon') # as a slice (last index missing, no bound checking)
+	dimensions(5, 3): lat, lon
+	array([[ 0.,  2.,  4.],
+	       [ 1.,  3.,  5.],
+	       [ 2.,  4.,  6.],
+	       [ 3.,  5.,  7.],
+	       [ 4.,  6.,  8.]])
 	"""
 	# recursive definition
 
@@ -544,8 +571,145 @@ class Laxarray(object):
 	res = self.values.compress(condition, axis=axis, out=out) # does not reduce
 	return self._laxarray_api(res, names=self.names)
 
+    def permute(self, axes, inplace=False):
+	"""  permute an array and its axes (like numpy's transpose, see transpose method which handles the 2D case)
+
+	input:
+	    axes: new axes order, can be a list of str names or of integers
+	
+	note: axes must include all dimensions, but can include more of them w/o error raising
+	"""
+	axes = [self._get_axis_idx(ax) for ax in axes]
+
+	# re-arrange array
+	newvalues = self.values.transpose(axes)
+
+	# re-arrange names
+	newnames = tuple([self.names[i] for i in axes])
+
+	if inplace:
+	    self.values = newvalues
+	    self.names = names
+
+	else:
+	    return self._laxarray_api(newvalues, newnames)
+
+    def transpose(self, axes=None, **kwargs):
+	""" to be consistent with numpy 
+	""" 
+	if axes is None:
+	    assert self.ndim == 2, "transpose only 2D unless axes is provided"
+	    axes = 1,0
+	return self.permute(axes, **kwargs)
+
+    def conform_to(self, dims):
+	""" make the array conform to a list of dimension names
+
+	dims: str, list or tuple of names
+	"""
+	dims = tuple(dims)
+	assert type(dims[0]) is str, "input dimensions must be strings"
+
+	if self.names == dims:
+	    return self
+
+	# check that all dimensions are present, otherwise add
+	if set(self.names) != set(dims):
+	    missing_dims = tuple([nm for nm in dims if not nm in self.names])
+	    newnames = missing_dims + self.names
+
+	    val = self.values.copy()
+	    for nm in missing_dims:
+		val = val[np.newaxis] # prepend singleton dimension
+
+	    obj = self._laxarray_api(val, newnames)
+
+	else:
+	    obj = self
+
+	# and transpose to the desired dimension
+	obj = obj.transpose(dims)
+	assert obj.names == dims, "problem in transpose"
+	return obj
+
+    @property
+    def T(self):
+	return self.transpose()
+
+    #
+    # basic operattions
+    #
+
+    def __add__(self, other): return _operation(np.add, self, other, laxarray=self._laxarray_api)
+
+    def __mul__(self, other): return _operation(np.multiply, self, other, laxarray=self._laxarray_api)
+
+    def __sub__(self, other): return _operation(np.subtract, self, other, laxarray=self._laxarray_api)
+
+    def __div__(self, other): return _operation(np.divide, self, other, laxarray=self._laxarray_api)
+
+    def __pow__(self, other): return _operation(np.power, self, other, laxarray=self._laxarray_api)
+
+    def __eq__(self, other): 
+	return isinstance(other, Laxarray) and np.all(self.values == other.values) and self.names == other.names
+
 
 laxarray = Laxarray # as convenience function
+
+
+#
+# Handle operations 
+#
+def _unique(nm):
+    """ return the same ordered list without duplicated elements
+    """
+    new = []
+    for k in nm:
+	if k not in new:
+	    new.append(k)
+    return new
+
+def _operation(func, o1, o2, align=True, order=None, laxarray=laxarray):
+    """ operation on Laxarray objects
+
+    input:
+	func	: operator
+	o1, o2	: operand
+	align, optional: if True, use pandas to align the axes
+	order	: if order is True, align the dimensions along a particular order
+
+	laxarray: constructor (takes values and axes)
+
+    output:
+	Laxarray
+    """
+    # second operand is not a Laxarray: let numpy do the job 
+    if not isinstance(o2, Laxarray): 
+	if np.ndim(o2) > o1.ndim:
+	    raise ValueError("bad input: second operand's dimensions not documented")
+	res = func(o1.values, np.array(o2))
+	return laxarray(res, o1.names)
+
+    # if same dimension: easy
+    if o1.names == o2.names:
+	res = func(o1.values, o2.values)
+	return laxarray(res, o1.names)
+
+    # otherwise determine the dimensions of the result
+    if order is None:
+	order = _unique(o1.names + o2.names) 
+    else:
+	order = [o for o in order if o in o1.names or o in o2.names]
+    order = tuple(order)
+
+    #
+    o1 = o1.conform_to(order)
+    o2 = o2.conform_to(order)
+
+    assert o1.names == o2.names, "problem in transpose"
+    res = func(o1.values, o2.values) # just to the job
+
+    return laxarray(res, order)
 
 # # For later
 # 
