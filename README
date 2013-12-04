@@ -1,30 +1,22 @@
-========
+================================
 laxarray
-========
+================================
 
 numpy's ndarrays like with a name per axis and nan treated as missing values
 
 It is more powerful than you would think !
 
 Install:
--------
+--------
 python setup.py install
 
 Get started:
------------
+------------
 
     >>> import numpy as np
     >>> import laxarray as la
 
-Define a numpy array 
-
-    >>> values = array([[ 0.,  1.,  2.,  3.,  4.,  5.],
-           [ 1.,  2.,  3.,  4.,  5.,  6.],
-           [ 2.,  3.,  4.,  5.,  6.,  7.],
-           [ 3.,  4.,  5.,  6.,  7.,  8.],
-           [ 4.,  5.,  6.,  7.,  8.,  9.]])
-
-And a laxarray:
+Say we have a 2-D numpy array `values`. A laxarray is straightforward to define:
 
     >>> a = la.laxarray(values, ("lat","lon"))
     >>> a
@@ -34,6 +26,18 @@ And a laxarray:
            [ 2.,  3.,  4.,  5.,  6.,  7.],
            [ 3.,  4.,  5.,  6.,  7.,  8.],
            [ 4.,  5.,  6.,  7.,  8.,  9.]])
+
+whose actual data content is made of a `values` and a `names` attribute:
+
+    >>> a.values
+    array([[ 0.,  1.,  2.,  3.,  4.,  5.],
+           [ 1.,  2.,  3.,  4.,  5.,  6.],
+           [ 2.,  3.,  4.,  5.,  6.,  7.],
+           [ 3.,  4.,  5.,  6.,  7.,  8.],
+           [ 4.,  5.,  6.,  7.,  8.,  9.]])
+
+    >>> a.names
+    ('lat', 'lon')
 
 Now use labels to slice, and note how the label is conserved:
 
@@ -74,31 +78,35 @@ Unless specified otherwise:
     array([ nan,  nan,  nan,  nan,  nan,  nan])
 
 
-Short list:
-----------
+Short Feature list:
+-------------------
 * behaves like a numpy array in any useful sense (wrapper around numpy methods):
-    * +-*/** operations
+
+    * `+-*/**` operations
+
     * all transformations with `axis=` parameters (min, max, mean, cumsum etc...)
 
-* each axis has a label (or name) 
+* each axis has a label (or name)
 
-* NEW slicing capability via a `xs` method with an `axis=` parameter or via 
-keyword arguments for multi-dimensional slicing (see examples below)
+* new slicing capability via a `xs` method with an `axis=` parameter or via 
+  keyword arguments for multi-dimensional slicing (see examples below)
 
 * the name can be provided to `axis=` instead of its integer index whenever it 
-makes things easier (almost always !) 
+  makes things easier (almost always !)
 
 * nans are treated as missing values (wrapper around numpy's masked array) 
-without you worrying about it.
+  without you worrying about it.
 
 * axes alignment when an operation involves laxarrays with various dimensions
 
-* the data structure simply consists of two attributes directly accessible:  
+* the data structure simply consists of two attributes directly accessible: 
+
     * `values` : ndarray object
     * `names ` : tuple of length `ndim` whose elements match values' shape attribute
 
+
 Longer list with examples:
--------------------------
+--------------------------
 
 * each axis is labelled by a unique string
 
@@ -114,15 +122,15 @@ Longer list with examples:
     (if no names are given, it follows an automatic naming "x0", "x1" etc...)
 
 * most standard operations (addition, multiplication, power, ...) work with 
-enhanced data alignment capability compared to numpy arrays since named axes 
-allow non-ambiguous telescoping of the dimensions
+  enhanced data alignment capability compared to numpy arrays since named axes 
+  allow non-ambiguous telescoping of the dimensions
 
     >>> b = laxarray(values[0], ("lon"))
     >>> a*b
 
 * most axis operations (min, max, mean, var, cumsum, ...) are implemented and 
-return a laxarray (unless it involves flattening the array). laxarray
-also implements numpy's `percentile` function as a method
+  return a laxarray (unless it involves flattening the array). laxarray
+  also implements numpy's `percentile` function as a method
 
 * all transformations keep track of axis names in a consistent manner
 
@@ -143,8 +151,8 @@ also implements numpy's `percentile` function as a method
 
 
 * it provides a new slicing method `xs` to slice along a dimension regardless 
-of the order of the dimension, so it is possible not to worry about the exact
-shape of the array:
+  of the order of the dimension, so it is possible not to worry about the exact
+  shape of the array:
 
     >>> a.xs(3, axis=0)      # integer axis
     dimensions(6,): lon
@@ -159,33 +167,39 @@ shape of the array:
     array(8.0)
 
     xs understands a variety of types of parameters:
-    - int   : as above
-    - list  : similar to numpy's take method (take is also implemented in laxarray)
-    - tuple : new method compared to numpy array: it is similar to a slice except
-that the equivalent start (first) and stop (second) parameters 
-involve bound checking (which is not the case by standard slicing 
-or an array with the [] operator !). 
+
+    * `int`   : as above
+
+    * `list`  : similar to numpy's take method (take is also implemented in laxarray)
+
+    * `tuple` : `(stop)` or `(start,stop)` or `(start,stop,step)` to obtain an 
+       effect similar to the `[]` operator, except that it checks array bounds 
+
+       a.xs((start,stop,step), axis=0) :: a[start:stop:step]  *if stop < a.shape[0]*
+
+    * `slice`: can also provide an actual slice object, to have exact same effect as `[]`
+       (no bound checking)
 
 * it treats nans as missing values in all operations by default, via a skipna
-    parameter attached to every transformation, doing conversions back 
-    and forth to np.ma.MaskedArray under the hood without you noticing.
+  parameter attached to every transformation, doing conversions back 
+  and forth to np.ma.MaskedArray under the hood without you noticing.
 
 * it has a familiar api (two points below)
 
 * it tries to follow numpy's conventions and NOT offer many additional features 
-(appart from what comes naturally with the named labels, already consequent), 
-with the aim of being a light-weight building block in other packages and more.
+  (appart from what comes naturally with the named labels, already consequent), 
+  with the aim of being a light-weight building block in other packages and more.
 
 * It is NOT a sub-class of ndarray but it store the actual numpy array in a  
-`values` attribute, along with its axis `names`. This follows pandas' api
-and allows an instantaneous access to the data. 
+  `values` attribute, along with its axis `names`. This follows pandas' api
+  and allows an instantaneous access to the data. 
 
 * it is the building block for a companion package called `dimarray` which
-deals with `indexed` axis
+  deals with `indexed` axis
 
 * bonus: there is one apply_recursive function which recursively apply any 
-multi-dimensional transformation from laxarray to laxarray, with potential 
-application for interpolation (see dimarray)
+  multi-dimensional transformation from laxarray to laxarray, with potential 
+  application for interpolation (see dimarray)
 
 Summary
 -------

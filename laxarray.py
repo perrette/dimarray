@@ -283,16 +283,21 @@ class Laxarray(object):
 	axis = self._get_axis_idx(axis) # just in case
 	return [nm for nm in self.names if nm != self.names[axis]]
 
-    def xs(self, slice_=None, axis=0, _export_scalar=True, keepdims=False, **kwargs):
+    def xs(self, slice_=None, axis=0, keepdims=False, **kwargs):
 	""" Multi-dimensional slicing
 
-	slice_  : integer, list, slice or tuple
-	axis    : axis to slice
-	keepdims: [False] keep initial dimensions
-	**kwargs: keyword arguemnts with axis names as keys "<axis> = <slice_>"
+	input:
+	    slice_  : integer, list, slice or tuple
+	    axis    : axis to slice
+	    keepdims: [False] keep initial dimensions even in case of integer slicing
+
+	    **kwargs: keyword arguemnts with axis names as keys "<axis> = <slice_>"
+
+	output.
+	    laxarray or scalar
 
 	Various behaviours depending on the type slice_
-	int  :  slice along axis, squeeze it out
+	int  :  slice along axis, squeeze it out, return a scalar if 
 	list :  sample several int slices, same shape as before
 	tuple:  ([start,] stop[, step]), similar to slice, except that the 
 		stop element *is* included and a bound check is performed
@@ -321,8 +326,7 @@ class Laxarray(object):
 	array([ 3.,  4.,  5.,  6.,  7.,  8.])
 
 	>>> a.xs(lat=3, lon=5)	      # multiple keyword arguments
-	dimensions(): 
-	array(8.0)
+	8.0
 
 	Take several columns
 
@@ -334,21 +338,24 @@ class Laxarray(object):
 	       [ 3.,  6.,  7.],
 	       [ 4.,  7.,  8.]])
 
-	>>> a.xs((3,5), axis='lon')	# as a tuple 3 to 5 (included)
-	dimensions(5, 3): lat, lon
-	array([[ 3.,  4.,  5.],
-	       [ 4.,  5.,  6.],
-	       [ 5.,  6.,  7.],
-	       [ 6.,  7.,  8.],
-	       [ 7.,  8.,  9.]])
-
-	>>> a.xs(lon=(3,5,2))		# as a tuple step > 1
+	>>> a.xs((3,5), axis='lon')	
 	dimensions(5, 2): lat, lon
-	array([[ 3.,  5.],
-	       [ 4.,  6.],
-	       [ 5.,  7.],
-	       [ 6.,  8.],
-	       [ 7.,  9.]])
+	array([[ 3.,  4.],
+	       [ 4.,  5.],
+	       [ 5.,  6.],
+	       [ 6.,  7.],
+	       [ 7.,  8.]])
+
+	>>> a.xs((3,5), axis='lon') == a[:,3:5]  # similar to
+	True
+
+	>>> a.xs(lon=(0,5,2))	# as a tuple step > 1
+	dimensions(5, 3): lat, lon
+        array([[ 0.,  2.,  4.],
+               [ 1.,  3.,  5.],
+               [ 2.,  4.,  6.],
+               [ 3.,  5.,  7.],
+               [ 4.,  6.,  8.]])
 
 	>>> a.xs(slice(-200,5,2), axis='lon') # as a slice (last index missing, no bound checking)
 	dimensions(5, 3): lat, lon
@@ -368,62 +375,91 @@ class Laxarray(object):
 
 	    else:
 		axis, slice_ = kwargs.popitem()
-		obj = self.xs(slice_, axis=axis, keepdims=keepdims, _export_scalar=False)
-		newobj = obj.xs(keepdims=keepdims, _export_scalar=_export_scalar, **kwargs)
+		obj = self.xs(keepdims=keepdims, **kwargs)
+		newobj = obj._xs_axis(slice_, axis=axis, keepdims=keepdims)
 
-	    if np.ndim(newobj) == 0 and _export_scalar:
-		newobj = float(newobj) # check int case
+	# slice along single axis
+	else:
 
-	    return newobj
+	    assert len(kwargs) == 0, "cannot give both explicit and keyword arguments"
 
-	#
-	# assume len(kwargs) is zero
-	#
-	assert len(kwargs) == 0, "cannot give both explicit and keyword arguments"
+	    newobj = self._xs_axis(slice_, axis, keepdims)
 
+	return newobj
+
+    def _xs_axis(self, slice_, axis, keepdims, _scalar_conversion=True):
+	""" take a slice/cross-section along one axis, see xs for documentation
+
+	_scalar_conversion [True], if True, return a scalar whenever size == 1
+	"""
 	axis = self._get_axis_idx(axis) 
-	n = self.shape[axis]
 
-	# convert tuple to slice with appropriate changes and checks
-	# bound checking + including last element
-	if type(slice_) is tuple:
-	    slice_ = slice(*slice_)
+	if type(slice_) is list:
+	    res = self.take(slice_, axis=axis)
 
-	    if slice_.stop is not None:
-		assert slice_.stop < n, "beyond max axis bounds !"
-		slice_ = slice(slice_.start, slice_.stop+1, slice_.step) # include last element !
+	elif type(slice_) is int:
+	    res = self.take([slice_], axis=axis)
 
-	    if slice_.start is not None:
-		assert slice_.start >= 0, "outside axes bounds !"
+	    # if collapsed axis, drop the name
+	    if not keepdims:
+		res = res.squeeze(axis=axis)
 
-	# basic definition
-	if type(slice_) is int:
-	    indices = [slice_]
-	    squeeze = True
+	elif type(slice_) is tuple:
+	    res = self._take_tuple(slice_, axis=axis)
 
 	elif type(slice_) is slice:
-	    idx = np.arange(n)
-	    indices = idx[slice_]
-	    squeeze = False
-
-	elif type(slice_) is list:
-	    indices = slice_
-	    squeeze = False
+	    res = self._take_slice(slice_, axis=axis)
 
 	else:
 	    print slice_
 	    print type(slice_)
 	    raise ValueError("`slice_` may be int, tuple or list only")
 
-	res = self.take(indices, axis=axis)
+	# If result is scalar, like, convert to scalar unless otherwise specified 
+	if _scalar_conversion:
+	    res = res._check_scalar()
 
-	# if collapsed axis, drop the name
-	if not keepdims and squeeze:
-	    res = res.squeeze(axis)
+	return res
 
-	if res.ndim == 0 and _export_scalar:
-	    res = float(res) # check int case
+    def _take_slice(self, slice_, axis=0):
+	""" similar to take, but for a `slice` instead of indices
+	"""
+	assert type(slice_) is slice, "only accept slice !"
+	axis = self._get_axis_idx(axis) 
+	n = self.shape[axis]
+	idx = np.arange(n)
+	indices = idx[slice_]
+	return self.take(indices, axis=axis)
 
+    def _take_tuple(self, t, axis=0):
+	""" similar to _take_slice, but for a `tuple` instead of slice_
+	and does bound checking
+	"""
+	assert type(t) is tuple, "only accept tuple !"
+	axis = self._get_axis_idx(axis) 
+
+	# convert tuple to slice with appropriate changes and checks
+	# bound checking + including last element
+	n = self.shape[axis]
+	slice_ = slice(*t)
+
+	if slice_.stop is not None:
+	    assert slice_.stop < n, "beyond max axis bounds !"
+	    slice_ = slice(slice_.start, slice_.stop, slice_.step) 
+
+	if slice_.start is not None:
+	    assert slice_.start >= 0, "outside axes bounds !"
+
+	return self._take_slice(slice_, axis=axis)
+
+    def _check_scalar(self):
+	""" export to python scalar if size == 1
+	"""
+	if isinstance(self, Laxarray) and self.size == 1:
+	    type_ = _convert_dtype(self.dtype)
+	    res = type_(self.values)
+	else:
+	    res = self
 	return res
 
     def squeeze(self, axis=None):
@@ -849,3 +885,13 @@ def _operation(func, o1, o2, align=True, order=None, laxarray=laxarray):
 
     return laxarray(res, order)
 
+def _convert_dtype(dtype):
+    """ convert a python type
+    """
+    if dtype is np.dtype(int):
+	type_ = int
+
+    else:
+	type_ = float
+
+    return type_
