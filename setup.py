@@ -4,7 +4,7 @@ with open('README') as file:
         long_description = file.read()
 
 setup(name='laxarray',
-      version='1.1.1',
+      version='1.2',
       py_modules=['laxarray'],
       description='Labelled Axis Array',
       long_description=long_description,
