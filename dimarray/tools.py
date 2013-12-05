@@ -46,8 +46,6 @@ def _operation(func, o1, o2, align=True, order=None):
 	align, optional: if True, use pandas to align the axes
 	order	: if order is True, align the dimensions along a particular order
 
-	_constructor: constructor (takes values and names)
-
     output:
 	values: array values
 	names : dimension names
@@ -78,7 +76,7 @@ def _operation(func, o1, o2, align=True, order=None):
     assert o1.names == o2.names, "problem in transpose"
     res = func(o1.values, o2.values) # just to the job
 
-    return _constructor(res, order)
+    return res, order
 
 #
 # Handle operations 
@@ -150,7 +148,33 @@ def _slice_to_indices(slice_, n, include_last=False, bounds=None):
     idx = np.arange(n) # array to sample (by default same as arange(n)
     indices = idx[slice_]
 
+
     return indices
+
+#
+# Recursively apply a transformation on an Dimarray
+#
+# ... decorator to make a function recursive
+# 
+def _DescRecursive(object):
+    """ Decorator to make a Dimarray method recursive via apply_recursive
+    """
+    def __init__(self, trans, dims):
+
+	assert type(dims) is tuple, "dims must be a tuple"
+	self.trans = trans
+	self.dims = dims # dimensions to which it applies
+
+    def __get__(self, obj, cls=None):
+	""" 
+	"""
+	newmethod = partial(self.apply, obj, self.dims, self.trans)
+	newmethod.__doc__ = "Wrapper for recursive application of this function\n\n"+self.apply_recursive.__doc__
+	return newmethod
+
+    return 
+
+
 
 #def deco_numpy(apply_method, numpy_method, **kwargs):
 #    """ predefine arguments for apply

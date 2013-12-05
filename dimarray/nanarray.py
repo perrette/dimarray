@@ -33,6 +33,8 @@ from tools import _NumpyDesc
 class NanArray(ba.BaseArray):
     """ BaseArray which treats NaNs as missing values
     """
+
+    _subok = True
     def __init__(self, values, dtype=None, copy=False):
 	""" instantiate a ndarray with values: note values must be numpy array
 
@@ -93,8 +95,11 @@ class NanArray(ba.BaseArray):
 	if not isinstance(result, np.ndarray):
 	    return result
 
+	if np.ma.isMaskedArray(result):
+	    result = result.filled(np.nan)
+
 	# otherwise, fill NaNs back in
-	return NanArray(result.filled(np.nan))
+	return NanArray(result)
 
 #    #
 #    # Cumbersome update NanArray to BaseArray, for this small jump of little 
@@ -160,7 +165,7 @@ def test_doc(raise_on_error=False, globs={}, **kwargs):
 
     kwargs['globs'] = _load_test_glob()
 
-    return doctest.testmod(na, raise_on_error=raise_on_error, **kwargs)
+    return doctest.testmod(na, optionflags=doctest.ELLIPSIS, raise_on_error=raise_on_error, **kwargs)
 
 if __name__ == "__main__":
     test_doc()

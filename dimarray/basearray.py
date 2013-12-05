@@ -4,7 +4,6 @@ Behaviour:
 ----------
 
     - same as numpy array, except that
-	- axis=0 by default (except in squeeze)
 	- == returns a boolean and not an array
     - add the xs method along one axis only
 
@@ -36,12 +35,6 @@ from tools import _slice_to_indices, _convert_dtype, _operation, _check_scalar, 
 class BaseArray(object):
     """ Contains a numpy array with named axes, and treat nans as missing values
 
-    As a difference to numpy, the default behavious for an along-axis transform
-    if to take `axis=0` instead of None. 
-    
-    This behaviour is experimental and may change is the future to be more 
-    consistent with numpy arrays.
-
     The transforms return a BaseArray, except when `axis` is None, in which case 
     they will return a numpy array. 
 
@@ -68,7 +61,7 @@ class BaseArray(object):
 	self.values = np.array(values, dtype=dtype, copy=copy)
 
     @classmethod
-    def _constructor(cls, values):
+    def __constructor(cls, values):
 	""" just used for subclassing
 	"""
 	# try returning subclass
@@ -85,7 +78,7 @@ class BaseArray(object):
 	""" slice array and return the new object with correct labels
 	"""
 	val = self.values[item]
-	return self._constructor(values=val)
+	return self.__constructor(values=val)
 
     def __setitem__(self, item, val):
 	""" set item: numpy method
@@ -102,7 +95,7 @@ class BaseArray(object):
 	""" remove singleton dimensions
 	"""
 	res = self.values.squeeze(axis=axis)
-	return self._constructor(values=res)
+	return self.__constructor(values=res)
 
     #
     # BELOW, PURE LAYOUT FOR NUMPY TRANSFORMS
@@ -130,7 +123,7 @@ class BaseArray(object):
 	return self.values.__array__
 
     def copy(self):
-	return self._constructor(self.values.copy())
+	return self.__constructor(self.values.copy())
 
     def apply(self, funcname, axis=None):
 	""" apply along-axis numpy method
@@ -141,23 +134,23 @@ class BaseArray(object):
 	values = getattr(self.values, funcname)(axis=axis) 
 
 	if isinstance(values, np.ndarray):
-	    return self._constructor(values)
+	    return self.__constructor(values)
 
 	# just return the scalar
 	else:
 	    return values
 
-    def take(self, indices, axis=0):
+    def take(self, indices, axis=None):
 	""" apply along-axis numpy method
 	"""
 	res = self.values.take(indices, axis=axis)
-	return self._constructor(res)
+	return self.__constructor(res)
 
     def transpose(self, axes=None):
 	""" apply along-axis numpy method
 	"""
-	res = self.values.take(indices, axes)
-	return self._constructor(res)
+	res = self.values.transpose(axes)
+	return self.__constructor(res)
 
     #
     # Add numpy transforms
@@ -206,7 +199,7 @@ class BaseArray(object):
 	else:
 	    res = func(self.values, other)
 
-	return self._constructor(res)
+	return self.__constructor(res)
 
     def __add__(self, other): return self._operation(np.add, other)
 
@@ -231,7 +224,7 @@ class BaseArray(object):
     # ADD-ON TO NUMPY: AN XS METHOD (along-axis only for basearray)
     #
 
-    def _xs_axis(self, idx, axis=0, _keepdims=False, _scalar_conversion=True, _include_last=None, _check_bounds=None):
+    def _xs_axis(self, idx, axis=None, _keepdims=False, _scalar_conversion=True, _include_last=None, _check_bounds=None):
 	""" Take a slice/cross-section along one axis
 
 	input:
@@ -332,7 +325,7 @@ class BaseArray(object):
     #
     xs = _xs_axis
 
-    def _take_tuple(self, t, axis=0, check_bounds=None, include_last=None):
+    def _take_tuple(self, t, axis=None, check_bounds=None, include_last=None):
 	""" similar to take, but for a `slice` instead of indices
 
 	input:
@@ -387,14 +380,13 @@ def _load_test_glob():
 
     return locals()
 
-def test_doc(raise_on_error=False, optionflags=1, globs={}, **kwargs):
+def test_doc(raise_on_error=False, globs={}, **kwargs):
     import doctest
     import basearray as ba
-    doctest.ELLIPSIS = True  # understands ...
 
     kwargs['globs'] = _load_test_glob()
 
-    return doctest.testmod(ba, raise_on_error=raise_on_error, optionflags=optionflags,**kwargs)
+    return doctest.testmod(ba, raise_on_error=raise_on_error, optionflags=doctest.ELLIPSIS,**kwargs)
 
 
 if __name__ == "__main__":
