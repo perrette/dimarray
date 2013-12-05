@@ -57,11 +57,6 @@ class BaseArray(object):
     # class-attributes to determine how a slice should work
     _check_bounds = False
     _include_last = False
-    
-    # list of attributes of the class (in addition of `values`) required for 
-    # initialization (except for copy), reduced to the strict minimum (see
-    # _updated method)
-    _attributes = ()
 
     def __init__(self, values, dtype=None, copy=False):
 	""" instantiate a ndarray with values: note values must be numpy array
@@ -70,17 +65,6 @@ class BaseArray(object):
 	dtype, copy: passed to np.array 
 	"""
 	self.values = np.array(values, dtype=dtype, copy=copy)
-
-    def _updated(self, values, **kwargs):
-	""" return a new instance allowing for one or several attributes to be updated
-
-	==> useful for subclassing, as the input arguments change in subclasses
-	"""
-	for k in self._attributes:
-	    if k not in kwargs:
-		kwargs[k] = getattr(self, k)
-
-	return self._constructor(values, **kwargs)
 
     @classmethod
     def _constructor(cls, values, dtype=None, copy=False):
@@ -93,7 +77,7 @@ class BaseArray(object):
 	""" slice array and return the new object with correct labels
 	"""
 	val = self.values[item]
-	return self._updated(val)
+	return self._constructor(values=val)
 
     def __setitem__(self, item, val):
 	""" set item: numpy method
@@ -110,7 +94,7 @@ class BaseArray(object):
 	""" remove singleton dimensions
 	"""
 	res = self.values.squeeze(axis=axis)
-	return self._updated(res)
+	return self._constructor(values=res)
 
     #
     # BELOW, PURE LAYOUT FOR NUMPY TRANSFORMS
@@ -138,7 +122,7 @@ class BaseArray(object):
 	return self.values.__array__
 
     def copy(self):
-	return self._updated(self.values.copy())
+	return self._constructor(self.values.copy())
 
     def apply(self, funcname, axis=None):
 	""" apply along-axis numpy method
@@ -147,7 +131,7 @@ class BaseArray(object):
 	values = getattr(self.values, funcname)(axis=axis) 
 
 	if isinstance(values, np.ndarray):
-	    return self._updated(values)
+	    return self._constructor(values)
 
 	# just return the scalar
 	else:
@@ -157,13 +141,13 @@ class BaseArray(object):
 	""" apply along-axis numpy method
 	"""
 	res = self.values.take(indices, axis=axis)
-	return self._updated(res)
+	return self._constructor(res)
 
     def transpose(self, axes=None):
 	""" apply along-axis numpy method
 	"""
 	res = self.values.take(indices, axes)
-	return self._updated(res)
+	return self._constructor(res)
 
     #
     # Add numpy transforms
@@ -210,7 +194,7 @@ class BaseArray(object):
 	else:
 	    res = func(self.values, other)
 
-	return self._updated(res)
+	return self._constructor(res)
 
     def __add__(self, other): return self._operation(np.add, other)
 
