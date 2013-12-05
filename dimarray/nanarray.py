@@ -29,7 +29,7 @@ import numpy as np
 import copy
 from functools import partial
 
-from shared import operation as _operation
+from tools import _operation, _NumpyDesc
 import basearray as ba
 
 
@@ -46,11 +46,10 @@ class NanArray(ba.BaseArray):
 	self.values = np.array(values, dtype=dtype, copy=copy)
 
     @classmethod
-    def _constructor(cls, values, names=None, dtype=None, copy=False):
-	""" all transformations/operations call _constructor
-	set default names to None
+    def _constructor(cls, values, dtype=None, copy=False):
+	""" 
 	"""
-	return NanArray(values=values, names=names, dtype=dtype, copy=copy)
+	return NanArray(values=values, dtype=dtype, copy=copy)
 
     #
     # Operations on array that require dealing with NaNs
@@ -79,8 +78,8 @@ class NanArray(ba.BaseArray):
 	    res.fill(np.na)
 	return res
 
-    def apply(self, funcname, axis=0, skipna=True):
-	""" apply `func` along an axis
+    def apply(self, funcname, skipna=True, args=(), **kwargs):
+	""" apply numpy's `func` and return a BaseArray instance
 
 	Generic description:
 
@@ -89,24 +88,19 @@ class NanArray(ba.BaseArray):
 	    axis   : int or str (the axis label), or None [default 0] 
 	    skipna : if True, skip the NaNs in the computation
 
+
 	return:
 	    result : from the same class (if axis is not None, else np.ndarray)
 
 	Examples:
 	--------
-
-	>>> a.mean(axis='lon')
-	dimensions(5,): lat
-	array([ 2.5,  3.5,  4.5,  5.5,  6.5])
-
-	Default to axis=0 (here "lat")
-
-	>>> a.mean()
-	dimensions(6,): lon
-	array([ 2.,  3.,  4.,  5.,  6.,  7.])
-
-	>>> a.mean(axis=None)
-	4.5
+	>>> b = a.copy()
+	>>> b[2] = 0.
+	>>> res = b.sum()
+	>>> b[2] = np.nan
+	>>> b.sum()
+	>>> b == c
+	True
 	"""
 	values = self._ma(skipna)
 
@@ -117,16 +111,61 @@ class NanArray(ba.BaseArray):
 	if axis is None:
 	    return method()
 
-	axis = self._get_axis_idx(axis) 
 	res_ma = method(axis=axis)
 	res = self._array(res_ma) # fill nans back in if necessary
 
-	if funcname.startswith("cum"):
-	    names = self.names
-	else:
-	    names = self._get_reduced_names(axis) # name after reduction
+	return self._constructor(res)
+	assert type(funcname) is str, "can only provide function as a string"
 
-	return self._constructor(res, names=names)
+	# retrieve bound method
+	method = getattr(self.values, funcname)
+
+	# use None as default values otherwise this would not work !
+	# as axis can be in *args or **kwargs
+	# or one would need to inspect method's argument etc...
+
+
+	## return a float if axis is None, just as numpy does
+	#if 'axis' in kwargs and kwargs['axis'] is None:
+	#    kwargs['axis'] = 0 # default values
+
+	values = method(*args, **kwargs)
+
+	# check wether the result is a scalar, if yes, export
+	values, test_scalar = _check_scalar(values)
+
+	if test_scalar:
+	    return values
+	else:
+	    return self._constructor(values)
+
+    #
+    # Add numpy transforms
+    #
+    mean = _NumpyDesc("apply", "mean")
+    median = _NumpyDesc("apply", "median")
+    sum  = _NumpyDesc("apply", "sum")
+    diff = _NumpyDesc("apply", "diff")
+    prod = _NumpyDesc("apply", "prod")
+    min = _NumpyDesc("apply", "min")
+    max = _NumpyDesc("apply", "max")
+    ptp = _NumpyDesc("apply", "ptp")
+    cumsum = _NumpyDesc("apply", "cumsum")
+    cumprod = _NumpyDesc("apply", "cumprod")
+
+    take = _NumpyDesc("apply", "take")
+
+    def take(self, indices, axis=0):
+	""" apply along-axis numpy method
+	"""
+	res = self.values.take(indices, axis=axis)
+	return self._constructor(res)
+
+    def transpose(self, axes=None):
+	""" apply along-axis numpy method
+	"""
+	res = self.values.take(indices, axes)
+	return self._constructor(res)
 
 array = NanArray # as convenience function
 

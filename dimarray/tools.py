@@ -1,6 +1,39 @@
 """ tools shared by the different variations of a labelled array
 """
 import numpy as np
+from functools import partial
+
+#
+# Technicalities to apply numpy methods
+#
+class _NumpyDesc(object):
+    """ to apply a numpy function which reduces an axis
+    """
+    def __init__(self, apply_method, numpy_method, **kwargs):
+	"""
+	apply_method: as the string name of the bound method to consider
+        numpy_method: as a string name of the numpy function to apply
+	**kwargs    : default values for keyword arguments to numpy_method
+	"""
+	assert type(apply_method) is str, "can only provide method name as a string"
+	assert type(numpy_method) is str, "can only provide method name as a string"
+	self.numpy_method = numpy_method
+	self.apply_method = apply_method
+	self.kwargs = kwargs
+
+    def __get__(self, obj, cls=None):
+	"""
+	"""
+	# convert self.apply to an actual function
+	apply_method = getattr(obj, self.apply_method) 
+	newmethod = partial(apply_method, self.numpy_method, **self.kwargs)
+	#newmethod = deco_numpy(apply_method, self.numpy_method, **self.kwargs)
+
+	# Now replace the doc string with "apply" docstring
+	newmethod.__doc__ = apply_method.__doc__.replace("`func`","`"+self.numpy_method+"`")
+
+	return newmethod
+
 
 def _operation(func, o1, o2, align=True, order=None):
     """ operation on LaxArray objects
@@ -118,3 +151,36 @@ def _slice_to_indices(slice_, n, include_last=False, bounds=None):
     indices = idx[slice_]
 
     return indices
+
+#def deco_numpy(apply_method, numpy_method, **kwargs):
+#    """ predefine arguments for apply
+#
+#    input:
+#	apply_method: method to "decorate" (which is BaseArray.apply)
+#	numpy_method: first argument to apply_method
+#	**kwargs    : default arguments for the numpy method
+#    output:
+#	decorated apply_method
+#
+#    NOTE: could also add *args parameter if the need comes, here not included
+#          to reduce confusion
+#    
+#    decorator similar to partial, but expand args to *args
+#
+#    Examples input:
+#	function: apply(fun, axis=0, skipna=True, args=(), **kwargs)
+#
+#    Corresponding output
+#	function: apply(*args, axis=0, skipna=True, fun=fun, **kwargs)
+#    """
+#    def newfun(*varargs, **kwds):
+#	""" the function actually called when doing, e.g. a.mean()
+#	""" 
+#	kwargs.update(kwds)
+#	# here is the trick: pass args to args parameter instead of *args
+#	return apply_method(numpy_method, args=varargs, **kwargs)
+#
+#    # Now replace the doc string with "apply" docstring
+#    newfun.__doc__ = apply_method.__doc__.replace("`func`","`"+numpy_method+"`")
+#
+#    return newfun

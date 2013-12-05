@@ -31,33 +31,8 @@ DimArray : add values and metadata to each axis and to the array
 """
 import numpy as np
 import copy
-from functools import partial
-from shared import _slice_to_indices, _convert_dtype, _operation, _check_scalar
+from tools import _slice_to_indices, _convert_dtype, _operation, _check_scalar, _NumpyDesc
 
-#
-# Descriptors to add functions following same patterns
-#
-class _Desc(object):
-    """ to apply a numpy function which reduces an axis
-    """
-    def __init__(self, apply_method, numpy_method):
-	"""
-	apply_method: as the string name of the bound method to consider
-        numpy_method: as a string name of the numpy function to apply
-	"""
-	assert type(apply_method) is str, "can only provide method name as a string"
-	assert type(numpy_method) is str, "can only provide method name as a string"
-	self.numpy_method = numpy_method
-	self.apply_method = apply_method
-
-    def __get__(self, obj, cls=None):
-	"""
-	"""
-	# convert self.apply to an actual function
-	apply_method = getattr(obj, self.apply_method) 
-	newmethod = partial(apply_method, self.numpy_method)
-	newmethod.__doc__ = apply_method.__doc__.replace("`func`","`"+self.numpy_method+"`")
-	return newmethod
 
 class BaseArray(object):
     """ Contains a numpy array with named axes, and treat nans as missing values
@@ -82,6 +57,11 @@ class BaseArray(object):
     # class-attributes to determine how a slice should work
     _check_bounds = False
     _include_last = False
+    
+    # list of attributes of the class (in addition of `values`) required for 
+    # initialization (except for copy), reduced to the strict minimum (see
+    # _updated method)
+    _attributes = ()
 
     def __init__(self, values, dtype=None, copy=False):
 	""" instantiate a ndarray with values: note values must be numpy array
@@ -90,6 +70,17 @@ class BaseArray(object):
 	dtype, copy: passed to np.array 
 	"""
 	self.values = np.array(values, dtype=dtype, copy=copy)
+
+    def _updated(self, values, **kwargs):
+	""" return a new instance allowing for one or several attributes to be updated
+
+	==> useful for subclassing, as the input arguments change in subclasses
+	"""
+	for k in self._attributes:
+	    if k not in kwargs:
+		kwargs[k] = getattr(self, k)
+
+	return self._constructor(values, **kwargs)
 
     @classmethod
     def _constructor(cls, values, dtype=None, copy=False):
@@ -102,7 +93,7 @@ class BaseArray(object):
 	""" slice array and return the new object with correct labels
 	"""
 	val = self.values[item]
-	return self._constructor(val)
+	return self._updated(val)
 
     def __setitem__(self, item, val):
 	""" set item: numpy method
@@ -119,7 +110,7 @@ class BaseArray(object):
 	""" remove singleton dimensions
 	"""
 	res = self.values.squeeze(axis=axis)
-	return self._constructor(res)
+	return self._updated(res)
 
     #
     # BELOW, PURE LAYOUT FOR NUMPY TRANSFORMS
@@ -147,52 +138,46 @@ class BaseArray(object):
 	return self.values.__array__
 
     def copy(self):
-	return self._constructor(self.values.copy(), names=copy.copy(self.names))
+	return self._updated(self.values.copy())
 
-    def apply(self, funcname, *args, **kwargs):
-	""" apply numpy's `func` and return a BaseArray instance
+    def apply(self, funcname, axis=None):
+	""" apply along-axis numpy method
 	"""
-	assert type(funcname) is str, "can only provide function as a string"
+	# call numpy method
+	values = getattr(self.values, funcname)(axis=axis) 
 
-	# retrieve bound method
-	method = getattr(self.values, funcname)
+	if isinstance(values, np.ndarray):
+	    return self._updated(values)
 
-	# use None as default values otherwise this would not work !
-	# as axis can be in *args or **kwargs
-	# or one would need to inspect method's argument etc...
-
-
-	## return a float if axis is None, just as numpy does
-	#if 'axis' in kwargs and kwargs['axis'] is None:
-	#    kwargs['axis'] = 0 # default values
-
-	values = method(*args, **kwargs)
-
-	# check wether the result is a scalar, if yes, export
-	values, test_scalar = _check_scalar(values)
-
-	if test_scalar:
-	    return values
+	# just return the scalar
 	else:
-	    return self._constructor(values)
+	    return values
+
+    def take(self, indices, axis=0):
+	""" apply along-axis numpy method
+	"""
+	res = self.values.take(indices, axis=axis)
+	return self._updated(res)
+
+    def transpose(self, axes=None):
+	""" apply along-axis numpy method
+	"""
+	res = self.values.take(indices, axes)
+	return self._updated(res)
 
     #
     # Add numpy transforms
     #
-    mean = _Desc("apply", "mean")
-    median = _Desc("apply", "median")
-    sum  = _Desc("apply", "sum")
-    diff = _Desc("apply", "diff")
-    prod = _Desc("apply", "prod")
-    min = _Desc("apply", "min")
-    max = _Desc("apply", "max")
-    ptp = _Desc("apply", "ptp")
-    cumsum = _Desc("apply", "cumsum")
-    cumprod = _Desc("apply", "cumprod")
-    take = _Desc("apply", "take")
-    compress = _Desc("apply", "compress")
-    clip = _Desc("apply", "clip")
-    transpose = _Desc("apply", "transpose")
+    mean = _NumpyDesc("apply", "mean")
+    median = _NumpyDesc("apply", "median")
+    sum  = _NumpyDesc("apply", "sum")
+    diff = _NumpyDesc("apply", "diff")
+    prod = _NumpyDesc("apply", "prod")
+    min = _NumpyDesc("apply", "min")
+    max = _NumpyDesc("apply", "max")
+    ptp = _NumpyDesc("apply", "ptp")
+    cumsum = _NumpyDesc("apply", "cumsum")
+    cumprod = _NumpyDesc("apply", "cumprod")
 
     @property
     def T(self):
@@ -205,12 +190,11 @@ class BaseArray(object):
 	""" make an operation
 
 	Just for testing:
-	>>> a == a
-	True
-	>>> b = a[:2,:2]
 	>>> b
 	array([[ 0.,  1.],
 	       [ 1.,  2.]])
+	>>> b == b
+	True
 	>>> b + 2
 	array([[ 2.,  3.],
 	       [ 3.,  4.]])
@@ -226,7 +210,7 @@ class BaseArray(object):
 	else:
 	    res = func(self.values, other)
 
-	return self._constructor(res)
+	return self._updated(res)
 
     def __add__(self, other): return self._operation(np.add, other)
 
@@ -398,6 +382,7 @@ def _load_test_glob():
 
     a = get_testdata()
     values = a.values
+    b = a[:2,:2] # small version
 
     return locals()
 
