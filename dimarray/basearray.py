@@ -15,8 +15,8 @@ BaseArray => NanArray => LaxArray => DimArray
 
 BaseArray: just emulate a numpy array
            + introduce the xs method (only one axis)
-           + axis=0 by default (except in squeeze)
 	   + `==` operator returns a boolean and not an array
+	   recent update: axis is None by default like in numpy
 
 NanArray : treats nans as missing values
 
@@ -32,7 +32,7 @@ DimArray : add values and metadata to each axis and to the array
 import numpy as np
 import copy
 from functools import partial
-from shared import slice_to_indices as _slice_to_indices, convert_dtype as _convert_dtype
+from shared import _slice_to_indices, _convert_dtype, _operation, _check_scalar
 
 #
 # Descriptors to add functions following same patterns
@@ -157,21 +157,23 @@ class BaseArray(object):
 	# retrieve bound method
 	method = getattr(self.values, funcname)
 
-	if axis is kwargs:
+	# use None as default values otherwise this would not work !
+	# as axis can be in *args or **kwargs
+	# or one would need to inspect method's argument etc...
 
-	# return a float if axis is None, just as numpy does
-	if 'axis' in kwargs and kwargs['axis'] is None:
-	if axis is None:
-	    return method()
+
+	## return a float if axis is None, just as numpy does
+	#if 'axis' in kwargs and kwargs['axis'] is None:
+	#    kwargs['axis'] = 0 # default values
 
 	values = method(*args, **kwargs)
 
 	# check wether the result is a scalar, if yes, export
-	values, test_scalar = values._check_scalar()
+	values, test_scalar = _check_scalar(values)
 
 	if test_scalar:
 	    return values
-	else
+	else:
 	    return self._constructor(values)
 
     #
@@ -201,6 +203,23 @@ class BaseArray(object):
     #
     def _operation(self, func, other):
 	""" make an operation
+
+	Just for testing:
+	>>> a == a
+	True
+	>>> b = a[:2,:2]
+	>>> b
+	array([[ 0.,  1.],
+	       [ 1.,  2.]])
+	>>> b + 2
+	array([[ 2.,  3.],
+	       [ 3.,  4.]])
+	>>> b+b == b*2
+	True
+	>>> b*b == b**2
+	True
+	>>> (b - b.values) == b - b
+	True
 	"""
 	if isinstance(other, BaseArray):
 	    res = func(self.values, other.values)
@@ -319,21 +338,9 @@ class BaseArray(object):
 
 	# If result is scalar, like, convert to scalar unless otherwise specified 
 	if _scalar_conversion:
-	    res, test = res._check_scalar()
+	    res, test = _check_scalar(res)
 
 	return res
-
-    def _check_scalar(self):
-	""" export to python scalar if size == 1
-	"""
-	if isinstance(self, BaseArray) and self.size == 1:
-	    type_ = _convert_dtype(self.dtype)
-	    res = type_(self.values)
-	    scalar = True
-	else:
-	    res = self
-	    scalar = False
-	return res, scalar
 
     #
     # for a base array, no way to do multidimensional slicing
@@ -386,7 +393,6 @@ def _load_test_glob():
     """ return globs parameter for doctest.testmod
     """
     # also go into locals()
-    import doctest
     import numpy as np
     import basearray as ba
 
@@ -395,15 +401,15 @@ def _load_test_glob():
 
     return locals()
 
-def test_doc(raise_on_error=False, globs={}, **kwargs):
+def test_doc(raise_on_error=False, optionflags=1, globs={}, **kwargs):
     import doctest
     import basearray as ba
+    doctest.ELLIPSIS = True  # understands ...
 
     kwargs['globs'] = _load_test_glob()
 
-    return doctest.testmod(ba, raise_on_error=raise_on_error, **kwargs)
+    return doctest.testmod(ba, raise_on_error=raise_on_error, optionflags=optionflags,**kwargs)
 
 
 if __name__ == "__main__":
     test_doc()
-    #debug_readme()

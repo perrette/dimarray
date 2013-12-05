@@ -2,7 +2,7 @@
 """
 import numpy as np
 
-def operation(func, o1, o2, align=True, order=None):
+def _operation(func, o1, o2, align=True, order=None):
     """ operation on LaxArray objects
 
     input:
@@ -59,7 +59,7 @@ def _unique(nm):
 	    new.append(k)
     return new
 
-def convert_dtype(dtype):
+def _convert_dtype(dtype):
     """ convert a python type
     """
     if dtype is np.dtype(int):
@@ -71,7 +71,23 @@ def convert_dtype(dtype):
     return type_
 
 
-def slice_to_indices(slice_, n, include_last=False, bounds=None):
+def _check_scalar(values):
+    """ export to python scalar if size == 1
+    """
+    avalues = np.array(values, copy=False)
+    
+    if avalues.size == 1:
+	type_ = _convert_dtype(avalues.dtype)
+	result = type_(avalues)
+	test_scalar = True
+    else:
+	result = values
+	test_scalar = False
+    return result, test_scalar
+
+
+
+def _slice_to_indices(slice_, n, include_last=False, bounds=None):
     """ convert a slice into indices for an array or list of size n
 
     input:
