@@ -1,5 +1,6 @@
 """ tools shared by the different variations of a labelled array
 """
+import numpy as np
 
 def operation(func, o1, o2, align=True, order=None):
     """ operation on LaxArray objects
@@ -85,7 +86,7 @@ def slice_to_indices(slice_, n, include_last=False, bounds=None):
     if bounds is not None:
 	raise NotImplementedError("bound checking not yet implemented !")
 
-    if _include_last:
+    if include_last:
 
 	# might need more checks
 	if type(slice_.stop) is int:

@@ -584,5 +584,5 @@ def test_readme(optionflags=1,**kwargs):
 
 
 if __name__ == "__main__":
-    debug_doc()
-    debug_readme()
+    test_doc()
+    test_readme()

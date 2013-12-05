@@ -22,7 +22,7 @@ dimarray: add values and metadata to each axis and to the array
 import numpy as np
 import copy
 from functools import partial
-from shared import slice_to_indices as _slice_to_indices
+from shared import slice_to_indices as _slice_to_indices, convert_dtype as _convert_dtype
 
 #
 # Descriptors to add functions following same patterns
@@ -86,6 +86,12 @@ class BaseArray(object):
 	""" set item: numpy method
 	"""
 	self.values[item] = val
+
+    def __repr__(self):
+	""" screen printing
+	"""
+	return repr(self.values)
+
 
     def squeeze(self, axis=None):
 	""" remove singleton dimensions
@@ -231,7 +237,7 @@ class BaseArray(object):
 	else:
 	    res = func(self.values, other)
 
-	return self._constructor(values)
+	return self._constructor(res)
 
     def __add__(self, other): return self._operation(np.add, other)
 
@@ -252,14 +258,77 @@ class BaseArray(object):
     def __int__(self):  return int(self.values)
 
 
+
     #
-    # Here the add-on: an xs method
+    # ADD-ON TO NUMPY: AN XS METHOD (along-axis only for basearray)
     #
 
-    def _xs_axis(self, idx, axis=0, keepdims=False, _scalar_conversion=True):
-	""" take a slice/cross-section along one axis
+    def _xs_axis(self, idx, axis=0, _keepdims=False, _scalar_conversion=True, _include_last=None, _check_bounds=None):
+	""" Take a slice/cross-section along one axis
 
-	_scalar_conversion [True], if True, return a scalar whenever size == 1
+	input:
+	    idx     : integer, list, slice or tuple
+	    axis    : axis to slice
+	    _keepdims: [False], for integer slicing only: keep initial dimensions
+
+	    _scalar_conversion [True], if True, return a scalar whenever size == 1
+
+	output:
+	    instance of BaseArray or scalar
+
+	Various behaviours based on idx type:
+
+	- int  :  slice along axis, squeeze it out, may return a scalar 
+	- list :  same as `take`: sample several int slices, same shape as before =
+	- tuple:  alias for slicing, but performing on individual axes as well
+
+		slice_ = slice(*tuple), where slice_ has parameters start, stop, step 
+		(see python built-in slice documentation)
+		a.xs((start, stop, step), axis=0) :: a[start:stop:step]
+		
+		Note that similarly to numpy, bounds are not checked when performing slicing, beware !
+		TO DO: class-wide parameters _check_bounds and _include_last 
+
+	Examples:
+	--------
+	>>> a
+	array([[ 0.,  1.,  2.,  3.,  4.,  5.],
+	       [ 1.,  2.,  3.,  4.,  5.,  6.],
+	       [ 2.,  3.,  4.,  5.,  6.,  7.],
+	       [ 3.,  4.,  5.,  6.,  7.,  8.],
+	       [ 4.,  5.,  6.,  7.,  8.,  9.]])
+
+	Equivalent expressions to get the 3rd line:
+
+	>>> a.xs(3, axis=0)   
+	array([ 3.,  4.,  5.,  6.,  7.,  8.])
+
+	Take several columns
+
+	>>> a.xs([0,3,4], axis=1)  # as a list
+	array([[ 0.,  3.,  4.],
+	       [ 1.,  4.,  5.],
+	       [ 2.,  5.,  6.],
+	       [ 3.,  6.,  7.],
+	       [ 4.,  7.,  8.]])
+
+	>>> a.xs((3,5), axis=1)	  # as a tuple
+	array([[ 3.,  4.],
+	       [ 4.,  5.],
+	       [ 5.,  6.],
+	       [ 6.,  7.],
+	       [ 7.,  8.]])
+
+	>>> a.xs((3,5), axis=1) == a[:,3:5]  # similar to
+	True
+
+	>>> a.xs((0,5,2), axis=1)	# as a tuple step > 1
+        array([[ 0.,  2.,  4.],
+               [ 1.,  3.,  5.],
+               [ 2.,  4.,  6.],
+               [ 3.,  5.,  7.],
+               [ 4.,  6.,  8.]])
+
 	"""
 	if type(idx) is list:
 	    res = self.take(idx, axis=axis)
@@ -268,14 +337,11 @@ class BaseArray(object):
 	    res = self.take([idx], axis=axis)
 
 	    # if collapsed axis, drop the name
-	    if not keepdims:
+	    if not _keepdims:
 		res = res.squeeze(axis=axis)
 
 	elif type(idx) is tuple:
-	    res = self._take_tuple(idx, axis=axis)
-
-	elif type(idx) is slice:
-	    res = self._take_slice(idx, axis=axis)
+	    res = self._take_tuple(idx, axis=axis, check_bounds=_check_bounds, include_last=_include_last)
 
 	else:
 	    print idx
@@ -284,12 +350,18 @@ class BaseArray(object):
 
 	# If result is scalar, like, convert to scalar unless otherwise specified 
 	if _scalar_conversion:
-	    if isinstance(self, BaseArray) and self.size == 1:
-		type_ = _convert_dtype(self.dtype)
-		res = type_(self.values)
-	    else:
-		res = self
+	    res = res._check_scalar()
 
+	return res
+
+    def _check_scalar(self):
+	""" export to python scalar if size == 1
+	"""
+	if isinstance(self, BaseArray) and self.size == 1:
+	    type_ = _convert_dtype(self.dtype)
+	    res = type_(self.values)
+	else:
+	    res = self
 	return res
 
     #
@@ -297,10 +369,18 @@ class BaseArray(object):
     #
     xs = _xs_axis
 
-    def _take_slice(self, slice_, axis=0, check_bounds=None, include_last=None):
+    def _take_tuple(self, t, axis=0, check_bounds=None, include_last=None):
 	""" similar to take, but for a `slice` instead of indices
+
+	input:
+	    t: tuple ==> slice_ = slice(*t)
+	       (see python built-in slice documentation)
+
+	    check_bounds = check min/max bound (TO DO !)
+	    include_last = include last element (TO DO!)
 	"""
-	assert type(slice_) is slice, "only accept slice !"
+	assert type(t) is tuple, "only accept tuple !"
+	slice_ = slice(*t)
 
 	# use default class values if not provided
 	if check_bounds is None:
@@ -311,20 +391,48 @@ class BaseArray(object):
 	if check_bounds:
 	    raise NotImplementedError("bound checking not yet implemented !")
 
-	indices = _slice_to_indices(slice_, include_last=include_last)
+	indices = _slice_to_indices(slice_, self.shape[axis], include_last=include_last)
 	return self.take(indices, axis=axis)
-
-    def _take_tuple(self, t, axis=0, **kwargs):
-	""" just to simplify syntax, shortcut for a slice
-
-	**kwargs: passed to _take_slice
-	"""
-	assert type(t) is tuple, "only accept tuple !"
-	slice_ = slice(*t)
-	return self._take_slice(slice_, axis=axis, **kwargs)
 
 
 array = BaseArray # as convenience function
 
+# 
+# For testing
+#
+# CHECK README FORMATTING python setup.py --long-description | rst2html.py > output.html
+
+def get_testdata():
+    # basic dataset used for testing
+    lat = np.arange(5)
+    lon = np.arange(6)
+    lon2, lat2 = np.meshgrid(lon, lat)
+    values = np.array(lon2+lat2, dtype=float) # use floats for the sake of the example
+    a = BaseArray(values)
+    return a
+
+def _load_test_glob():
+    """ return globs parameter for doctest.testmod
+    """
+    # also go into locals()
+    import doctest
+    import numpy as np
+    import basearray as ba
+
+    a = get_testdata()
+    values = a.values
+
+    return locals()
+
+def test_doc(raise_on_error=False, globs={}, **kwargs):
+    import doctest
+    import basearray as ba
+
+    kwargs['globs'] = _load_test_glob()
+
+    return doctest.testmod(ba, raise_on_error=raise_on_error, **kwargs)
+
+
 if __name__ == "__main__":
-    pass
+    test_doc()
+    #debug_readme()
