@@ -11,13 +11,23 @@ Behaviour:
 Full Genealogy:
 ---------------
 
-basearray => nanarray => laxarray => dimarray
+BaseArray => NanArray => LaxArray => DimArray
 
-basearry: just emulate a numpy array
-nanarray: treats nans as missing values
-laxarray: add a name to each dimension 
-    can give an axis name to `axis=`
-dimarray: add values and metadata to each axis and to the array
+BaseArray: just emulate a numpy array
+           + introduce the xs method (only one axis)
+           + axis=0 by default (except in squeeze)
+	   + `==` operator returns a boolean and not an array
+
+NanArray : treats nans as missing values
+
+LaxArray : add a name to each dimension 
+	   + can give an axis name to `axis=`
+	   + multidimensional slicing
+	   + recursive `endomorphic` transformation on subsets of the whole space
+
+DimArray : add values and metadata to each axis and to the array
+	   + netCDF I/O
+
 """
 import numpy as np
 import copy
@@ -30,31 +40,43 @@ from shared import slice_to_indices as _slice_to_indices, convert_dtype as _conv
 class _Desc(object):
     """ to apply a numpy function which reduces an axis
     """
-    def __init__(self, apply, func_name):
+    def __init__(self, apply_method, numpy_method):
 	"""
-	apply: `apply` method 
-		as a function: 
-		as a str     : will look for bound method in the described object, useful for subclassing
-        func_name   : name of the function to apply
+	apply_method: as the string name of the bound method to consider
+        numpy_method: as a string name of the numpy function to apply
 	"""
-	self.func_name = func_name
-	self.apply = apply
+	assert type(apply_method) is str, "can only provide method name as a string"
+	assert type(numpy_method) is str, "can only provide method name as a string"
+	self.numpy_method = numpy_method
+	self.apply_method = apply_method
 
     def __get__(self, obj, cls=None):
 	"""
 	"""
 	# convert self.apply to an actual function
-	if self.apply is str:
-	    apply = getattr(obj, self.apply) 
-	else:
-	    apply = self.apply
-
-	newmethod = partial(apply, obj, self.func_name)
-	newmethod.__doc__ = apply.__doc__.replace("`func`","`"+self.func_name+"`")
+	apply_method = getattr(obj, self.apply_method) 
+	newmethod = partial(apply_method, self.numpy_method)
+	newmethod.__doc__ = apply_method.__doc__.replace("`func`","`"+self.numpy_method+"`")
 	return newmethod
 
 class BaseArray(object):
     """ Contains a numpy array with named axes, and treat nans as missing values
+
+    As a difference to numpy, the default behavious for an along-axis transform
+    if to take `axis=0` instead of None. 
+    
+    This behaviour is experimental and may change is the future to be more 
+    consistent with numpy arrays.
+
+    The transforms return a BaseArray, except when `axis` is None, in which case 
+    they will return a numpy array. 
+
+    If a numpy like behaviour is desired (with None as default), it is always 
+    possible to call the underlying numpy object.
+
+    a.mean(axis=None) :: a.values.mean()
+
+    Additionally, a new `xs` method is introduced, similar to `take`
     """
 
     # class-attributes to determine how a slice should work
@@ -127,20 +149,30 @@ class BaseArray(object):
     def copy(self):
 	return self._constructor(self.values.copy(), names=copy.copy(self.names))
 
-    def apply(self, funcname, axis=0):
-	""" apply `func` along an axis
+    def apply(self, funcname, *args, **kwargs):
+	""" apply numpy's `func` and return a BaseArray instance
 	"""
+	assert type(funcname) is str, "can only provide function as a string"
 
-	# retrive bound method
+	# retrieve bound method
 	method = getattr(self.values, funcname)
 
+	if axis is kwargs:
+
 	# return a float if axis is None, just as numpy does
+	if 'axis' in kwargs and kwargs['axis'] is None:
 	if axis is None:
 	    return method()
 
-	values = method(axis=axis)
+	values = method(*args, **kwargs)
 
-	return self._constructor(values)
+	# check wether the result is a scalar, if yes, export
+	values, test_scalar = values._check_scalar()
+
+	if test_scalar:
+	    return values
+	else
+	    return self._constructor(values)
 
     #
     # Add numpy transforms
@@ -155,72 +187,10 @@ class BaseArray(object):
     ptp = _Desc("apply", "ptp")
     cumsum = _Desc("apply", "cumsum")
     cumprod = _Desc("apply", "cumprod")
-
-    #
-    # Lower-level numpy functions so select a subset of the array
-    #
-
-    def take(self, indices, axis=0, out=None):
-	""" Analogous to numpy's `take` method, but allow axis label
-	in addition to axis index.
-
-	By contrast to numpy, default value for axis is 0 because axis names
-	
-	input:
-	    indices: array-like
-	    axis   : axis label or integer index or None
-	
-	output:
-	    BaseArray (if axis is not None, else numpy array)
-	"""
-	if axis is None:
-	    return self.values.take(indices, out=out)
-
-	res = self.values.take(indices, axis=axis, out=out)
-	return self._constructor(res)
-
-    def clip(self, a_min, a_max, out=None):
-	""" analogous to numpy's `clip` method
-	"""
-	res = self.values.clip(a_min=a_min, a_max=a_max, out=out)
-	return self._constructor(res)
-
-    def compress(self, condition, axis=0, out=None):
-	""" logical indexing along an axis (analogous to numpy)
-	"""
-	if axis is None: 
-	    return self.values.compress(condition, out=out)
-
-	axis = self._get_axis_idx(axis)
-	res = self.values.compress(condition, axis=axis, out=out) # does not reduce
-	return self._constructor(res)
-
-    def transpose(self, axes=None):
-	""" analogous to numpy's transpose
-
-	input:
-	    axes: new axes order, can be a list of str names or of integers
-	"""
-	if axes is None:
-	    # do nothing for 1-D arrays (like numpy)
-	    if self.ndim == 1:
-		return self
-
-	    assert self.ndim == 2, "transpose only 2D unless axes is provided"
-	    axes = 1,0
-
-	# re-arrange array
-	newvalues = self.values.transpose(axes)
-
-	# re-arrange names
-	newnames = tuple([self.names[i] for i in axes])
-
-	if inplace:
-	    self.values = newvalues
-	    self.names = names
-
-	else:
-	    return self._constructor(newvalues, names=newnames)
+    take = _Desc("apply", "take")
+    compress = _Desc("apply", "compress")
+    clip = _Desc("apply", "clip")
+    transpose = _Desc("apply", "transpose")
 
     @property
     def T(self):
@@ -256,7 +226,6 @@ class BaseArray(object):
 
     def __float__(self):  return float(self.values)
     def __int__(self):  return int(self.values)
-
 
 
     #
@@ -350,7 +319,7 @@ class BaseArray(object):
 
 	# If result is scalar, like, convert to scalar unless otherwise specified 
 	if _scalar_conversion:
-	    res = res._check_scalar()
+	    res, test = res._check_scalar()
 
 	return res
 
@@ -360,9 +329,11 @@ class BaseArray(object):
 	if isinstance(self, BaseArray) and self.size == 1:
 	    type_ = _convert_dtype(self.dtype)
 	    res = type_(self.values)
+	    scalar = True
 	else:
 	    res = self
-	return res
+	    scalar = False
+	return res, scalar
 
     #
     # for a base array, no way to do multidimensional slicing
