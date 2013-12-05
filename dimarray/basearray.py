@@ -33,7 +33,6 @@ import numpy as np
 import copy
 from tools import _slice_to_indices, _convert_dtype, _operation, _check_scalar, _NumpyDesc
 
-
 class BaseArray(object):
     """ Contains a numpy array with named axes, and treat nans as missing values
 
@@ -58,6 +57,8 @@ class BaseArray(object):
     _check_bounds = False
     _include_last = False
 
+    _subok = True # if True, will return a subclass when possible, else, will return a basearray
+
     def __init__(self, values, dtype=None, copy=False):
 	""" instantiate a ndarray with values: note values must be numpy array
 
@@ -67,11 +68,18 @@ class BaseArray(object):
 	self.values = np.array(values, dtype=dtype, copy=copy)
 
     @classmethod
-    def _constructor(cls, values, dtype=None, copy=False):
-	""" constructor method, by default a BaseArray, but it can be changed 
-	to something else by subclassing 
+    def _constructor(cls, values):
+	""" just used for subclassing
 	"""
-	return BaseArray(values=values, dtype=dtype, copy=copy)
+	# try returning subclass
+	if cls._subok:
+	    try:
+		return cls(values)
+	    except:
+		print "returns BaseArray !"
+		pass
+
+	return BaseArray(values)
 
     def __getitem__(self, item):
 	""" slice array and return the new object with correct labels
@@ -87,8 +95,8 @@ class BaseArray(object):
     def __repr__(self):
 	""" screen printing
 	"""
-	return repr(self.values)
-
+	header = "<BaseArray>"
+	return "\n".join([header,repr(self.values)])
 
     def squeeze(self, axis=None):
 	""" remove singleton dimensions
@@ -127,6 +135,8 @@ class BaseArray(object):
     def apply(self, funcname, axis=None):
 	""" apply along-axis numpy method
 	"""
+	assert type(funcname) is str, "can only provide function as a string"
+
 	# call numpy method
 	values = getattr(self.values, funcname)(axis=axis) 
 
@@ -175,11 +185,13 @@ class BaseArray(object):
 
 	Just for testing:
 	>>> b
+	<BaseArray>
 	array([[ 0.,  1.],
 	       [ 1.,  2.]])
 	>>> b == b
 	True
 	>>> b + 2
+	<BaseArray>
 	array([[ 2.,  3.],
 	       [ 3.,  4.]])
 	>>> b+b == b*2
@@ -248,6 +260,7 @@ class BaseArray(object):
 	Examples:
 	--------
 	>>> a
+	<BaseArray>
 	array([[ 0.,  1.,  2.,  3.,  4.,  5.],
 	       [ 1.,  2.,  3.,  4.,  5.,  6.],
 	       [ 2.,  3.,  4.,  5.,  6.,  7.],
@@ -257,11 +270,13 @@ class BaseArray(object):
 	Equivalent expressions to get the 3rd line:
 
 	>>> a.xs(3, axis=0)   
+	<BaseArray>
 	array([ 3.,  4.,  5.,  6.,  7.,  8.])
 
 	Take several columns
 
 	>>> a.xs([0,3,4], axis=1)  # as a list
+	<BaseArray>
 	array([[ 0.,  3.,  4.],
 	       [ 1.,  4.,  5.],
 	       [ 2.,  5.,  6.],
@@ -269,6 +284,7 @@ class BaseArray(object):
 	       [ 4.,  7.,  8.]])
 
 	>>> a.xs((3,5), axis=1)	  # as a tuple
+	<BaseArray>
 	array([[ 3.,  4.],
 	       [ 4.,  5.],
 	       [ 5.,  6.],
@@ -279,6 +295,7 @@ class BaseArray(object):
 	True
 
 	>>> a.xs((0,5,2), axis=1)	# as a tuple step > 1
+	<BaseArray>
         array([[ 0.,  2.,  4.],
                [ 1.,  3.,  5.],
                [ 2.,  4.,  6.],

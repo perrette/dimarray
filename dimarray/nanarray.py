@@ -27,16 +27,12 @@ DimArray : add values and metadata to each axis and to the array
 """
 import numpy as np
 import copy
-from functools import partial
-
-from tools import _operation, _NumpyDesc
 import basearray as ba
-
+from tools import _NumpyDesc
 
 class NanArray(ba.BaseArray):
     """ BaseArray which treats NaNs as missing values
     """
-
     def __init__(self, values, dtype=None, copy=False):
 	""" instantiate a ndarray with values: note values must be numpy array
 
@@ -45,40 +41,14 @@ class NanArray(ba.BaseArray):
 	"""
 	self.values = np.array(values, dtype=dtype, copy=copy)
 
-    @classmethod
-    def _constructor(cls, values, dtype=None, copy=False):
-	""" 
+    def __repr__(self):
+	""" screen printing
 	"""
-	return NanArray(values=values, dtype=dtype, copy=copy)
+	header = "<NanArray>"
+	return "\n".join([header,repr(self.values)])
 
-    #
-    # Operations on array that require dealing with NaNs
-    #
 
-    def _ma(self, skipna=True):
-	""" return a masked array in place of NaNs if skipna is True
-	"""
-	a = self.values
-
-	# return numpy array is no NaN is present of if skipna is False
-	if not np.any(np.isnan(a)) or not skipna:
-	    return a
-
-	masked_array = np.ma.array(a, mask=np.isnan(a), fill_value=np.nan)
-	return masked_array
-
-    @staticmethod
-    def _array(res):
-	""" reverse of _ma: get back standard numpy array, 
-
-	filling nans back in if necessary
-	"""
-	# fills the nans back in
-	if isinstance(res, np.ma.MaskedArray): 
-	    res.fill(np.na)
-	return res
-
-    def apply(self, funcname, skipna=True, args=(), **kwargs):
+    def apply(self, funcname, axis=None, skipna=True):
 	""" apply numpy's `func` and return a BaseArray instance
 
 	Generic description:
@@ -95,77 +65,68 @@ class NanArray(ba.BaseArray):
 	Examples:
 	--------
 	>>> b = a.copy()
-	>>> b[2] = 0.
-	>>> res = b.sum()
-	>>> b[2] = np.nan
-	>>> b.sum()
-	>>> b == c
-	True
+	>>> b[1] = np.nan
+	>>> b
+	<NanArray>
+	array([[  0.,   1.,   2.,   3.,   4.,   5.],
+	       [ nan,  nan,  nan,  nan,  nan,  nan],
+	       [  2.,   3.,   4.,   5.,   6.,   7.],
+	       [  3.,   4.,   5.,   6.,   7.,   8.],
+	       [  4.,   5.,   6.,   7.,   8.,   9.]])
+	>>> b.sum(axis=0)
+	<NanArray>
+	array([  9.,  13.,  17.,  21.,  25.,  29.])
+	>>> b.values.sum(axis=0)
+	array([ nan,  nan,  nan,  nan,  nan,  nan])
 	"""
-	values = self._ma(skipna)
-
-	# retrive bound method
-	method = getattr(values, funcname)
-
-	# return a float if axis is None
-	if axis is None:
-	    return method()
-
-	res_ma = method(axis=axis)
-	res = self._array(res_ma) # fill nans back in if necessary
-
-	return self._constructor(res)
 	assert type(funcname) is str, "can only provide function as a string"
 
-	# retrieve bound method
-	method = getattr(self.values, funcname)
+	# Convert to MaskedArray if needed
+	values = self.values
+	if np.any(np.isnan(values)) and skipna:
+	    values = np.ma.array(values, mask=np.isnan(values))
 
-	# use None as default values otherwise this would not work !
-	# as axis can be in *args or **kwargs
-	# or one would need to inspect method's argument etc...
+	# Apply numpy method
+	result = getattr(values, funcname)(axis=axis) 
 
+	# if scalar, just return it
+	if not isinstance(result, np.ndarray):
+	    return result
 
-	## return a float if axis is None, just as numpy does
-	#if 'axis' in kwargs and kwargs['axis'] is None:
-	#    kwargs['axis'] = 0 # default values
+	# otherwise, fill NaNs back in
+	return NanArray(result.filled(np.nan))
 
-	values = method(*args, **kwargs)
+#    #
+#    # Cumbersome update NanArray to BaseArray, for this small jump of little 
+#    # use (could have replaced BaseArray with self.__class__) but this prepares
+#    # bigger jumps when additional parameters are needed
+#    #
+#    def _operation(self, func, other):
+#	result = super(NanArray, self)._operation(func, other)
+#	return NanArray(result)
+#
+#    def __getitem__(self, item):
+#	return NanArray(self.values[item])
+#
+#    def copy(self):
+#	return NanArray(self.values.copy())
+#
+#    def squeeze(self, axis=None):
+#	""" remove singleton dimensions
+#	"""
+#	result = super(NanArray, self).squeeze(func, axis=axis)
+#	return NanArray(res)
+#
+#    def transpose(self, axes=None):
+#	result = super(NanArray, self).transpose(axes=axes)
+#	return NanArray(res)
+#
+#    def xs(self, *args, **kwargs):
+#	""" see doc in BaseArray
+#	"""
+#	result = super(NanArray, xs).transpose(*args, **kwargs)
+#	return NanArray(res)
 
-	# check wether the result is a scalar, if yes, export
-	values, test_scalar = _check_scalar(values)
-
-	if test_scalar:
-	    return values
-	else:
-	    return self._constructor(values)
-
-    #
-    # Add numpy transforms
-    #
-    mean = _NumpyDesc("apply", "mean")
-    median = _NumpyDesc("apply", "median")
-    sum  = _NumpyDesc("apply", "sum")
-    diff = _NumpyDesc("apply", "diff")
-    prod = _NumpyDesc("apply", "prod")
-    min = _NumpyDesc("apply", "min")
-    max = _NumpyDesc("apply", "max")
-    ptp = _NumpyDesc("apply", "ptp")
-    cumsum = _NumpyDesc("apply", "cumsum")
-    cumprod = _NumpyDesc("apply", "cumprod")
-
-    take = _NumpyDesc("apply", "take")
-
-    def take(self, indices, axis=0):
-	""" apply along-axis numpy method
-	"""
-	res = self.values.take(indices, axis=axis)
-	return self._constructor(res)
-
-    def transpose(self, axes=None):
-	""" apply along-axis numpy method
-	"""
-	res = self.values.take(indices, axes)
-	return self._constructor(res)
 
 array = NanArray # as convenience function
 
@@ -183,15 +144,13 @@ def _load_test_glob():
     """ return globs parameter for doctest.testmod
     """
     import doctest
+    import numpy as np
     from nanarray import NanArray
     import nanarray as na
 
-    # same as basearray
-    baglob = ba._load_test_glob()
-    locals().update(baglob)
-
     a = get_testdata()
     values = a.values
+    b = a[:2,:2] # small version
 
     return locals()
 
