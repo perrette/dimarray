@@ -1,248 +1,39 @@
-================================
-laxarray:    Labelled Axis Array 
-================================
+==========================================
+dimarray: Array with meaningful dimensions
+==========================================
 
-In three points:
+Planned Features
 ----------------
 
-* numpy's ndarrays-like with a name per axis and NaNs treated as missing values
+* numpy's ndarrays with named axes and metadata organized on the netCDF format
+* follow pandas' api but works for any dimension and any axis name
+* includes most numpy transformations
+* alias method for matplotlib plotting.
+* natural netCDF I/O
 
-* Forget which axis is first or second and concentrate on what you aim at doing.
+* main classes and functions:
 
-* It is light-weight but more powerful than you would think !
+    * Dimarray		    : main class (a meta-class containing ndarray in the values field)
+    * Dataset		    : collections.OrderedDict of Dimarray objects
+    * Axes, Axis	    : axis and indexing
+    * read, write, summary  : netCDF I/O
 
-Install:
---------
+Architecture: a genealogy of array
+----------------------------------
 
-using pip (at each new release):
+basearray => nanarray => laxarray => dimarray
 
-    sudo pip install laxarray -U
+basearray: just emulate a numpy array
+           + introduce the xs method (only one axis)
+           + axis=0 by default (except in squeeze)
+	   + `==` operator returns a boolean and not an array
 
-or downloading the tar.gz from https://github.com/perrette/laxarray (most up-to-date)
+nanarray : treats nans as missing values
 
-    sudo python setup.py install
+laxarray : add a name to each dimension 
+	   + can give an axis name to `axis=`
+	   + multidimensional slicing
+	   + recursive `endomorphic` transformation on subsets of the whole space
 
-
-Get started:
-------------
-
-Everything happens in one class LaxArray located into the laxarray module (single file !)
-
->>> import numpy as np
->>> import laxarray as la
-
-Say we have a 2-D numpy array `values`. A labelled array is straightforward to 
-define with numpy-like syntax:
-
->>> a = la.array(values)    # think of np.array() or np.ma.array()
->>> a
-dimensions(5, 6): x0, x1
-array([[ 0.,  1.,  2.,  3.,  4.,  5.],
-       [ 1.,  2.,  3.,  4.,  5.,  6.],
-       [ 2.,  3.,  4.,  5.,  6.,  7.],
-       [ 3.,  4.,  5.,  6.,  7.,  8.],
-       [ 4.,  5.,  6.,  7.,  8.,  9.]])
-
-The dimensions x0 and x1 above were created automatically: this is not very
-useful unless you use laxarray simply to perform calculations involving NaNs.
-Having named axes is the reason why you should use laxarray:
-
->>> a = la.array(values, ("lat","lon"))
->>> a
-dimensions(5, 6): lat, lon
-array([[ 0.,  1.,  2.,  3.,  4.,  5.],
-       [ 1.,  2.,  3.,  4.,  5.,  6.],
-       [ 2.,  3.,  4.,  5.,  6.,  7.],
-       [ 3.,  4.,  5.,  6.,  7.,  8.],
-       [ 4.,  5.,  6.,  7.,  8.,  9.]])
-
-whose actual data content is made of a `values` and a `names` attribute.
-
->>> a.values	    # `values´ like in pandas
-array([[ 0.,  1.,  2.,  3.,  4.,  5.],
-       [ 1.,  2.,  3.,  4.,  5.,  6.],
-       [ 2.,  3.,  4.,  5.,  6.,  7.],
-       [ 3.,  4.,  5.,  6.,  7.,  8.],
-       [ 4.,  5.,  6.,  7.,  8.,  9.]])
->>> a.names
-('lat', 'lon')
-
-Numpy's array() method works just as fine to retrieve the values:
-
->>> np.array(a)
-array(...)
-
-Axis names are propagated in the results via slicing or transformations:
-
->>> a[3]	         # standard selection/slicing with `[]`
-dimensions(6,): lon
-array([ 3.,  4.,  5.,  6.,  7.,  8.])
-
-laxarray provides a new slicing method `xs` to slice along a dimension regardless 
-of the order of the dimension, so it is possible not to worry about the exact
-shape of the array:
-
->>> a.xs(3, axis=0)      # integer axis
-dimensions(6,): lon
-array([ 3.,  4.,  5.,  6.,  7.,  8.])
->>> a.xs(3, axis='lat')  # labelled axis
-dimensions(6,): lon
-array([ 3.,  4.,  5.,  6.,  7.,  8.])
->>> a.xs(lat=3, lon=5)   # keyword argument + multidimensional slicing
-8.0
-
-Also accepts slicing via list or tuple as input parameter:
-
->>> a.xs(lon=[1,3,4])	# as a list
-dimensions(5, 3): lat, lon
-array([[ 1.,  3.,  4.],
-       [ 2.,  4.,  5.],
-       [ 3.,  5.,  6.],
-       [ 4.,  6.,  7.],
-       [ 5.,  7.,  8.]])
-
->>> a.xs(lon=(1,6,2)) # as a tuple, similar to `slice(1,6,2)` (note 6=5+1)
-dimensions(5, 3): lat, lon
-array([[ 1.,  3.,  5.],
-       [ 2.,  4.,  6.],
-       [ 3.,  5.,  7.],
-       [ 4.,  6.,  8.],
-       [ 5.,  7.,  9.]])
->>> a.xs(lon=(1,None,2)) == a[:, 1::2]
-True
-
-All along-axis ndarray methods are implemented:
-
->>> a.mean(axis="lon")  # same as a.mean(axis=1)
-dimensions(5,): lat
-array([ 2.5,  3.5,  4.5,  5.5,  6.5])
-
-It also deal with NaNs as a wrapper to MaskedArray when necessary, without you 
-even noticing:
-
->>> b = a.copy()
->>> b[2] = np.nan    # alias for `b.values[2] = np.nan`
->>> b 
-dimensions(5, 6): lat, lon
-array([[  0.,   1.,   2.,   3.,   4.,   5.],
-       [  1.,   2.,   3.,   4.,   5.,   6.],
-       [ nan,  nan,  nan,  nan,  nan,  nan],
-       [  3.,   4.,   5.,   6.,   7.,   8.],
-       [  4.,   5.,   6.,   7.,   8.,   9.]])
->>> b.sum(axis="lat")
-dimensions(6,): lon
-array([  8.,  12.,  16.,  20.,  24.,  28.])
->>> b.sum(axis="lat", skipna=False)   # unless specified otherwise (default numpy)
-dimensions(6,): lon
-array([ nan,  nan,  nan,  nan,  nan,  nan])
-
-As a cool feature directly related to named axes, arrays with different 
-dimensions just align naturally:
-
->>> ts = la.array(np.arange(10), ('time',))
->>> ts*a
-dimensions(10, 5, 6): time, lat, lon
-array(...)
-
-But beware, it is not commutative ! 
-
->>> a*ts
-dimensions(5, 6, 10): lat, lon, time
-array(...)
-
-The convention chosen here is, when in doubt, to adopt the dimension ordering
-of the left-hand side operand.
-But it is easy to permute the dimensions to any desired order:
-
->>> (a*ts).transpose(('time','lat','lon'))
-dimensions(10, 5, 6): time, lat, lon
-array(...)
-
-
-Main features:
---------------
-* each axis has a label (or name), displayed on string for quick data inspection
-
-* the data structure simply consists of two attributes directly accessible: 
-
-    * `values` : ndarray object
-    * `names ` : tuple of length `ndim` whose elements match values' shape attribute
-
-* behaves like a numpy nd-array in any useful sense (wrapper around numpy methods):
-
-    * `+-*/**` operations, *with axis alignment*
-
-    * all along-axis transformations (min, max, mean, cumsum, squeeze, etc...) are 
-      implemented
-
-* NaN handling via parameter `skipna=` (default to True) in all transformations
-  (wrapper around numpy's masked array, without you worrying about it)
-
-* the axis *name* can be provided to `axis=` parameter instead of its integer 
-  index whenever it makes things easier (almost always !)
-
-* multi-dimensional slicing via the `xs` method where axis names and values can 
-  be provided as keyword arguments (`lon=..., lat=..., time=`). xs understands a 
-  variety of types of parameters for each axis (`int`, `list`, `tuple`, `slice`)
-  with a corresponding range of effects (see doc: help(a.xs))
-
-
-Comparison to other packages
-----------------------------
-
-* it can be seen as an add-on to **numpy** arrays, trying to respect most 
-  conventions except when it contradicts the philosophy of having meaningfull
-  dimensions. In particular, flattening transformations are not the default
-  behaviour as it would loose this information: `axis=` default to `0` instead 
-  of `None` (which is also similar to pandas)
-
->>> a.mean() # default to axis=0 (here "lat")
-dimensions(6,): lon
-array([ 2.,  3.,  4.,  5.,  6.,  7.])
->>> a.mean(axis=None) 
-4.5
->>> a.values.mean()   # return result from numpy transform
-4.5
-
-* it is *not* a competitor to **pandas** (an excellent package !), although it 
-  adopts some of pandas naming convention (`values`, `xs`). laxarray does not 
-  store the actual values of the axes themselves (see *dimarray* package for that)
-  pandas is a package for low-dimensional and mixed-type data with many handy
-  methods for data analysis and plotting
-
-* laxarray shares with **larry** the concept of sticking to the essential and doing 
-  that well. It just adds one name per axis and makes the most out of it. I am 
-  not a user of larry, so I cannot tell much more, appart that data are stored 
-  under an `x` attribute instead of `values`, and also has labelled axis 
-  *values* but it seems to have less functionalites regarding slicing/axis labelling 
-  (no `xs` method, no argument name-based slicing). The rest is a matter of taste.
-
-* laxarray is developped as a building block for a companion package called **dimarray** 
-  which also includes axis values on top of axis names and offer a full netCDF I/O, 
-  particularly suited for geophysical applications.
-
-Technical details
------------------
-
-* easy to subclass with constructor as static method
-
-* laxarray.test_doc() and laxarray.test_readme() use the doctest module to test 
-  each example in this README ! This should make things more robust
-
-* bonus: there is one apply_recursive function which recursively apply any 
-  multi-dimensional transformation from laxarray to laxarray, with potential 
-  application for interpolation (see dimarray)
-
-Summary
--------
-
-The philosophical jump compared to a numpy array is that a laxarray is not only
-a container of data, but its dimensions now also have a meaning attached to it
-(e.g. longitude, latitude for geophysical data). 
-
-The main consequence of that is it allows to forget how the data is arranged 
-on disk (which column is first or second) and concentrate on what you aim at doing.
-
-This is achieved by providing the `axis=` parameter as axis label in addition to 
-only axis integer position in all standard transformations and to the new 
-multi-dimensional axis slicing method xs. 
+dimarray : add values and metadata to each axis and to the array
+	   + netCDF I/O
