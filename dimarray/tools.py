@@ -90,18 +90,6 @@ def _unique(nm):
 	    new.append(k)
     return new
 
-def _convert_dtype(dtype):
-    """ convert a python type
-    """
-    if dtype is np.dtype(int):
-	type_ = int
-
-    else:
-	type_ = float
-
-    return type_
-
-
 def _check_scalar(values):
     """ export to python scalar if size == 1
     """
@@ -173,7 +161,6 @@ def _DescRecursive(object):
 	return newmethod
 
     return 
-
 
 
 #def deco_numpy(apply_method, numpy_method, **kwargs):
