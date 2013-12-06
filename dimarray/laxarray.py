@@ -325,6 +325,109 @@ class LaxArray(na.NanArray):
 	#names = self._get_reduced_names(axis)
 	return self.__constructor(res, names=self.names)
 
+    def _xs_axis(self, idx, axis=0, **kwargs):
+
+	assert axis is not None, "axis= cannot be None in slicing"
+
+	axis = self._get_axis_idx(axis) 
+
+	res = super(LaxArray, self)._xs_axis(idx, axis=axis, **kwargs)
+
+	# scalar
+	if not isinstance(res, ba.BaseArray):
+	    return res
+
+	if res.ndim < self.ndim:  # i.e. integer and _keepdims = False
+	    names = self._get_reduced_names(axis)
+
+	else:
+	    names = self.names
+
+	return self.__constructor(res, names)
+
+    def xs(self, idx=None, axis=0, _scalar_conversion=True, **kwargs):
+        """ Multi-dimensional slicing
+
+        input:
+            idx     : integer, list, slice or tuple
+            axis    : axis to slice
+
+            **kwargs: keyword arguemnts with axis names as keys "<axis> = <slice_>"
+
+        output.
+            see doc in BaseArry for what idx can be
+
+        Examples:
+        --------
+        >>> a
+        dimensions(5, 6): lat, lon
+        array([[ 0.,  1.,  2.,  3.,  4.,  5.],
+               [ 1.,  2.,  3.,  4.,  5.,  6.],
+               [ 2.,  3.,  4.,  5.,  6.,  7.],
+               [ 3.,  4.,  5.,  6.,  7.,  8.],
+               [ 4.,  5.,  6.,  7.,  8.,  9.]])
+
+        Equivalent expressions to get the 3rd line:
+
+        >>> a.xs(3, axis=0)   # integer axis
+        dimensions(6,): lon
+        array([ 3.,  4.,  5.,  6.,  7.,  8.])
+
+        >>> a.xs(3, axis='lat')  # labelled axis
+        dimensions(6,): lon
+        array([ 3.,  4.,  5.,  6.,  7.,  8.])
+
+        >>> a.xs(lat=3, lon=5)              # multiple keyword arguments
+        8.0
+
+        Take several columns
+
+        >>> a.xs(lon=[0,3,4])                # as a list
+        dimensions(5, 3): lat, lon
+        array([[ 0.,  3.,  4.],
+               [ 1.,  4.,  5.],
+               [ 2.,  5.,  6.],
+               [ 3.,  6.,  7.],
+               [ 4.,  7.,  8.]])
+
+        >>> a.xs((3,5), axis='lon')        
+        dimensions(5, 2): lat, lon
+        array([[ 3.,  4.],
+               [ 4.,  5.],
+               [ 5.,  6.],
+               [ 6.,  7.],
+               [ 7.,  8.]])
+
+        >>> a.xs((3,5), axis='lon') == a[:,3:5]  # similar to
+        True
+
+        >>> a.xs(lon=(0,5,2))        # as a tuple step > 1
+        dimensions(5, 3): lat, lon
+        array([[ 0.,  2.,  4.],
+               [ 1.,  3.,  5.],
+               [ 2.,  4.,  6.],
+               [ 3.,  5.,  7.],
+               [ 4.,  6.,  8.]])
+        """
+        # keyword arguments: recursive definition
+        if idx is None:
+
+            if len(kwargs) == 0:
+                newobj = self
+
+            else:
+                axis, idx = kwargs.popitem()
+                obj = self.xs(_scalar_conversion=False, **kwargs) # make sure we keep a BaseArray
+                newobj = obj._xs_axis(idx, axis=axis, _scalar_conversion=_scalar_conversion)
+
+        # slice along single axis
+        else:
+
+            assert len(kwargs) == 0, "cannot give both explicit and keyword arguments"
+
+            newobj = self._xs_axis(idx, axis, _scalar_conversion=_scalar_conversion)
+
+        return newobj
 
     #
     # AXIS TRANSFORM
