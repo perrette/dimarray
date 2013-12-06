@@ -4,6 +4,8 @@ NOTE: experimental dealing with decriptor, will be removed if it is more
 confusing than it brings benefits (could also use @property decorators)
 """
 from collections import OrderedDict as odict
+import numpy as np
+
 # 
 # Attribute Descriptor
 #
@@ -21,30 +23,29 @@ class Metadata(object):
 
     Example:
 
-    >>> class A:
+    >>> class A(object):
     ...     _attrs = dict() # can be ordered
-    ...     name = Desc(name="name", default="", atype=str)
-    ...     units = Desc("units", "", str)
-    ...     anything = Desc("anything")
+    ...     name = Metadata(name="name", default="", atype=str)
+    ...     units = Metadata("units", "", str)
+    ...     anything = Metadata("anything")
     >>> a = A()
     >>> a.units  # units not provided
     ''
     >>> a._attrs  
     {}
-    >>> a
     >>> a.units = "some units"
     >>> a.units     # some units provided
-    "some units"
+    'some units'
     >>> a._attrs
-    {'units':'some units'}
+    {'units': 'some units'}
     >>> a.units= "" # provided as unitless
     >>> a._attrs  
-    {'units':''}
+    {'units': ''}
     >>> del a.units
     >>> a.units
     ''
     """
-    atype = str, int, long, bool, float, tuple
+    #atype = str, int, long, bool, float, tuple
 
     def __init__(self, name, default="", atype=None):
 	"""
@@ -54,18 +55,20 @@ class Metadata(object):
 	"""
 	self.name = name
 	self.default = default
-
-	# provide info on type
 	if atype is None:
-	    self.atype = tuple(atype)
+	    atype = type(default)
+	if type(atype) is type:
+	    atype = (atype,)
+	self.atype = atype
 
     def __get__(self, obj, cls=None):
-	""" access to attribute: return default is not user-defined !
+	""" access to attribute: return default if not user-defined !
 	"""
 	if self.name in obj._attrs:
 	    val = obj._attrs[self.name]
 	else:
 	    val = self.default # default value
+	return val
 
     def __set__(self, obj, val):
 	""" access to attribute
@@ -73,51 +76,14 @@ class Metadata(object):
 	# check that attribute has the right type
 	if not type(val) in self.atype:
 	    raise TypeError("attribute {} must be {}, got {}".format(self.name, self.atype, type(val)))
+
 	obj._attrs[self.name] = val
 
-    def __del__(self):
+    def __delete__(self, obj):
 	""" reset to default value
 	"""
 	del obj._attrs[self.name]
 
-
-class Data(object):
-    """ Data Descriptor (e.g. values, or anything else)
-
-    data can be protected (non-overwritable) or not
-    a protected variable may avoid bugs ...
-
-    Advantage: __set__ is called instead of __setattr__ from instance object 
-    ==> this allows cleaner handling of metadata to have actual data out of 
-    the way, and anyway finer control of protected/non-protected attributes, 
-    for example to make an attribute private (could save efforts for debugging)
-    """
-    def __init__(self, name, protected=False):
-	"""
-	"""
-	self.name = name
-	self.protected = protected
-
-    def __get__(self, obj, cls=None):
-	"""
-	"""
-	return getattr(obj, self.name)
-
-    def __set__(self, obj, val):
-	""" This method is called if the attribute is about to be overwritten
-	`protected` attriubute determines whether this is a good idea or not
-	"""
-	if self.protected:
-	    raise Exception("cannot overwrite {name}, try using \
-		    \n\t `a`.{name}[:] = `b` syntax \
-		    \n\t or one of the exising methods (squeeze, transpose...)\
-		    \n\t or create a new {cls} instance"\
-		    .format(name=self.name, cls=obj.__class__.__name__))
-
-	setattr(obj, self.name, val)
-
-    def __del__(self, obj):
-	raise Exception("cannot delete "+self.name)
 
 class Variable(object):
     """ A variable has values and four typical attributes:
@@ -136,19 +102,28 @@ class Variable(object):
     Examples:
     ---------
 
-    >>> v = Variable()
+    >>> v = Variable([1,2])
     >>> v.name
-    ""
+    ''
     >>> v.name = "myname"
     >>> v.name
-    "myname"
+    'myname'
     >>>
     """
-    # Data Descriptors 
-    values = Data("_values", protected=True)
+    # Set values as a property for enhanced control
+    @property 
+    def values(self):
+	return self._values
+
+    @values.setter
+    def values(self, newval):
+	if np.shape(newval) != np.shape(self._values):
+	    msg = "To reshape dimensions try one of the exising methods "
+	    msg += "(squeeze, transpose...) or create a new <{cls}> instance".format(cls=self.__class__.__name__)
+	    raise ValueError(msg)
 
     # MetaData Descriptors  (also `data-descriptor` in the python sense)
-    names = Metadata("name", "", str)
+    name  = Metadata("name", "", str)
     units = Metadata("units", "", str)
     descr = Metadata("descr", "", str)
     stamp = Metadata("stamp", "", str)
@@ -164,34 +139,6 @@ class Variable(object):
 	""" to be written to netCDF as attribute (only non-empty attributes)
 	"""
 	return self._attrs.keys()
-
-    def __setattr__(self, att, val):
-	""" set new attribute: this method should be called only for non data
-	attributes !
-	"""
-	if att.startswith("_"):
-	    #print "private attribute?",att, ":",val
-	    #print "store directly under the class"
-	    self.__dict__[att] = val
-
-	else:
-	    print "new attributes?",att, ":",val
-	    self.__dict__['_attrs'][att] = val
-
-    def __getattr__(self, att):
-	""" retrieve non-standard attribute
-	"""
-	if att.startswith("_"):
-	    #print "private attribute?",att, ":",val
-	    #print "get directly from self.__dict__"
-	    val = self.__dict__[att]
-
-	elif att in self._attrs:
-	    return self._attrs[att]
-
-	# This will never happen with a standard attribute as defined above
-	else:
-	    raise ValueError("Attribute not found: "+att)
 
     @property
     def size(self): 
@@ -212,11 +159,11 @@ class Variable(object):
 	""" 
 	inplace: modify attributes in-place, return None (useful to respect closure)
 
-	>>> a.set(units=m).plot() # in case units was forgotten
-	>>> a.set(_slicing="numpy")[:30]
-	>>> a.set(_slicing="exact")[1971.42]
-	>>> a.set(_slicing="nearest")[1971]
-	>>> a.set(name="myname", inplace=True) # modify attributes inplace
+	a.set(units=m).plot() # in case units was forgotten
+	a.set(_slicing="numpy")[:30]
+	a.set(_slicing="exact")[1971.42]
+	a.set(_slicing="nearest")[1971]
+	a.set(name="myname", inplace=True) # modify attributes inplace
 	"""
 	if inplace:
 	    for k in kwargs:
@@ -242,6 +189,10 @@ def _convert_dtype(dtype):
 
     return type_
 
-if __name__ == "__main__":
-    pass
+def test():
+    import doctest
+    import metadata
+    doctest.testmod(metadata)
 
+if __name__ == "__main__":
+    test()
