@@ -119,7 +119,7 @@ class Axes(list):
     def from_tuples(cls, *tuples_name_values):
 	""" initialize axes from tuples
 
-	>>> Axes.from_tuples(('lat',mylat), ('lon',mylon)) 
+	Axes.from_tuples(('lat',mylat), ('lon',mylon)) 
 	"""
 	newaxes = Axes()
 	for nm, values in tuples_name_values:
@@ -242,32 +242,35 @@ class Locator(object):
     ---------
     >>> values = np.arange(1950.,2000.)
     >>> values  # doctest: +ELLIPSIS
-    array([1950., ... ,1999.])
+    array([ 1950., ... 1999.])
     >>> loc = Locator(values)   
     >>> loc(1951) 
     1
     >>> loc(1951.4) # also works in nearest approx
     1
-    >>> loc(1951.4, method="exact")     # unless "exact" or "index" is specified
-    Exception ...
-    >>> loc([1960, 1980, 2000])		# a list if also fine 
-    [10, 30, 50]
+    >>> loc(1951.4, method="exact")     # doctest: +ELLIPSIS
+    Exception raised:
+	...
+	ValueError: 1951.4000000000001 is not in list
+    >>> loc([1960, 1980, 1999])		# a list if also fine 
+    [10, 30, 49]
     >>> loc((1960,1970))		# or a tuple/slice (latest index included)
+    slice(10, 21, None)
     >>> loc[1960:1970] == _		# identical, as any of the commands above
     True
 
     Test equivalence with np.index_exp
     >>> ix = 1951
-    >>> loc[ix] = np.index_exp[loc[ix]][0]
+    >>> loc[ix] == np.index_exp[loc[ix]][0]
     True
-    >>> ix = [1960, 1980, 2000]
-    >>> loc[ix] = np.index_exp[loc[ix]][0]
+    >>> ix = [1960, 1980, 1999]
+    >>> loc[ix] == np.index_exp[loc[ix]][0]
     True
     >>> ix = slice(1960,1970)
-    >>> loc[ix] = np.index_exp[loc[ix]][0]
+    >>> loc[ix] == np.index_exp[loc[ix]][0]
     True
     >>> ix = 1951
-    >>> loc[ix] = np.index_exp[loc[ix]][0]
+    >>> loc[ix] == np.index_exp[loc[ix]][0]
     True
     """
     def __init__(self, values, method=None):
@@ -279,7 +282,7 @@ class Locator(object):
 	self.values = values
 
 	if method is None:
-	    method = self._method
+	    method = self._method()
 
 	self.method = method #  default method
 
@@ -302,11 +305,7 @@ class Locator(object):
     #
 
     def __getitem__(self, ix):
-	""" best at handling slices
-
-	>>> loc[34.3]
-	>>> loc[34.3:67.]
-	>>> loc[34.3:67:5]
+	""" 
 	"""
 	if type(ix) is slice:
 	    return self.slice(ix)
@@ -445,10 +444,12 @@ def test():
     """ test module
     """
     import doctest
-    doctest.debug_src(Locator.__doc__)
+    import axes
+    #reload(axes)
+    #globs = {'Locator':Locator}
+    #doctest.debug_src(Locator.__doc__)
+    doctest.testmod(axes, optionflags=doctest.ELLIPSIS)
 
 if __name__ == "__main__":
-    #test()
-    import doctest
-    doctest.debug_src(Locator.__doc__)
+    test()
 

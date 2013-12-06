@@ -122,6 +122,9 @@ class Variable(object):
     descr = Metadata("descr", "", str)
     stamp = Metadata("stamp", "", str)
 
+    # store attributes in an ordered dict (to be copied at initialization)
+    _metadata_default = odict() 
+
     # Set values as a property for enhanced control
     @property 
     def values(self):
@@ -142,7 +145,7 @@ class Variable(object):
 	""" typical initialization call
 	"""
 	self._values = values
-	self._metadata = odict() # store attributes in an ordered dict
+	self._metadata = self._metadata_default.copy()
 	self.set(inplace=True, **attrs)
 
     def __getattr__(self, att):
@@ -198,6 +201,11 @@ class Variable(object):
 
 	if not inplace:
 	    return obj
+
+    def repr_meta(self):
+	""" string representation for metadata
+	"""
+	return ", ".join(['%s: "%s"' % (att, getattr(self, att)) for att in self.ncattrs()])
 
 def _convert_dtype(dtype):
     """ convert numpy type in a python type
