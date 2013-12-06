@@ -5,13 +5,14 @@ confusing than it brings benefits (could also use @property decorators)
 """
 from collections import OrderedDict as odict
 import numpy as np
+import copy
 
 # 
 # Attribute Descriptor
 #
 class Metadata(object):
     """ Metadata descriptor to control access to a class's attribute
-    via an `_attrs` dictionary and __get__/__set__ methods
+    via an `_metadata` dictionary and __get__/__set__ methods
 
     Advantages vs basic `.` attribute:
 	- make the distinction between data and metadata: e.g. print and I/O
@@ -24,22 +25,22 @@ class Metadata(object):
     Example:
 
     >>> class A(object):
-    ...     _attrs = dict() # can be ordered
+    ...     _metadata = dict() # can be ordered
     ...     name = Metadata(name="name", default="", atype=str)
     ...     units = Metadata("units", "", str)
     ...     anything = Metadata("anything")
     >>> a = A()
     >>> a.units  # units not provided
     ''
-    >>> a._attrs  
+    >>> a._metadata  
     {}
     >>> a.units = "some units"
     >>> a.units     # some units provided
     'some units'
-    >>> a._attrs
+    >>> a._metadata
     {'units': 'some units'}
     >>> a.units= "" # provided as unitless
-    >>> a._attrs  
+    >>> a._metadata  
     {'units': ''}
     >>> del a.units
     >>> a.units
@@ -49,7 +50,7 @@ class Metadata(object):
 
     def __init__(self, name, default="", atype=None):
 	"""
-	name : attribute name in obj._attrs
+	name : attribute name in obj._metadata
 	default: default returned values if not set by user
 	atype: attrubute type (can have multiple allowed types)
 	"""
@@ -64,8 +65,8 @@ class Metadata(object):
     def __get__(self, obj, cls=None):
 	""" access to attribute: return default if not user-defined !
 	"""
-	if self.name in obj._attrs:
-	    val = obj._attrs[self.name]
+	if self.name in obj._metadata:
+	    val = obj._metadata[self.name]
 	else:
 	    val = self.default # default value
 	return val
@@ -77,27 +78,30 @@ class Metadata(object):
 	if not type(val) in self.atype:
 	    raise TypeError("attribute {} must be {}, got {}".format(self.name, self.atype, type(val)))
 
-	obj._attrs[self.name] = val
+	obj._metadata[self.name] = val
 
     def __delete__(self, obj):
 	""" reset to default value
 	"""
-	del obj._attrs[self.name]
+	del obj._metadata[self.name]
 
 
 class Variable(object):
-    """ A variable has values and four typical attributes:
+    """ A variable has values and metadata
 
-    - values: stored as list or numpy array
+    - values: stored as list or numpy array under _values
+
+    Typical metadata are:
 
     - name : variable name
     - units: variable units
     - descr: variable description (not including geo-location)
     - stamp: string information indicating e.g. coordinates or time stamp or history
 
-    Also accessible the values' type
+    They are stored under _metadata attributes. It is possible to set default attributes
+    using the metadata descriptor and access is 
 
-    TO DO: check with actual netCDF conventions and possibly update
+    TO DO: check with actual netCDF conventions 
 
     Examples:
     ---------
@@ -110,6 +114,14 @@ class Variable(object):
     'myname'
     >>>
     """
+    #
+    # Properties
+    #
+    name  = Metadata("name", "", str)
+    units = Metadata("units", "", str)
+    descr = Metadata("descr", "", str)
+    stamp = Metadata("stamp", "", str)
+
     # Set values as a property for enhanced control
     @property 
     def values(self):
@@ -122,23 +134,30 @@ class Variable(object):
 	    msg += "(squeeze, transpose...) or create a new <{cls}> instance".format(cls=self.__class__.__name__)
 	    raise ValueError(msg)
 
-    # MetaData Descriptors  (also `data-descriptor` in the python sense)
-    name  = Metadata("name", "", str)
-    units = Metadata("units", "", str)
-    descr = Metadata("descr", "", str)
-    stamp = Metadata("stamp", "", str)
+    #
+    # ...
+    #
 
     def __init__(self, values, **attrs):
 	""" typical initialization call
 	"""
 	self._values = values
-	self._attrs = odict() # store attributes in an ordered dict
+	self._metadata = odict() # store attributes in an ordered dict
 	self.set(inplace=True, **attrs)
+
+    def __getattr__(self, att):
+	""" return attributes
+	"""
+	if att in self._metadata:
+	    return self._metadata[att]
+
+	else:
+	    raise AttributeError("unknown attribute "+att)
 
     def ncattrs(self):
 	""" to be written to netCDF as attribute (only non-empty attributes)
 	"""
-	return self._attrs.keys()
+	return self._metadata.keys()
 
     @property
     def size(self): 
@@ -153,6 +172,8 @@ class Variable(object):
 	return self.values.__array__
 
     def copy(self):
+	""" shallow copy
+	"""
 	return copy.copy(self)
 
     def set(self, inplace=False, **kwargs):
@@ -165,15 +186,18 @@ class Variable(object):
 	a.set(_slicing="nearest")[1971]
 	a.set(name="myname", inplace=True) # modify attributes inplace
 	"""
-	if inplace:
-	    for k in kwargs:
-		setattr(self, k)
+	if inplace: obj = self
+	else: obj = self.copy()
 
-	else:
-	    new = self.copy(shallow=True)
-	    for k in kwargs:
-		setattr(self, k)
-	    return new
+	for k in kwargs:
+	    if hasattr(self, k) or k.startswith('_'):
+		setattr(self, k, kwargs[k])
+	    else:
+		print "add to metadata"
+		self._metadata[k] = kwargs[k]
+
+	if not inplace:
+	    return obj
 
 def _convert_dtype(dtype):
     """ convert numpy type in a python type
