@@ -1,225 +1,136 @@
-""" This module contains describe the basic Variable type with values and metadata
-
-NOTE: experimental dealing with decriptor, will be removed if it is more 
-confusing than it brings benefits (could also use @property decorators)
+""" Module to distinguish metadata from other variables, 
+which makes it easier for netCDF I/O and printing to screen.
 """
-from collections import OrderedDict as odict
 import numpy as np
 import copy
+from collection import OrderedDict as odict
 
 # 
 # Attribute Descriptor
 #
-class Metadata(object):
-    """ Metadata descriptor to control access to a class's attribute
-    via an `_metadata` dictionary and __get__/__set__ methods
-
-    Advantages vs basic `.` attribute:
-	- make the distinction between data and metadata: e.g. print and I/O
-	- fine control of default vs user-defined attributes
-	- move unclear things out of the way (__getattr__ etc...) in actual class
-
-    NOTE: this is experimental and might be removed if it 
-	  provdes too confusing for standard usage.
-
-    Example:
-
-    >>> class A(object):
-    ...     _metadata = dict() # can be ordered
-    ...     name = Metadata(name="name", default="", atype=str)
-    ...     units = Metadata("units", "", str)
-    ...     anything = Metadata("anything")
-    >>> a = A()
-    >>> a.units  # units not provided
-    ''
-    >>> a._metadata  
-    {}
-    >>> a.units = "some units"
-    >>> a.units     # some units provided
-    'some units'
-    >>> a._metadata
-    {'units': 'some units'}
-    >>> a.units= "" # provided as unitless
-    >>> a._metadata  
-    {'units': ''}
-    >>> del a.units
-    >>> a.units
-    ''
-    """
-    #atype = str, int, long, bool, float, tuple
-
-    def __init__(self, name, default="", atype=None):
-	"""
-	name : attribute name in obj._metadata
-	default: default returned values if not set by user
-	atype: attrubute type (can have multiple allowed types)
-	"""
-	self.name = name
-	self.default = default
-	if atype is None:
-	    atype = type(default)
-	if type(atype) is type:
-	    atype = (atype,)
-	self.atype = atype
-
-    def __get__(self, obj, cls=None):
-	""" access to attribute: return default if not user-defined !
-	"""
-	if self.name in obj._metadata:
-	    val = obj._metadata[self.name]
-	else:
-	    val = self.default # default value
-	return val
-
-    def __set__(self, obj, val):
-	""" access to attribute
-	"""
-	# check that attribute has the right type
-	if not type(val) in self.atype:
-	    raise TypeError("attribute {} must be {}, got {}".format(self.name, self.atype, type(val)))
-
-	obj._metadata[self.name] = val
-
-    def __delete__(self, obj):
-	""" reset to default value
-	"""
-	del obj._metadata[self.name]
-
 
 class Variable(object):
-    """ A variable has values and metadata
+    """ Variable with metadata
+    
+    Help maintain an ordered list or attributes distinguishable from other 
+    attributes. Typical metadata are:
 
-    - values: stored as list or numpy array under _values
-
-    Typical metadata are:
-
-    - name : variable name
     - units: variable units
     - descr: variable description (not including geo-location)
     - stamp: string information indicating e.g. coordinates or time stamp or history
 
-    They are stored under _metadata attributes. It is possible to set default attributes
-    using the metadata descriptor and access is 
-
-    TO DO: check with actual netCDF conventions 
-
-    Examples:
-    ---------
-
-    >>> v = Variable([1,2])
-    >>> v.name
-    ''
-    >>> v.name = "myname"
-    >>> v.name
-    'myname'
-    >>>
+    How it works: anything that is not private (does not start with "_"), is
+    not in the "_metadata_exclude" list, and whose type is in "_metadata_types"
+    is just considered a metadata and its name is added to "_metadata", so that
+    1) the list is permanently up-to-date and 2) it is ordered (which is not the 
+    case for self.__dict__)
     """
-    #
-    # Properties
-    #
-    name  = Metadata("name", "", str)
-    units = Metadata("units", "", str)
-    descr = Metadata("descr", "", str)
-    stamp = Metadata("stamp", "", str)
+    # Most important field (e.g. ("values",) or ("values", "axes"))
+    _metadata_exclude = () # variables which are NOT metadata
 
-    # store attributes in an ordered dict (to be copied at initialization)
-    _metadata_default = odict() 
+    # impose restriction about what type metadata can have
+    # for now use python immutable types, eventually could authorize
+    # everything which is netCDF writable
+    _metadata_types = int, long, float, tuple, str, bool  # autorized metadata types
 
-    # Set values as a property for enhanced control
-    @property 
-    def values(self):
-	return self._values
-
-    @values.setter
-    def values(self, newval):
-	if np.shape(newval) != np.shape(self._values):
-	    msg = "To reshape dimensions try one of the exising methods "
-	    msg += "(squeeze, transpose...) or create a new <{cls}> instance".format(cls=self.__class__.__name__)
-	    raise ValueError(msg)
-
-    #
-    # ...
-    #
-
-    def __init__(self, values, **attrs):
-	""" typical initialization call
+    def __init__(self):
 	"""
-	self._values = values
-	self._metadata = self._metadata_default.copy()
-	self.set(inplace=True, **attrs)
+	"""
+	_metadata = odict() # ordered dictionary of metadata
 
     def __getattr__(self, att):
-	""" return attributes
+	""" set attributes: distinguish between metadata and other 
 	"""
-	if att in self._metadata:
+	# Searching first in __dict__ is the default behaviour, 
+	# included here for clarity
+	if att in self.__dict__:
+	    return super(Variable, self).__getattr__(att)
+
+	# check if att is a metadata
+	elif att in self._metadata
 	    return self._metadata[att]
 
+	# again here, to raise a typical error message
 	else:
-	    raise AttributeError("unknown attribute "+att)
+	    return super(Variable, self).__getattr__(att)
+
+    def __setattr__(self, att, val):
+	""" set attributes: some are metadata, other not
+	"""
+	# add name to odict of metadata
+	if self._ismetadata(att, val):
+	    self._metadata[att] = val
+
+	else:
+	    super(Variable, self).__setattr__(att, val)
+
+    def __detattr__(self, att):
+	""" delete an attribute
+	"""
+	# default behaviour
+	if att in self.__dict__:
+	    super(Variable, self).__delattr__(att) # standard method
+
+	# delete metadata if it applicable
+	elif att in self._metadata:
+	    del self._metadata[att]
+
+	# again here, to raise a typical error message
+	else:
+	    super(Variable, self).__delattr__(att) # standard method
+
+
+    def _ismetadata(self, att, val=None):
+	""" returns True if att is metadata
+	"""
+	# if val is None, test if att in self._metadata
+	# if att already in metadata, then "True"
+	if val is None or att in self._metadata:
+	    test = att in self._metadata
+
+	# otherwise, check if it is a valid metadata
+	else: 
+	    test = not att.startswith('_') and att not in self._metadata_exclude \
+		    and type(val) in self._metadata_types # also check type (to avoid limit errors)
+
+	return test
+
+
+    #
+    # This methods are analogous to netCDF4 module in python, and useful
+    # to set/get/det metadata when there is a conflict with another existing name
+    #
 
     def ncattrs(self):
-	""" to be written to netCDF as attribute (only non-empty attributes)
-	"""
 	return self._metadata.keys()
 
-    @property
-    def size(self): 
-	return np.size(self.values)
-
-    @property
-    def dtype(self): 
-	return _convert_dtype(np.array(self.values).dtype)
-
-    @property
-    def __array__(self): 
-	return self.values.__array__
-
-    def copy(self):
-	""" shallow copy
+    def setncattr(self, att, val):
+	""" force setting attribute to metadata
 	"""
-	return copy.copy(self)
+	if not type(val) in self._metadata_types:
+	    raise TypeError("Found type {}. Only authorized metadata types: {}".format(type(val), self._metadata_types))
 
-    def set(self, inplace=False, **kwargs):
+	self._metadata[att] = val
+
+    def getncattr(self, att):
 	""" 
-	inplace: modify attributes in-place, return None (useful to respect closure)
-
-	a.set(units=m).plot() # in case units was forgotten
-	a.set(_slicing="numpy")[:30]
-	a.set(_slicing="exact")[1971.42]
-	a.set(_slicing="nearest")[1971]
-	a.set(name="myname", inplace=True) # modify attributes inplace
 	"""
-	if inplace: obj = self
-	else: obj = self.copy()
+	return self._metadata[att]
 
-	for k in kwargs:
-	    if hasattr(self, k) or k.startswith('_'):
-		setattr(self, k, kwargs[k])
-	    else:
-		print "add to metadata"
-		self._metadata[k] = kwargs[k]
+    def delncattr(self, att):
+	""" 
+	"""
+	del self._metadata[att]
 
-	if not inplace:
-	    return obj
+    #
+    # "pretty" printing
+    #
 
     def repr_meta(self):
 	""" string representation for metadata
 	"""
-	return ", ".join(['%s: "%s"' % (att, getattr(self, att)) for att in self.ncattrs()])
+	return ", ".join(['{}: {}'.format(att, getattr(self, att)) for att in self.ncattrs()])
 
-def _convert_dtype(dtype):
-    """ convert numpy type in a python type
-    """
-    if dtype is np.dtype(int):
-	type_ = int
-
-    elif dtype in [np.dtype('S'), np.dtype('S1')]:
-	type_ = str
-
-    else:
-	type_ = float
-
-    return type_
 
 def test():
     import doctest

@@ -25,40 +25,24 @@ class DimArray(Variable):
     * alias method for matplotlib plotting.
     * natural netCDF I/O
     """
-    _order = None  # set a general ordering relationship
+    _order = None  # set a general ordering relationship for dimensions
 
-    # pre-defined metadata (see doc in metadata.py)
-    name = Metadata("name","")    # variable names
-    units = Metadata("units","")  # variable units
-    descr = Metadata("descr","")  # variable description
-    stamp = Metadata("stamp","")  # record dimensions during slicing and transformations
-
-    #
-    # also protect the axes attribute
-    #
-    @property 
-    def axes(self):
-	return self._axes
-
-    @values.setter
-    def axes(self, newval):
-	if np.shape(newval) != np.shape(self._values):
-	    msg = "To reshape dimensions try one of the exising methods "
-	    msg += "(squeeze, transpose...) or create a new <{cls}> instance".format(cls=self.__class__.__name__)
-	    raise ValueError(msg)
+    _metadata_exclude = ("values","axes","name") # is NOT a metadata
 
     #
     # NOW MAIN BODY OF THE CLASS
     #
 
-    def __init__(self, values, axes=None, dtype=None, _slicing=None, copy=False, **attrs):
+    def __init__(self, values, axes=None, dtype=None, copy=False, _slicing=None, name="", **metadata):
 	""" Initialization
 
 	values	: numpy-like array, or DimArray instance
 	axes	: Axes instance, or list of tuples or list of Axis objects
 		  This argument can only be omitted if values is an instance of DimArray
-		    
-	**attrs: metadata 
+
+	name	: can set a name to the variable, will be used when writing to netCDF
+
+	metadata: stored in _metadata dict
 
 	dtype, copy: passed to np.array()
 
@@ -94,19 +78,20 @@ class DimArray(Variable):
 	#
 
 	self.values = avalues
+	self.name = name  
 	self.axes = axes
 
-	# option
+	# options
 	self._slicing = _slicing
 
-	# attributes
-	self.attrs = attrs
+	#
+	# metadata (see Variable type in metadata.py)
+	#
+	super(DimArray, self).__init__() # init an ordered dict self._metadata
+	for k in metadata:
+	    self.setncattr(k, metadata[k]) # perform type-checking and store in self._metadata
 
-	# Define attributes
-	_check_attrs(attrs) # check whether each attribue conform, raise Exception if not
-	self.__dict__.update(attrs) # passing keyword arguments
-
-	# exact shape
+	# Check consistency between axes and values
 	inferred = tuple([ax.size for ax in self.axes])
 	if inferred != self.values.shape:
 	    print "shape inferred from axes: ",inferred
@@ -156,20 +141,18 @@ class DimArray(Variable):
 
 	# or just with the normal class constructor
 	else:
-	    #new = dimarray(values, axes)
 	    new = DimArray(values, axes, **kwargs)
-	    #new.set(inplace=True, **kwargs)
 	    return new
 
     @classmethod
-    def from_tuples(cls, values, *args, **kwargs):
+    def from_tuples(cls, values, *axes, **kwargs):
 	""" initialize DimArray with with variable list of tuples, and attributes
 
 	values	    : numpy-like array (passed to array())
-	*args	    : variable list of tuples to define axes: ('x0',val0), ('x1',val1), ...
-	**kwargs    : list of tuples
+	*axes	    : variable list of tuples to define axes: ('x0',val0), ('x1',val1), ...
+	**kwargs    : passed to DimArray (attributes)
 	"""
-	axes = Axes.from_tuples(*args)
+	axes = Axes.from_tuples(*axes)
 	new = cls(values, axes, **kwargs)
 	return new
 
@@ -179,32 +162,38 @@ class DimArray(Variable):
 	""" initialize DimArray with with variable list of tuples, and attributes
 
 	values	    : numpy-like array (passed to array())
-	*args	    : variable list of tuples to define axes: ('x0',val0), ('x1',val1), ...
-	**kwargs    : list of tuples
+	axes	    : list of axis values
+	names	    : list of axis names
+	(axes, names) are passed to Axes.from_list
+	**kwargs    : passed to DimArray (attributes)
 	"""
 	axes = Axes.from_list(axes, names)
 	new = cls(values, axes, **kwargs)
 	return new
 
     @classmethod
-    def from_dict(cls, values, names=None, **kwargs):
+    def from_dict(cls, values, names=None, **axes):
 	""" initialize DimArray with with variable list of tuples, and attributes
 
 	values	    : numpy-like array (passed to array())
-	*args	    : variable list of tuples to define axes: ('x0',val0), ('x1',val1), ...
-	**kwargs    : list of tuples
+	**axes      : axes passed as keyword araguments <axis name>=<axis val>
 	"""
-	if len(kwargs) > 0:
-	    for k in kwargs:
-		if type(kwargs[k]) is str:
-		    print "PASSED:",k,":",kwargs[k]
+	if len(axes) > 0:
+
+	    # "convenience", quick check on axes, to avoid a "deep" error message
+	    for k in axes:
+		if type(axes[k]) is str:
+		    print "PASSED:",k,":",axes[k]
 		    msg = \
 """ no attribute can be passed with the from_dict method 
-==> try using the set() method instead, e.g. DimArray.from_dict(values, **kwargs).set(val1=val2)
+==> try using the set() method instead, for example:
+    a = DimArray.from_dict(values, **axes)
+    a.name = "myname"
+    a.units = "myunits"
 """
 		    raise ValueError(msg)
 
-	    axes = Axes.from_dict(shape=np.shape(values), names=names, **kwargs)
+	    axes = Axes.from_dict(shape=np.shape(values), names=names, **axes)
 	return cls(values, axes)
 
     #
@@ -234,7 +223,8 @@ class DimArray(Variable):
 	new = copy.copy(self) # shallow copy
 
 	if not shallow:
-	    new.set(values=values.copy(), axes=self.axes.copy(), inplace=True) 
+	    new.values = values.copy()
+	    new.axes = self.axes.copy()
 
 	return new
 	#return DimArray(self.values.copy(), self.axes.copy(), slicing=self.slicing, **{k:getattr(self,k) for k in self.ncattrs()})
@@ -264,18 +254,18 @@ class DimArray(Variable):
 	items = np.index_exp[item] # tuple
     
 	# dictionary <axis name> : <axis index> to feed into xs
-	slice_nd = {self.axes[i].name: it for i, it in enumerate(items)]
+	ix_nd = {self.axes[i].name: it for i, it in enumerate(items)]
 
-	return self.xs(**slice_nd)
+	return self.xs(**ix_nd)
 
 
-    def xs_axis(self, slice_, axis=0, method=None, **kwargs):
-	""" slice a long a single axis
+    def xs_axis(self, ix, axis=0, method=None, **kwargs):
+	""" cross-section or slice along a single axis
 
 	input:
-	    - slice_: the slice
+	    - ix    : index as axis value or integer position 
 	    - axis  : int or str
-	    - method: None (default), nearest, exact, numpy
+	    - method: None (default), "nearest", "exact", "numpy"
 	    - **kwargs: additional parameters passed to self.axes relative to slicing behaviour
 
 	output:
@@ -294,7 +284,16 @@ class DimArray(Variable):
 	axis_id = self.axes.index(axis_obj) # corresponding integer index
 
 	# get integer index/slice for axis valued index/slice
-	index = axis.loc(slice_, method=method, **kwargs) 
+	if method is None:
+	    method = self._slicing # slicing method
+
+	# numpy-like indexing, do nothing
+	if method == "numpy":
+	    index = ix
+
+	# otherwise locate the values
+	else:
+	    index = axis.loc(ix, method=method, **kwargs) 
 
 	# make a numpy index  and use numpy's slice method (`slice(None)` :: `:`)
 	index = (slice(None),)*(axis_id-1) + (index,)
@@ -308,12 +307,12 @@ class DimArray(Variable):
 
 	return self.__constructor(newval, axes, **attrs)
 
-    def xs(self, slice_=None, axis=0, method=None, **axes):
+    def xs(self, ix=None, axis=0, method=None, **axes):
 	""" Cross-section, can be multidimensional
 
 	input:
 
-	    - slice_ : int or list or tuple or slice
+	    - ix : int or list or tuple or slice
 	    - axis   : int or str
 	    - method	: slicing method
 	    => passed to xs_axis
@@ -326,8 +325,8 @@ class DimArray(Variable):
 	>>> a.xs(time=1952, lon=-40, lat=70, method="nearest") # lookup nearest element (with bound checking)
 	"""
 	# single-axis slicing
-	if slice_ is not None:
-	    obj = self.xs_axis(slice_, axis=axis, method=method)
+	if ix is not None:
+	    obj = self.xs_axis(ix, axis=axis, method=method)
 
 	# multi-dimensional slicing <axis name> : <axis index value>
 	# just a chained call
@@ -341,33 +340,46 @@ class DimArray(Variable):
     #
     # here some aliases to make things compatible with pandas
     #
-
-    @property
-    def ix(self)
-	""" just an alias to the default behaviour
-	"""
-	raise NotImplementedError("pandas-like convenience' ix access is not yet implemented, \
-		main methods are standard top-level `[]` syntax for axis-value-based indexing \
-		(works in N-D) and iloc instead for integer indexing (standard numpy). `loc` \
-		is also provided as a convenience to do pandas' exact-match indexing for float-
-		valued array instead of nearest match, the default here.")
-
-	return self
-
     @property
     def loc(self):
 	""" pandas-like: exact access to the index
 	"""
-	return self.set(_slicing='exact', inplace=False)
+	obj = self.copy(shallow=True)
+	obj._slicing = 'exact'
+	return obj
 
     @property
     def iloc(self):
 	""" integer index-access
 	"""
-	return self.set(_slicing='numpy', inplace=False)
+	obj = self.copy(shallow=True)
+	obj._slicing = 'numpy'
+	return obj
 
     def __eq__(self, other): 
 	return isinstance(other, DimArray) and np.all(self.values == other.values) and self.axes == other.axes
+
+    def set(self, inplace=False, **kwargs):
+	""" update multiple class attributes in-place or after copy
+
+	inplace: modify attributes in-place, return None 
+	otherwise first make a copy, and return new obj
+
+	a.set(_slicing="numpy")[:30]
+	a.set(_slicing="exact")[1971.42]
+	a.set(_slicing="nearest")[1971]
+	a.set(name="myname", inplace=True) # modify attributes inplace
+	"""
+	if inplace: 
+	    for k in kwargs:
+		setattr(self, k, kwargs[k]) # include metadata check
+	    #self.__dict__.update(kwargs)
+
+	else:
+	    obj = self.copy(shallow=True)
+	    for k in kwargs:
+		setattr(obj, k, kwargs[k]) # include metadata check
+	    return obj
 
     #
     # to behave like a dictionary w.r.t. first dimension (pandas-like)
@@ -509,8 +521,14 @@ class DimArray(Variable):
 
 
 
-def dimarray(values, axes=None, names=None, name="", units="", descr="", dtype=None, _slicing=None, **kwargs):
+def array(values, axes=None, names=None, dtype=None, **kwaxes):
     """ Wrapper for initialization
+
+    In most ways similar to DimArray, except that no axes can be passed
+    as keyword arguments instead of metadata.
+
+    a = array(values, lon=mylon, lat=mylat)
+    a.set(name="myname", units="units")
     """
     if axes is None and hasattr(values, "axes"):
 	axes = values.axes
@@ -523,8 +541,8 @@ def dimarray(values, axes=None, names=None, name="", units="", descr="", dtype=N
 	    print axes
 	    raise ValueError("axes must be passed as a list")
 
-    if len(kwargs) > 0:
-	new = DimArray.from_dict(values, axes, **kwargs) 
+    if len(kwaxes) > 0:
+	new = DimArray.from_dict(values, axes, **kwaxes) 
 
     # scalar values
     elif len(axes) == 0:
@@ -535,8 +553,5 @@ def dimarray(values, axes=None, names=None, name="", units="", descr="", dtype=N
 
     else:
         new = DimArray.from_list(values, axes, names=names) 
-
-    # reserved attributes
-    new.set(name=name, units=units, descr=descr, _slicing=_slicing, inplace=True) 
 
     return new

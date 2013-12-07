@@ -18,6 +18,20 @@ def _fix_type(axis):
 
     return axis
 
+def _convert_dtype(dtype):
+    """ convert numpy type in a python type
+    """
+    if dtype is np.dtype(int):
+	type_ = int
+
+    elif dtype in [np.dtype('S'), np.dtype('S1')]:
+	type_ = str
+
+    else:
+	type_ = float
+
+    return type_
+
 #
 # Axis class
 #
@@ -29,9 +43,9 @@ class Axis(Variable):
 	values: numpy array (or list) 
 	name  : name (attribute)
 
-    + metadata (see Variable class)
-	=> name, units, descr, stamp are pre-defined
     """
+    _metadata_exclude = ("values", "name") # variables which are NOT metadata
+
     def __init__(self, values, name="", slicing=None, **attrs):
 	""" 
 	"""
@@ -41,13 +55,10 @@ class Axis(Variable):
 
 	values = _fix_type(values)
 
-	# Initialize self._metadata and set self._values
-	super(Axis, self).__init__(values, name=name)
+	super(Axis, self).__init__() # init an ordered dict of metadata
 
-	# Note: this is equivalent to : 
-	#   self._values = values
-	#   self._metadata = self._metadata_default.copy() # an (possibly empty) ordered dictionary
-	#   self.name = name
+	self.values = values 
+	self.name = name 
 
     def __getitem__(self, item):
 	""" access values elements & return an axis object
@@ -63,12 +74,6 @@ class Axis(Variable):
 	"""
 	return Locator(self.values)
 
-    @property
-    def iloc(self):
-	""" Access the slicer to locate axis elements
-	"""
-	return Locator(self.values, method="numpy")
-
     def __repr__(self):
 	""" string representation
 	""" 
@@ -81,6 +86,16 @@ class Axis(Variable):
 
     def copy(self):
 	return copy.copy(self)
+
+    # a few array-like properties
+    @property
+    def size(self): 
+	return np.size(self.values)
+
+    @property
+    def dtype(self): 
+	return _convert_dtype(np.array(self.values).dtype)
+
 
 #
 # List of axes
@@ -206,7 +221,6 @@ class Locator(object):
     where `values` represent the axis values
     and `method` is one of:
 
-    "numpy"  : integer-based indexing 
     "exact"  : exact matching of the value to locate in `values`
     "nearest": nearest match (with bound checking)
 
@@ -216,9 +230,7 @@ class Locator(object):
     A locator instance is generated from within the Axis object, via 
     its properties loc (valued-based indexing) and iloc (integer-based)
 
-	(a) axis.loc  ==> Locator(values)  
-
-	(b) axis.iloc ==> Locator(values , method="numpy")  
+	axis.loc  ==> Locator(values)  
 
     A locator is hashable is a similar way to a numpy array, but also 
     callable to provide the "method" parameter on-the-fly.
@@ -226,7 +238,7 @@ class Locator(object):
     It returns an integer index or `list` of `int` or `slice` of `int` which 
     is understood by numpy's arrays. In particular we have:
 
-	loc[ix] = np.index_exp[loc[ix]][0]
+	loc[ix] == np.index_exp[loc[ix]][0]
 
     The "set" method can also be useful for chained calls. We have the general 
     equivalence:
@@ -277,28 +289,22 @@ class Locator(object):
 	"""
 	values	: string list or numpy array
 
-	method	: default method: "index", "nearest", or "numpy"
+	method	: "index" (same as "exact") or "nearest" for float
+
+	NOTE: for str or int, "index" is always used
 	"""
 	self.values = values
 
+	# default method: "nearest" (for float)
 	if method is None:
-	    method = self._method()
+	    method = "nearest"
 
-	self.method = method #  default method
-
-    def _method(self):
-	""" default slicing method
-	"""
-	dtype = type(self.values[0])
-
-	# exact for integer or string
+	# but set to "index" if str or int valued axis
+	dtype = type(values[0])
 	if dtype in [str, int]: 
 	    method = "index"
 
-	# nearest for float
-	else: 
-	    method = "nearest"
-	return method
+	self.method = method #  default method
 
     #
     # wrapper methods: __getitem__ and __call__
@@ -363,11 +369,6 @@ class Locator(object):
 		raise ValueError("%f out of bounds ! (min: %f, max: %f, step: %f)" % (val, mi, ma, dx))
 	return np.argmin(np.abs(val-self.values))
 
-    def numpy(self, idx):
-	""" numpy index: do nothing
-	"""
-	return idx
-
     #
     # wrapper for single value
     #
@@ -393,10 +394,14 @@ class Locator(object):
     # Access a slice
     #
 
-    def slice(self, slice_, method=None):
+    def slice(self, slice_, method=None, include_last=True):
 	""" Return a slice_ object
 
-	slice_: slice or tuple 
+	slice_	    : slice or tuple 
+	include_last: include last element 
+
+	Note bound checking is automatically done via "locate" method
+	This is in contrast with slicing in numpy arrays.
 	"""
 	# Check type
 	assert type(slice_) in (tuple, slice), "must provide a slice or a tuple"
@@ -405,16 +410,6 @@ class Locator(object):
 
 	# update method
 	if method is None: method = self.method
-
-	# include last element, except for numpy-like indexing
-	# (for consistency with numpy and pandas)
-	# not bound checking is automatically done in both "index" 
-	# ("exact") and "nearest" methods, but not in "numpy"
-	# again, this is consistent with other packages.
-	if method  == "numpy":
-	    include_last = False
-	else:
-	    include_last = True
 
 	start, stop, step = slice_.start, slice_.stop, slice_.step
 
