@@ -3,7 +3,7 @@ from collections import OrderedDict
 import string
 import copy
 
-from metadata import Variable, Metadata
+from metadata import Variable
 
 __all__ = ["Axis","Axes"]
 
@@ -167,7 +167,7 @@ class Axes(list):
 	# alternative option: only the shape is given
 	elif shape is not None:
 	    current_shape = [ax.size for ax in axes]
-	    assert len(set(current_shape)) == len(set(axes.names)), \
+	    assert len(set(current_shape)) == len(set([ax.name for ax in axes])), \
     """ some axes have the same size !
     ==> ambiguous determination of dimensions order via keyword arguments only
     ==> explictly supply `names=` or use from_list() or from_tuples() methods" """
@@ -183,7 +183,7 @@ class Axes(list):
 	""" get an axis by integer or name
 	"""
 	if type(item) is str:
-	    item = self.names.index(item)
+	    item = self.get_idx(item)
 
 	if np.iterable(item):
 	    return Axes([self[i] for i in item])
@@ -194,7 +194,7 @@ class Axes(list):
     def __repr__(self):
 	""" string representation
 	"""
-	header = "dimensions: "+ " x ".join(self.names)
+	header = "dimensions: "+ " x ".join([ax.name for ax in self])
 	body = "\n".join([repr(ax).split('\n')[0] for ax in self])
 	return "\n".join([header, body])
 
@@ -202,12 +202,23 @@ class Axes(list):
 	""" sort IN PLACE
 	"""
 	if type(names[0]) is int:
-	    names = self[names].names # names to sort along
+	    names = [ax.name for ax in self]
+
 	super(Axes, self).sort(key=lambda x: names.index(x.name))
 
     def copy(self):
 	return copy.copy(self)
 
+    def get_idx(self, axis):
+	""" always return axis integer location
+	"""
+	# if axis is already an integer, just return it
+	if type(axis) is int:
+	    return axis
+
+	names = [ax.name for ax in self]
+
+	return names.index(axis)
 
 #
 # Return a slice for an axis

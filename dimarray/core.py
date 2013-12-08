@@ -3,13 +3,12 @@
 import numpy as np
 import copy
 
-import plotting
+#import plotting
 
-from metadata import Variable, Metadata
+from metadata import Variable
+from tools import _NumpyDesc
 from axes import Axis, Axes
 from lazyapi import pandas_obj
-
-use_pandas = True # use pandas to align data
 
 __all__ = []
 
@@ -28,6 +27,8 @@ class DimArray(Variable):
     _order = None  # set a general ordering relationship for dimensions
 
     _metadata_exclude = ("values","axes","name") # is NOT a metadata
+
+    _pandas_like = False # influences the behaviour of ix and loc
 
     #
     # NOW MAIN BODY OF THE CLASS
@@ -107,12 +108,11 @@ class DimArray(Variable):
 	    self.transpose(order, inplace=True)
 
     @staticmethod
-    def __constructor(values, axes, **kwargs):
+    def __constructor(values, axes, **metadata):
 	""" Internal API for the constructor: check whether a pre-defined class exists
 
 	values	: numpy-like array
 	axes	: Axes instance 
-	**kwargs: additional parameters
 
 	This static method is used whenever a new DimArray needs to be instantiated
 	for example after a transformation.
@@ -122,26 +122,16 @@ class DimArray(Variable):
 	"""
 	assert isinstance(axes, Axes), "Need to provide an Axes object !"
 
-	# look whether a particular pre-defined array matches the dimensions
-	import defarray
-
-	# the dimensions for the object
-	dims = axes.names
-
 	# loop over all variables defined in defarray
-	cls = None
-	for obj in vars(defarray): 
-	    if isinstance(obj, defarray.Defarray):
-		if tuple(dims) == cls._dimensions:
-		    cls = obj
+	cls = _get_defarray_cls([ax.name for ax in axes])
 
 	# initialize with the specialized class
 	if cls is not None:
-	    new = cls(values, *axes, **kwargs)
+	    new = cls(values, *axes, **metadata)
 
 	# or just with the normal class constructor
 	else:
-	    new = DimArray(values, axes, **kwargs)
+	    new = DimArray(values, axes, **metadata)
 	    return new
 
     @classmethod
@@ -269,7 +259,7 @@ class DimArray(Variable):
 	    - **kwargs: additional parameters passed to self.axes relative to slicing behaviour
 
 	output:
-	    - DimArray object
+	    - DimArray object or python built-in type, consistently with numpy slicing
 
 	>>> a.xs(45.5, axis=0)	 # doctest: +ELLIPSIS
 	>>> a.xs(45.7, axis="lat") == a.xs(45.5, axis=0) # "nearest" matching
@@ -305,7 +295,15 @@ class DimArray(Variable):
 	    axes.remove(axis_obj)
 	    attrs = {axis_id.name:axis.values[index]} # add attribute
 
-	return self.__constructor(newval, axes, **attrs)
+	# If result is a numpy array, make it a DimArray
+	if isinstance(newval, np.ndarray):
+	    result = self.__constructor(newval, axes, **attrs)
+
+	# otherwise, return scalar
+	else:
+	    result = newval
+
+	return result
 
     def xs(self, ix=None, axis=0, method=None, **axes):
 	""" Cross-section, can be multidimensional
@@ -356,6 +354,172 @@ class DimArray(Variable):
 	obj._slicing = 'numpy'
 	return obj
 
+    @property
+    def ix(self):
+	""" automatic choice between numpy or axis-value indexing
+
+	question: should follow this path?? this is error prone
+	or rather make it an alias for iloc?
+	"""
+	if not self._pandas_like:
+	    return self.iloc
+
+	raise Warning("this method may disappear in the future")
+	raise NotImplementedError('add the method to Locator')
+
+    #
+    # MAKE IT BEHAVE LIKE A NUMPY ARRAY
+    #
+
+    # basic numpy shape attributes as properties
+    @property
+    def shape(self): 
+	return self.values.shape
+
+    @property
+    def size(self): 
+	return self.values.size
+
+    @property
+    def ndim(self): 
+	return self.values.ndim
+
+    @property
+    def dtype(self): 
+	return self.values.dtype
+
+    @property
+    def __array__(self): 
+	return self.values.__array__
+
+
+    # numpy transforms
+
+    def apply(self, funcname, axis=None, skipna=True):
+	""" apply along-axis numpy method
+	"""
+	assert type(funcname) is str, "can only provide function as a string"
+
+	# Convert to MaskedArray if needed
+	values = self.values
+	nans = np.isnan(values)
+	if np.any(nans) and skipna:
+	    values = np.ma.array(values, mask=nans)
+
+	# Apply numpy method
+	if type(axis) is str:
+	    axis = self.axes.get_idx(axis)
+	result = getattr(values, funcname)(axis=axis) 
+
+	# if scalar, just return it
+	if not isinstance(result, np.ndarray):
+	    return result
+
+	# otherwise, fill NaNs back in
+	if np.ma.isMaskedArray(result):
+	    result = result.filled(np.nan)
+
+	obj = self.__constructor(result)
+
+	# add metadata back in
+	obj._metadata_update_transform(self, funcname, self.axes[axis].name)
+
+	return obj
+
+    #
+    # Add numpy transforms
+    #
+    mean = _NumpyDesc("apply", "mean")
+    median = _NumpyDesc("apply", "median")
+    sum  = _NumpyDesc("apply", "sum")
+    diff = _NumpyDesc("apply", "diff")
+    prod = _NumpyDesc("apply", "prod")
+    min = _NumpyDesc("apply", "min")
+    max = _NumpyDesc("apply", "max")
+    ptp = _NumpyDesc("apply", "ptp")
+    cumsum = _NumpyDesc("apply", "cumsum")
+    cumprod = _NumpyDesc("apply", "cumprod")
+
+
+    def transpose(self, axes=None):
+	""" Analogous to numpy, but also allows axis names
+	>>> a = da.array(np.zeros((5,6)), lon=np.arange(6), lat=np.arange(5))
+	>>> a          # doctest: +ELLIPSIS
+	dimensions(5, 6): lat, lon
+	array(...)
+	>>> a.T         # doctest: +ELLIPSIS
+	dimensions(6, 5): lon, lat
+	array(...)
+	>>> a.transpose([1,0]) == a.T == a.transpose(['lon','lat'])
+	True
+	"""
+	if axes is None:
+	    if self.ndim == 2:
+		axes = [1,0] # numpy, 2-D case
+	    elif self.ndim == 1:
+		axes = [0]
+
+	    else:
+		raise ValueError("indicate axes value to transpose")
+
+	# get equivalent indices 
+	if type(axes[0]) is str:
+	    axes = [self.dims.index(nm) for nm in axes]
+
+	result = self.values.transpose(axes)
+	newaxes = [self.axes[i] for i in axes]
+	return self.__constructor(result, newaxes)
+
+
+
+    @property
+    def T(self):
+	return self.transpose()
+
+    #
+    # basic operattions
+    #
+    def _operation(self, func, other, reindex=True, transpose=True):
+	""" make an operation: this include axis and dimensions alignment
+
+	Just for testing:
+	>>> b
+	...
+	array([[ 0.,  1.],
+	       [ 1.,  2.]])
+	>>> b == b
+	True
+	>>> b+2 == b + np.ones(b.shape)*2
+	True
+	>>> b+b == b*2
+	True
+	>>> b*b == b**2
+	True
+	>>> (b - b.values) == b - b
+	True
+	"""
+	result = _operation(func, self, other, reindex=reindex, transpose=transpose, constructor=self.__constructor)
+	return result
+
+    def __add__(self, other): return self._operation(np.add, other)
+
+    def __sub__(self, other): return self._operation(np.subtract, other)
+
+    def __mul__(self, other): return self._operation(np.multiply, other)
+
+    def __div__(self, other): return self._operation(np.divide, other)
+
+    def __pow__(self, other): return self._operation(np.power, other)
+
+    def __eq__(self, other): 
+	""" note it uses the np.all operator !
+	"""
+	return isinstance(other, self.__class__) and np.all(self.values == other.values)
+
+    def __float__(self):  return float(self.values)
+    def __int__(self):  return int(self.values)
+
+
     def __eq__(self, other): 
 	return isinstance(other, DimArray) and np.all(self.values == other.values) and self.axes == other.axes
 
@@ -392,6 +556,20 @@ class DimArray(Variable):
 	return self.axes[0].values
 
     #
+    # iteration over any dimension: key, value
+    #
+    def iter(self, axis=0):
+	""" Iterate over axis value and slice along an axis
+
+	for time, time_slice in myarray.iter('time'):
+	    do stuff
+	"""
+	# iterate over axis values
+	for k in self.axes[axis].values:
+	    val = self.xs_axis(k, axis=axis) # cross-section
+	    yield k, val
+
+    #
     # pretty printing
     #
 
@@ -420,29 +598,6 @@ class DimArray(Variable):
 	    lines.append(line)
 
 	return "\n".join(lines)
-
-
-    def transpose(self, axes=None):
-	""" Analogous to numpy, but also allows axis names
-	>>> a = da.array(np.zeros((5,6)), lon=np.arange(6), lat=np.arange(5))
-	>>> a          # doctest: +ELLIPSIS
-	dimensions(5, 6): lat, lon
-	array(...)
-	>>> a.T         # doctest: +ELLIPSIS
-	dimensions(6, 5): lon, lat
-	array(...)
-	>>> a.transpose([1,0]) == a.T == a.transpose(['lon','lat'])
-	True
-	"""
-	if axes is not None:
-	    axes = [self._get_axis_idx(ax) for ax in axes]
-	    names = [self.names[i] for i in axes]
-
-	else:
-	    names = [self.names[i] for i in 1,0] # work only 2D
-
-	result = self.values.transpose(axes)
-	return self.__constructor(result, names=names)
 
 
 
@@ -516,9 +671,8 @@ class DimArray(Variable):
 	"""
 	return self.to_pandas().plot(*args, **kwargs)
 
-    plot = plotting.plot
-    contourf = plotting.contourf
-
+    #plot = plotting.plot
+    #contourf = plotting.contourf
 
 
 def array(values, axes=None, names=None, dtype=None, **kwaxes):
@@ -554,4 +708,22 @@ def array(values, axes=None, names=None, dtype=None, **kwaxes):
     else:
         new = DimArray.from_list(values, axes, names=names) 
 
+    # make it one of the predefined classes (with predefined methods)
+    cls = _get_defarray_cls(new.dims)
+    if cls is not None:
+	new = cls(new.values, new.axes)
+
     return new
+
+
+def _get_defarray_cls(dims):
+    """ look whether a particular pre-defined array matches the dimensions
+    """
+    import defarray
+    cls = None
+    for obj in vars(defarray): 
+	if isinstance(obj, defarray.Defarray):
+	    if tuple(dims) == cls._dimensions:
+		cls = obj
+
+    return cls
