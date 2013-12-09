@@ -11,7 +11,7 @@ def _fix_type(axis):
     """ fix type for axes coming from pandas
     """
     dtype = type(axis[0])
-    if dtype is str:
+    if dtype in [str, type(None)]:
 	axis = list(axis)
     else:
 	axis = np.array(axis, dtype=dtype)
@@ -445,6 +445,48 @@ class Locator(object):
     @property
     def size(self):
 	return np.size(self.values)
+
+#
+# Axis alignment
+#
+
+def _common_axis(ax1, ax2):
+    """ find the common axis (will be sorted)
+
+    input:
+	ax1, ax2: Axis objets
+
+    output:
+	newaxis: axis object
+    """
+    assert ax1.name == ax2.name, "cannot align axis from differnet dimensions"
+    #DataFrame([Series(dummy, index=d1), Series(dummy, index=d2)]).index
+    if type(ax1) is list:
+	newaxis = set(ax1+ax2)
+	newaxis.sort(reverse=ax1[1] < ax1[0] if len(ax1) > 1 else False) # sort new axis
+
+    else:
+	ax = _common_axis(list(ax1), list(ax2))
+	newaxis = np.array(ax)
+
+    return Axis(newaxis, ax1.name)
+
+#def _common_axes(axes1, axes2):
+#    """ Align axes which have a dimension in common
+#
+#    input:
+#	axes1, axes2: Axes objects
+#    """
+#    # common list of dimensions
+#    dims1 =  [ax.name for ax in axes1] 
+#    dims =  [ax.name for ax in axes2 if ax.name in dims1] 
+#
+#    newaxes = []
+#    for name in dims:
+#	newaxis = _common_axis(axes1[name], axes2[name])
+#	newaxes.append(newaxis)
+#
+#    return Axes(newaxes)
 
 def test():
     """ test module

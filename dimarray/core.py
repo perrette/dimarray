@@ -7,7 +7,7 @@ import copy
 
 from metadata import Metadata
 from tools import _NumpyDesc
-from axes import Axis, Axes
+from axes import Axis, Axes, _common_axis
 from lazyapi import pandas_obj
 
 __all__ = []
@@ -358,58 +358,6 @@ class DimArray(Metadata):
 	raise Warning("this method may disappear in the future")
 	raise NotImplementedError('add the method to Locator')
 
-    #
-    # REINDEXING - RESHAPE
-    #
- 
-    def reindex_axis(self, newaxis, axis, method='nearest'):
-	""" reindex an array along an axis
-
-	Input:
-	    - newaxis: array or list on the new axis
-	    - axis   : axis number or name
-	    - method : "nearest", "exact", "interp"
-
-	Output:
-	    - Dimarray
-
-	TO DO: optimize?
-	"""
-	axis_id = self.axes.get_idx(axis)
-	axis_nm = self.axes.get_idx(axis)
-
-	# indices along which to sample
-	indices = np.empty(np.size(newaxis), dtype=int)
-	indices.fill(-1)
-	ax = self.axes[axis] # Axis object
-	if method in "nearest","exact":
-	    for i, val in enumerate(newaxis):
-		try:
-		    idx = ax.loc.locate(val)
-		    indices[i] = idx
-
-		except Exception, msg:
-		    # not found, will be filled with Nans
-		    pass
-
-	    # prepare array to slice
-	    values = self.values.take(indices, axis=axis_id)
-
-	    # missing indices
-	    missing = (slice(None),)*(axis_id-1) + np.where(indices==-1)
-	    values[missing] = np.nan # set missing values to NaN
-
-	    # new Dimarray
-	    # ...replace the axis
-	    new_ax = Axis(newaxis, ax.name)
-	    axes = [ax for i,ax in enumerate(self.axes) if i != axis_id else new_ax]
-	    # ...initialize Dimarray
-	    obj = self.__constructor(values, axes)
-	    obj._metadata = self._metadata 
-	    return obj
-
-	else:
-	    raise NotImplementedError(method)
 
     #
     # Basic numpy array's properties
@@ -489,7 +437,6 @@ class DimArray(Metadata):
     cumsum = _NumpyDesc("apply", "cumsum")
     cumprod = _NumpyDesc("apply", "cumprod")
 
-
     def transpose(self, axes=None):
 	""" Analogous to numpy, but also allows axis names
 	>>> a = da.array(np.zeros((5,6)), lon=np.arange(6), lat=np.arange(5))
@@ -519,11 +466,106 @@ class DimArray(Metadata):
 	newaxes = [self.axes[i] for i in axes]
 	return self.__constructor(result, newaxes)
 
-
     @property
     def T(self):
 	return self.transpose()
 
+    def newaxis(self, dim):
+	""" add a new axis, ready to broadcast
+	"""
+	assert type(dim) is str, "dim must be string"
+	values = self.values[np.newaxis] # newaxis is None 
+	axis = Axis([None], dim) # create new dummy axis
+	axes = self.axes.copy()
+	axes.insert(0, axis)
+	return self.__constructor(values, axes)
+
+    #
+    # REINDEXING - RESHAPE
+    #
+ 
+    def reindex_axis(self, newaxis, axis, method=None):
+	""" reindex an array along an axis
+
+	Input:
+	    - newaxis: array or list on the new axis
+	    - axis   : axis number or name
+	    - method : "nearest", "exact", "interp"
+
+	Output:
+	    - Dimarray
+
+	TO DO: optimize?
+	"""
+	axis_id = self.axes.get_idx(axis)
+	axis_nm = self.axes.get_idx(axis)
+	ax = self.axes[axis_id] # Axis object
+
+	# do nothing if axis is same
+	if np.all(newaxis==ax.values):
+	    return self
+
+	# indices along which to sample
+	if method in "nearest","exact":
+
+	    indices = np.empty(np.size(newaxis), dtype=int)
+	    indices.fill(-1)
+
+	    # locate elements one by one...
+	    for i, val in enumerate(newaxis):
+		try:
+		    idx = ax.loc.locate(val, method=method)
+		    indices[i] = idx
+
+		except Exception, msg:
+		    # not found, will be filled with Nans
+		    pass
+
+	    # prepare array to slice
+	    values = self.values.take(indices, axis=axis_id)
+
+	    # missing indices
+	    missing = (slice(None),)*(axis_id-1) + np.where(indices==-1)
+	    values[missing] = np.nan # set missing values to NaN
+
+	    # new Dimarray
+	    # ...replace the axis
+	    new_ax = Axis(newaxis, ax.name)
+	    axes = [ax for i,ax in enumerate(self.axes) if i != axis_id else new_ax]
+	    # ...initialize Dimarray
+	    obj = self.__constructor(values, axes)
+	    obj._metadata = self._metadata 
+	    return obj
+
+	else:
+	    raise NotImplementedError(method)
+
+    def _reindex_axes(self, axes, method=None):
+	""" reindex according to a list of axes
+	"""
+	obj = self
+	newdims = [ax2.name for ax2 in axes]
+	for ax in self.axes:
+	    if ax.name in newdims:
+		newaxis = axes[ax.name].values
+		obj = obj.reindex_axis(newaxis, axis=ax.name, method=method)
+
+	return obj
+
+    def reindex_like(self, other, method=None):
+	""" reindex like another axis
+
+	note: only reindex axes which are present in other
+	"""
+	return self._reindex_axes(other.axes, method=method)
+
+    def reindex(self, method=None, **kwds):
+	""" reindex over several dimensions via keyword arguments, for convenience
+	"""
+	obj = self
+	for k in kwds:
+	    obj = obj.reindex_axis(kwds[k], axis=k, method=method)
+	return obj
 
     #
     # basic operattions
@@ -547,7 +589,7 @@ class DimArray(Metadata):
 	>>> (b - b.values) == b - b
 	True
 	"""
-	result = _operation(func, self, other, reindex=reindex, transpose=transpose, constructor=self.__constructor)
+	result = _operation(func, self, other, constructor=self.__constructor)
 	return result
 
     def __add__(self, other): return self._operation(np.add, other)
@@ -778,49 +820,62 @@ def _get_defarray_cls(dims):
 
     return cls
 
-
-def _operation(func, o1, o2, align=True, order=None):
+def _operation(func, o1, o2, reindex=True, transpose=True, constructor=DimArray):
     """ operation on LaxArray objects
 
     input:
 	func	: operator
-	o1    	: LHS operand: expect attributes (values, dims)
-		  and method conform_to 
+	o1    	: LHS operand: DimArray
 	o2    	: RHS operand: at least: be convertible by np.array())
 	align, optional: if True, use pandas to align the axes
-	order	: if order is True, align the dimensions along a particular order
 
     output:
 	values: array values
 	dims : dimension names
     """
     # second operand is not a DimArray: let numpy do the job 
-    if not hasattr(o2, 'values') or not hasattr(o2,'dims'): 
+    if not isinstance(o2, DimArray):
 	if np.ndim(o2) > o1.ndim:
 	    raise ValueError("bad input: second operand's dimensions not documented")
 	res = func(o1.values, np.array(o2))
-	return res, o1.dims
+	return constructor(res, o1.axes)
 
-    # if same dimension: easy
-    if o1.dims == o2.dims:
-	res = func(o1.values, o2.values)
-	return res, o1.dims
+    # both objects are dimarrays
 
-    # otherwise determine the dimensions of the result
-    if order is None:
-	order = _unique(o1.dims + o2.dims) 
-    else:
-	order = [o for o in order if o in o1.dims or o in o2.dims]
-    order = tuple(order)
+    # re-index 
+    if reindex:
 
-    #
-    o1 = o1.conform_to(order)
-    o2 = o2.conform_to(order)
+	# common list of dimensions
+	dims1 =  [ax.name for ax in o1.axes] 
+	common_dims =  [ax.name for ax in o2.axes if ax.name in dims1] 
 
+	# reindex both operands
+	for name in common_dims:
+	    ax = _common_axis(o1.axes[name], o2.axes[name])
+	    o1 = o1.reindex_axis(ax.values, axis=ax.name)
+	    o2 = o2.reindex_axis(ax.values, axis=ax.name)
+
+    # determine the dimensions of the result
+    newdims = _unique(o1.dims + o2.dims) 
+
+    # make sure all dimensions are present
+    for o in newdims:
+	if o not in o1.dims:
+	    o1 = o1.newaxis(o)
+	if o not in o2.dims:
+	    o2 = o2.newaxis(o)
+
+    # now give it the right order
+    o1 = o1.transpose(newdims)
+    o2 = o2.transpose(newdims)
     assert o1.dims == o2.dims, "problem in transpose"
-    res = func(o1.values, o2.values) # just to the job
 
-    return res, order
+    # make the new axes
+    newaxes = [ax for ax in o1.axes if ax.values[0] is not None else o2.axes[ax.name]]
+
+    res = func(o1.values, o2.values)
+
+    return constructor(res, newaxes)
 
 #
 # Handle operations 
