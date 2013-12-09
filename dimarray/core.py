@@ -5,7 +5,7 @@ import copy
 
 #import plotting
 
-from metadata import Variable
+from metadata import Metadata
 from tools import _NumpyDesc
 from axes import Axis, Axes
 from lazyapi import pandas_obj
@@ -15,7 +15,7 @@ __all__ = []
 #
 # Main class:
 #
-class DimArray(Variable):
+class DimArray(Metadata):
     """ numpy's ndarray with physical dimensions
 
     * numpy's ndarrays with named axes and metadata organized on the netCDF format.
@@ -86,7 +86,7 @@ class DimArray(Variable):
 	self._slicing = _slicing
 
 	#
-	# metadata (see Variable type in metadata.py)
+	# metadata (see Metadata type in metadata.py)
 	#
 	super(DimArray, self).__init__() # init an ordered dict self._metadata
 	for k in metadata:
@@ -120,7 +120,12 @@ class DimArray(Variable):
 	This makes the sub-classing process easier since only this method needs to be 
 	overloaded to make the sub-class a "closed" class.
 	"""
-	assert isinstance(axes, Axes), "Need to provide an Axes object !"
+	assert isinstance(axes, list), "Need to provide a list of Axis objects !"
+	if len(axes) == 0:
+	    return DimArray(values, axes, **metadata)
+
+	assert isinstance(axes[0], Axis), "Need to provide a list of Axis objects !"
+	#assert isinstance(axes, Axes), "Need to provide an Axes object !"
 
 	# loop over all variables defined in defarray
 	cls = _get_defarray_cls([ax.name for ax in axes])
@@ -162,8 +167,8 @@ class DimArray(Variable):
 	return new
 
     @classmethod
-    def from_dict(cls, values, names=None, **axes):
-	""" initialize DimArray with with variable list of tuples, and attributes
+    def from_kwds(cls, values, names=None, **axes):
+	""" initialize DimArray with with axes as key-word arguments
 
 	values	    : numpy-like array (passed to array())
 	**axes      : axes passed as keyword araguments <axis name>=<axis val>
@@ -175,15 +180,15 @@ class DimArray(Variable):
 		if type(axes[k]) is str:
 		    print "PASSED:",k,":",axes[k]
 		    msg = \
-""" no attribute can be passed with the from_dict method 
+""" no attribute can be passed with the from_kwds method 
 ==> try using the set() method instead, for example:
-    a = DimArray.from_dict(values, **axes)
+    a = DimArray.from_kwds(values, **axes)
     a.name = "myname"
     a.units = "myunits"
 """
 		    raise ValueError(msg)
 
-	    axes = Axes.from_dict(shape=np.shape(values), names=names, **axes)
+	    axes = Axes.from_kwds(shape=np.shape(values), names=names, **axes)
 	return cls(values, axes)
 
     #
@@ -193,16 +198,12 @@ class DimArray(Variable):
 	""" return dimension or numpy attribue
 	"""
 	# check for dimensions
-	if att in self.axes.names:
+	if att in self.dims:
 	    ax = self.axes[att]
 	    return ax.values # return numpy array
 
-	# numpy attributes: size, shape etc...
-	elif hasattr(self.values, att): # and not inspect.isfunction( getattr(self.values, att) ):
-	    return getattr(self.values, att)
-
 	else:
-	    raise ValueError("unknown attribute: "+att)
+	    super(DimArray, self).__getattr__(att) # call Metadata's method
 
     def copy(self, shallow=False):
 	""" copy of the object and update arguments
@@ -220,7 +221,7 @@ class DimArray(Variable):
 	#return DimArray(self.values.copy(), self.axes.copy(), slicing=self.slicing, **{k:getattr(self,k) for k in self.ncattrs()})
 
     #
-    # Slicing
+    # SLICING
     #
 
     @property
@@ -228,15 +229,6 @@ class DimArray(Variable):
 	""" axis names :: axes.names
 	"""
 	return tuple([ax.name for ax in self.axes])
-
-    def _get_axis_idx(self, axis):
-	""" always return an integer axis
-	"""
-	if type(axis) is str:
-	    axis = self.dims.index(axis)
-
-	return axis
-
 
     def __getitem__(self, item): 
 	""" get a slice (use xs method)
@@ -247,7 +239,6 @@ class DimArray(Variable):
 	ix_nd = {self.axes[i].name: it for i, it in enumerate(items)]
 
 	return self.xs(**ix_nd)
-
 
     def xs_axis(self, ix, axis=0, method=None, **kwargs):
 	""" cross-section or slice along a single axis
@@ -368,7 +359,60 @@ class DimArray(Variable):
 	raise NotImplementedError('add the method to Locator')
 
     #
-    # MAKE IT BEHAVE LIKE A NUMPY ARRAY
+    # REINDEXING - RESHAPE
+    #
+ 
+    def reindex_axis(self, newaxis, axis, method='nearest'):
+	""" reindex an array along an axis
+
+	Input:
+	    - newaxis: array or list on the new axis
+	    - axis   : axis number or name
+	    - method : "nearest", "exact", "interp"
+
+	Output:
+	    - Dimarray
+
+	TO DO: optimize?
+	"""
+	axis_id = self.axes.get_idx(axis)
+	axis_nm = self.axes.get_idx(axis)
+
+	# indices along which to sample
+	indices = np.empty(np.size(newaxis), dtype=int)
+	indices.fill(-1)
+	ax = self.axes[axis] # Axis object
+	if method in "nearest","exact":
+	    for i, val in enumerate(newaxis):
+		try:
+		    idx = ax.loc.locate(val)
+		    indices[i] = idx
+
+		except Exception, msg:
+		    # not found, will be filled with Nans
+		    pass
+
+	    # prepare array to slice
+	    values = self.values.take(indices, axis=axis_id)
+
+	    # missing indices
+	    missing = (slice(None),)*(axis_id-1) + np.where(indices==-1)
+	    values[missing] = np.nan # set missing values to NaN
+
+	    # new Dimarray
+	    # ...replace the axis
+	    new_ax = Axis(newaxis, ax.name)
+	    axes = [ax for i,ax in enumerate(self.axes) if i != axis_id else new_ax]
+	    # ...initialize Dimarray
+	    obj = self.__constructor(values, axes)
+	    obj._metadata = self._metadata 
+	    return obj
+
+	else:
+	    raise NotImplementedError(method)
+
+    #
+    # Basic numpy array's properties
     #
 
     # basic numpy shape attributes as properties
@@ -392,8 +436,9 @@ class DimArray(Variable):
     def __array__(self): 
 	return self.values.__array__
 
-
+    #
     # numpy transforms
+    #
 
     def apply(self, funcname, axis=None, skipna=True):
 	""" apply along-axis numpy method
@@ -406,10 +451,11 @@ class DimArray(Variable):
 	if np.any(nans) and skipna:
 	    values = np.ma.array(values, mask=nans)
 
-	# Apply numpy method
-	if type(axis) is str:
-	    axis = self.axes.get_idx(axis)
-	result = getattr(values, funcname)(axis=axis) 
+	# Get axis name and idx
+	axis_id = self.axes.get_idx(axis)
+	axis_nm = self.axes[axis].name
+
+	result = getattr(values, funcname)(axis=axis_id) 
 
 	# if scalar, just return it
 	if not isinstance(result, np.ndarray):
@@ -419,7 +465,10 @@ class DimArray(Variable):
 	if np.ma.isMaskedArray(result):
 	    result = result.filled(np.nan)
 
-	obj = self.__constructor(result)
+	# New axes (axis was reduced)
+	newaxes = [ax for ax in self.axes if ax.name != axis_nm]
+
+	obj = self.__constructor(result, newaxes)
 
 	# add metadata back in
 	obj._metadata_update_transform(self, funcname, self.axes[axis].name)
@@ -471,10 +520,10 @@ class DimArray(Variable):
 	return self.__constructor(result, newaxes)
 
 
-
     @property
     def T(self):
 	return self.transpose()
+
 
     #
     # basic operattions
@@ -510,6 +559,8 @@ class DimArray(Variable):
     def __div__(self, other): return self._operation(np.divide, other)
 
     def __pow__(self, other): return self._operation(np.power, other)
+
+
 
     def __eq__(self, other): 
 	""" note it uses the np.all operator !
@@ -598,7 +649,6 @@ class DimArray(Variable):
 	    lines.append(line)
 
 	return "\n".join(lines)
-
 
 
     #
@@ -696,7 +746,7 @@ def array(values, axes=None, names=None, dtype=None, **kwaxes):
 	    raise ValueError("axes must be passed as a list")
 
     if len(kwaxes) > 0:
-	new = DimArray.from_dict(values, axes, **kwaxes) 
+	new = DimArray.from_kwds(values, axes, **kwaxes) 
 
     # scalar values
     elif len(axes) == 0:
@@ -727,3 +777,60 @@ def _get_defarray_cls(dims):
 		cls = obj
 
     return cls
+
+
+def _operation(func, o1, o2, align=True, order=None):
+    """ operation on LaxArray objects
+
+    input:
+	func	: operator
+	o1    	: LHS operand: expect attributes (values, dims)
+		  and method conform_to 
+	o2    	: RHS operand: at least: be convertible by np.array())
+	align, optional: if True, use pandas to align the axes
+	order	: if order is True, align the dimensions along a particular order
+
+    output:
+	values: array values
+	dims : dimension names
+    """
+    # second operand is not a DimArray: let numpy do the job 
+    if not hasattr(o2, 'values') or not hasattr(o2,'dims'): 
+	if np.ndim(o2) > o1.ndim:
+	    raise ValueError("bad input: second operand's dimensions not documented")
+	res = func(o1.values, np.array(o2))
+	return res, o1.dims
+
+    # if same dimension: easy
+    if o1.dims == o2.dims:
+	res = func(o1.values, o2.values)
+	return res, o1.dims
+
+    # otherwise determine the dimensions of the result
+    if order is None:
+	order = _unique(o1.dims + o2.dims) 
+    else:
+	order = [o for o in order if o in o1.dims or o in o2.dims]
+    order = tuple(order)
+
+    #
+    o1 = o1.conform_to(order)
+    o2 = o2.conform_to(order)
+
+    assert o1.dims == o2.dims, "problem in transpose"
+    res = func(o1.values, o2.values) # just to the job
+
+    return res, order
+
+#
+# Handle operations 
+#
+def _unique(nm):
+    """ return the same ordered list without duplicated elements
+    """
+    new = []
+    for k in nm:
+	if k not in new:
+	    new.append(k)
+    return new
+

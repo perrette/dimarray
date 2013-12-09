@@ -12,7 +12,7 @@ from collections import OrderedDict as odict
 # Attribute Descriptor
 #
 
-class Variable(object):
+class Metadata(object):
     """ Variable with metadata
     
     Help maintain an ordered list or attributes distinguishable from other 
@@ -51,7 +51,7 @@ class Variable(object):
 	# Searching first in __dict__ is the default behaviour, 
 	# included here for clarity
 	if att in self.__dict__:
-	    return super(Variable, self).__getattr__(att)
+	    return super(Metadata, self).__getattr__(att)
 
 	# check if att is a metadata
 	elif att in self._metadata:
@@ -59,7 +59,7 @@ class Variable(object):
 
 	# again here, to raise a typical error message
 	else:
-	    return super(Variable, self).__getattr__(att)
+	    return super(Metadata, self).__getattr__(att)
 
     def __setattr__(self, att, val):
 	""" set attributes: some are metadata, other not
@@ -69,14 +69,14 @@ class Variable(object):
 	    self._metadata[att] = val
 
 	else:
-	    super(Variable, self).__setattr__(att, val)
+	    super(Metadata, self).__setattr__(att, val)
 
     def __detattr__(self, att):
 	""" delete an attribute
 	"""
 	# default behaviour
 	if att in self.__dict__:
-	    super(Variable, self).__delattr__(att) # standard method
+	    super(Metadata, self).__delattr__(att) # standard method
 
 	# delete metadata if it applicable
 	elif att in self._metadata:
@@ -84,7 +84,7 @@ class Variable(object):
 
 	# again here, to raise a typical error message
 	else:
-	    super(Variable, self).__delattr__(att) # standard method
+	    super(Metadata, self).__delattr__(att) # standard method
 
 
     def _ismetadata(self, att, val=None):
@@ -162,7 +162,7 @@ class Variable(object):
     #
     def _metadata_update_transform(self, other, transform, axis):
 	""" 
-	other: Variable instance
+	other: Metadata instance
 	transform: transformation name
 	axis	: axis name
 	"""

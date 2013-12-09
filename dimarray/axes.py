@@ -3,7 +3,7 @@ from collections import OrderedDict
 import string
 import copy
 
-from metadata import Variable
+from metadata import Metadata
 
 __all__ = ["Axis","Axes"]
 
@@ -35,7 +35,7 @@ def _convert_dtype(dtype):
 #
 # Axis class
 #
-class Axis(Variable):
+class Axis(Metadata):
     """ Axis
 
     Required Attributes:
