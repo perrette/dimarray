@@ -446,8 +446,8 @@ class DimArray(Metadata):
 	# Get axis name and idx
 	if axis is not None:
 	    axis = self.axes.get_idx(axis)
-	    ax = self.axes[axis]
-	    axis_nm = ax.name
+	    axis_obj = self.axes[axis]
+	    axis_nm = axis_obj.name
 
 	kwargs['axis'] = axis
 	result = getattr(values, funcname)(*args, **kwargs) 
@@ -455,7 +455,7 @@ class DimArray(Metadata):
 	# Special treatment for argmax and argmin: return the corresponding index
 	if funcname in ("argmax","argmin","nanargmax","nanargmin"):
 	    assert axis is not None, "axis must not be None for "+funcname+", or apply on values"
-	    result = ax.values[result] # get actual axis values
+	    result = axis_obj.values[result] # get actual axis values
 	    return result
 
 	# if scalar, just return it
@@ -472,7 +472,7 @@ class DimArray(Metadata):
 	obj = self._constructor(result, newaxes)
 
 	# add metadata back in
-	obj._metadata_update_transform(self, funcname, ax.name)
+	obj._metadata_update_transform(self, funcname, axis_nm)
 
 	return obj
 
@@ -614,7 +614,7 @@ class DimArray(Metadata):
     # REINDEXING 
     #
  
-    def reindex_axis(self, newaxis, axis, method=None):
+    def reindex_axis(self, newaxis, axis, method='nearest'):
 	""" reindex an array along an axis
 
 	Input:
@@ -636,7 +636,7 @@ class DimArray(Metadata):
 	    return self
 
 	# indices along which to sample
-	if method in ("nearest","exact"):
+	if method in ("nearest","exact",None):
 
 	    indices = np.empty(np.size(newaxis), dtype=int)
 	    indices.fill(-1)
@@ -658,20 +658,23 @@ class DimArray(Metadata):
 	    missing = (slice(None),)*(axis_id-1) + np.where(indices==-1)
 	    values[missing] = np.nan # set missing values to NaN
 
-	    # new Dimarray
-	    # ...replace the axis
-	    new_ax = Axis(newaxis, ax.name)
-	    axes = self.axes.copy()
-	    axes[axis_id] = new_ax # replace the new axis
-
-	    # ...initialize Dimarray
-	    obj = self._constructor(values, axes)
-	    obj._metadata = self._metadata 
-	    return obj
+	elif method == "interp":
+	    raise NotImplementedError(method)
 
 	else:
 	    #return self.interp1d(newaxis, axis)
-	    raise NotImplementedError(method)
+	    raise ValueError(method)
+
+	# new Dimarray
+	# ...replace the axis
+	new_ax = Axis(newaxis, ax.name)
+	axes = self.axes.copy()
+	axes[axis_id] = new_ax # replace the new axis
+
+	# ...initialize Dimarray
+	obj = self._constructor(values, axes, **self._metadata)
+	return obj
+
 
     def _reindex_axes(self, axes, method=None):
 	""" reindex according to a list of axes
@@ -780,20 +783,23 @@ class DimArray(Metadata):
 
 	lines = []
 
-	if self.size < 10:
-	    line = "dimarray: "+repr(self.values)
-	else:
-	    line = "dimarray: {} non-null elements ({} null)".format(nonnull, self.size-nonnull)
+	#if self.size < 10:
+	#    line = "dimarray: "+repr(self.values)
+	#else:
+	line = "dimarray: {} non-null elements ({} null)".format(nonnull, self.size-nonnull)
 	lines.append(line)
 
-	#if np.any([getattr(self,k) is not "" for k in self.ncattrs()]):
+	# show metadata as well?
 	if len(self.ncattrs()) > 0:
 	    line = self.repr_meta()
-	    #line = ", ".join(['%s: "%s"' % (att, getattr(self, att)) for att in self.ncattrs()])
 	    lines.append(line)
 
 	if self.size > 1:
 	    line = repr(self.axes)
+	    lines.append(line)
+
+	if self.size < 100:
+	    line = repr(self.values)
 	    lines.append(line)
 
 	return "\n".join(lines)

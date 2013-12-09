@@ -165,7 +165,7 @@ class Metadata(object):
 	"""
 	# first copy all other metadata if applicable
 	if self._metadata_transform:
-	    self._metadata = other._metadata # this includes "stamp"
+	    self._metadata = other._metadata.copy() # this includes "stamp"
 
 	# new stamp
 	ax = other.axes[axis]
@@ -244,20 +244,19 @@ def append_stamp(metadata, stamp, inplace=False):
 
     # add transform (json-ed list)
     if "stamp" not in metadata:
-	metadata["stamp"] = json.dumps([]) # json-ed empty list
+	metadata["stamp"] = json.dumps(()) # json-ed empty tuple
 
     # de-json the stamp
-    stamp_list = json.loads(metadata['stamp'])
+    stamp_tuple = json.loads(metadata['stamp'])
 
     # append the new stamp
-    stamp_list.append(stamp)
+    stamp_tuple += (stamp,)
 
     # transform back to string
-    metadata['stamp'] = json.dumps(stamp_list)
+    metadata['stamp'] = json.dumps(stamp_tuple)
 
     if not inplace:
 	return metadata
-
 
 def test(**kwargs):
     import doctest
