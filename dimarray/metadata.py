@@ -27,6 +27,14 @@ class Metadata(object):
     is just considered a metadata and its name is added to "_metadata", so that
     1) the list is permanently up-to-date and 2) it is ordered (which is not the 
     case for self.__dict__)
+
+    >>> import dimarray.metadata as md
+    >>> v = md.Metadata()
+    >>> v.yo = 123
+    >>> v.name = 'myname'
+    >>> v.ya = 'hio'
+    >>> v.repr_meta()
+    'yo: 123, name: myname, ya: hio'
     """
     # Most important field (e.g. ("values",) or ("values", "axes"))
     _metadata_exclude = () # variables which are NOT metadata
@@ -43,15 +51,15 @@ class Metadata(object):
     def __init__(self):
 	"""
 	"""
-	_metadata = odict() # ordered dictionary of metadata
+	super(Metadata, self).__setattr__("_metadata", odict()) # ordered dictionary of metadata
 
     def __getattr__(self, att):
 	""" set attributes: distinguish between metadata and other 
 	"""
 	# Searching first in __dict__ is the default behaviour, 
 	# included here for clarity
-	if att in self.__dict__:
-	    return super(Metadata, self).__getattr__(att)
+	if att in self.__dict__ or att.startswith('_'):
+	    return self.__getattribute__(att) # no __getattr__ in object
 
 	# check if att is a metadata
 	elif att in self._metadata:
@@ -59,7 +67,7 @@ class Metadata(object):
 
 	# again here, to raise a typical error message
 	else:
-	    return super(Metadata, self).__getattr__(att)
+	    return self.__getattribute__(att)
 
     def __setattr__(self, att, val):
 	""" set attributes: some are metadata, other not
@@ -240,10 +248,10 @@ class Metadata(object):
 	return
 
 
-def test():
+def test(**kwargs):
     import doctest
     import metadata
-    doctest.testmod(metadata)
+    doctest.testmod(metadata, **kwargs)
 
 if __name__ == "__main__":
     test()

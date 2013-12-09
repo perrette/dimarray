@@ -199,7 +199,7 @@ class Axes(list):
 	return "\n".join([header, body])
 
     def sort(self, names):
-	""" sort IN PLACE
+	""" sort IN PLACE according to the order in "names"
 	"""
 	if type(names[0]) is int:
 	    names = [ax.name for ax in self]

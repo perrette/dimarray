@@ -4,6 +4,7 @@
 #from lazyapi import axis as Axis
 import numpy as np
 from functools import partial
+from axes import Axis, Axes
 
 #
 # Technicalities to apply numpy methods
@@ -36,265 +37,8 @@ class _NumpyDesc(object):
 
 	return newmethod
 
-
-#def _check_scalar(values):
-#    """ export to python scalar if size == 1
-#    """
-#    avalues = np.array(values, copy=False)
-#    
-#    if avalues.size == 1:
-#	type_ = _convert_dtype(avalues.dtype)
-#	result = type_(avalues)
-#	test_scalar = True
-#    else:
-#	result = values
-#	test_scalar = False
-#    return result, test_scalar
-
-
-
 #
-# Recursively apply a transformation on an Dimarray
-#
-# ... decorator to make a function recursive
-# 
-def _DescRecursive(object):
-    """ Decorator to make a Dimarray method recursive via apply_recursive
-    """
-    def __init__(self, trans, dims):
-
-	assert type(dims) is tuple, "dims must be a tuple"
-	self.trans = trans
-	self.dims = dims # dimensions to which it applies
-
-    def __get__(self, obj, cls=None):
-	""" 
-	"""
-	newmethod = partial(self.apply, obj, self.dims, self.trans)
-	newmethod.__doc__ = "Wrapper for recursive application of this function\n\n"+self.apply_recursive.__doc__
-	return newmethod
-
-    return 
-
-def apply_reduce(obj, fun, axis=None, args=(), **kwargs):
-    """ Apply a transformation which reduces the axis
-    """
-    if axis is None:
-	axis = obj.axes[0].name # first axis by default (could change that)
-
-    myaxis = obj.axes[axis] # return an Axis object
-
-    # get the axis integer index
-    idx = obj.dims.index(myaxis.name)
-
-    # the result as numpy array
-    data = fun(obj.values, axis=idx, *args, **kwargs)
-
-    newaxes = [ax for ax in obj.axes if ax.name != myaxis.name]
-
-    # Back to Dimarray
-    new = obj._dimarray_api(data, newaxes)
-
-    # add history or the transformation to the attribute?
-    _add_history(new, fun, obj.axes[axis])
-
-    return new
-
-def _add_history(new, fun, axis):
-    """ document the transformation
-    """
-    pass
-    #if not hasattr(new, 'history'):
-    #    new.history = ""
-    #new.history += "{}: {},".format(fun.__name__, axis)
-
-    # percentiles return a list in some situations: add a leading "sample" dimension
-    if type(data) is list:
-	newaxes = [ax for ax in obj.axes if ax.name != myaxis.name]
-	q = args[0] # second argument for percentile
-	newlab = "pct_"+axis
-	newaxes = [Axis(q, newlab)] + newaxes
-
-    # new dimensions (after cumulating on the axis)
-    elif data.shape == obj.shape:
-	newaxes = obj.axes  # same axis 
-
-    # new dimensions (after collapse of an axis)
-    else:
-	newaxes = [ax for ax in obj.axes if ax.name != myaxis.name]
-
-    # Back to Dimarray
-    new = obj._dimarray_api(data, newaxes)
-
-    # could also add history...
-    if False:
-	if not hasattr(new, 'history'):
-	    new.history = ""
-	new.history += "{}: {},".format(fun.__name__, obj.axes[axis])
-
-    return new
-
-
-#
-#   That is it: below are more advanced stuff which are not yet used
-#
-
-#
-# technicality: lookup for appropriate functions in a global()
-#
-def search_fun(first=None, has=None, hasnot=None, glob=None):
-    """ search function according to its call arguments
-    """
-    if glob is None:
-	glob = globals()
-
-    funs = []
-    for funname in glob:
-	if funname.startswith("_"): continue
-	fun = glob[funname]
-	if not inspect.isfunction(fun): continue
-
-	# check arguments
-	args = inspect.getargspec(fun)[0]
-
-	# check the function as certain arguments
-	if has is not None:
-	    if not set(has).issubset(args):
-		continue
-
-	# ...and not others
-	if hasnot is not None:
-	    if set(hasnot).issubset(args):
-		continue
-
-	# and check the first arguments
-	if first is not None:
-	    if not set(first).issubset(args[:len(first)]):
-		continue
-
-	funs.append(fun)
-
-    return funs
-
-#
-#
-#   Decorator to make a bound method from a function with such a signature:
-#
-#   fun(dim1, ..., dimn, values, *args, **kwargs)
-#
-def bound(fun):
-    """ Decorator
-
-    original function signature:
-	fun(dim1, dim2,..., dimn, values, *args, **kwargs)
-
-    new function signature:
-	fun(obj, *args, **kwargs)
-    """
-    # get dimensions from function's signature
-    dims = _get_dims(fun)
-
-    def boundmethod(obj, *args, **kwargs):
-	""" bound method
-	"""
-	args0 = [obj.axes[k].values for k in dims] # coordinates: e.g. lon, lat...
-	args0.append(obj.values)    # add values
-	args1 = args0 + list(args)  # add other default arguments
-
-	return fun(*args1, **kwargs)
-
-    boundmethod.__name__ += fun.__name__
-    boundmethod.__doc__ += fun.__doc__
-
-    return boundmethod
-
-#
-# Useful for plotting methods
-# 
-class DimDesc(object):
-    """ Choose between a set of methods based on dimensions
-    """
-    def __init__(self, **pool):
-	""" pool: dictionary {dimensions : method}
-	"""
-	self.pool = pool
-
-    def __get__(self, obj, cls=None):
-	"""
-	"""
-	for k in self.pool:
-	    dims = tuple(k.split(","))
-	    if dims == tuple(obj.dims):
-		fun = self.pool[k]
-		return functools.partial(fun, obj)
-
-	raise NotImplementedError("method not implemented for this set of dimensions: "+repr(obj.dims))
-
-#
-#
-# Descriptor to apply a transformation recursively until the appropriate sub-array is found
-# 
-#   A transformation compatible with this descriptor looks like:
-#
-#   fun(dim1, ..., dimn, values, *args, **kwargs)
-#
-class RecDesc(object):
-    """ Recursively apply a transformation whose signature is:
-
-    fun(dim1, ..., dimn, values, *args, **kwargs) returns Dimarray's instance
-    """
-    def __init__(self, transform):
-	""" 
-	transform   : transformation to apply (from transform.py) (check above for signature)
-	"""
-	self.transform = transform 
-
-    def __get__(self, obj, cls=None): 
-	""" for python to recognize this as a method
-	"""
-	# get dimensions from function's signature
-	dims = _get_dims(self.transform)
-	boundmethod = bound(self.transform)
-
-	# make the function recursive: applied until dims match dim1, etc...
-	recmethod = recursive(dims)(boundmethod) 
-
-	return functools.partial(boundmethod, obj)
-
-def _get_dims(fun):
-    """ return the dimensions of a functions based on its call signature
-
-    input:
-	function with arguments: dim1, dim2..., dimn, values, *args, **kwargs
-
-    returns:
-	[dim1, dim2, ..., dimn]
-    """
-    args = inspect.getargspec(fun)[0] # e.g. lon, lat, values
-    i = args.index('values')
-    return args[:i] # all cut-off values (e.g. lon, lat) 
-
-#
-# Recursively apply a transformation on an Dimarray
-#
-# ... decorator to make a function recursive
-# 
-def recursive(dims):
-    """ Decorator to make an Dimarray method recursive via apply_recursive
-    """
-    def real_decorator(fun):
-	""" nested decorator to pass "dims" argument
-	"""
-	def rec_func(obj, *args, **kwargs):
-	    """ recursive function
-	    """
-	    return _apply_recursive(obj, dims, fun, *args, **kwargs)
-	return rec_func
-
-    return real_decorator
-# 
-#
-# ... which makes use of:
+# recursively apply a DimArray ==> DimArray transform
 #
 def _apply_recursive(obj, dims, fun, *args, **kwargs):
     """ recursively apply a multi-axes transform
@@ -349,9 +93,58 @@ def _apply_recursive(obj, dims, fun, *args, **kwargs):
     data = np.array(data) # numpy array
 
     # automatically sort in the appropriate order
-    new = obj._dimarray_api(data, newaxes)
+    new = obj._constructor(data, newaxes)
 
     #new.sort(inplace=True, order=self.dims) # just in case
 
     return new
 
+#
+# INTERPOLATION
+#
+
+def interp1d_numpy(obj, newaxis, axis=None, left=None, right=None):
+    """ interpolate along one axis: wrapper around numpy's interp
+    """
+    ax = Axis(newaxis, axis)
+
+    def interp1d(obj, order=1):
+	""" 2-D interpolation function appled recursively on the object
+	"""
+	xp = obj.axes[x.name].values
+	fp = obj.values
+	f = np.interp(newaxis.values, xp, fp, left=None, right=None)
+	res = interp(obj.values, x0, y0, x1, y1, order=order)
+	return obj._constructor(res, newaxes, **obj._metadata)
+
+    return _apply_recursive(obj, dims=(x.name, y.name), interp1d)
+
+
+def interp2d(obj, newaxes, axes=None, order=1):
+    """ bilinear interpolation: wrapper around mpl_toolkits.basemap.interp
+
+    input:
+	newaxes: list of Axis object, or list of 1d arrays
+	axes, optional: list of str (axis names), required if newaxes is a list of arrays
+
+    output:
+	interpolated data (n-d)
+    """
+    from mpl_toolkits.basemap import interp
+
+    # make sure input axes have the valid format
+    newaxes = Axes.from_list(newaxes, axes) # valid format
+    newaxes.sort(self.dims) # re-order according to object's dimensions
+    x, y = newaxes  # 2-d interpolation
+
+    # make new grid 2-D
+    x1, x1 = np.meshgrid(x.values, y.values, indexing='ij')
+
+    def interp2d(obj, order=1):
+	""" 2-D interpolation function appled recursively on the object
+	"""
+	x0, y0 = obj.axes[x.name].values, obj.axes[y.name].values
+	res = interp(obj.values, x0, y0, x1, y1, order=order)
+	return obj._constructor(res, newaxes, **obj._metadata)
+
+    return _apply_recursive(obj, dims=(x.name, y.name), interp2d)

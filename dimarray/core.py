@@ -6,9 +6,9 @@ import copy
 #import plotting
 
 from metadata import Metadata
-from tools import _NumpyDesc
 from axes import Axis, Axes, _common_axis
 from lazyapi import pandas_obj
+import transform # numpy axis transformation, interpolation
 
 __all__ = []
 
@@ -108,7 +108,7 @@ class DimArray(Metadata):
 	    self.transpose(order, inplace=True)
 
     @staticmethod
-    def __constructor(values, axes, **metadata):
+    def _constructor(values, axes, **metadata):
 	""" Internal API for the constructor: check whether a pre-defined class exists
 
 	values	: numpy-like array
@@ -205,6 +205,29 @@ class DimArray(Metadata):
 	else:
 	    super(DimArray, self).__getattr__(att) # call Metadata's method
 
+
+    def set(self, inplace=False, **kwargs):
+	""" update multiple class attributes in-place or after copy
+
+	inplace: modify attributes in-place, return None 
+	otherwise first make a copy, and return new obj
+
+	a.set(_slicing="numpy")[:30]
+	a.set(_slicing="exact")[1971.42]
+	a.set(_slicing="nearest")[1971]
+	a.set(name="myname", inplace=True) # modify attributes inplace
+	"""
+	if inplace: 
+	    for k in kwargs:
+		setattr(self, k, kwargs[k]) # include metadata check
+	    #self.__dict__.update(kwargs)
+
+	else:
+	    obj = self.copy(shallow=True)
+	    for k in kwargs:
+		setattr(obj, k, kwargs[k]) # include metadata check
+	    return obj
+
     def copy(self, shallow=False):
 	""" copy of the object and update arguments
 
@@ -288,7 +311,7 @@ class DimArray(Metadata):
 
 	# If result is a numpy array, make it a DimArray
 	if isinstance(newval, np.ndarray):
-	    result = self.__constructor(newval, axes, **attrs)
+	    result = self._constructor(newval, axes, **attrs)
 
 	# otherwise, return scalar
 	else:
@@ -385,25 +408,52 @@ class DimArray(Metadata):
 	return self.values.__array__
 
     #
-    # numpy transforms
+    # NUMPY TRANSFORMS
     #
-
-    def apply(self, funcname, axis=None, skipna=True):
+    def apply(self, funcname, axis=None, skipna=True, args=(), **kwargs):
 	""" apply along-axis numpy method
+
+	parameters:
+	----------
+	    - funcname: numpy function name (str)
+	    - axis    : axis to apply the transform on
+	    - skipna  : remove nans?
+	    - args    : variable list of arguments before "axis"
+	    - kwargs  : variable dict of keyword arguments after "axis"
+	
+	returns:
+	--------
+	    - DimArray or scalar, consistently with ndarray behaviour
 	"""
 	assert type(funcname) is str, "can only provide function as a string"
 
-	# Convert to MaskedArray if needed
+	# Deal with NaNs
 	values = self.values
-	nans = np.isnan(values)
-	if np.any(nans) and skipna:
-	    values = np.ma.array(values, mask=nans)
+	if skipna:
+
+	    # replace with the optimized numpy function if existing
+	    if funcname in "sum","max","min","argmin","argmax":
+		funcname = "nan"+funcname
+
+	    # otherwise convert to MaskedArray if needed
+	    else:
+		nans = np.isnan(values)
+		if np.any(nans):
+		    values = np.ma.array(values, mask=nans)
 
 	# Get axis name and idx
-	axis_id = self.axes.get_idx(axis)
-	axis_nm = self.axes[axis].name
+	if axis is not None:
+	    axis_id = self.axes.get_idx(axis)
+	    axis_nm = self.axes[axis].name
 
-	result = getattr(values, funcname)(axis=axis_id) 
+	kwargs['axis'] = axis
+	result = getattr(values, funcname)(*args, **kwargs) 
+
+	# Special treatment for argmax and argmin: return the corresponding index
+	if funcname in "argmax","argmin","nanargmax","nanargmin":
+	    assert axis is not None, "axis must not be None for",funcname,", or apply on values"
+	    result = self.axes[axis].values[result] # get actual axis values
+	    return result
 
 	# if scalar, just return it
 	if not isinstance(result, np.ndarray):
@@ -416,7 +466,7 @@ class DimArray(Metadata):
 	# New axes (axis was reduced)
 	newaxes = [ax for ax in self.axes if ax.name != axis_nm]
 
-	obj = self.__constructor(result, newaxes)
+	obj = self._constructor(result, newaxes)
 
 	# add metadata back in
 	obj._metadata_update_transform(self, funcname, self.axes[axis].name)
@@ -426,17 +476,69 @@ class DimArray(Metadata):
     #
     # Add numpy transforms
     #
-    mean = _NumpyDesc("apply", "mean")
-    median = _NumpyDesc("apply", "median")
-    sum  = _NumpyDesc("apply", "sum")
-    diff = _NumpyDesc("apply", "diff")
-    prod = _NumpyDesc("apply", "prod")
-    min = _NumpyDesc("apply", "min")
-    max = _NumpyDesc("apply", "max")
-    ptp = _NumpyDesc("apply", "ptp")
-    cumsum = _NumpyDesc("apply", "cumsum")
-    cumprod = _NumpyDesc("apply", "cumprod")
+    mean = trans.NumpyDesc("apply", "mean")
+    median = trans.NumpyDesc("apply", "median")
+    diff = trans.NumpyDesc("apply", "diff")
+    sum  = trans.NumpyDesc("apply", "sum")
+    prod = trans.NumpyDesc("apply", "prod")
 
+    cumsum = trans.NumpyDesc("apply", "cumsum")
+    cumprod = trans.NumpyDesc("apply", "cumprod")
+
+    min = trans.NumpyDesc("apply", "min")
+    max = trans.NumpyDesc("apply", "max")
+    ptp = trans.NumpyDesc("apply", "ptp")
+    all = trans.NumpyDesc("apply", "all")
+    any = trans.NumpyDesc("apply", "any")
+
+    def compress(self, condition, axis=None):
+	""" analogous to numpy `compress` method
+	"""
+	return self.apply("compress", axis=axis, skipna=False, args=(condition,))
+
+    def take(self, indices, axis=None):
+	""" analogous to numpy `take` method
+	"""
+	return self.apply("take", axis=axis, skipna=False, args=(indices,))
+
+
+#    #
+#    # add an extra "where" method
+#    #
+#    def where(self, condition, otherwise=None, axis=None):
+#	""" 
+#	parameters:
+#	-----------
+#
+#	    condition: bool array of same size as self, unless `axis=` is provided
+#		 OR    `str` indicating a condition on axes
+#	    otherwise: array of same size as self or scalar, replacement value when condition is False
+#	    axis     : if provided, interpret the condition as applying along an axis
+#
+#	returns:
+#	--------
+#	    
+#	    array with self values when condition is True, and `otherwise` if False
+#	    if only `condition` is provided, return axis values for which `condition` is True
+#
+#	Examples:
+#	---------
+#	    a.where(a > 0)
+#	"""
+#	# convert scalar to the right shape
+#	if np.size(otherwise) == 1:
+#	    otherwise += np.zeros_like(self.values)
+#
+#	# evaluate str condition
+#	if type(condition) is str:
+#	    result = eval(condition, {ax.name:ax.values})
+#
+#	result = np.where(condition, [self.values, otherwise])
+
+
+    #
+    # RESHAPE THE ARRAY
+    #
     def transpose(self, axes=None):
 	""" Analogous to numpy, but also allows axis names
 	>>> a = da.array(np.zeros((5,6)), lon=np.arange(6), lat=np.arange(5))
@@ -464,7 +566,32 @@ class DimArray(Metadata):
 
 	result = self.values.transpose(axes)
 	newaxes = [self.axes[i] for i in axes]
-	return self.__constructor(result, newaxes)
+	return self._constructor(result, newaxes)
+
+
+    def squeeze(self, axis=None):
+	""" Analogous to numpy, but also allows axis name
+
+	>>> b = a.take([0], axis='lat')
+	>>> b
+	dimensions(1, 6): lat, lon
+	array([[ 0.,  1.,  2.,  3.,  4.,  5.]])
+	>>> b.squeeze()
+	dimensions(6,): lon
+	array([ 0.,  1.,  2.,  3.,  4.,  5.])
+	"""
+	if axis is None:
+	    axes = [ax for i, ax in enumerate(self.axes) if self.shape[i] > 1]
+	    res = self.values.squeeze()
+
+	else:
+	    axis = self.axes.get_idx(axis) 
+	    axes = self.axes.copy()
+	    if self.shape[axis] == 1:  # 0 is not removed by numpy...
+		axes.pop(axis)
+	    res = self.values.squeeze(axis)
+
+	return self.__constructor(res, axes, **self._metadata)
 
     @property
     def T(self):
@@ -478,10 +605,10 @@ class DimArray(Metadata):
 	axis = Axis([None], dim) # create new dummy axis
 	axes = self.axes.copy()
 	axes.insert(0, axis)
-	return self.__constructor(values, axes)
+	return self._constructor(values, axes)
 
     #
-    # REINDEXING - RESHAPE
+    # REINDEXING 
     #
  
     def reindex_axis(self, newaxis, axis, method=None):
@@ -533,11 +660,12 @@ class DimArray(Metadata):
 	    new_ax = Axis(newaxis, ax.name)
 	    axes = [ax for i,ax in enumerate(self.axes) if i != axis_id else new_ax]
 	    # ...initialize Dimarray
-	    obj = self.__constructor(values, axes)
+	    obj = self._constructor(values, axes)
 	    obj._metadata = self._metadata 
 	    return obj
 
 	else:
+	    #return self.interp1d(newaxis, axis)
 	    raise NotImplementedError(method)
 
     def _reindex_axes(self, axes, method=None):
@@ -568,7 +696,7 @@ class DimArray(Metadata):
 	return obj
 
     #
-    # basic operattions
+    # BASIC OPERATTIONS
     #
     def _operation(self, func, other, reindex=True, transpose=True):
 	""" make an operation: this include axis and dimensions alignment
@@ -589,7 +717,7 @@ class DimArray(Metadata):
 	>>> (b - b.values) == b - b
 	True
 	"""
-	result = _operation(func, self, other, constructor=self.__constructor)
+	result = _operation(func, self, other, constructor=self._constructor)
 	return result
 
     def __add__(self, other): return self._operation(np.add, other)
@@ -602,41 +730,12 @@ class DimArray(Metadata):
 
     def __pow__(self, other): return self._operation(np.power, other)
 
-
-
-    def __eq__(self, other): 
-	""" note it uses the np.all operator !
-	"""
-	return isinstance(other, self.__class__) and np.all(self.values == other.values)
-
     def __float__(self):  return float(self.values)
     def __int__(self):  return int(self.values)
-
 
     def __eq__(self, other): 
 	return isinstance(other, DimArray) and np.all(self.values == other.values) and self.axes == other.axes
 
-    def set(self, inplace=False, **kwargs):
-	""" update multiple class attributes in-place or after copy
-
-	inplace: modify attributes in-place, return None 
-	otherwise first make a copy, and return new obj
-
-	a.set(_slicing="numpy")[:30]
-	a.set(_slicing="exact")[1971.42]
-	a.set(_slicing="nearest")[1971]
-	a.set(name="myname", inplace=True) # modify attributes inplace
-	"""
-	if inplace: 
-	    for k in kwargs:
-		setattr(self, k, kwargs[k]) # include metadata check
-	    #self.__dict__.update(kwargs)
-
-	else:
-	    obj = self.copy(shallow=True)
-	    for k in kwargs:
-		setattr(obj, k, kwargs[k]) # include metadata check
-	    return obj
 
     #
     # to behave like a dictionary w.r.t. first dimension (pandas-like)
@@ -747,13 +846,6 @@ class DimArray(Metadata):
 	import ncio
 	return ncio.read_base(f, *args, **kwargs)
 
-    def squeeze(self, axis=None):
-	""" reduce singleton dimensions
-	"""
-	obj = super(DimArray, self).squeeze(axis=axis)
-	axes = Axes([self.axes[nm] for nm in obj.names])
-	return __constructor(obj.values, axes)
-
     #
     # Plotting
     #
@@ -763,9 +855,24 @@ class DimArray(Metadata):
 	"""
 	return self.to_pandas().plot(*args, **kwargs)
 
-    #plot = plotting.plot
-    #contourf = plotting.contourf
+#
+# Add a few transformations and plotting methods
+#
 
+# recursive application of obj => obj transformation
+DimArray.apply_recursive = transform.apply_recursive 
+
+# 1D and bilinear interpolation (recursively applied)
+DimArray.interp1d = transform.interp1d_numpy
+DimArray.interp2d = transform.interp2d_mpl
+
+# try:
+#     import plotting
+#     DimArray.plot = plotting.plot
+#     DimArray.contourf = plotting.contourf
+# 
+# except:
+#     print "could not import plotting"
 
 def array(values, axes=None, names=None, dtype=None, **kwaxes):
     """ Wrapper for initialization
@@ -807,18 +914,6 @@ def array(values, axes=None, names=None, dtype=None, **kwaxes):
 
     return new
 
-
-def _get_defarray_cls(dims):
-    """ look whether a particular pre-defined array matches the dimensions
-    """
-    import defarray
-    cls = None
-    for obj in vars(defarray): 
-	if isinstance(obj, defarray.Defarray):
-	    if tuple(dims) == cls._dimensions:
-		cls = obj
-
-    return cls
 
 def _operation(func, o1, o2, reindex=True, transpose=True, constructor=DimArray):
     """ operation on LaxArray objects
@@ -888,4 +983,3 @@ def _unique(nm):
 	if k not in new:
 	    new.append(k)
     return new
-
