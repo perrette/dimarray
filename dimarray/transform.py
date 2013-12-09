@@ -9,7 +9,7 @@ from axes import Axis, Axes
 #
 # Technicalities to apply numpy methods
 #
-class _NumpyDesc(object):
+class NumpyDesc(object):
     """ to apply a numpy function which reduces an axis
     """
     def __init__(self, apply_method, numpy_method, **kwargs):
@@ -40,7 +40,7 @@ class _NumpyDesc(object):
 #
 # recursively apply a DimArray ==> DimArray transform
 #
-def _apply_recursive(obj, dims, fun, *args, **kwargs):
+def apply_recursive(obj, dims, fun, *args, **kwargs):
     """ recursively apply a multi-axes transform
 
     dims   : dimensions to apply the function on
@@ -85,7 +85,7 @@ def _apply_recursive(obj, dims, fun, *args, **kwargs):
 	slice_ = obj.xs(**{ax.name:axisval, "method":"index"})
 
 	# apply the transform recursively
-	res = _apply_recursive(slice_, dims, fun, *args, **kwargs)
+	res = apply_recursive(slice_, dims, fun, *args, **kwargs)
 
 	data.append(res.values)
 
@@ -117,10 +117,10 @@ def interp1d_numpy(obj, newaxis, axis=None, left=None, right=None):
 	res = interp(obj.values, x0, y0, x1, y1, order=order)
 	return obj._constructor(res, newaxes, **obj._metadata)
 
-    return _apply_recursive(obj, dims=(x.name, y.name), interp1d)
+    return apply_recursive(obj, (x.name, y.name), interp1d)
 
 
-def interp2d(obj, newaxes, axes=None, order=1):
+def interp2d_mpl(obj, newaxes, axes=None, order=1):
     """ bilinear interpolation: wrapper around mpl_toolkits.basemap.interp
 
     input:
@@ -147,4 +147,4 @@ def interp2d(obj, newaxes, axes=None, order=1):
 	res = interp(obj.values, x0, y0, x1, y1, order=order)
 	return obj._constructor(res, newaxes, **obj._metadata)
 
-    return _apply_recursive(obj, dims=(x.name, y.name), interp2d)
+    return apply_recursive(obj, (x.name, y.name), interp2d)

@@ -79,7 +79,7 @@ class Axis(Metadata):
 	""" 
 	values = "{} ({}): {} to {}".format(self.name, self.size, self.values[0], self.values[-1])
 	meta = self.repr_meta()
-	return "\n".join(values, meta)
+	return "\n".join([values, meta])
 
     def issingleton(self):
 	return np.size(self.values) == 1
@@ -151,7 +151,7 @@ class Axes(list):
 	return cls.from_tuples(*zip(names, values))
 
     @classmethod
-    def from_dict(cls, names=None, shape=None, **kwargs):
+    def from_kwds(cls, names=None, shape=None, **kwargs):
 	""" infer dimensions from key-word arguments
 	"""
 	axes = cls()
@@ -365,7 +365,7 @@ class Locator(object):
 	""" exactly locate a value on the axis (use built-in list `index` method)
 	val: index value
 	"""
-	val = type(self.values[0])(val) # convert to the same type first
+	#val = type(self.values[0])(val) # convert to the same type first
 	return list(self.values).index(val)
 
     exact = index # alias for index, by opposition to nearest
@@ -376,7 +376,7 @@ class Locator(object):
 	if check_bounds:
 	    dx = self.step
 	    mi, ma = np.min(self.values), np.max(self.values)
-	    if val < mi - dx/2 or val > ma + dx/2:
+	    if val < mi - dx/2. or val > ma + dx/2.:
 		raise ValueError("%f out of bounds ! (min: %f, max: %f, step: %f)" % (val, mi, ma, dx))
 	return np.argmin(np.abs(val-self.values))
 

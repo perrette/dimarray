@@ -1,5 +1,13 @@
 """ small module to handle unit operations
+
+>>> import dimarray.units as units
+>>> import dimarray.metadata as md
+>>> u = md.Units.loads("m^2 m kg")
+>>> v = md.Units.loads("m^4 kg^-1 K")
+>>> u*v
+[K, m^7]
 """
+import json
 
 #
 # play with units

@@ -152,18 +152,7 @@ class Metadata(object):
     def _metadata_append_stamp(self, stamp):
 	""" append a new transform or operation stamp to metadata
 	"""
-	# add transform (json-ed list)
-	if "stamp" not in self._metadata:
-	    self._metadata["stamp"] = json.dumps([]) # json-ed empty list
-
-	# de-json the stamp
-	stamp_list = json.loads(self._metadata['stamp'])
-
-	# append the new stamp
-	stamp_list.append(stamp)
-
-	# transform back to string
-	self._metadata['stamp'] = json.dumps(stamp_list)
+	append_stamp(self._metadata, stamp, inplace=True)
 
     #
     # update metadata after an axis transform
@@ -179,8 +168,8 @@ class Metadata(object):
 	    self._metadata = other._metadata # this includes "stamp"
 
 	# new stamp
-	axis = other.axes[axis]
-	d = dict(transform=transform, axis=axis.name, start=axis.values[0], end=axis.values[-1])
+	ax = other.axes[axis]
+	d = dict(transform=transform, axis=ax.name, start=ax.values[0], end=ax.values[-1])
 	stamp = "{transform}({axis}={start}:{end})".format(**d)
 
 	self._metadata_append_stamp(stamp)
@@ -246,6 +235,28 @@ class Metadata(object):
 	    print "unknown unit operation",op
 
 	return
+
+def append_stamp(metadata, stamp, inplace=False):
+    """ append a new transform or operation stamp to metadata
+    """
+    if not inplace:
+	metadata = metadata.copy()
+
+    # add transform (json-ed list)
+    if "stamp" not in metadata:
+	metadata["stamp"] = json.dumps([]) # json-ed empty list
+
+    # de-json the stamp
+    stamp_list = json.loads(metadata['stamp'])
+
+    # append the new stamp
+    stamp_list.append(stamp)
+
+    # transform back to string
+    metadata['stamp'] = json.dumps(stamp_list)
+
+    if not inplace:
+	return metadata
 
 
 def test(**kwargs):

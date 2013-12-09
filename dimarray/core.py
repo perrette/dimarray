@@ -5,10 +5,10 @@ import copy
 
 #import plotting
 
-from metadata import Metadata
+from metadata import Metadata, append_stamp
 from axes import Axis, Axes, _common_axis
 from lazyapi import pandas_obj
-import transform # numpy axis transformation, interpolation
+import transform  # numpy axis transformation, interpolation
 
 __all__ = []
 
@@ -78,6 +78,8 @@ class DimArray(Metadata):
 	# store all fields
 	#
 
+	super(DimArray, self).__init__() # init an ordered dict self._metadata
+
 	self.values = avalues
 	self.name = name  
 	self.axes = axes
@@ -88,7 +90,6 @@ class DimArray(Metadata):
 	#
 	# metadata (see Metadata type in metadata.py)
 	#
-	super(DimArray, self).__init__() # init an ordered dict self._metadata
 	for k in metadata:
 	    self.setncattr(k, metadata[k]) # perform type-checking and store in self._metadata
 
@@ -259,7 +260,7 @@ class DimArray(Metadata):
 	items = np.index_exp[item] # tuple
     
 	# dictionary <axis name> : <axis index> to feed into xs
-	ix_nd = {self.axes[i].name: it for i, it in enumerate(items)]
+	ix_nd = {self.axes[i].name: it for i, it in enumerate(items)}
 
 	return self.xs(**ix_nd)
 
@@ -297,7 +298,7 @@ class DimArray(Metadata):
 
 	# otherwise locate the values
 	else:
-	    index = axis.loc(ix, method=method, **kwargs) 
+	    index = axis_obj.loc(ix, method=method, **kwargs) 
 
 	# make a numpy index  and use numpy's slice method (`slice(None)` :: `:`)
 	index = (slice(None),)*(axis_id-1) + (index,)
@@ -307,11 +308,14 @@ class DimArray(Metadata):
 	if newval.ndim < self.ndim:
 	    axes = copy.copy(self.axes)
 	    axes.remove(axis_obj)
-	    attrs = {axis_id.name:axis.values[index]} # add attribute
+
+	    # add new stamp
+	    stamp = "{}={}".format(axis_obj.name, axis_obj.values[index])
+	    metadata = append_stamp(self._metadata, stamp, inplace=False)
 
 	# If result is a numpy array, make it a DimArray
 	if isinstance(newval, np.ndarray):
-	    result = self._constructor(newval, axes, **attrs)
+	    result = self._constructor(newval, axes, **metadata)
 
 	# otherwise, return scalar
 	else:
@@ -432,7 +436,7 @@ class DimArray(Metadata):
 	if skipna:
 
 	    # replace with the optimized numpy function if existing
-	    if funcname in "sum","max","min","argmin","argmax":
+	    if funcname in ("sum","max","min","argmin","argmax"):
 		funcname = "nan"+funcname
 
 	    # otherwise convert to MaskedArray if needed
@@ -450,8 +454,8 @@ class DimArray(Metadata):
 	result = getattr(values, funcname)(*args, **kwargs) 
 
 	# Special treatment for argmax and argmin: return the corresponding index
-	if funcname in "argmax","argmin","nanargmax","nanargmin":
-	    assert axis is not None, "axis must not be None for",funcname,", or apply on values"
+	if funcname in ("argmax","argmin","nanargmax","nanargmin"):
+	    assert axis is not None, "axis must not be None for "+funcname+", or apply on values"
 	    result = self.axes[axis].values[result] # get actual axis values
 	    return result
 
@@ -476,20 +480,20 @@ class DimArray(Metadata):
     #
     # Add numpy transforms
     #
-    mean = trans.NumpyDesc("apply", "mean")
-    median = trans.NumpyDesc("apply", "median")
-    diff = trans.NumpyDesc("apply", "diff")
-    sum  = trans.NumpyDesc("apply", "sum")
-    prod = trans.NumpyDesc("apply", "prod")
+    mean = transform.NumpyDesc("apply", "mean")
+    median = transform.NumpyDesc("apply", "median")
+    diff = transform.NumpyDesc("apply", "diff")
+    sum  = transform.NumpyDesc("apply", "sum")
+    prod = transform.NumpyDesc("apply", "prod")
 
-    cumsum = trans.NumpyDesc("apply", "cumsum")
-    cumprod = trans.NumpyDesc("apply", "cumprod")
+    cumsum = transform.NumpyDesc("apply", "cumsum")
+    cumprod = transform.NumpyDesc("apply", "cumprod")
 
-    min = trans.NumpyDesc("apply", "min")
-    max = trans.NumpyDesc("apply", "max")
-    ptp = trans.NumpyDesc("apply", "ptp")
-    all = trans.NumpyDesc("apply", "all")
-    any = trans.NumpyDesc("apply", "any")
+    min = transform.NumpyDesc("apply", "min")
+    max = transform.NumpyDesc("apply", "max")
+    ptp = transform.NumpyDesc("apply", "ptp")
+    all = transform.NumpyDesc("apply", "all")
+    any = transform.NumpyDesc("apply", "any")
 
     def compress(self, condition, axis=None):
 	""" analogous to numpy `compress` method
@@ -628,12 +632,12 @@ class DimArray(Metadata):
 	axis_nm = self.axes.get_idx(axis)
 	ax = self.axes[axis_id] # Axis object
 
-	# do nothing if axis is same
-	if np.all(newaxis==ax.values):
+	# do nothing if axis is same or only None element
+	if ax.values[0] is None or np.all(newaxis==ax.values):
 	    return self
 
 	# indices along which to sample
-	if method in "nearest","exact":
+	if method in ("nearest","exact"):
 
 	    indices = np.empty(np.size(newaxis), dtype=int)
 	    indices.fill(-1)
@@ -658,7 +662,9 @@ class DimArray(Metadata):
 	    # new Dimarray
 	    # ...replace the axis
 	    new_ax = Axis(newaxis, ax.name)
-	    axes = [ax for i,ax in enumerate(self.axes) if i != axis_id else new_ax]
+	    axes = self.axes.copy()
+	    axes[axis_id] = new_ax # replace the new axis
+
 	    # ...initialize Dimarray
 	    obj = self._constructor(values, axes)
 	    obj._metadata = self._metadata 
@@ -907,11 +913,6 @@ def array(values, axes=None, names=None, dtype=None, **kwaxes):
     else:
         new = DimArray.from_list(values, axes, names=names) 
 
-    # make it one of the predefined classes (with predefined methods)
-    cls = _get_defarray_cls(new.dims)
-    if cls is not None:
-	new = cls(new.values, new.axes)
-
     return new
 
 
@@ -966,7 +967,11 @@ def _operation(func, o1, o2, reindex=True, transpose=True, constructor=DimArray)
     assert o1.dims == o2.dims, "problem in transpose"
 
     # make the new axes
-    newaxes = [ax for ax in o1.axes if ax.values[0] is not None else o2.axes[ax.name]]
+    newaxes = o1.axes.copy()
+    # ...make sure no singletong value is included
+    for i, ax in enumerate(newaxes):
+	if ax.values[0] is None:
+	    newaxes[i] = o2.axes[ax.name]
 
     res = func(o1.values, o2.values)
 

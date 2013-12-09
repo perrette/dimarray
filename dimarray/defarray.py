@@ -5,6 +5,7 @@ but this would be contrary to the spirit of a Dimarray, as
 `columns` and `index` are not semantic labels (and therefore 
 they are not conserved in pandas)
 """
+from core import DimArray, Axis, Axes
 #
 # Add a few predefined class (e.g. Map, TimeSeries etc...)
 # see the definition module 
@@ -30,8 +31,43 @@ class Defarray(Dimarray):
 		print "provided: ",self.axes.names
 		raise Exception("dimension mismatch !!")
 
+
+    @staticmethod
+    def _constructor(values, axes, **metadata):
+	""" Internal API for the constructor: check whether a pre-defined class exists
+
+	values	: numpy-like array
+	axes	: Axes instance 
+
+	This static method is used whenever a new DimArray needs to be instantiated
+	for example after a transformation.
+
+	This makes the sub-classing process easier since only this method needs to be 
+	overloaded to make the sub-class a "closed" class.
+	"""
+	assert isinstance(axes, list), "Need to provide a list of Axis objects !"
+
+	# scalar
+	if len(axes) == 0:
+	    return DimArray(values, axes, **metadata)
+
+	assert isinstance(axes[0], Axis), "Need to provide a list of Axis objects !"
+	#assert isinstance(axes, Axes), "Need to provide an Axes object !"
+
+	# loop over all variables defined in defarray
+	cls = _get_defarray_cls([ax.name for ax in axes])
+
+	# initialize with the specialized class
+	if cls is not None:
+	    new = cls(values, *axes, **metadata)
+
+	# or just with the normal class constructor
+	else:
+	    new = DimArray(values, axes, **metadata)
+	    return new
+
 #
-# A few example subclasses from the geophysics
+# A FEW EXAMPLE SUBCLASSES FROM GEOPHYSICS
 #
 class TimeSeries(Defarray):
     _dimensions = ("time",)
@@ -42,3 +78,16 @@ class Map(Defarray):
     """
     _dimensions = ("lat","lon")
     #plot = Defarray.contourf
+
+
+def _get_defarray_cls(dims):
+    """ look whether a particular pre-defined array matches the dimensions
+    """
+    import defarray
+    cls = None
+    for obj in vars(defarray): 
+	if isinstance(obj, defarray.Defarray):
+	    if tuple(dims) == cls._dimensions:
+		cls = obj
+
+    return cls
