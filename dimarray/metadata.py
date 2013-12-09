@@ -144,7 +144,7 @@ class Metadata(object):
     def repr_meta(self):
 	""" string representation for metadata
 	"""
-	return ", ".join(['{}: {}'.format(att, getattr(self, att)) for att in self.ncattrs()])
+	return ", ".join(['{}: {}'.format(att, self.getncattr(att)) for att in self.ncattrs()])
 
     #
     # add a new stamp to "stamp" list via json 

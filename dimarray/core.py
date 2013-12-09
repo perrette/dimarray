@@ -128,17 +128,9 @@ class DimArray(Metadata):
 	assert isinstance(axes[0], Axis), "Need to provide a list of Axis objects !"
 	#assert isinstance(axes, Axes), "Need to provide an Axes object !"
 
-	# loop over all variables defined in defarray
-	cls = _get_defarray_cls([ax.name for ax in axes])
-
-	# initialize with the specialized class
-	if cls is not None:
-	    new = cls(values, *axes, **metadata)
-
 	# or just with the normal class constructor
-	else:
-	    new = DimArray(values, axes, **metadata)
-	    return new
+	new = DimArray(values, axes, **metadata)
+	return new
 
     @classmethod
     def from_tuples(cls, values, *axes, **kwargs):
@@ -264,7 +256,7 @@ class DimArray(Metadata):
 
 	return self.xs(**ix_nd)
 
-    def xs_axis(self, ix, axis=0, method=None, **kwargs):
+    def xs_axis(self, ix, axis=0, method=None, keepdims=False, **kwargs):
 	""" cross-section or slice along a single axis
 
 	input:
@@ -285,8 +277,8 @@ class DimArray(Metadata):
 	assert axis is not None, "axis= cannot be None in slicing"
 
 	# get an axis object
-	axis_obj = self.axes[axis] # axis object
-	axis_id = self.axes.index(axis_obj) # corresponding integer index
+	ax = self.axes[axis] # axis object
+	axis_id = self.axes.index(ax) # corresponding integer index
 
 	# get integer index/slice for axis valued index/slice
 	if method is None:
@@ -298,20 +290,26 @@ class DimArray(Metadata):
 
 	# otherwise locate the values
 	else:
-	    index = axis_obj.loc(ix, method=method, **kwargs) 
+	    index = ax.loc(ix, method=method, **kwargs) 
 
 	# make a numpy index  and use numpy's slice method (`slice(None)` :: `:`)
 	index = (slice(None),)*(axis_id-1) + (index,)
 	newval = self.values[index]
+	newaxisval = self.axes[axis].values[index]
 
 	# if resulting dimension has reduced, remove the corresponding axis
-	if newval.ndim < self.ndim:
-	    axes = copy.copy(self.axes)
-	    axes.remove(axis_obj)
+	axes = copy.copy(self.axes)
+
+	if not keepdims and not isinstance(newaxisval, np.ndarray):
+	    axes.remove(ax)
 
 	    # add new stamp
-	    stamp = "{}={}".format(axis_obj.name, axis_obj.values[index])
+	    stamp = "{}={}".format(ax.name, newaxisval)
 	    metadata = append_stamp(self._metadata, stamp, inplace=False)
+
+	else:
+	    axes[axis_id] = Axis(newaxisval, ax.name) # new axis
+	    metadata = self._metadata.copy()
 
 	# If result is a numpy array, make it a DimArray
 	if isinstance(newval, np.ndarray):
@@ -323,7 +321,7 @@ class DimArray(Metadata):
 
 	return result
 
-    def xs(self, ix=None, axis=0, method=None, **axes):
+    def xs(self, ix=None, axis=0, method=None, keepdims=False, **axes):
 	""" Cross-section, can be multidimensional
 
 	input:
@@ -342,14 +340,14 @@ class DimArray(Metadata):
 	"""
 	# single-axis slicing
 	if ix is not None:
-	    obj = self.xs_axis(ix, axis=axis, method=method)
+	    obj = self.xs_axis(ix, axis=axis, method=method, keepdims=keepdims)
 
 	# multi-dimensional slicing <axis name> : <axis index value>
 	# just a chained call
 	else:
 	    obj = self
 	    for nm, idx in axes.iteritems():
-		obj = obj.xs_axis(idx, axis=nm, method=method)
+		obj = obj.xs_axis(idx, axis=nm, method=method, keepdims=keepdims)
 
 	return obj
 
@@ -447,8 +445,9 @@ class DimArray(Metadata):
 
 	# Get axis name and idx
 	if axis is not None:
-	    axis_id = self.axes.get_idx(axis)
-	    axis_nm = self.axes[axis].name
+	    axis = self.axes.get_idx(axis)
+	    ax = self.axes[axis]
+	    axis_nm = ax.name
 
 	kwargs['axis'] = axis
 	result = getattr(values, funcname)(*args, **kwargs) 
@@ -456,7 +455,7 @@ class DimArray(Metadata):
 	# Special treatment for argmax and argmin: return the corresponding index
 	if funcname in ("argmax","argmin","nanargmax","nanargmin"):
 	    assert axis is not None, "axis must not be None for "+funcname+", or apply on values"
-	    result = self.axes[axis].values[result] # get actual axis values
+	    result = ax.values[result] # get actual axis values
 	    return result
 
 	# if scalar, just return it
@@ -473,7 +472,7 @@ class DimArray(Metadata):
 	obj = self._constructor(result, newaxes)
 
 	# add metadata back in
-	obj._metadata_update_transform(self, funcname, self.axes[axis].name)
+	obj._metadata_update_transform(self, funcname, ax.name)
 
 	return obj
 
@@ -787,8 +786,10 @@ class DimArray(Metadata):
 	    line = "dimarray: {} non-null elements ({} null)".format(nonnull, self.size-nonnull)
 	lines.append(line)
 
-	if np.any([getattr(self,k) is not "" for k in self.ncattrs()]):
-	    line = ", ".join(['%s: "%s"' % (att, getattr(self, att)) for att in self.ncattrs()])
+	#if np.any([getattr(self,k) is not "" for k in self.ncattrs()]):
+	if len(self.ncattrs()) > 0:
+	    line = self.repr_meta()
+	    #line = ", ".join(['%s: "%s"' % (att, getattr(self, att)) for att in self.ncattrs()])
 	    lines.append(line)
 
 	if self.size > 1:
