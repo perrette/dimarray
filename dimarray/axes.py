@@ -459,17 +459,15 @@ def _common_axis(ax1, ax2):
     output:
 	newaxis: axis object
     """
-    assert ax1.name == ax2.name, "cannot align axis from differnet dimensions"
-    #DataFrame([Series(dummy, index=d1), Series(dummy, index=d2)]).index
     if type(ax1) is list:
-	newaxis = set(ax1+ax2)
+	newaxis = list(set(ax1+ax2))
 	newaxis.sort(reverse=ax1[1] < ax1[0] if len(ax1) > 1 else False) # sort new axis
 
     else:
 	ax = _common_axis(list(ax1), list(ax2))
 	newaxis = np.array(ax)
 
-    return Axis(newaxis, ax1.name)
+    return newaxis
 
 #def _common_axes(axes1, axes2):
 #    """ Align axes which have a dimension in common

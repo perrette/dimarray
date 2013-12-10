@@ -47,7 +47,7 @@ class DimArray(Metadata):
 
 	dtype, copy: passed to np.array()
 
-	_slicing: default slicing method (mostly for internal use)
+	_slicing: default slicing method "numpy", "nearest", "exact" (mostly for internal use)
 	"""
 	#
 	# array values
@@ -655,7 +655,11 @@ class DimArray(Metadata):
 	    values = self.values.take(indices, axis=axis_id)
 
 	    # missing indices
-	    missing = (slice(None),)*(axis_id-1) + np.where(indices==-1)
+	    # convert int to floats if necessary
+	    if values.dtype == np.dtype(int):
+		values = np.array(values, dtype=float, copy=False)
+
+	    missing = (slice(None),)*axis_id + np.where(indices==-1)
 	    values[missing] = np.nan # set missing values to NaN
 
 	elif method == "interp":
@@ -826,7 +830,7 @@ class DimArray(Metadata):
 	"""
 	obj = pandas_obj(self.values, *[ax.values for ax in self.axes])
 
-	# make sure the axis has the right name
+	# make sure the axes have the right name
 	for i, ax in enumerate(self.axes):
 	    obj.axes[i].name = ax.name
 
@@ -879,13 +883,6 @@ DimArray.apply_recursive = transform.apply_recursive
 DimArray.interp1d = transform.interp1d_numpy
 DimArray.interp2d = transform.interp2d_mpl
 
-# try:
-#     import plotting
-#     DimArray.plot = plotting.plot
-#     DimArray.contourf = plotting.contourf
-# 
-# except:
-#     print "could not import plotting"
 
 def array(values, axes=None, names=None, dtype=None, **kwaxes):
     """ Wrapper for initialization
@@ -954,9 +951,9 @@ def _operation(func, o1, o2, reindex=True, transpose=True, constructor=DimArray)
 
 	# reindex both operands
 	for name in common_dims:
-	    ax = _common_axis(o1.axes[name], o2.axes[name])
-	    o1 = o1.reindex_axis(ax.values, axis=ax.name)
-	    o2 = o2.reindex_axis(ax.values, axis=ax.name)
+	    ax_values = _common_axis(o1.axes[name].values, o2.axes[name].values)
+	    o1 = o1.reindex_axis(ax_values, axis=name)
+	    o2 = o2.reindex_axis(ax_values, axis=name)
 
     # determine the dimensions of the result
     newdims = _unique(o1.dims + o2.dims) 
