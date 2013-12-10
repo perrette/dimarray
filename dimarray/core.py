@@ -293,8 +293,8 @@ class DimArray(Metadata):
 	    index = ax.loc(ix, method=method, **kwargs) 
 
 	# make a numpy index  and use numpy's slice method (`slice(None)` :: `:`)
-	index = (slice(None),)*(axis_id-1) + (index,)
-	newval = self.values[index]
+	index_nd = (slice(None),)*axis_id + (index,)
+	newval = self.values[index_nd]
 	newaxisval = self.axes[axis].values[index]
 
 	# if resulting dimension has reduced, remove the corresponding axis

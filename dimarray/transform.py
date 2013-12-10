@@ -68,7 +68,7 @@ def apply_recursive(obj, dims, fun, *args, **kwargs):
 
     # search for an axis which is not in dims
     i = 0
-    while obj.axes[0].name in dims:
+    while obj.axes[i].name in dims:
 	i+=1 
 
     # make sure it worked
@@ -81,8 +81,11 @@ def apply_recursive(obj, dims, fun, *args, **kwargs):
     data = []
     for axisval in axis.values: # first axis
 
+	print "recursive call"
+
 	# take a slice of the data (exact matching)
-	slice_ = obj.xs(**{ax.name:axisval, "method":"index"})
+	slice_ = obj.xs_axis(axisval, axis=axis.name, method="index")
+	#slice_ = obj.xs(**{ax.name:axisval, "method":"index"})
 
 	# apply the transform recursively
 	res = apply_recursive(slice_, dims, fun, *args, **kwargs)
@@ -103,21 +106,28 @@ def apply_recursive(obj, dims, fun, *args, **kwargs):
 # INTERPOLATION
 #
 
-def interp1d_numpy(obj, newaxis, axis=None, left=None, right=None):
+def interp1d_numpy(obj, values=None, axis=None, left=None, right=None):
     """ interpolate along one axis: wrapper around numpy's interp
+
+    input:
+	newaxis_values: 1d array, or Axis object
+	newaxis_name, optional: `str` (axis name), required if newaxis is an array
+
+    output:
+	interpolated data (n-d)
     """
-    ax = Axis(newaxis, axis)
+    newaxis = Axis(values, axis)
 
     def interp1d(obj, order=1):
 	""" 2-D interpolation function appled recursively on the object
 	"""
-	xp = obj.axes[x.name].values
+	xp = obj.axes[newaxis.name].values
 	fp = obj.values
-	f = np.interp(newaxis.values, xp, fp, left=None, right=None)
-	res = interp(obj.values, x0, y0, x1, y1, order=order)
-	return obj._constructor(res, newaxes, **obj._metadata)
+	result = np.interp(newaxis.values, xp, fp, left=left, right=right)
+	return obj._constructor(result, [newaxis], **obj._metadata)
 
-    return apply_recursive(obj, (x.name, y.name), interp1d)
+    result = apply_recursive(obj, (newaxis.name,), interp1d)
+    return result.transpose(obj.dims) # transpose back to original dimensions
 
 
 def interp2d_mpl(obj, newaxes, axes=None, order=1):
@@ -147,4 +157,5 @@ def interp2d_mpl(obj, newaxes, axes=None, order=1):
 	res = interp(obj.values, x0, y0, x1, y1, order=order)
 	return obj._constructor(res, newaxes, **obj._metadata)
 
-    return apply_recursive(obj, (x.name, y.name), interp2d)
+    result = apply_recursive(obj, (x.name, y.name), interp2d)
+    return result.transpose(obj.dims) # transpose back to original dimensions
