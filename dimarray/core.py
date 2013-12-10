@@ -299,17 +299,17 @@ class Dimarray(Metadata):
 
 	# if resulting dimension has reduced, remove the corresponding axis
 	axes = copy.copy(self.axes)
+	metadata = self._metadata.copy()
 
 	if not keepdims and not isinstance(newaxisval, np.ndarray):
 	    axes.remove(ax)
 
 	    # add new stamp
 	    stamp = "{}={}".format(ax.name, newaxisval)
-	    metadata = append_stamp(self._metadata, stamp, inplace=False)
+	    append_stamp(metadata, stamp, inplace=True)
 
 	else:
 	    axes[axis_id] = Axis(newaxisval, ax.name) # new axis
-	    metadata = self._metadata.copy()
 
 	# If result is a numpy array, make it a Dimarray
 	if isinstance(newval, np.ndarray):
@@ -885,7 +885,6 @@ Dimarray.apply_recursive = transform.apply_recursive
 Dimarray.interp1d = transform.interp1d_numpy
 Dimarray.interp2d = transform.interp2d_mpl
 
-
 def array(values, axes=None, dims=None, dtype=None, **kwaxes):
     """ Wrapper for initialization
 
@@ -999,4 +998,3 @@ def _ndindex(indices, axis_id):
     """ return the N-D index from an along-axis index
     """
     return (slice(None),)*axis_id + np.index_exp[indices]
-

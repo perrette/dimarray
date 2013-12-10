@@ -4,7 +4,6 @@ which makes it easier for netCDF I/O and printing to screen.
 import numpy as np
 import copy
 import json
-from units import Units
 
 from collections import OrderedDict as odict
 
@@ -180,61 +179,7 @@ class Metadata(object):
     def _metadata_update_operation(self, o1, other, op):
 	"""
 	"""
-	return # later
-
-	if not "units" in o1._metadata:
-	    return
-
-	#
-	# converves for add/subtract
-	#
-
-	if op in ("add","subtract"):
-	    # do nothing if different dimensions originally (could raise a warning..)
-	    if units1 != o2._metadata["units"]:
-		if _metadata_operation_warning:
-		    raise Warning("different units by add/subtract")
-	    self._metadata["units"] = o1._metadata["units"]
-	    return
-
-	# convert first operand units
-	try:
-	    units1 = o1._metadata["units"]
-	    units1 = Units.loads(units1)
-
-	except Exception, msg:
-	    print msg
-	    print "failed to convert units", units1
-	    return 
-
-	if op == "power":
-	    units = units1.power(other)
-	    self._metadata["units"] = units.dumps()
-	    return 
-
-	# convert second operand units
-	try:
-	    units2 = other._metadata["units"]
-	    units2 = Units.loads(units2)
-
-	except Exception, msg:
-	    print msg
-	    print "failed to convert units", units2
-	    return 
-
-	# combine
-	if op == "multiply":
-	    new = units1.multiply(units2)
-	    self._metadata["units"] = new.dumps()
-
-	elif op == "divide":
-	    new = units1.divide(units2)
-	    self._metadata["units"] = new.dumps()
-
-	else:
-	    print "unknown unit operation",op
-
-	return
+	return # later (units.py module)
 
 def append_stamp(metadata, stamp, inplace=False):
     """ append a new transform or operation stamp to metadata

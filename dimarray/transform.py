@@ -1,6 +1,3 @@
-#import numpy as np
-#import functools
-#import inspect
 import numpy as np
 from functools import partial
 from axes import Axis, Axes
