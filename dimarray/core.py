@@ -26,7 +26,7 @@ class Dimarray(Metadata):
     """
     _order = None  # set a general ordering relationship for dimensions
 
-    _metadata_exclude = ("values","axes","name") # is NOT a metadata
+    _metadata_exclude = ("values","axes") # is NOT a metadata
 
     _pandas_like = False # influences the behaviour of ix and loc
 
@@ -34,14 +34,12 @@ class Dimarray(Metadata):
     # NOW MAIN BODY OF THE CLASS
     #
 
-    def __init__(self, values, axes=None, dtype=None, copy=False, _slicing=None, name="", **metadata):
+    def __init__(self, values, axes=None, dtype=None, copy=False, _slicing=None, **metadata):
 	""" Initialization
 
 	values	: numpy-like array, or Dimarray instance
 	axes	: Axes instance, or list of tuples or list of Axis objects
 		  This argument can only be omitted if values is an instance of Dimarray
-
-	name	: can set a name to the variable, will be used when writing to netCDF
 
 	metadata: stored in _metadata dict
 
@@ -81,7 +79,6 @@ class Dimarray(Metadata):
 	super(Dimarray, self).__init__() # init an ordered dict self._metadata
 
 	self.values = avalues
-	self.name = name  
 	self.axes = axes
 
 	# options
@@ -850,15 +847,14 @@ class Dimarray(Metadata):
     #  I/O
     # 
 
-    def save(self, f, *args, **kwargs):
+    def save(self, f, name=None, *args, **kwargs):
 	import ncio
 
 	# add variable name if provided...
-	if len(args) == 0 and 'name' not in kwargs:
-	    if self.name:
-		args = [self.name]+list(args)
+	if name is None and hasattr(self, "name"):
+	    name = self.name
 
-	ncio.write_variable(f, self, *args, **kwargs)
+	ncio.write_variable(f, self, name, *args, **kwargs)
 
     @classmethod
     def load(cls, f, *args, **kwargs):

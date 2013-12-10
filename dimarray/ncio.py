@@ -64,14 +64,6 @@ def write(f, name, data, axes=None, dims=None, mode='w', **metadata):
     Provide dimensions as a list:
 
     >>> write("test.nc", "testvar", np.randn(20, 30), [np.linspace(-90,90,20), np.linspace(-180,180,30)],['lat','lon'])
-
-    Or as key-word arguments:
-
-    >>> write("test.nc", "testvar", np.randn(20, 30), lat=np.linspace(-90,90,20), lon=np.linspace(-180,180,30))
-
-    Note:   If keyword arguments are given, the order is lost. 
-	    In case there is ambiguity in how to order the data 
-	    (e.g. two dimensions have the same length), provide arguments as list.
     """
     #axes = Axes.from_list(axes, dims)
     obj = Dimarray(data, axes, dims, name=name, **metadata) # initialize a dimarray
@@ -240,7 +232,7 @@ def write_dataset(f, obj, mode='w'):
 	write_variable(f, obs[nm], nm)
 
 
-def write_variable(f, obj, name, mode='w'):
+def write_variable(f, obj, name=None, mode='w'):
     """ save Dimarray instance to file
 
     f	: file name or netCDF file handle
@@ -248,6 +240,9 @@ def write_variable(f, obj, name, mode='w'):
     name: variable name
     mode: 'w' or 'a' 
     """
+    if not name and hasattr(obj, "name"): name = obj.name
+    assert name, "invalid variable name !"
+
     # control wether file name or netCDF handle
     f, close = check_file(f, mode=mode)
 
@@ -268,7 +263,12 @@ def write_variable(f, obj, name, mode='w'):
 
     # add attributes if any
     for k in obj.ncattrs():
-	f.variables[name].setncattr(k, getattr(obj, k))
+	if k == "name": continue # 
+	try:
+	    f.variables[name].setncattr(k, getattr(obj, k))
+
+	except TypeError, msg:
+	    raise Warning(msg)
 
     if close:
 	f.close()

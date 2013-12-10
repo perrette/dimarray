@@ -41,7 +41,7 @@ class Metadata(object):
     # impose restriction about what type metadata can have
     # for now use python immutable types, eventually could authorize
     # everything which is netCDF writable
-    _metadata_types = int, long, float, tuple, str, bool  # autorized metadata types
+    _metadata_types = int, long, float, tuple, str, bool, unicode # autorized metadata types
 
     _metadata_transform = True # conserve metadata via axis transform?
     _metadata_units = "units" # metadata which follow unit-like rules in operations

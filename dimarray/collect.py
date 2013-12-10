@@ -17,7 +17,7 @@ class Dataset(OrderedDict):
 	    val = array(val)
 
 	# update the name
-	if not val.name:
+	if not hasattr(val, "name") or (hasattr(val, "name") and not val.name):
 	    val.name = item
 
 	# Ordered-Dict method
