@@ -7,7 +7,7 @@ import numpy as np
 from collect import Dataset
 from axes import Axis, Axes
 #import core as da
-from core import DimArray as Dimarray
+from core import Dimarray as Dimarray
 from core import _ndindex
 
 __all__ = ['read',"summary","write"]

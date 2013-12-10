@@ -3,7 +3,7 @@
 from collections import OrderedDict
 import numpy as np
 
-from core import DimArray
+from core import Dimarray
 from lazyapi import array, axis, pandas_obj
 
 class Dataset(OrderedDict):
@@ -12,7 +12,7 @@ class Dataset(OrderedDict):
     def __setitem__(self, item, val):
 	""" convert the object with dimarray
 	"""
-	if not isinstance(val, DimArray):
+	if not isinstance(val, Dimarray):
 	    val = array(val)
 
 	# update the name
@@ -31,7 +31,7 @@ class Dataset(OrderedDict):
 	    res = getattr(self[k], method)(*args, **kwargs)
 
 	    # reinsert in the dictionary (typically False for plots, true for transformations)
-	    if isinstance(res, DimArray): d[k] = res
+	    if isinstance(res, Dimarray): d[k] = res
 
 	return d
 

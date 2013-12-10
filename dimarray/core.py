@@ -15,7 +15,7 @@ __all__ = []
 #
 # Main class:
 #
-class DimArray(Metadata):
+class Dimarray(Metadata):
     """ numpy's ndarray with physical dimensions
 
     * numpy's ndarrays with named axes and metadata organized on the netCDF format.
@@ -37,9 +37,9 @@ class DimArray(Metadata):
     def __init__(self, values, axes=None, dtype=None, copy=False, _slicing=None, name="", **metadata):
 	""" Initialization
 
-	values	: numpy-like array, or DimArray instance
+	values	: numpy-like array, or Dimarray instance
 	axes	: Axes instance, or list of tuples or list of Axis objects
-		  This argument can only be omitted if values is an instance of DimArray
+		  This argument can only be omitted if values is an instance of Dimarray
 
 	name	: can set a name to the variable, will be used when writing to netCDF
 
@@ -78,7 +78,7 @@ class DimArray(Metadata):
 	# store all fields
 	#
 
-	super(DimArray, self).__init__() # init an ordered dict self._metadata
+	super(Dimarray, self).__init__() # init an ordered dict self._metadata
 
 	self.values = avalues
 	self.name = name  
@@ -115,7 +115,7 @@ class DimArray(Metadata):
 	values	: numpy-like array
 	axes	: Axes instance 
 
-	This static method is used whenever a new DimArray needs to be instantiated
+	This static method is used whenever a new Dimarray needs to be instantiated
 	for example after a transformation.
 
 	This makes the sub-classing process easier since only this method needs to be 
@@ -123,22 +123,22 @@ class DimArray(Metadata):
 	"""
 	assert isinstance(axes, list), "Need to provide a list of Axis objects !"
 	if len(axes) == 0:
-	    return DimArray(values, axes, **metadata)
+	    return Dimarray(values, axes, **metadata)
 
 	assert isinstance(axes[0], Axis), "Need to provide a list of Axis objects !"
 	#assert isinstance(axes, Axes), "Need to provide an Axes object !"
 
 	# or just with the normal class constructor
-	new = DimArray(values, axes, **metadata)
+	new = Dimarray(values, axes, **metadata)
 	return new
 
     @classmethod
     def from_tuples(cls, values, *axes, **kwargs):
-	""" initialize DimArray with with variable list of tuples, and attributes
+	""" initialize Dimarray with with variable list of tuples, and attributes
 
 	values	    : numpy-like array (passed to array())
 	*axes	    : variable list of tuples to define axes: ('x0',val0), ('x1',val1), ...
-	**kwargs    : passed to DimArray (attributes)
+	**kwargs    : passed to Dimarray (attributes)
 	"""
 	axes = Axes.from_tuples(*axes)
 	new = cls(values, axes, **kwargs)
@@ -147,13 +147,13 @@ class DimArray(Metadata):
 
     @classmethod
     def from_list(cls, values, axes, dims=None, **kwargs):
-	""" initialize DimArray with with variable list of tuples, and attributes
+	""" initialize Dimarray with with variable list of tuples, and attributes
 
 	values	    : numpy-like array (passed to array())
 	axes	    : list of axis values
 	dims	    : list of axis dims
 	(axes, dims) are passed to Axes.from_list
-	**kwargs    : passed to DimArray (attributes)
+	**kwargs    : passed to Dimarray (attributes)
 	"""
 	axes = Axes.from_list(axes, dims)
 	new = cls(values, axes, **kwargs)
@@ -161,7 +161,7 @@ class DimArray(Metadata):
 
     @classmethod
     def from_kwds(cls, values, dims=None, **axes):
-	""" initialize DimArray with with axes as key-word arguments
+	""" initialize Dimarray with with axes as key-word arguments
 
 	values	    : numpy-like array (passed to array())
 	**axes      : axes passed as keyword araguments <axis name>=<axis val>
@@ -175,7 +175,7 @@ class DimArray(Metadata):
 		    msg = \
 """ no attribute can be passed with the from_kwds method 
 ==> try using the set() method instead, for example:
-    a = DimArray.from_kwds(values, **axes)
+    a = Dimarray.from_kwds(values, **axes)
     a.name = "myname"
     a.units = "myunits"
 """
@@ -196,7 +196,7 @@ class DimArray(Metadata):
 	    return ax.values # return numpy array
 
 	else:
-	    super(DimArray, self).__getattr__(att) # call Metadata's method
+	    super(Dimarray, self).__getattr__(att) # call Metadata's method
 
 
     def set(self, inplace=False, **kwargs):
@@ -234,7 +234,7 @@ class DimArray(Metadata):
 	    new.axes = self.axes.copy()
 
 	return new
-	#return DimArray(self.values.copy(), self.axes.copy(), slicing=self.slicing, **{k:getattr(self,k) for k in self.ncattrs()})
+	#return Dimarray(self.values.copy(), self.axes.copy(), slicing=self.slicing, **{k:getattr(self,k) for k in self.ncattrs()})
 
     #
     # SLICING
@@ -266,7 +266,7 @@ class DimArray(Metadata):
 	    - **kwargs: additional parameters passed to self.axes relative to slicing behaviour
 
 	output:
-	    - DimArray object or python built-in type, consistently with numpy slicing
+	    - Dimarray object or python built-in type, consistently with numpy slicing
 
 	>>> a.xs(45.5, axis=0)	 # doctest: +ELLIPSIS
 	>>> a.xs(45.7, axis="lat") == a.xs(45.5, axis=0) # "nearest" matching
@@ -311,7 +311,7 @@ class DimArray(Metadata):
 	    axes[axis_id] = Axis(newaxisval, ax.name) # new axis
 	    metadata = self._metadata.copy()
 
-	# If result is a numpy array, make it a DimArray
+	# If result is a numpy array, make it a Dimarray
 	if isinstance(newval, np.ndarray):
 	    result = self._constructor(newval, axes, **metadata)
 
@@ -425,7 +425,7 @@ class DimArray(Metadata):
 	
 	returns:
 	--------
-	    - DimArray or scalar, consistently with ndarray behaviour
+	    - Dimarray or scalar, consistently with ndarray behaviour
 	"""
 	assert type(funcname) is str, "can only provide function as a string"
 
@@ -748,7 +748,7 @@ class DimArray(Metadata):
     def __int__(self):  return int(self.values)
 
     def __eq__(self, other): 
-	return isinstance(other, DimArray) and np.all(self.values == other.values) and self.axes == other.axes
+	return isinstance(other, Dimarray) and np.all(self.values == other.values) and self.axes == other.axes
 
 
     #
@@ -879,17 +879,17 @@ class DimArray(Metadata):
 #
 
 # recursive application of obj => obj transformation
-DimArray.apply_recursive = transform.apply_recursive 
+Dimarray.apply_recursive = transform.apply_recursive 
 
 # 1D and bilinear interpolation (recursively applied)
-DimArray.interp1d = transform.interp1d_numpy
-DimArray.interp2d = transform.interp2d_mpl
+Dimarray.interp1d = transform.interp1d_numpy
+Dimarray.interp2d = transform.interp2d_mpl
 
 
 def array(values, axes=None, dims=None, dtype=None, **kwaxes):
     """ Wrapper for initialization
 
-    In most ways similar to DimArray, except that no axes can be passed
+    In most ways similar to Dimarray, except that no axes can be passed
     as keyword arguments instead of metadata.
 
     a = array(values, lon=mylon, lat=mylat)
@@ -907,27 +907,27 @@ def array(values, axes=None, dims=None, dtype=None, **kwaxes):
 	    raise ValueError("axes must be passed as a list")
 
     if len(kwaxes) > 0:
-	new = DimArray.from_kwds(values, axes, **kwaxes) 
+	new = Dimarray.from_kwds(values, axes, **kwaxes) 
 
     # scalar values
     elif len(axes) == 0:
-	new = DimArray(values, axes) 
+	new = Dimarray(values, axes) 
 
     elif type(axes[0]) is tuple:
-	new = DimArray.from_tuples(values, *axes) 
+	new = Dimarray.from_tuples(values, *axes) 
 
     else:
-        new = DimArray.from_list(values, axes, dims=dims) 
+        new = Dimarray.from_list(values, axes, dims=dims) 
 
     return new
 
 
-def _operation(func, o1, o2, reindex=True, transpose=True, constructor=DimArray):
+def _operation(func, o1, o2, reindex=True, transpose=True, constructor=Dimarray):
     """ operation on LaxArray objects
 
     input:
 	func	: operator
-	o1    	: LHS operand: DimArray
+	o1    	: LHS operand: Dimarray
 	o2    	: RHS operand: at least: be convertible by np.array())
 	align, optional: if True, use pandas to align the axes
 
@@ -935,8 +935,8 @@ def _operation(func, o1, o2, reindex=True, transpose=True, constructor=DimArray)
 	values: array values
 	dims : dimension names
     """
-    # second operand is not a DimArray: let numpy do the job 
-    if not isinstance(o2, DimArray):
+    # second operand is not a Dimarray: let numpy do the job 
+    if not isinstance(o2, Dimarray):
 	if np.ndim(o2) > o1.ndim:
 	    raise ValueError("bad input: second operand's dimensions not documented")
 	res = func(o1.values, np.array(o2))

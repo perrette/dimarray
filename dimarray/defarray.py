@@ -1,16 +1,16 @@
 """ Definition of dimensions and a few classical classes
 
 Note one could be tempted to add Series and DataFrame like in pandas
-but this would be contrary to the spirit of a DimArray, as 
+but this would be contrary to the spirit of a Dimarray, as 
 `columns` and `index` are not semantic labels (and therefore 
 they are not conserved in pandas)
 """
-from core import DimArray, Axis, Axes
+from core import Dimarray, Axis, Axes
 #
 # Add a few predefined class (e.g. Map, TimeSeries etc...)
 # see the definition module 
 #
-class Defarray(DimArray):
+class Defarray(Dimarray):
     """ Array with pre-defined dimensions
     
     This class makes initializing a dimarray easier
@@ -39,7 +39,7 @@ class Defarray(DimArray):
 	values	: numpy-like array
 	axes	: Axes instance 
 
-	This static method is used whenever a new DimArray needs to be instantiated
+	This static method is used whenever a new Dimarray needs to be instantiated
 	for example after a transformation.
 
 	This makes the sub-classing process easier since only this method needs to be 
@@ -49,7 +49,7 @@ class Defarray(DimArray):
 
 	# scalar
 	if len(axes) == 0:
-	    return DimArray(values, axes, **metadata)
+	    return Dimarray(values, axes, **metadata)
 
 	assert isinstance(axes[0], Axis), "Need to provide a list of Axis objects !"
 	#assert isinstance(axes, Axes), "Need to provide an Axes object !"
@@ -63,7 +63,7 @@ class Defarray(DimArray):
 
 	# or just with the normal class constructor
 	else:
-	    new = DimArray(values, axes, **metadata)
+	    new = Dimarray(values, axes, **metadata)
 	    return new
 
 #

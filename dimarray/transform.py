@@ -37,7 +37,7 @@ class NumpyDesc(object):
 	return newmethod
 
 #
-# recursively apply a DimArray ==> DimArray transform
+# recursively apply a Dimarray ==> Dimarray transform
 #
 def apply_recursive(obj, dims, fun, *args, **kwargs):
     """ recursively apply a multi-axes transform
