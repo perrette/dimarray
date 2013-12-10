@@ -7,7 +7,7 @@ import copy
 
 from metadata import Metadata, append_stamp
 from axes import Axis, Axes, _common_axis
-from lazyapi import pandas_obj
+from tools import pandas_obj
 import transform  # numpy axis transformation, interpolation
 
 __all__ = []

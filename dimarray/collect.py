@@ -3,8 +3,9 @@
 from collections import OrderedDict
 import numpy as np
 
-from core import Dimarray
-from lazyapi import array, axis, pandas_obj
+from axes import Axis
+from core import Dimarray, array
+from tools import pandas_obj
 
 class Dataset(OrderedDict):
     """ container for a mixture of objects of different types (different dimensions)
