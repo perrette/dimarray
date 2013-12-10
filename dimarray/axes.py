@@ -171,7 +171,7 @@ class Axes(list):
     """ some axes have the same size !
     ==> ambiguous determination of dimensions order via keyword arguments only
     ==> explictly supply `dims=` or use from_list() or from_tuples() methods" """
-	    argsort = [shape.index(k) for k in current_shape]
+	    argsort = [current_shape.index(k) for k in shape]
 	    axes = axes[argsort]
 
 	    current_shape = tuple([ax.size for ax in axes])

@@ -23,7 +23,6 @@ class Dataset(OrderedDict):
 	# Ordered-Dict method
 	super(Dataset, self).__setitem__(item, val)
 
-
     def apply(method, *args, **kwargs):
 	""" apply a dimarray method to every element...
 	"""
@@ -45,28 +44,19 @@ class Dataset(OrderedDict):
 	import ncio
 	return ncio.read_dataset(f, *args, **kwargs)
 
-    def align(self):
+    def align(self, **kwargs):
 	""" align the data using pandas
-
-	note: assume consistent objects
 	"""
-	1/0
-	## Transform each item to a pandas object
-	#d = OrderedDict()
-	#for k in self:
-	#    n = self[k].ndim
-	#    d[k] = self[k].to_pandas()
-	#
-	## Now transform the whole dictionary to a pandas object
-	#d = pandas_obj(d)
+	objs = [self[k] for k in self]
 
-	## Transform back to Dataset object
-	#cls = d[k].__class__
-	#data = Dataset()
-	#for k in self:
-	#    data[k] = cls(d[k].values, d[k].axes)
+	newobjs = _align_objects(objs, **kwargs)
 
-	#return data
+	d = Dataset()
+
+	for i, k in enumerate(self):
+	    d[k] = newobjs[i]
+
+	return d
 
     def isaligned(self):
 	""" check that axes are consistent
