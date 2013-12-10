@@ -1,17 +1,17 @@
 """ Internal API, mostly used to avoid circular imports by lazy import of dependencies, and to keep an overview on what is going on
 """
-def dimarray(data, *args, **kwargs):
-    """ initialize an Dimarray, avoiding circular import
+def array(data, *args, **kwargs):
+    """ initialize an DimArray, avoiding circular import
     """
-    from core import dimarray
-    #return Dimarray(data, *args, **kwargs)
-    return dimarray(data, *args, **kwargs)
+    from core import array
+    #return DimArray(data, *args, **kwargs)
+    return array(data, *args, **kwargs)
 
 def isdimarray(obj):
-    """ True is instance of Dimarray or its sub-classes
+    """ True is instance of DimArray or its sub-classes
     """
-    from core import Dimarray
-    return isinstance(obj, Dimarray)
+    from core import DimArray
+    return isinstance(obj, DimArray)
 
 def axis(*args, **kwargs):
     """ avoid circular imports

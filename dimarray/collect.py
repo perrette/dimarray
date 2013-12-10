@@ -3,17 +3,17 @@
 from collections import OrderedDict
 import numpy as np
 
-from core import Dimarray
-from lazyapi import dimarray, axis, pandas_obj
+from core import DimArray
+from lazyapi import array, axis, pandas_obj
 
 class Dataset(OrderedDict):
-    """ container for a mixture of objects of different type (different dimensions)
+    """ container for a mixture of objects of different types (different dimensions)
     """
     def __setitem__(self, item, val):
 	""" convert the object with dimarray
 	"""
-	if not isinstance(val, Dimarray):
-	    val = dimarray(item, val)
+	if not isinstance(val, DimArray):
+	    val = array(val)
 
 	# update the name
 	if not val.name:
@@ -31,7 +31,7 @@ class Dataset(OrderedDict):
 	    res = getattr(self[k], method)(*args, **kwargs)
 
 	    # reinsert in the dictionary (typically False for plots, true for transformations)
-	    if isinstance(res, Dimarray): d[k] = res
+	    if isinstance(res, DimArray): d[k] = res
 
 	return d
 
@@ -99,14 +99,14 @@ class Dataset(OrderedDict):
 
 	#cls = base.get_class(('set',) + v0._dimensions) # get class
 
-	return dimarray(data, axes)
+	return array(data, axes)
 
     def _filter_dims(self, dims):
 	""" return variables names matching given dimensions
 	"""
 	nms = []
 	for nm in self:
-	    if tuple(self[nm].axes.names) == tuple(dims):
+	    if tuple(self[nm].dims) == tuple(dims):
 		nms.append(nm)
 	return nms
 

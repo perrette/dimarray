@@ -1,11 +1,14 @@
 """ NetCDF I/O to access and save geospatial data
 """
+import os
 import netCDF4 as nc
 import numpy as np
 #from geo.data.index import to_slice, _slice3D
 from collect import Dataset
 from axes import Axis, Axes
-from lazyapi import dimarray
+#import core as da
+from core import DimArray as Dimarray
+from core import _ndindex
 
 __all__ = ['read',"summary","write"]
 
@@ -19,7 +22,8 @@ def summary(fname):
     input: 
 	fname: netCDF file name
     """
-    print read_dimensions(fname)
+    print fname+":\n"+"-"*len(fname)
+    print read_dimensions(fname, verbose=False)
     nms, _ = scan(fname, verbose=False)
     for nm in nms:
 	dims, shape = scan_var(fname, nm, verbose=False)
@@ -43,7 +47,7 @@ def read(f, nms=None, *args, **kwargs):
     else:
 	return read_dataset(f, nms, *args, **kwargs)
 
-def write(f, name, data, axes=None, names=None, mode='w', **kwargs):
+def write(f, name, data, axes=None, dims=None, mode='w', **metadata):
     """ Initialize a Dimarray and write to netCDF
 
     Input:
@@ -51,11 +55,11 @@ def write(f, name, data, axes=None, names=None, mode='w', **kwargs):
 	name	: variable name
 	data	: numpy array
 	axes	: list of numpy arrays (or Axes objects)
-	names	: names of the axes (the dimensions) 
+	dims	: dims of the axes (the dimensions) 
 	mode    : mode to access the netcdf: 'w' (default, overwrite) or 'a' (append)
-	**kwargs: for convenience, can pass dimensions as keyword arguments (beware the order is lost)
+	**metadata: for convenience, can pass dimensions as keyword arguments (beware the order is lost)
 
-    data, axes, names, **kwargs are passed to dimarray to instantiate a Dimarray, see corresponding doc for details.
+    data, axes, dims, **metadata are passed to dimarray to instantiate a Dimarray, see corresponding doc for details.
 
     Provide dimensions as a list:
 
@@ -69,7 +73,8 @@ def write(f, name, data, axes=None, names=None, mode='w', **kwargs):
 	    In case there is ambiguity in how to order the data 
 	    (e.g. two dimensions have the same length), provide arguments as list.
     """
-    obj = dimarray(data, axes, names, name=name, **kwargs) # initialize a dimarray
+    #axes = Axes.from_list(axes, dims)
+    obj = Dimarray(data, axes, dims, name=name, **metadata) # initialize a dimarray
     obj.write(f, mode=mode) # write to file
 
 
@@ -78,14 +83,14 @@ def write(f, name, data, axes=None, names=None, mode='w', **kwargs):
 # 
 
 
-def read_dimensions(f, name=None):
+def read_dimensions(f, name=None, verbose=True):
     """ return an Axes object
 
     name, optional: variable name
 
     return: Axes object
     """
-    f, close = check_file(f, mode='r')
+    f, close = check_file(f, mode='r', verbose=verbose)
 
     # dimensions associated to the variable to load
     if name is None:
@@ -118,7 +123,7 @@ def read_attributes(f, name=None):
     return attr
 
 
-def read_variable(f, v, ix=None, **kwargs):
+def read_variable(f, v, ix=None, **kwaxes):
     """ read any one variable from netCDF4 file with dimensions "sample","time","lat","lon"
     Input:
 
@@ -126,7 +131,7 @@ def read_variable(f, v, ix=None, **kwargs):
 	- v         : netCDF variable name to extract
 	- ix	    : [None] integer index slice for N-D numpy array
 
-	**slices: keyword arguments for dimensions to slice
+	**kwaxes: keyword arguments to indices axes subregions
 	- sample    : [None] time
 	- time	    : [None] time
 	- lat       : [None] latitude
@@ -156,22 +161,26 @@ def read_variable(f, v, ix=None, **kwargs):
     For the last two, a nearest neighbour search is performed to retrieve 
     closest location on the axis.  For an exact match, add keyword argument:
     """
-    from core import dimarray
-
     f, close = check_file(f, mode='r')
 
     axes = read_dimensions(f, v)
 
     # get the slice object
     if ix is None:
-	ix = axes.loc(**kwargs) # get the N-D slice
+	ix = ()
+	for ax in axes:
+	    if ax.name in kwaxes:
+		ix += (kwargs[ax.name],)
+	    else:
+		ix += (slice(None),)
+	ix = np.index_exp[ix] # just to make sure
 
     # slice the data and dimensions
     newdata = f.variables[v][ix]
     newaxes = [Axis(ax[ix[i]], ax.name) for i, ax in enumerate(axes)] # also get the appropriate axes
 
     # initialize a dimarray
-    obj = dimarray(newdata, newaxes, name=v)
+    obj = Dimarray(newdata, newaxes, name=v)
 
     # Read attributes
     attr = read_attributes(f, v)
@@ -243,7 +252,7 @@ def write_variable(f, obj, name, mode='w'):
     f, close = check_file(f, mode=mode)
 
     # Create dimensions
-    for dim in obj.axes.names:
+    for dim in obj.dims:
 	if not dim in f.dimensions:
 	    val = obj.axes[dim].values
 	    f.createDimension(dim, len(val))
@@ -252,7 +261,7 @@ def write_variable(f, obj, name, mode='w'):
 
     # Create Variable
     if name not in f.variables:
-	f.createVariable(name, obj.dtype, obj.axes.names)
+	f.createVariable(name, obj.dtype, obj.dims)
 
     # Write Variable
     f.variables[name][:] = obj.values
@@ -298,6 +307,11 @@ def check_file(f, mode='r', verbose=True):
 		print "read from",fname
 	    else:
 		print "write to",fname
+
+	# make sure the file does not exist if mode == "w"
+	if mode=="w" and os.path.exists(fname):
+	    os.remove(fname)
+
 	f = nc.Dataset(fname, mode)
 	close = True
 

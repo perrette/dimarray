@@ -142,16 +142,16 @@ class Axes(list):
 	return newaxes
 
     @classmethod
-    def from_list(cls, values, names=None):
+    def from_list(cls, values, dims=None):
 	""" 
 	"""
-	if names is None: 
-	    names = [None for __ in range(len(values))]
+	if dims is None: 
+	    dims = [None for __ in range(len(values))]
 
-	return cls.from_tuples(*zip(names, values))
+	return cls.from_tuples(*zip(dims, values))
 
     @classmethod
-    def from_kwds(cls, names=None, shape=None, **kwargs):
+    def from_kwds(cls, dims=None, shape=None, **kwargs):
 	""" infer dimensions from key-word arguments
 	"""
 	axes = cls()
@@ -160,9 +160,9 @@ class Axes(list):
 
 	# Make sure the order is right (since it is lost via dict-passing)
 
-	# preferred solution: names is given
-	if names is not None:
-	    axes.sort(names)
+	# preferred solution: dims is given
+	if dims is not None:
+	    axes.sort(dims)
 
 	# alternative option: only the shape is given
 	elif shape is not None:
@@ -170,7 +170,7 @@ class Axes(list):
 	    assert len(set(current_shape)) == len(set([ax.name for ax in axes])), \
     """ some axes have the same size !
     ==> ambiguous determination of dimensions order via keyword arguments only
-    ==> explictly supply `names=` or use from_list() or from_tuples() methods" """
+    ==> explictly supply `dims=` or use from_list() or from_tuples() methods" """
 	    argsort = [shape.index(k) for k in current_shape]
 	    axes = axes[argsort]
 
@@ -198,13 +198,13 @@ class Axes(list):
 	body = "\n".join([repr(ax).split('\n')[0] for ax in self])
 	return "\n".join([header, body])
 
-    def sort(self, names):
-	""" sort IN PLACE according to the order in "names"
+    def sort(self, dims):
+	""" sort IN PLACE according to the order in "dims"
 	"""
-	if type(names[0]) is int:
-	    names = [ax.name for ax in self]
+	if type(dims[0]) is int:
+	    dims = [ax.name for ax in self]
 
-	super(Axes, self).sort(key=lambda x: names.index(x.name))
+	super(Axes, self).sort(key=lambda x: dims.index(x.name))
 
     def copy(self):
 	return copy.copy(self)
@@ -216,9 +216,9 @@ class Axes(list):
 	if type(axis) is int:
 	    return axis
 
-	names = [ax.name for ax in self]
+	dims = [ax.name for ax in self]
 
-	return names.index(axis)
+	return dims.index(axis)
 
 #
 # Return a slice for an axis

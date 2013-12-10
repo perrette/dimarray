@@ -1,7 +1,7 @@
 """ Definition of dimensions and a few classical classes
 
 Note one could be tempted to add Series and DataFrame like in pandas
-but this would be contrary to the spirit of a Dimarray, as 
+but this would be contrary to the spirit of a DimArray, as 
 `columns` and `index` are not semantic labels (and therefore 
 they are not conserved in pandas)
 """
@@ -10,7 +10,7 @@ from core import DimArray, Axis, Axes
 # Add a few predefined class (e.g. Map, TimeSeries etc...)
 # see the definition module 
 #
-class Defarray(Dimarray):
+class Defarray(DimArray):
     """ Array with pre-defined dimensions
     
     This class makes initializing a dimarray easier

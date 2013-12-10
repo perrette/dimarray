@@ -146,21 +146,21 @@ class DimArray(Metadata):
 
 
     @classmethod
-    def from_list(cls, values, axes, names=None, **kwargs):
+    def from_list(cls, values, axes, dims=None, **kwargs):
 	""" initialize DimArray with with variable list of tuples, and attributes
 
 	values	    : numpy-like array (passed to array())
 	axes	    : list of axis values
-	names	    : list of axis names
-	(axes, names) are passed to Axes.from_list
+	dims	    : list of axis dims
+	(axes, dims) are passed to Axes.from_list
 	**kwargs    : passed to DimArray (attributes)
 	"""
-	axes = Axes.from_list(axes, names)
+	axes = Axes.from_list(axes, dims)
 	new = cls(values, axes, **kwargs)
 	return new
 
     @classmethod
-    def from_kwds(cls, values, names=None, **axes):
+    def from_kwds(cls, values, dims=None, **axes):
 	""" initialize DimArray with with axes as key-word arguments
 
 	values	    : numpy-like array (passed to array())
@@ -181,7 +181,7 @@ class DimArray(Metadata):
 """
 		    raise ValueError(msg)
 
-	    axes = Axes.from_kwds(shape=np.shape(values), names=names, **axes)
+	    axes = Axes.from_kwds(shape=np.shape(values), dims=dims, **axes)
 	return cls(values, axes)
 
     #
@@ -242,7 +242,7 @@ class DimArray(Metadata):
 
     @property
     def dims(self):
-	""" axis names :: axes.names
+	""" axis names 
 	"""
 	return tuple([ax.name for ax in self.axes])
 
@@ -544,6 +544,7 @@ class DimArray(Metadata):
     #
     def transpose(self, axes=None):
 	""" Analogous to numpy, but also allows axis names
+
 	>>> a = da.array(np.zeros((5,6)), lon=np.arange(6), lat=np.arange(5))
 	>>> a          # doctest: +ELLIPSIS
 	dimensions(5, 6): lat, lon
@@ -660,6 +661,7 @@ class DimArray(Metadata):
 		values = np.array(values, dtype=float, copy=False)
 
 	    missing = (slice(None),)*axis_id + np.where(indices==-1)
+	    #missing = _ndindex(np.where(indices==-1), axis_id)
 	    values[missing] = np.nan # set missing values to NaN
 
 	elif method == "interp":
@@ -884,7 +886,7 @@ DimArray.interp1d = transform.interp1d_numpy
 DimArray.interp2d = transform.interp2d_mpl
 
 
-def array(values, axes=None, names=None, dtype=None, **kwaxes):
+def array(values, axes=None, dims=None, dtype=None, **kwaxes):
     """ Wrapper for initialization
 
     In most ways similar to DimArray, except that no axes can be passed
@@ -899,7 +901,7 @@ def array(values, axes=None, names=None, dtype=None, **kwaxes):
     if isinstance(axes, np.ndarray):
 	if np.ndim(values) == 1:
 	    axes = [axes]
-	    if type(names) is str: names = [names]
+	    if type(dims) is str: dims = [dims]
 	else:
 	    print axes
 	    raise ValueError("axes must be passed as a list")
@@ -915,7 +917,7 @@ def array(values, axes=None, names=None, dtype=None, **kwaxes):
 	new = DimArray.from_tuples(values, *axes) 
 
     else:
-        new = DimArray.from_list(values, axes, names=names) 
+        new = DimArray.from_list(values, axes, dims=dims) 
 
     return new
 
@@ -992,3 +994,9 @@ def _unique(nm):
 	if k not in new:
 	    new.append(k)
     return new
+
+def _ndindex(indices, axis_id):
+    """ return the N-D index from an along-axis index
+    """
+    return (slice(None),)*axis_id + np.index_exp[indices]
+

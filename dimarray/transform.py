@@ -1,7 +1,6 @@
 #import numpy as np
 #import functools
 #import inspect
-#from lazyapi import axis as Axis
 import numpy as np
 from functools import partial
 from axes import Axis, Axes
