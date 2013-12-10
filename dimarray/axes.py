@@ -450,21 +450,24 @@ class Locator(object):
 # Axis alignment
 #
 
-def _common_axis(ax1, ax2):
+def _common_axis(*axes):
     """ find the common axis (will be sorted)
 
     input:
-	ax1, ax2: Axis objets
+	*axes
 
     output:
 	newaxis: axis object
     """
-    if type(ax1) is list:
-	newaxis = list(set(ax1+ax2))
-	newaxis.sort(reverse=ax1[1] < ax1[0] if len(ax1) > 1 else False) # sort new axis
+    if type(axes[0]) is list:
+	all_values = set()
+	for ax in axes:
+	    all_values = all_values.union(set(ax))
+	newaxis = list(all_values)
+	newaxis.sort(reverse=axes[0][1] < axes[0][0] if len(ax) > 1 else False) # sort new axis
 
     else:
-	ax = _common_axis(list(ax1), list(ax2))
+	ax = _common_axis(*[list(ax) for ax in axes])
 	newaxis = np.array(ax)
 
     return newaxis

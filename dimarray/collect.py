@@ -4,7 +4,7 @@ from collections import OrderedDict
 import numpy as np
 
 from axes import Axis
-from core import Dimarray, array
+from core import Dimarray, array, _align_objects
 from tools import pandas_obj
 
 class Dataset(OrderedDict):
@@ -50,22 +50,23 @@ class Dataset(OrderedDict):
 
 	note: assume consistent objects
 	"""
-	# Transform each item to a pandas object
-	d = OrderedDict()
-	for k in self:
-	    n = self[k].ndim
-	    d[k] = self[k].to_pandas()
-	
-	# Now transform the whole dictionary to a pandas object
-	d = pandas_obj(d)
+	1/0
+	## Transform each item to a pandas object
+	#d = OrderedDict()
+	#for k in self:
+	#    n = self[k].ndim
+	#    d[k] = self[k].to_pandas()
+	#
+	## Now transform the whole dictionary to a pandas object
+	#d = pandas_obj(d)
 
-	# Transform back to Dataset object
-	cls = d[k].__class__
-	data = Dataset()
-	for k in self:
-	    data[k] = cls(d[k].values, d[k].axes)
+	## Transform back to Dataset object
+	#cls = d[k].__class__
+	#data = Dataset()
+	#for k in self:
+	#    data[k] = cls(d[k].values, d[k].axes)
 
-	return data
+	#return data
 
     def isaligned(self):
 	""" check that axes are consistent
