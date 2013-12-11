@@ -34,11 +34,11 @@ class Dimarray(Metadata):
     # NOW MAIN BODY OF THE CLASS
     #
 
-    def __init__(self, values, axes=None, dtype=None, copy=False, _slicing=None, **metadata):
+    def __init__(self, values, *axes, **kwargs):
 	""" Initialization
 
 	values	: numpy-like array, or Dimarray instance
-	axes	: Axes instance, or list of tuples or list of Axis objects
+	axes	: variable list of Axis objects or list of tuples ('dim', values)
 		  This argument can only be omitted if values is an instance of Dimarray
 
 	metadata: stored in _metadata dict
@@ -47,30 +47,59 @@ class Dimarray(Metadata):
 
 	_slicing: default slicing method "numpy", "nearest", "exact" (mostly for internal use)
 	"""
+	# filter **kwargs and keep metadata
+	default = dict(dtype=None, copy=False, _slicing=None, weights=None)
+	for k in default:
+	    if k in kwargs:
+		default[k] = kwargs.pop(k)
+
+	metadata = kwargs
+	_slicing= default.pop('_slicing')
+	weights = default.pop('weights')
+
 	#
 	# array values
 	#
-	avalues = np.array(values, dtype=dtype, copy=copy)
+	avalues = np.array(values, **default)
 
 	#
 	# Initialize the axes
-	#
-	if axes is None:
-	    assert hasattr(values, "axes"), "need to provide axes (as Axes object or tuples)!"
-	    axes = values.axes
+	# 
+	# Can be one of
+	# - list of Axis objects
+	# - list of tuples `dim, array`
+	# - list of str for dimension names
+	# - list of arrays (unnamed dimensions)
+	# - nothing
 
-	assert isinstance(axes, list),  "axes must be passed as a list"
-
+	# axis not provided: check whether values has an axes field
 	if len(axes) == 0:
-	    axes = Axes()
 
-	elif type(axes[0]) is tuple:
-	    axes = Axes.from_tuples(*axes)
+	    # check if attached to values (e.g. Dimarray or pandas object)
+	    if hasattr(values, "axes"):
+		axes = values.axes
 
-	elif type(axes[0]) is Axis:
+	    # define a default set of axes if not provided
+	    axes = Axes.from_shape(avalues.shape)
+
+	# list of axes
+	elif isinstance(axes[0], Axis):
 	    axes = Axes(axes)
 
-	assert isinstance(axes, Axes), "axes must be a list of tuples or an Axes instance"
+	# (name, values) tuples
+	elif isinstance(axes[0], tuple):
+	    axes = Axes.from_tuples(*axes)
+
+	# only axis values are provided: default names
+	elif isinstance(axes[0], np.ndarray) or isinstance(axes[0], list):
+	    axes = Axes.from_list(axes)
+
+	# only dimension names are provided: default values
+	elif isinstance(axes[0], str):
+	    axes = Axes.from_shape(avalues.shape, dims=axes)
+
+	else:
+	    raise TypeError("axes, if provided, must be a list of: `Axis` or `tuple` or `str` or arrays")
 
 	#
 	# store all fields
@@ -83,6 +112,7 @@ class Dimarray(Metadata):
 
 	# options
 	self._slicing = _slicing
+	self.weights = weights
 
 	#
 	# metadata (see Metadata type in metadata.py)
@@ -118,32 +148,10 @@ class Dimarray(Metadata):
 	This makes the sub-classing process easier since only this method needs to be 
 	overloaded to make the sub-class a "closed" class.
 	"""
-	assert isinstance(axes, list), "Need to provide a list of Axis objects !"
-	if len(axes) == 0:
-	    return Dimarray(values, axes, **metadata)
-
-	assert isinstance(axes[0], Axis), "Need to provide a list of Axis objects !"
-	#assert isinstance(axes, Axes), "Need to provide an Axes object !"
-
-	# or just with the normal class constructor
-	new = Dimarray(values, axes, **metadata)
-	return new
+	return Dimarray(values, *axes, **metadata)
 
     @classmethod
-    def from_tuples(cls, values, *axes, **kwargs):
-	""" initialize Dimarray with with variable list of tuples, and attributes
-
-	values	    : numpy-like array (passed to array())
-	*axes	    : variable list of tuples to define axes: ('x0',val0), ('x1',val1), ...
-	**kwargs    : passed to Dimarray (attributes)
-	"""
-	axes = Axes.from_tuples(*axes)
-	new = cls(values, axes, **kwargs)
-	return new
-
-
-    @classmethod
-    def from_list(cls, values, axes, dims=None, **kwargs):
+    def from_list(cls, values, axes=None, dims=None, **kwargs):
 	""" initialize Dimarray with with variable list of tuples, and attributes
 
 	values	    : numpy-like array (passed to array())
@@ -152,34 +160,37 @@ class Dimarray(Metadata):
 	(axes, dims) are passed to Axes.from_list
 	**kwargs    : passed to Dimarray (attributes)
 	"""
-	axes = Axes.from_list(axes, dims)
-	new = cls(values, axes, **kwargs)
-	return new
+	if axes is None:
+	    axes = Axes.from_shape(np.shape(values), dims)
+
+	else:
+	    axes = Axes.from_list(axes, dims)
+
+	return cls(values, *axes, **kwargs)
 
     @classmethod
-    def from_kwds(cls, values, dims=None, **axes):
+    def from_kwds(cls, values, dims=None, **kwaxes):
 	""" initialize Dimarray with with axes as key-word arguments
 
 	values	    : numpy-like array (passed to array())
-	**axes      : axes passed as keyword araguments <axis name>=<axis val>
+	**kwaxes      : axes passed as keyword araguments <axis name>=<axis val>
 	"""
-	if len(axes) > 0:
-
-	    # "convenience", quick check on axes, to avoid a "deep" error message
-	    for k in axes:
-		if type(axes[k]) is str:
-		    print "PASSED:",k,":",axes[k]
-		    msg = \
+	# "convenience", quick check on axes, to avoid a "deep" error message
+	for k in kwaxes:
+	    if type(kwaxes[k]) is str:
+		print "PASSED:",k,":",kwaxes[k]
+		msg = \
 """ no attribute can be passed with the from_kwds method 
 ==> try using the set() method instead, for example:
-    a = Dimarray.from_kwds(values, **axes)
-    a.name = "myname"
-    a.units = "myunits"
+a = Dimarray.from_kwds(values, **kwaxes)
+a.name = "myname"
+a.units = "myunits"
 """
-		    raise ValueError(msg)
+		raise ValueError(msg)
 
-	    axes = Axes.from_kwds(shape=np.shape(values), dims=dims, **axes)
-	return cls(values, axes)
+	list_axes = Axes.from_kwds(shape=np.shape(values), dims=dims, **kwaxes)
+
+	return cls(values, *list_axes)
 
     #
     # Attributes access
@@ -522,17 +533,34 @@ class Dimarray(Metadata):
 	""" compute a weighted mean
 	"""
 	# use Dimarray future to get a N-D array of weights
-	if weights is None:
-	    all_weights = [ax.get_weights().reshape(self.dims) for ax in self.axes]
-	    weights = np.prod(all_weights, axis=0) # multiply the weights
 
-	# set NaNs where needed
-	weights.values[np.isnan(self.values)] = np.nan
+	# standard case: guess weights
+	if weights is None:
+	    weights = self.get_weights()
+
+	# user-provided: set NaNs where needed
+	else:
+	    weights.values[np.isnan(self.values)] = np.nan
 
 	# Multiply values by the weights 
 	sum_values = (self*weights).sum(axis=axis, skipna=skipna)
 	sum_weights = (weights).sum(axis=axis, skipna=skipna)
 	return sum_values / sum_weights
+
+    def get_weights(self):
+	""" get weight associated to the array
+	"""
+	if self.weights is not None:
+	    weights = Dimarray(self.weights, *self.axes, **{'copy':False})
+
+	else:
+	    all_weights = [ax.get_weights().reshape(self.dims) for ax in self.axes]
+	    weights = np.prod(all_weights, axis=0) # multiply the weights
+
+	# fill NaNs in when necessary
+	weights = weights.values[np.isnan(self.values)] = np.nan
+	
+	return weights
 
     def compress(self, condition, axis=None):
 	""" analogous to numpy `compress` method
@@ -714,7 +742,7 @@ class Dimarray(Metadata):
 	o = self
 	for dim in newdims:
 	    if dim not in self.dims:
-		o = self.newaxis(o)
+		o = o.newaxis(dim)
 
 	# now give it the right order
 	return o.transpose(newdims)
@@ -999,38 +1027,22 @@ Dimarray.apply_recursive = transform.apply_recursive
 Dimarray.interp1d = transform.interp1d_numpy
 Dimarray.interp2d = transform.interp2d_mpl
 
-def array(values, axes=None, dims=None, dtype=None, **kwaxes):
+def array(values, axes=None, dims=None, **kwaxes):
     """ Wrapper for initialization
 
-    In most ways similar to Dimarray, except that no axes can be passed
-    as keyword arguments instead of metadata.
+    a wrapper to Dimarray.from_keys and Dimarray.from_list
+    but accepting no metadata.
 
     a = array(values, lon=mylon, lat=mylat)
     a.set(name="myname", units="units")
     """
-    if axes is None and hasattr(values, "axes"):
-	axes = values.axes
-
-    if isinstance(axes, np.ndarray):
-	if np.ndim(values) == 1:
-	    axes = [axes]
-	    if type(dims) is str: dims = [dims]
-	else:
-	    print axes
-	    raise ValueError("axes must be passed as a list")
-
-    if len(kwaxes) > 0:
-	new = Dimarray.from_kwds(values, axes, **kwaxes) 
-
-    # scalar values
-    elif len(axes) == 0:
-	new = Dimarray(values, axes) 
-
-    elif type(axes[0]) is tuple:
-	new = Dimarray.from_tuples(values, *axes) 
+    if axes is not None or len(kwaxes) == 0:
+	assert len(kwaxes) == 0, "cannot provide both axes and kwaxes, use Dimarray.from_list"
+	new = Dimarray.from_list(values, axes, dims=dims) 
 
     else:
-        new = Dimarray.from_list(values, axes, dims=dims) 
+	new = Dimarray.from_kwds(values, dims, **kwaxes) 
+
 
     return new
 
@@ -1156,4 +1168,4 @@ def _expand(*list_of_arrays):
     """ Expand a list of arrays ax1, ax2, ... to  a list of tuples [(ax1[0], ax2[0],..), (ax1[0], ax2[1]), ...]
     """
     kwargs = dict(indexing="ij")
-    return axis_values = np.array(zip(*np.meshgrid(*list_of_arrays, **kwargs)))
+    return np.array(zip(*np.meshgrid(*list_of_arrays, **kwargs)))

@@ -13,12 +13,7 @@ class Dataset(OrderedDict):
     def __setitem__(self, item, val):
 	""" convert the object with dimarray
 	"""
-	if not isinstance(val, Dimarray):
-	    val = array(val)
-
-	# update the name
-	if not hasattr(val, "name") or (hasattr(val, "name") and not val.name):
-	    val.name = item
+	assert isinstance(val, Dimarray), "can only append Dimarray instances"
 
 	# Ordered-Dict method
 	super(Dataset, self).__setitem__(item, val)

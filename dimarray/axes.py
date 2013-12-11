@@ -7,6 +7,7 @@ from metadata import Metadata
 
 __all__ = ["Axis","Axes"]
 
+
 def _convert_dtype(dtype):
     """ convert numpy type in a python type
     """
@@ -79,7 +80,7 @@ class Axis(Metadata):
 	    weights = np.array(weights, copy=False)
 
 	# index on one dimension
-	ax = Axis(np.arange(len(weights)), name=self.name)
+	ax = Axis(self.values, name=self.name)
 
 	return Dimarray(weights, ax)
 
@@ -127,31 +128,12 @@ class Axis(Metadata):
 class Axes(list):
     """ Axes class: inheritates from a list but dict-like access methods for convenience
     """
-    def __init__(self, axes=[]):
-	"""
-	"""
-	super(Axes, self).__init__(axes)
-	for ax in self:
-	    assert isinstance(ax, Axis), "use a list of Axis objects to initialize Axes"
-
-    def append(self, axis, name=None):
+    def append(self, item):
 	""" add a check on axis
 	"""
-	if not isinstance(axis, Axis):
-
-	    if name is None:
-
-		# name contained in the attribute
-		if hasattr(axis, "name"):
-		    name = axis.name
-
-		# or guess follow default: "x0", "x1"
-		else:
-		    name = "x{}".format(len(self))
-
-	    axis = Axis(axis, name)
-
-	super(Axes, self).append(axis)
+	# if item is an Axis, just append it
+	assert isinstance(item, Axis), "can only append an Axis object !"
+	super(Axes, self).append(item)
 
     @classmethod
     def from_tuples(cls, *tuples_name_values):
@@ -159,27 +141,51 @@ class Axes(list):
 
 	Axes.from_tuples(('lat',mylat), ('lon',mylon)) 
 	"""
-	newaxes = Axes()
+	assert type(tuples_name_values[0]) is tuple, "need to provide a list of `name, values` tuples !"
+
+	newaxes = cls()
 	for nm, values in tuples_name_values:
-	    newaxes.append(values, nm)
+	    newaxes.append(Axis(values, nm))
 	return newaxes
 
     @classmethod
-    def from_list(cls, values, dims=None):
-	""" 
+    def from_shape(cls, shape, dims=None):
+	""" return default axes based on shape
 	"""
-	if dims is None: 
-	    dims = [None for __ in range(len(values))]
+	axes = cls()
+	for i,ni in enumerate(shape):
+	    if dims is None:
+		name = "x{}".format(i) # default name
+	    else:
+		name = dims[i]
+	    axis = Axis(np.arange(ni), name)
+	    axes.append(axis)
 
-	return cls.from_tuples(*zip(dims, values))
+	return axes
+
+    @classmethod
+    def from_list(cls, list_of_arrays, dims=None):
+	"""  list of np.ndarrays and dims
+	"""
+	assert type(list_of_arrays) in (list, tuple), "need to provide a list of arrays !"
+
+	# default names
+	if dims is None: 
+	    dims = ["x{}".format(i) for i in range(len(list_of_arrays))]
+
+	return cls.from_tuples(*zip(dims, list_of_arrays))
 
     @classmethod
     def from_kwds(cls, dims=None, shape=None, **kwargs):
 	""" infer dimensions from key-word arguments
 	"""
+	# if no key-word argument is given, just return default axis
+	if len(kwargs) == 0:
+	    return cls.from_shape(shape, dims)
+
 	axes = cls()
 	for k in kwargs:
-	    axes.append(kwargs[k], k)
+	    axes.append(Axis(kwargs[k], k))
 
 	# Make sure the order is right (since it is lost via dict-passing)
 
@@ -198,7 +204,10 @@ class Axes(list):
 	    axes = axes[argsort]
 
 	    current_shape = tuple([ax.size for ax in axes])
-	    assert current_shape == shape, "dimensions mismatch !"
+	    assert current_shape == shape, "dimensions mismatch (axes shape: {} != values shape: {}".format(current_shape, shape)
+
+	else:
+	    raise Warning("no shape information: random order")
 
 	return axes
 
@@ -496,6 +505,8 @@ def test():
     #doctest.debug_src(Locator.__doc__)
     doctest.testmod(axes, optionflags=doctest.ELLIPSIS)
 
+
 if __name__ == "__main__":
     test()
+
 

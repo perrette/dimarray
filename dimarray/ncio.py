@@ -43,9 +43,12 @@ def read(f, nms=None, *args, **kwargs):
     >>> data = read('test.nc','dynsealevel', time=(2000,2100), lon=(50,70), lat=42)  # load only a chunck of the data
     """
     if nms is not None and type(nms) is str:
-	return read_variable(f, nms, *args, **kwargs)
+	obj = read_variable(f, nms, *args, **kwargs)
     else:
-	return read_dataset(f, nms, *args, **kwargs)
+	obj = read_dataset(f, nms, *args, **kwargs)
+
+    return obj
+
 
 def write(f, name, data, axes=None, dims=None, mode='w', **metadata):
     """ Initialize a Dimarray and write to netCDF
@@ -66,8 +69,8 @@ def write(f, name, data, axes=None, dims=None, mode='w', **metadata):
     >>> write("test.nc", "testvar", np.randn(20, 30), [np.linspace(-90,90,20), np.linspace(-180,180,30)],['lat','lon'])
     """
     #axes = Axes.from_list(axes, dims)
-    obj = Dimarray(data, axes, dims, name=name, **metadata) # initialize a dimarray
-    obj.write(f, mode=mode) # write to file
+    obj = Dimarray.from_list(data, axes, dims, **metadata) # initialize a dimarray
+    obj.write(f, name, mode=mode) # write to file
 
 
 #
@@ -93,7 +96,7 @@ def read_dimensions(f, name=None, verbose=True):
     # load axes
     axes = Axes()
     for k in dims:
-	axes.append(f.variables[k], k)
+	axes.append(Axis(f.variables[k], k))
 
     if close: f.close()
 
@@ -172,7 +175,8 @@ def read_variable(f, v, ix=None, **kwaxes):
     newaxes = [Axis(ax[ix[i]], ax.name) for i, ax in enumerate(axes)] # also get the appropriate axes
 
     # initialize a dimarray
-    obj = Dimarray(newdata, newaxes, name=v)
+    obj = Dimarray(newdata, *newaxes)
+    obj.name = v
 
     # Read attributes
     attr = read_attributes(f, v)
