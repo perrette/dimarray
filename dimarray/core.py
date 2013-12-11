@@ -6,7 +6,7 @@ import copy
 #import plotting
 
 from metadata import Metadata, append_stamp
-from axes import Axis, Axes, _common_axis
+from axes import Axis, Axes
 from tools import pandas_obj
 import transform  # numpy axis transformation, interpolation
 
@@ -612,7 +612,7 @@ class Dimarray(Metadata):
     # REINDEXING 
     #
  
-    def reindex_axis(self, newaxis, axis, method='nearest'):
+    def reindex_axis(self, newaxis, axis=None, method='nearest'):
 	""" reindex an array along an axis
 
 	Input:
@@ -625,6 +625,13 @@ class Dimarray(Metadata):
 
 	TO DO: optimize?
 	"""
+	if axis is None:
+	    assert isinstance(newaxis, Axis), "provide name or an Axis object"
+	    axis = newaxis.name
+
+	if isinstance(newaxis, Axis):
+	    newaxis = newaxis.values
+
 	axis_id = self.axes.get_idx(axis)
 	axis_nm = self.axes.get_idx(axis)
 	ax = self.axes[axis_id] # Axis object
@@ -916,6 +923,10 @@ def array(values, axes=None, dims=None, dtype=None, **kwaxes):
 
     return new
 
+#
+# Operation and axis aligmnent
+#
+
 
 def _operation(func, o1, o2, reindex=True, transpose=True, constructor=Dimarray):
     """ operation on LaxArray objects
@@ -979,8 +990,23 @@ def _operation(func, o1, o2, reindex=True, transpose=True, constructor=Dimarray)
     return constructor(res, newaxes)
 
 #
-# Handle operations 
+# Axis alignment for operations
 #
+def _common_axis(*axes):
+    """ find the common axis between 
+    """
+    #from heapq import merge
+    import itertools
+
+    # First merge the axes with duplicates (while preserving the order of the lists)
+    axes_lists = [list(ax.values) for ax in axes] # axes as lists
+    newaxis_val = axes_lists[0]
+    for val in itertools.chain(*axes_lists[1:]):
+	if val not in newaxis_val:
+	    newaxis_val.append(val)
+
+    return Axis(newaxis_val, axes[0].name)
+
 def _get_dims(*objects):
     """ find all dimensions from a variable list of objects
     """

@@ -248,11 +248,15 @@ def write_variable(f, obj, name=None, mode='w'):
 
     # Create dimensions
     for dim in obj.dims:
+
 	if not dim in f.dimensions:
 	    val = obj.axes[dim].values
 	    f.createDimension(dim, len(val))
-	    f.createVariable(dim, val.dtype, dim)
-	    f.variables[dim][:] = val
+
+	    # check type: so far object-type arrays are strings
+	    dtype = val.dtype if val.dtype is not np.dtype('O') else str  
+	    v = f.createVariable(dim, dtype, dim)
+	    v[:] = val
 
     # Create Variable
     if name not in f.variables:

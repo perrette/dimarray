@@ -7,24 +7,14 @@ from metadata import Metadata
 
 __all__ = ["Axis","Axes"]
 
-def _fix_type(axis):
-    """ fix type for axes coming from pandas
-    """
-    dtype = type(axis[0])
-    if dtype in [str, type(None)]:
-	axis = list(axis)
-    else:
-	axis = np.array(axis, dtype=dtype)
-
-    return axis
-
 def _convert_dtype(dtype):
     """ convert numpy type in a python type
     """
     if dtype is np.dtype(int):
 	type_ = int
 
-    elif dtype in [np.dtype('S'), np.dtype('S1')]:
+    # objects represent strings
+    elif dtype is np.dtype('O'):
 	type_ = str
 
     else:
@@ -53,7 +43,13 @@ class Axis(Metadata):
 	    assert hasattr(values, "name"), "unnamed dimension !"
 	    name = values.name # e.g pandas axis
 
-	values = _fix_type(values)
+	# if string, make it an object-typed array
+	if isinstance(type(values[0]), str) or type(values[0]) is np.str_:
+	    values = np.array(values, dtype=object) # make sure data is stored with object type
+
+	# otherwise, just a normal array
+	else:
+	    values = np.array(values, copy=False)
 
 	super(Axis, self).__init__() # init an ordered dict of metadata
 
@@ -445,32 +441,6 @@ class Locator(object):
     @property
     def size(self):
 	return np.size(self.values)
-
-#
-# Axis alignment
-#
-
-def _common_axis(*axes):
-    """ find the common axis (will be sorted)
-
-    input:
-	*axes
-
-    output:
-	newaxis: axis object
-    """
-    if type(axes[0]) is list:
-	all_values = set()
-	for ax in axes:
-	    all_values = all_values.union(set(ax))
-	newaxis = list(all_values)
-	newaxis.sort(reverse=axes[0][1] < axes[0][0] if len(ax) > 1 else False) # sort new axis
-
-    else:
-	ax = _common_axis(*[list(ax) for ax in axes])
-	newaxis = np.array(ax)
-
-    return newaxis
 
 #def _common_axes(axes1, axes2):
 #    """ Align axes which have a dimension in common
