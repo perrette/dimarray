@@ -172,7 +172,7 @@ def read_variable(f, v, ix=None, **kwaxes):
 
     # slice the data and dimensions
     newdata = f.variables[v][ix]
-    newaxes = [Axis(ax[ix[i]], ax.name) for i, ax in enumerate(axes)] # also get the appropriate axes
+    newaxes = [ax[ix[i]] for i, ax in enumerate(axes)] # also get the appropriate axes
 
     # initialize a dimarray
     obj = Dimarray(newdata, *newaxes)

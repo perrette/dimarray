@@ -77,8 +77,6 @@ def apply_recursive(obj, dims, fun, *args, **kwargs):
     data = []
     for axisval in axis.values: # first axis
 
-	print "recursive call"
-
 	# take a slice of the data (exact matching)
 	slice_ = obj.xs_axis(axisval, axis=axis.name, method="index")
 	#slice_ = obj.xs(**{ax.name:axisval, "method":"index"})
@@ -93,9 +91,6 @@ def apply_recursive(obj, dims, fun, *args, **kwargs):
 
     # automatically sort in the appropriate order
     new = obj._constructor(data, newaxes)
-
-    #new.sort(inplace=True, order=self.dims) # just in case
-
     return new
 
 #

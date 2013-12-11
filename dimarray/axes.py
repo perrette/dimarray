@@ -87,7 +87,19 @@ class Axis(Metadata):
     def __getitem__(self, item):
 	""" access values elements & return an axis object
 	"""
-	return self.values[item]
+	values = self.values[item]
+
+	# if collapsed to scalar, just return it
+	if not isinstance(values, np.ndarray):
+	    return values
+
+	if isinstance(self.weights, np.ndarray):
+	    weights = self.weights[item]
+
+	else:
+	    weights = self.weights
+
+	return Axis(values, self.name, weights=weights)
 
     def __eq__(self, other):
 	return isinstance(other, Axis) and np.all(other.values == self.values)

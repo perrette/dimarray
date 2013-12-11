@@ -17,23 +17,3 @@ Planned Features
     * Dataset		    : collections.OrderedDict of Dimarray objects
     * Axes, Axis	    : axis and indexing
     * read, write, summary  : netCDF I/O
-
-Architecture: a genealogy of array
-----------------------------------
-
-basearray => nanarray => laxarray => dimarray
-
-basearray: just emulate a numpy array
-           + introduce the xs method (only one axis)
-	   + `==` operator returns a boolean and not an array
-	   recent update: axis is None by default like in numpy
-
-nanarray : treats nans as missing values
-
-laxarray : add a name to each dimension 
-	   + can give an axis name to `axis=`
-	   + multidimensional slicing
-	   + recursive `endomorphic` transformation on subsets of the whole space
-
-dimarray : add values and metadata to each axis and to the array
-	   + netCDF I/O

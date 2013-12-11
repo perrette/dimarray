@@ -303,21 +303,34 @@ a.units = "myunits"
 	# make a numpy index  and use numpy's slice method (`slice(None)` :: `:`)
 	index_nd = (slice(None),)*axis_id + (index,)
 	newval = self.values[index_nd]
-	newaxisval = self.axes[axis].values[index]
+	newaxis = self.axes[axis][index] # returns an Axis object
 
 	# if resulting dimension has reduced, remove the corresponding axis
 	axes = copy.copy(self.axes)
 	metadata = self._metadata.copy()
 
-	if not keepdims and not isinstance(newaxisval, np.ndarray):
-	    axes.remove(ax)
+	# check for collapsed axis
+	collapsed = not isinstance(newaxis, Axis)
+	    
+	# re-expand things even if the axis collapsed
+	if collapsed and keepdims:
 
-	    # add new stamp
-	    stamp = "{}={}".format(ax.name, newaxisval)
+	    newaxis = Axis([newaxis], self.axes[axis].name) 
+	    reduced_shape = list(self.shape)
+	    reduced_shape[axis_id] = 1 # reduce to one
+	    newval = np.reshape(newval, reduced_shape)
+
+	    collapsed = False # set as not collapsed
+
+	# If collapsed axis, just remove it and add new stamp
+	if collapsed:
+	    axes.remove(ax)
+	    stamp = "{}={}".format(ax.name, newaxis)
 	    append_stamp(metadata, stamp, inplace=True)
 
+	# Otherwise just update the axis
 	else:
-	    axes[axis_id] = Axis(newaxisval, ax.name) # new axis
+	    axes[axis_id] = newaxis
 
 	# If result is a numpy array, make it a Dimarray
 	if isinstance(newval, np.ndarray):
@@ -943,7 +956,7 @@ a.units = "myunits"
 	    line = self.repr_meta()
 	    lines.append(line)
 
-	if self.size > 1:
+	if True: #self.size > 1:
 	    line = repr(self.axes)
 	    lines.append(line)
 
