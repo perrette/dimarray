@@ -102,7 +102,7 @@ def apply_recursive(obj, dims, fun, *args, **kwargs):
 # INTERPOLATION
 #
 
-def interp1d_numpy(obj, values=None, axis=None, left=None, right=None):
+def interp1d_numpy(obj, values=None, axis=0, left=None, right=None):
     """ interpolate along one axis: wrapper around numpy's interp
 
     input:

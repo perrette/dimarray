@@ -34,9 +34,9 @@ class Axis(Metadata):
 	name  : name (attribute)
 
     """
-    _metadata_exclude = ("values", "name") # variables which are NOT metadata
+    _metadata_exclude = ("values", "name", "weights") # variables which are NOT metadata
 
-    def __init__(self, values, name="", slicing=None, **attrs):
+    def __init__(self, values, name="", weights=None, slicing=None, **attrs):
 	""" 
 	"""
 	if not name:
@@ -55,6 +55,33 @@ class Axis(Metadata):
 
 	self.values = values 
 	self.name = name 
+	self.weights = weights 
+
+    def get_weights(self):
+	""" return axis weights as a Dimarray
+	"""
+	from core import Dimarray
+
+	# no weights
+	if self.weights is None:
+	    weights = np.ones_like(self.values)
+
+	# function of axis
+	elif callable(self.weights):
+	    weights = self.weights(self.values)
+
+	# same weight for every element
+	elif np.size(self.weights) == 1:
+	    weights = np.zeros_like(self.values) + self.weights
+
+	# already an array of weights
+	else:
+	    weights = np.array(weights, copy=False)
+
+	# index on one dimension
+	ax = Axis(np.arange(len(weights)), name=self.name)
+
+	return Dimarray(weights, ax)
 
     def __getitem__(self, item):
 	""" access values elements & return an axis object

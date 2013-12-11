@@ -409,13 +409,13 @@ class Dimarray(Metadata):
     #
     # NUMPY TRANSFORMS
     #
-    def apply(self, funcname, axis=None, skipna=True, args=(), **kwargs):
+    def apply(self, funcname, axis=0, skipna=True, args=(), **kwargs):
 	""" apply along-axis numpy method
 
 	parameters:
 	----------
 	    - funcname: numpy function name (str)
-	    - axis    : axis to apply the transform on
+	    - axis    : int, str, tuple: axis or group of axes to apply the transform on
 	    - skipna  : remove nans?
 	    - args    : variable list of arguments before "axis"
 	    - kwargs  : variable dict of keyword arguments after "axis"
@@ -423,8 +423,20 @@ class Dimarray(Metadata):
 	returns:
 	--------
 	    - Dimarray or scalar, consistently with ndarray behaviour
+
+	NOTE: if an axis has weights, the `mean`, `std` and `var` will 
+	      use these weights.
 	"""
 	assert type(funcname) is str, "can only provide function as a string"
+
+	# If axis is provided as a tuple, apply the function on the collapsed array
+	if type(axis) is tuple:
+	    return self.collapse(*axis).apply(funcname, axis=0, skipna=skipna, args=args, **kwargs)
+
+#	# Apply weighted transform if applicable
+#	if funcname in ['mean','std','var'] and self.axes[axis].weights is not None:
+#	    return self._apply_weighted(funcname, axis=axis, skipna=skipna, args=args, **kwargs)
+
 
 	# Deal with NaNs
 	values = self.values
@@ -463,8 +475,23 @@ class Dimarray(Metadata):
 	if np.ma.isMaskedArray(result):
 	    result = result.filled(np.nan)
 
-	# New axes (axis was reduced)
-	newaxes = [ax for ax in self.axes if ax.name != axis_nm]
+	# New axes
+	# ...nothing change for cumulative functions
+	if funcname.startswith('cum'):
+	    newaxes = self.axes.copy() # do not change anything
+
+	# ...diff without collapsing dimension: add a first slice of NaNs to conserve axis size
+	# ...and be bijective w.r.t. to reverse transform cumsum
+	elif  funcname == "diff" and result.ndim == self.ndim: 
+	    # first = (slice(None),)*axis + (0,) # first dimension along axis 
+	    #nan_slice = np.empty_like(result[first]) # make a slice ...
+	    nan_slice = np.empty_like(result.take([0], axis=axis)) # make a slice ...
+	    nan_slice.fill(np.nan) # ...filled with NaNs
+	    result = np.concatenate((nan_slice,result), axis=axis)
+	    newaxes = self.axes.copy() # do not change anything
+
+	else:
+	    newaxes = [ax for ax in self.axes if ax.name != axis_nm]
 
 	obj = self._constructor(result, newaxes)
 
@@ -490,6 +517,22 @@ class Dimarray(Metadata):
     ptp = transform.NumpyDesc("apply", "ptp")
     all = transform.NumpyDesc("apply", "all")
     any = transform.NumpyDesc("apply", "any")
+
+    def weighted_mean(self, axis=0, skipna=True, weights=None):
+	""" compute a weighted mean
+	"""
+	# use Dimarray future to get a N-D array of weights
+	if weights is None:
+	    all_weights = [ax.get_weights().reshape(self.dims) for ax in self.axes]
+	    weights = np.prod(all_weights, axis=0) # multiply the weights
+
+	# set NaNs where needed
+	weights.values[np.isnan(self.values)] = np.nan
+
+	# Multiply values by the weights 
+	sum_values = (self*weights).sum(axis=axis, skipna=skipna)
+	sum_weights = (weights).sum(axis=axis, skipna=skipna)
+	return sum_values / sum_weights
 
     def compress(self, condition, axis=None):
 	""" analogous to numpy `compress` method
@@ -569,6 +612,60 @@ class Dimarray(Metadata):
 	newaxes = [self.axes[i] for i in axes]
 	return self._constructor(result, newaxes)
 
+    def collapse(self, *dims):
+	""" collapse (or flatten) dimensions
+
+	Input:
+	    - *dims: variable list of axis names
+
+	Output:
+	    - Dimarray appropriately reshaped, with collapsed dimensions as first axis (tuples)
+
+	This is useful to do a regional mean with missing values
+
+	Note: can be passed via the "axis" parameter of the transformation, too
+
+	Example:
+	--------
+
+	a.collapse('lon','lat').mean()
+
+	Is equivalent to:
+
+	a.mean(axis=('lon','lat')) 
+	"""
+	# First transpose the array so that the dimensions to collapse are at the front
+	newdims = dims + tuple(nm for nm in self.dims if nm not in dims)	
+	b = self.transpose(newdims) # dimensions to factorize in the front
+
+	# Then collapse the first len(dims) dimensions in one new axis
+
+	n = len(dims) # number of dimensions to collapse
+	first_dim = np.sum(self.shape[:n])
+
+	# Each element of the new first axis is a tuple (or a subarray of dimension n)
+	axis_values = _expand(*[ax.values for ax in self.axes[:n]])
+
+	# Combine the weights as a product of the individual axis weights
+	axis_weights= _expand(*[ax.get_weights() for ax in self.axes[:n]]).prod(axis=1)
+
+	if np.all(axis_weights == 1):
+	    axis_weights = None
+
+	assert first_dim == np.size(axis_values), "problem when reshaping"
+
+	# Define the new axis
+	first_axis = Axis(axis_values, name=dims, weights=axis_weights) 
+
+	# Reshape the actual array values
+	newshape = (first_dim,) + self.shape[n:]
+	newvalues = b.values.reshape(newshape)
+
+	# Define the new array
+	new = self._constructor(newvalues, [first_axis,]+self.axes[n:], **self._metadata)
+
+	return new
+
 
     def squeeze(self, axis=None):
 	""" Analogous to numpy, but also allows axis name
@@ -606,13 +703,27 @@ class Dimarray(Metadata):
 	axis = Axis([None], dim) # create new dummy axis
 	axes = self.axes.copy()
 	axes.insert(0, axis)
-	return self._constructor(values, axes)
+	return self._constructor(values, axes, **self._metadata)
+
+    def reshape(self, newdims):
+	""" reshape an array according to a new set of dimensions
+
+	Note: involves transposing the array
+	"""
+	# first append missing dimensions
+	o = self
+	for dim in newdims:
+	    if dim not in self.dims:
+		o = self.newaxis(o)
+
+	# now give it the right order
+	return o.transpose(newdims)
 
     #
     # REINDEXING 
     #
  
-    def reindex_axis(self, newaxis, axis=None, method='nearest'):
+    def reindex_axis(self, newaxis, axis=0, method='nearest'):
 	""" reindex an array along an axis
 
 	Input:
@@ -967,15 +1078,8 @@ def _operation(func, o1, o2, reindex=True, transpose=True, constructor=Dimarray)
     newdims = _get_dims(o1, o2) 
 
     # make sure all dimensions are present
-    for o in newdims:
-	if o not in o1.dims:
-	    o1 = o1.newaxis(o)
-	if o not in o2.dims:
-	    o2 = o2.newaxis(o)
-
-    # now give it the right order
-    o1 = o1.transpose(newdims)
-    o2 = o2.transpose(newdims)
+    o1 = o1.reshape(newdims)
+    o2 = o2.reshape(newdims)
     assert o1.dims == o2.dims, "problem in transpose"
 
     # make the new axes
@@ -1047,3 +1151,9 @@ def _ndindex(indices, axis_id):
     """ return the N-D index from an along-axis index
     """
     return (slice(None),)*axis_id + np.index_exp[indices]
+
+def _expand(*list_of_arrays):
+    """ Expand a list of arrays ax1, ax2, ... to  a list of tuples [(ax1[0], ax2[0],..), (ax1[0], ax2[1]), ...]
+    """
+    kwargs = dict(indexing="ij")
+    return axis_values = np.array(zip(*np.meshgrid(*list_of_arrays, **kwargs)))
