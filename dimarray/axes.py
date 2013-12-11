@@ -114,6 +114,7 @@ class Axis(Metadata):
 	""" string representation
 	""" 
 	values = "{} ({}): {} to {}".format(self.name, self.size, self.values[0], self.values[-1])
+	
 	meta = self.repr_meta()
 	return "\n".join([values, meta])
 
@@ -126,7 +127,8 @@ class Axis(Metadata):
     # a few array-like properties
     @property
     def size(self): 
-	return np.size(self.values)
+	#return np.size(self.values)
+	return self.values.shape[0]
 
     @property
     def dtype(self): 
@@ -238,8 +240,8 @@ class Axes(list):
     def __repr__(self):
 	""" string representation
 	"""
-	header = "dimensions: "+ " x ".join([ax.name for ax in self])
-	body = "\n".join([repr(ax).split('\n')[0] for ax in self])
+	header = "dimensions: "+ " x ".join([repr(ax.name) for ax in self])
+	body = "\n".join(["{} / {}".format(i, repr(ax).split('\n')[0]) for i,ax in enumerate(self)])
 	return "\n".join([header, body])
 
     def sort(self, dims):

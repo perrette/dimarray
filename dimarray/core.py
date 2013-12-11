@@ -455,7 +455,7 @@ a.units = "myunits"
 
 	# If axis is provided as a tuple, apply the function on the collapsed array
 	if type(axis) is tuple:
-	    return self.collapse(*axis).apply(funcname, axis=0, skipna=skipna, args=args, **kwargs)
+	    return self.collapse(axis).apply(funcname, axis=0, skipna=skipna, args=args, **kwargs)
 
 #	# Apply weighted transform if applicable
 #	if funcname in ['mean','std','var'] and self.axes[axis].weights is not None:
@@ -653,11 +653,12 @@ a.units = "myunits"
 	newaxes = [self.axes[i] for i in axes]
 	return self._constructor(result, newaxes)
 
-    def collapse(self, *dims):
+    def collapse(self, dims, keep=False):
 	""" collapse (or flatten) dimensions
 
 	Input:
 	    - *dims: variable list of axis names
+	    - keep [False]: if True, dims are interpreted as the dimensions to keep (mirror)
 
 	Output:
 	    - Dimarray appropriately reshaped, with collapsed dimensions as first axis (tuples)
@@ -669,44 +670,54 @@ a.units = "myunits"
 	Example:
 	--------
 
-	a.collapse('lon','lat').mean()
+	a.collapse(('lon','lat')).mean()
 
 	Is equivalent to:
 
 	a.mean(axis=('lon','lat')) 
 	"""
+	assert type(keep) is bool, "keep must be a boolean !"
+
+	# keep? mirror call
+	if keep:
+	    dims = tuple(d for d in self.dims if d not in dims)
+
 	# First transpose the array so that the dimensions to collapse are at the front
-	newdims = dims + tuple(nm for nm in self.dims if nm not in dims)	
+	newdims = dims + tuple(nm for nm in self.dims if nm not in dims)
 	b = self.transpose(newdims) # dimensions to factorize in the front
 
 	# Then collapse the first len(dims) dimensions in one new axis
 
 	n = len(dims) # number of dimensions to collapse
-	first_dim = np.sum(self.shape[:n])
+	first_dim = np.prod(b.shape[:n])
 
 	# Each element of the new first axis is a tuple (or a subarray of dimension n)
-	axis_values = _expand(*[ax.values for ax in self.axes[:n]])
+	axis_values = _expand(*[ax.values for ax in b.axes[:n]])
 
 	# Combine the weights as a product of the individual axis weights
-	axis_weights= _expand(*[ax.get_weights() for ax in self.axes[:n]]).prod(axis=1)
+	axis_weights= _expand(*[ax.get_weights() for ax in b.axes[:n]]).prod(axis=1)
 
 	if np.all(axis_weights == 1):
 	    axis_weights = None
 
-	assert first_dim == np.size(axis_values), "problem when reshaping"
+	#assert first_dim == np.size(axis_values), "problem when reshaping: {} and {}".format(first_dim,np.size(axis_values))
 
 	# Define the new axis
 	first_axis = Axis(axis_values, name=dims, weights=axis_weights) 
 
 	# Reshape the actual array values
-	newshape = (first_dim,) + self.shape[n:]
+	newshape = (first_dim,) + b.shape[n:]
 	newvalues = b.values.reshape(newshape)
 
 	# Define the new array
-	new = self._constructor(newvalues, [first_axis,]+self.axes[n:], **self._metadata)
+	new = self._constructor(newvalues, [first_axis,]+b.axes[n:], **b._metadata)
 
 	return new
 
+    def _reexpand(self, *dims):
+	""" opposite from collapse
+	"""
+	pass
 
     def squeeze(self, axis=None):
 	""" Analogous to numpy, but also allows axis name
@@ -1178,7 +1189,11 @@ def _ndindex(indices, axis_id):
     return (slice(None),)*axis_id + np.index_exp[indices]
 
 def _expand(*list_of_arrays):
-    """ Expand a list of arrays ax1, ax2, ... to  a list of tuples [(ax1[0], ax2[0],..), (ax1[0], ax2[1]), ...]
+    """ Expand a list of arrays ax1, ax2, ... to  a list of tuples [(ax1[0], ax2[0], ax3[]..), (ax1[0], ax2[0], ax3[1]..), ...]
     """
     kwargs = dict(indexing="ij")
-    return np.array(zip(*np.meshgrid(*list_of_arrays, **kwargs)))
+    grd = np.meshgrid(*list_of_arrays, **kwargs)
+    newaxis = np.array(zip(*[g.ravel() for g in grd]))
+    assert newaxis.shape[1] == len(list_of_arrays), "pb when reshaping: {} and {}".format(newaxis.shape, len(list_of_arrays))
+    assert newaxis.shape[0] == np.prod([x.size for x in list_of_arrays]), "pb when reshaping: {} and {}".format(newaxis.shape, np.prod([x.size for x in list_of_arrays]))
+    return newaxis
