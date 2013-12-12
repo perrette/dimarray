@@ -7,7 +7,7 @@ import copy
 #import plotting
 
 from metadata import Metadata, append_stamp
-from axes import Axis, Axes
+from axes import Axis, Axes, GroupedAxis
 from tools import pandas_obj
 import transform  # numpy axis transformation, interpolation
 
@@ -456,12 +456,19 @@ a.units = "myunits"
 
 	# If axis is provided as a tuple, apply the function on the collapsed array
 	if type(axis) is tuple:
-	    return self.collapse(axis).apply(funcname, axis=0, skipna=skipna, args=args, **kwargs)
+	    grouped = self.group(axis)
+	    insert = self.dims.index(axis[0])  # position where the new axis has been inserted
+
+	    # checking
+	    ax = grouped.axes[insert] 
+	    assert isinstance(ax, GroupedAxis) and ax.axes[0].name == axis[0], "problem when grouping axes"
+
+	    # apply the transform at the position of the grouped axis
+	    return grouped.apply(funcname, axis=insert, skipna=skipna, args=args, **kwargs)
 
 #	# Apply weighted transform if applicable
 #	if funcname in ['mean','std','var'] and self.axes[axis].weights is not None:
 #	    return self._apply_weighted(funcname, axis=axis, skipna=skipna, args=args, **kwargs)
-
 
 	# Deal with NaNs
 	values = self.values
@@ -523,15 +530,22 @@ a.units = "myunits"
 	else:
 	    newaxes = [ax for ax in self.axes if ax.name != axis_nm]
 
-#	if funcname == "cumsum":
-#	    print values
-#	    1/0
-#
-
 	obj = self._constructor(result, newaxes)
 
 	# add metadata back in
-	obj._metadata_update_transform(self, funcname, axis_nm)
+
+	# speed up GroupedAxis
+	def repr_ax(axis):
+	    if isinstance(axis, GroupedAxis):
+		group = axis
+		return ",".join([repr_ax(ax) for ax in group.axes])
+	    else:
+		#return "{nm}={start}:{end}".format(nm=axis.name, start=axis.values[0], end=axis.values[-1])
+		return str(axis)
+
+	stamp = "{transform}({axis})".format(transform=funcname, axis=repr_ax(axis_obj))
+
+	obj._metadata = append_stamp(self._metadata, stamp, inplace=False)
 
 	return obj
 
@@ -664,12 +678,15 @@ a.units = "myunits"
 	newaxes = [self.axes[i] for i in axes]
 	return self._constructor(result, newaxes)
 
-    def collapse(self, dims, keep=False):
-	""" collapse (or flatten) dimensions
+    def group(self, dims, keep=False, insert=None):
+	""" group (or flatten) a subset of dimensions
 
 	Input:
 	    - *dims: variable list of axis names
 	    - keep [False]: if True, dims are interpreted as the dimensions to keep (mirror)
+	    - insert: position where to insert the grouped axis 
+		      (by default, just reshape in the numpy sense if possible, 
+		      otherwise insert at the position of the first dimension to group)
 
 	Output:
 	    - Dimarray appropriately reshaped, with collapsed dimensions as first axis (tuples)
@@ -681,70 +698,73 @@ a.units = "myunits"
 	Example:
 	--------
 
-	a.collapse(('lon','lat')).mean()
+	a.group(('lon','lat')).mean()
 
 	Is equivalent to:
 
 	a.mean(axis=('lon','lat')) 
 	"""
 	assert type(keep) is bool, "keep must be a boolean !"
+	assert type(dims[0]) is str, "dims must be strings"
 
 	# keep? mirror call
 	if keep:
 	    dims = tuple(d for d in self.dims if d not in dims)
 
-	# Make sure the dimensions to collapse are in the first position: transpose if needed
-	if dims != self.dims[:len(dims)]:
-	    newdims = dims + tuple(nm for nm in self.dims if nm not in dims)
+	n = len(dims) # number of dimensions to group
+	ii = self.dims.index(dims[0]) # start
+	if insert is None: 
+	    insert = ii
+
+	# If dimensions do not follow each other, have all dimensions as first axis
+	if dims != self.dims[insert:insert+len(dims)]:
+
+	    # new array shape, assuming dimensions are properly aligned
+	    newdims = [ax.name for ax in self.axes if ax.name not in dims]
+	    newdims = newdims[:insert] + list(dims) + newdims[insert:]
+	
 	    b = self.transpose(newdims) # dimensions to factorize in the front
-	    return b.collapse(dims)
+	    return b.group(dims, insert=insert)
 
-	# Then collapse the first len(dims) dimensions in one new axis
-	n = len(dims) # number of dimensions to collapse
-	first_dim = np.prod(self.shape[:n])
+	# Create a new grouped axis
+	newaxis = GroupedAxis(*[ax for ax in self.axes if ax.name in dims])
 
-	# Each element of the new first axis is a tuple (or a subarray of dimension n)
-	axis_values = _flatten(*[ax.values for ax in self.axes[:n]])
-
-	# Combine the weights as a product of the individual axis weights
-	axis_weights= _flatten(*[ax.get_weights() for ax in self.axes[:n]]).prod(axis=1)
-
-	if np.all(axis_weights == 1):
-	    axis_weights = None
-
-	#assert first_dim == np.size(axis_values), "problem when reshaping: {} and {}".format(first_dim,np.size(axis_values))
-
-	# Define the new axis
-	#newname = json.dumps(dims) # new name: string representation of the tuple
-	newname = dims
-	first_axis = Axis(axis_values, name=newname, weights=axis_weights) 
+	# New axes
+	newaxes = [ax for ax in self.axes if ax.name not in dims]
+	newaxes.insert(insert, newaxis)
 
 	# Reshape the actual array values
-	newshape = (first_dim,) + self.shape[n:]
+	newshape = [ax.size for ax in newaxes]
 	newvalues = self.values.reshape(newshape)
 
 	# Define the new array
-	new = self._constructor(newvalues, [first_axis,]+self.axes[n:], **self._metadata)
+	new = self._constructor(newvalues, newaxes, **self._metadata)
 
 	return new
 
-    def _expand(self, axis=0):
-	""" opposite from collapse (appart from ordering)
+    def ungroup(self, axis=None):
+	""" opposite from group
+
+	axis: axis to ungroup as int or str (default: ungroup all)
 	"""
-	ax = self.axes[axis]    # axis to expand
+	# by default, ungroup all
+	if axis is None:
+	    grouped_axes = [ax.name for ax in self.axes if isinstance(ax, GroupedAxis)]
+	    obj = self
+	    for axis in grouped_axes:
+		obj = obj.ungroup(axis=axis)
+	    return obj
 
-	assert ax.values.ndim == 2, "can only expand axes made of tuples"
+	assert type(axis) in (str, int), "axis must be integer or string"
 
-	dim = ax.name	     # its name  (same as axis if axis is a str)
-	ax_id = self.dims.index(dim) # its index (same as axis if axis is an integer)
-	#dims = json.loads(dim)	# expanded dimensions
-	dims = dim
-	expanded_axes = [Axis(np.unique(ax.values[:,i]), nm) for i, nm in enumerate(dims)]
-	expanded_shape = [ax.size for ax in expanded_axes]
+	group = self.axes[axis]    # axis to expand
+	axis = self.dims.index(group.name) # make axis be an integer
 
-	newshape = self.shape[:ax_id] + tuple(expanded_shape) + self.shape[ax_id+1:]
+	assert isinstance(group, GroupedAxis), "can only ungroup a GroupedAxis"
+
+	newshape = self.shape[:axis] + tuple(ax.size for ax in group.axes) + self.shape[axis+1:]
 	newvalues = self.values.reshape(newshape)
-	newaxes = self.axes[:ax_id] + expanded_axes + self.axes[ax_id+1:]
+	newaxes = self.axes[:axis] + group.axes + self.axes[axis+1:]
 
 	return self._constructor(newvalues, newaxes, **self._metadata)
 
@@ -800,6 +820,8 @@ a.units = "myunits"
 
 	# now give it the right order
 	return o.transpose(newdims)
+
+    #def expand(self, order=None, **newdims):
 
     #
     # REINDEXING 
@@ -1225,18 +1247,3 @@ def _ndindex(indices, axis_id):
     """ return the N-D index from an along-axis index
     """
     return (slice(None),)*axis_id + np.index_exp[indices]
-
-def _flatten(*list_of_arrays):
-    """ flatten a list of arrays ax1, ax2, ... to  a list of tuples [(ax1[0], ax2[0], ax3[]..), (ax1[0], ax2[0], ax3[1]..), ...]
-    """
-    kwargs = dict(indexing="ij")
-    grd = np.meshgrid(*list_of_arrays, **kwargs)
-    array_of_tuples = np.array(zip(*[g.ravel() for g in grd]))
-    assert array_of_tuples.shape[1] == len(list_of_arrays), "pb when reshaping: {} and {}".format(array_of_tuples.shape, len(list_of_arrays))
-    assert array_of_tuples.shape[0] == np.prod([x.size for x in list_of_arrays]), "pb when reshaping: {} and {}".format(array_of_tuples.shape, np.prod([x.size for x in list_of_arrays]))
-    return array_of_tuples
-
-def _expand(array_of_tuples):
-    """ opposite of _flatten
-    """
-    return list_of_arrays

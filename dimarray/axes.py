@@ -104,22 +104,22 @@ class Axis(Metadata):
     def __eq__(self, other):
 	return isinstance(other, Axis) and np.all(other.values == self.values)
 
+    def __repr__(self):
+	""" string representation for printing to screen
+	""" 
+	return "{} ({}): {} to {}".format(self.name, self.size, self.values[0], self.values[-1])
+
+    def __str__(self):
+	""" simple string representation
+	"""
+	#return "{}={}:{}".format(self.name, self.values[0], self.values[-1])
+	return "{}({})={}:{}".format(self.name, self.size, self.values[0], self.values[-1])
+
     @property
     def loc(self):
 	""" Access the slicer to locate axis elements
 	"""
 	return Locator(self.values)
-
-    def __repr__(self):
-	""" string representation
-	""" 
-	values = "{} ({}): {} to {}".format(self.name, self.size, self.values[0], self.values[-1])
-	
-	meta = self.repr_meta()
-	return "\n".join([values, meta])
-
-    def issingleton(self):
-	return np.size(self.values) == 1
 
     def copy(self):
 	return copy.copy(self)
@@ -127,13 +127,77 @@ class Axis(Metadata):
     # a few array-like properties
     @property
     def size(self): 
-	#return np.size(self.values)
-	return self.values.shape[0]
+	return self.values.size
 
     @property
     def dtype(self): 
 	return _convert_dtype(np.array(self.values).dtype)
 
+
+class GroupedAxis(Axis):
+    """ an Axis that contains two axes flattened together
+    """
+    _metadata_exclude = ("axes", "name")
+
+    def __init__(self, *axes):
+	"""
+	"""
+	#super(Axis, self).__init__() # init an ordered dict of metadata
+	Metadata.__init__(self)
+
+	self.axes = Axes(axes)
+	self.name = ",".join([ax.name for ax in self.axes])
+
+    @property
+    def values(self):
+	""" values as 2-D numpy array, to keep things consistent with Axis
+	"""
+
+	# Each element of the new axis is a tuple, which makes a 2-D numpy array
+	return _flatten(*[ax.values for ax in self.axes])
+
+    @property
+    def weights(self):
+	""" Combine the weights as a product of the individual axis weights
+	"""
+	if np.all([ax.weights is None for ax in self.axes]):
+	    return None
+
+	else:
+	    return _flatten(*[ax.get_weights() for ax in self.axes]).prod(axis=1)
+
+	#if np.all(axis_weights == 1):
+	#    axis_weights = None
+
+    @property
+    def size(self): 
+	""" size as product of axis sizes
+	"""
+	return np.prod([ax.size for ax in self.axes])
+
+    @property
+    def levels(self):
+	""" for convenience, return individual axis values (like pandas)
+	"""
+	return [ax.values for ax in self.axes]
+
+    def __repr__(self):
+	""" string representation
+	""" 
+	first = tuple(ax.values[0] for ax in self.axes)
+	last = tuple(ax.values[-1] for ax in self.axes)
+	return "{} ({}): {} to {}".format(self.name, self.size, first, last)
+
+
+def _flatten(*list_of_arrays):
+    """ flatten a list of arrays ax1, ax2, ... to  a list of tuples [(ax1[0], ax2[0], ax3[]..), (ax1[0], ax2[0], ax3[1]..), ...]
+    """
+    kwargs = dict(indexing="ij")
+    grd = np.meshgrid(*list_of_arrays, **kwargs)
+    array_of_tuples = np.array(zip(*[g.ravel() for g in grd]))
+    assert array_of_tuples.shape[1] == len(list_of_arrays), "pb when reshaping: {} and {}".format(array_of_tuples.shape, len(list_of_arrays))
+    assert array_of_tuples.shape[0] == np.prod([x.size for x in list_of_arrays]), "pb when reshaping: {} and {}".format(array_of_tuples.shape, np.prod([x.size for x in list_of_arrays]))
+    return array_of_tuples
 
 #
 # List of axes
