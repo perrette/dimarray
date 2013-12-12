@@ -357,12 +357,13 @@ class Locator(object):
 
 	# default method: "nearest" (for float)
 	if method is None:
-	    method = "nearest"
-
-	# but set to "index" if str or int valued axis
-	dtype = type(values[0])
-	if dtype in [str, int]: 
 	    method = "index"
+	    #method = "nearest"
+
+	## but set to "index" if str or int valued axis
+	#dtype = type(values[0])
+	#if dtype in [str, int]: 
+	#    method = "index"
 
 	self.method = method #  default method
 
