@@ -4,12 +4,12 @@ with open('README') as file:
         long_description = file.read()
 
 setup(name='dimarray',
-      version='1.2.1',
+      version='0.0',
       author='Mahe Perrette',
       author_email='mahe.perrette@pik-potsdam.de',
-      description='Labelled Axis Array',
+      description='Numpy array with dimensions',
       keywords=('labelled array','numpy','larry','pandas','iris'),
-      py_modules=['dimarray'],
+      packages = ['dimarray'],
       long_description=long_description,
       url='https://github.com/perrette/dimarray',
       license = "BSD 2-Clause",

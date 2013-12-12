@@ -1,0 +1,868 @@
+========================
+Introduction to dimarray   
+========================
+
+Features
+--------
+
+* numpy's ndarrays with named axes and metadata organized on the netCDF format.
+* follow pandas' api but works for any dimension and any axis name
+* includes most numpy transformations
+* alias method for matplotlib plotting.
+* natural netCDF I/O
+
+* main classes and functions:
+
+    * Dimarray		    : main class (a meta-class containing ndarray in the values field)
+    * Dataset		    : collections.OrderedDict of Dimarray objects
+    * Axes, Axis	    : axis and indexing
+    * read, write, summary  : netCDF I/O
+
+Get started:
+-----------
+
+Import the basics
+
+>>> import numpy as np
+>>> from dimarray import Dimarray
+
+Define some dummy data representing 3 items "a", "b" and "c" for 5 years:
+
+>>> values = np.random.randn(3,5)
+
+Defining a Dimarray from there is pretty straightforward
+
+>>> a = Dimarray(values, ('items',list("abc")), ('time',np.arange(1950,1955)))  # all labels
+>>> a
+dimensions: 'items', 'time'
+0 / items (3): a to c
+1 / time (5): 1950 to 1954
+array(...)
+>>> b = Dimarray.from_kwds(values, items=list("abc"), time=np.arange(1950,1955)) # keyword arguments
+>>> c = Dimarray.from_list(values, [list("abc"), np.arange(1950,1955)], ['items','time']) # list
+>>> a == b == c
+True
+>>> d = da.array(values, items=list("abc"), time=np.arange(1950,1955))	# alias to Dimarray.from_kwds
+>>> d == b
+True
+
+NOTE: for convenience, an alias `array` exists for from_kwds and from_list methods:
+
+>>> d = da.array(values, items=list("abc"), time=np.arange(1950,1955)) # keyword arguments
+>>> e = da.array(values, [list("abc"), np.arange(1950,1955)], ['items','time']) # list
+>>> d == e == a == b == c
+True
+
+NOTE: it is also possible not to define the labels and indices at all:
+
+>>> da.Dimarray(values)		    # automatic labelling  # doctest: ELLIPSIS +1
+dimarray: 15 non-null elements (0 null)
+dimensions: 'x0', 'x1'
+0 / x0 (3): 0 to 2
+1 / x1 (5): 0 to 4
+array(...)
+>>> da.Dimarray(values, 'items','time')  # just dimensions names
+dimarray: 15 non-null elements (0 null)
+dimensions: 'items', 'time'
+0 / items (3): 0 to 2
+1 / time (5): 0 to 4
+array(...)
+>>> da.Dimarray(values, list("abc"), np.arange(1950,1955))  # or just axis values
+dimarray: 15 non-null elements (0 null)
+dimensions: 'x0', 'x1'
+0 / x0 (3): a to c
+1 / x1 (5): 1950 to 1954
+array(...)
+
+Tutorial
+--------
+
+* Define a Dimarray
+* Operations
+* Slicing
+* Transforms
+* Dataset
+* netCDF I/O 
+* Plotting
+
+Define an array
+===============
+
+First we need to import the important modules
+
+    >>> import numpy as np
+    >>> import dimarray as da
+    >>> from dimarray import Dimarray, Dataset, read, write, summary
+
+
+Let's get some example multi-dimensional data 
+
+    >>> lon, lat, values = da.datasets.make_data()
+    >>> lon.shape
+    (360,)
+    >>> lat.shape
+    (180,)
+    >>> values.shape
+    (180, 360)
+
+There are various ways of defining a Dimarray:
+
+    >>> a = Dimarray(values, ('lat',lat), ('lon',lon))
+    >>> a = Dimarray(values, ('lat',lat), ('lon',lon))
+    >>> a = Dimarray(values, ('lat',lat), ('lon',lon))
+    >>> a = Dimarray(values, ('lat',lat), ('lon',lon))
+    >>> a = Dimarray(values, ('lat',lat), ('lon',lon))
+    >>> a = Dimarray(values, ('lat',lat), ('lon',lon))
+
+Keyword arguments:
+
+    >>> b = Dimarray.from_dict(values, lon=lon, lat=lat)   
+
+A list of numpy arrays and a list of axis names:
+
+    >>> c = Dimarray.from_list(values, [lat,lon],["lat","lon"])
+    >>> a == b == c
+    True
+
+Or more simply with the dimarray wrapper (preferred option)
+
+    >>> a = da.array(values, ('lat',lat), ('lon',lon))
+    >>> b = da.array(values, lon=lon, lat=lat)
+    >>> c = da.array(values, [lat,lon],["lat","lon"])
+
+*NOTE: The 2nd definition (for `b`) is handy and fine as long as all axes have 
+different lengths. However if it is not the case, there isambiguity about 
+how to determine the order of dimensions because keyword arguments are not ordered
+in python. 
+
+This is an example of what can go bad:
+
+    >>> da.array(np.ones((3,3)), lon=np.arange(3)*4, lat=range(3))
+    Traceback (most recent call last):
+      File "/usr/lib/python2.7/doctest.py", line 1289, in __run
+        compileflags, 1) in test.globs
+      File "<doctest README[13]>", line 1, in <module>
+        da.array(np.ones((3,3)), lon=np.arange(3)*4, lat=range(3))
+      File "dimarray/lazyapi.py", line 8, in dimarray
+        return da.array(data, *args, **kwargs)
+      File "dimarray/core.py", line 461, in dimarray
+        new = Dimarray.from_dict(values, axes, **kwargs)
+      File "dimarray/core.py", line 140, in from_dict
+        axes = Axes.from_dict(shape=np.shape(values), names=names, **kwargs)
+      File "dimarray/axes.py", line 157, in from_dict
+        ==> explictly supply `names=` or use from_list() or from_tuples() methods" """
+    AssertionError:  some axes have the same size !
+        ==> ambiguous determination of dimensions order via keyword arguments only
+        ==> explictly supply `names=` or use from_list() or from_tuples() methods" 
+
+In such a case, just use one of the two other forms. The preferred form is:
+
+    >>> da.array(np.ones((3,3)), [('lat',range(3)), ('lon', np.arange(3)*4)])
+    dimarray: array([[ 1.,  1.,  1.],
+           [ 1.,  1.,  1.],
+           [ 1.,  1.,  1.]])
+    dimensions: lat x lon
+    lat (3): 0 to 2
+    lon (3): 0 to 8
+
+
+*NOTE: It is also possible to enter an array without named, dimensions: 
+it will be generated automatically.
+
+    >>> Dimarray.from_list(values, [lat,lon])
+    dimarray: 64800 non-null elements (0 null)
+    dimensions: x0 x x1
+    x0 (180): -89.5 to 89.5
+    x1 (360): -179.5 to 179.5
+
+Note there is always need to encapsulate the axes in some ways.
+
+
+Printing
+========
+
+A pretty-printing functionality makes it easy to check things went well:
+
+    >>> print a
+    dimarray: 64800 non-null elements (0 null)
+    dimensions: lat x lon
+    lat (180): -89.5 to 89.5
+    lon (360): -179.5 to 179.5
+
+
+String axes for items
+=====================
+
+It is also possible to have string axes !
+
+    >>> myset = da.array([[0,2,4,6,8,10],[1,3,5,7,9,11]], items=["even","odd"], index=range(6))
+    >>> myset
+    dimarray: 12 non-null elements (0 null)
+    dimensions: items x index
+    items (2): even to odd
+    index (6): 0 to 5
+
+
+Like a numpy array
+==================
+
+The Dimarray has the same attributes as a numpy array
+
+    >>> a.shape
+    (180, 360)
+    >>> a.ndim
+    2
+    >>> a.size
+    64800
+
+which are detected by numpy functions:
+
+    np.shape(a)
+    np.ndim(a)
+    np.size(a)
+
+as well as
+    >>> b = np.array(a)
+    >>> type(a)
+    <class 'dimarray.core.Dimarray'>
+    >>> type(b)
+    <type 'numpy.ndarray'>
+
+
+Access the underlying data structure
+====================================
+   
+The actual data is stored as numpy array in the `values` attribute of Dimarray
+whiles the dimensions (or axes) are buried a bit deeper: each dimension is 
+represented by an Axis object (itself with attributes and actual data stored 
+under a `values` attributes). They form a list of Axes. An Axes object is  
+a subclass of `list`. But you do not have to worry much about that
+since everything is dealt with internally. What is more useful is that each 
+dimension's `values` attribute is aliased at the highest level, so it is 
+possible to access them by a simple `.`. Check the size:
+
+    >>> type(a.values)
+    <type 'numpy.ndarray'>
+
+    >>> type(a.lon)
+    <type 'numpy.ndarray'>
+
+    >>> type(myset.items)
+    <type 'list'>
+
+    >>> type(myset.index)
+    <type 'numpy.ndarray'>
+
+
+While `values` is always a numpy array, indices are either 
+stored as numpy arrays (float or int), or as list of strings.
+
+Under the hood: `__getattr__` method redirect
+attribute searching to `a.values`.
+
+
+Axis and Axes
+=============
+
+It is also possible to access the Axes object directly:
+
+    >>> print a.axes
+    dimensions: lat x lon
+    lat (180): -89.5 to 89.5
+    lon (360): -179.5 to 179.5
+
+The individual `Axis` objects are then grabbed as in any list by their 
+integer index, but in an Axes they can also be accessed by name (note 
+a `name` _has_ to be a string):
+
+    >>> b = a.axes[0]
+    >>> c = a.axes['lat']
+    >>> b == c    
+    True
+    >>> b
+    lat (180): -89.5 to 89.5
+
+And the values are stored in b.values:
+
+    >>> np.all(b.values == np.array(b))
+    True
+
+For now, indexing an Axis object returns its numpy values directly, but
+this might change in the future to be more consistent with a Dimarray, 
+so that it forms a closed class.
+
+The Axis and Axes objects contain all the indexing/slicing magicc (see below)
+and the code is packaged under dimarray.axes.py
+
+
+Attributes
+==========
+
+It is also possible to give it a `name`, `units`, a description `descr`, and any
+other attribute which is not already a reserved field for the class. 
+
+    >>> a.name = "a"
+    >>> a.units = "m"
+    >>> b = a.set(name="myarray", units="myunits")
+    >>> b.set(descr="this is an example array", inplace=True)
+    >>> c = da.array(values, lon=lon, lat=lat, name="myarray",units="m")
+
+Note: the latter construct only accept one of the three classical parameters
+use `.` or `set` method to have more.
+
+With at leat one attribute non-null, the printing displays more information:
+
+    >>> b
+    dimarray: 64800 non-null elements (0 null)
+    name: "myarray", units: "myunits", descr: "this is an example array"
+    dimensions: lat x lon
+    lat (180): -89.5 to 89.5
+    lon (360): -179.5 to 179.5
+
+    >>> a.set(name="", units="", inplace=True)
+   
+
+Numpy Transform
+===============
+
+Most numpy axis-transforms are aliased on a Dimarray. The additional 
+new feature is that the `axis` parameter can now be given an axis name instead 
+of just an integer index !
+
+    >>> a.mean(axis='lon')
+    dimarray: 180 non-null elements (0 null)
+    dimensions: lat
+    lat (180): -89.5 to 89.5
+
+But the integer index also work
+
+    >>> a.mean(axis=1)
+    dimarray: 180 non-null elements (0 null)
+    dimensions: lat
+    lat (180): -89.5 to 89.5
+
+Cumulative transformation also works:
+
+    >>> a.cumsum(axis='lat')
+    dimarray: 64800 non-null elements (0 null)
+    dimensions: lat x lon
+    lat (180): -89.5 to 89.5
+    lon (360): -179.5 to 179.5
+
+As well as taking percentiles (note 'lat' becomes 'pct_lat'):
+
+    >>> a.percentile([5,50,95],axis='lat')
+    dimarray: 1080 non-null elements (0 null)
+    dimensions: pct_lat x lon
+    pct_lat (3): 5 to 95
+    lon (360): -179.5 to 179.5
+
+
+
+Basic operations
+================
+
+As you would expect, basic numpy operations work as well...
+
+    >>> b = a + 2
+    >>> b = a - a
+    >>> b = a / 2
+    >>> b = a ** 2
+    >>> b = a * np.array(a)
+
+...and return a Dimarray object
+
+    >>> b
+    dimarray: 64800 non-null elements (0 null)
+    dimensions: lat x lon
+    lat (180): -89.5 to 89.5
+    lon (360): -179.5 to 179.5
+
+
+Cross-dimensional operations
+============================
+
+But the really cool thing is that you can also do that across dimensions: 
+
+    >>> np.random.seed(0) # just for reproductivity of the numbers !
+    >>> ts = da.array(np.random.randn(150),time=np.arange(1950,2100))
+    >>> ts
+    dimarray: 150 non-null elements (0 null)
+    dimensions: time
+    time (150): 1950 to 2099
+
+Here multiplying a time series by a map, and get a 3D object !
+
+    >>> cube = ts * b
+    >>> print cube
+    dimarray: 9720000 non-null elements (0 null)
+    dimensions: time x lat x lon
+    time (150): 1950 to 2099
+    lat (180): -89.5 to 89.5
+    lon (360): -179.5 to 179.5
+
+Or say you want to account for an uncertainty of +/- 20% which is the 90% uncertainty range
+
+    >>> pct = da.array([0.8, 1, 1.2], pct=[5,50,95])
+    >>> estimates = b*pct
+    >>> estimates
+    dimarray: 194400 non-null elements (0 null)
+    dimensions: lat x lon x pct
+    lat (180): -89.5 to 89.5
+    lon (360): -179.5 to 179.5
+    pct (3): 5 to 95
+
+And you would like to see the full range with numpy's ptp method (max - min)
+
+    >>> estimates.ptp(axis='pct') 
+    dimarray: 64800 non-null elements (0 null)
+    dimensions: lat x lon
+    lat (180): -89.5 to 89.5
+    lon (360): -179.5 to 179.5
+
+Now note the way dimensions add up depends on your operands. The operations are 
+not commutative. So maybe you were not happy with the ordering resulting from the 
+previous operation?
+
+    >>> estimates.transpose(['pct','lat','lon'])
+    dimarray: 194400 non-null elements (0 null)
+    dimensions: pct x lat x lon
+    pct (3): 5 to 95
+    lat (180): -89.5 to 89.5
+    lon (360): -179.5 to 179.5
+
+Let's check it did the right thing on the data:
+
+    >>> estimates.transpose(['pct','lat','lon']).shape
+    (3, 180, 360)
+
+Note the name transpose comes from numpy. If you are not happy with it, you can
+use the "permute" alias.
+
+Note: there is also a _order attribute to the Dimarray class which is None by default.
+If _order is not None, every new initialized object will be sorted by default (this does
+not apply to inplace transformations)
+
+
+Single-axis alignment: the power of pandas
+==========================================
+
+If you have pandas installed, any low-dimensional operation will try to align 
+axes just like a pandas DataFrame would do. The only thing Dimarray does, in 
+case of axis length mismatch, is to use its to_pandas() method on each of the 
+two operands to initialize a Series, DataFrame, Panel or Panel4D, apply the
+operation (meaning: fill with NaNs any unmatched data, compute the value 
+otherwise) and instantiate a new Dimarray object from the result.
+
+This is very useful for time series:
+    >>> np.random.seed(0) # just for reproductivity of the numbers !
+    >>> ts1 = da.array(np.random.randn(50),time=np.arange(1930,1980))
+    >>> np.random.seed(0) # just for reproductivity of the numbers !
+    >>> ts2 = da.array(np.random.randn(35),time=np.arange(1950,1985))
+    >>> ts1 + ts2
+    dimarray: 30 non-null elements (25 null)
+    dimensions: time
+    time (55): 1930 to 1984
+
+Note the result now contains 25 null (Nans) elements, as expected:
+
+    >>> np.array(ts1+ts2)
+    array([        nan,         nan,         nan,         nan,         nan,
+                   nan,         nan,         nan,         nan,         nan,
+                   nan,         nan,         nan,         nan,         nan,
+                   nan,         nan,         nan,         nan,         nan,
+           -0.78893747,  1.0537758 ,  1.84317418,  1.49872818,  4.13731261,
+           -2.43164355,  0.99584693, -0.33854106,  1.42956036,  1.87995727,
+            0.298991  ,  1.83243603, -0.12674802, -1.85912145,  0.09595108,
+            0.4900233 ,  2.72436975,  0.99722159, -0.07425912, -1.15639849,
+           -3.60154278, -0.76639934, -0.84183399,  1.20861037,  1.76010244,
+           -1.89243998, -1.20703684,  0.59030651, -0.08111863,  1.25661849,
+                   nan,         nan,         nan,         nan,         nan])
+
+
+
+
+Slicing
+======= 
+
+The numpy way
+^^^^^^^^^^^^^
+
+Slicing works exactly like in numpy, except again, that it takes axis values
+argument by default, and returns a Dimarray.
+
+    >>> a
+    dimarray: 64800 non-null elements (0 null)
+    dimensions: lat x lon
+    lat (180): -89.5 to 89.5
+    lon (360): -179.5 to 179.5
+
+    >>> a[45.5]
+    dimarray: 360 non-null elements (0 null)
+    name: "", units: "", descr: "", lat: "45.5"
+    dimensions: lon
+    lon (360): -179.5 to 179.5
+
+    >>> a[45.5, 30.5:60.5] 
+    dimarray: 30 non-null elements (0 null)
+    name: "", units: "", descr: "", lat: "45.5"
+    dimensions: lon
+    lon (30): 30.5 to 59.5
+
+Note a new attribute has now been added to the result, documenting the slicing.
+
+Index slicing is also available via the iloc property attribute, always useful
+to get first or last elements of the data (the name is consistent with pandas naming)
+
+    >>> a.iloc[[0,-1], :10]
+    dimarray: 20 non-null elements (0 null)
+    dimensions: lat x lon
+    lat (2): -89.5 to 89.5
+    lon (10): -179.5 to -170.5
+
+It is reassuring to verify that:
+
+    >>> a.iloc[[0,-1], :10].values
+    array([[ 1.76405235,  0.40015721,  0.97873798,  2.2408932 ,  1.86755799,
+            -0.97727788,  0.95008842, -0.15135721, -0.10321885,  0.4105985 ],
+           [ 0.33451967,  1.39877873, -0.67685006,  0.9154972 ,  0.91696107,
+             0.67829419, -2.20539088, -0.2868287 ,  1.49510245,  1.30204345]])
+
+    >>> a.values[[0,-1], :10]
+    array([[ 1.76405235,  0.40015721,  0.97873798,  2.2408932 ,  1.86755799,
+            -0.97727788,  0.95008842, -0.15135721, -0.10321885,  0.4105985 ],
+           [ 0.33451967,  1.39877873, -0.67685006,  0.9154972 ,  0.91696107,
+             0.67829419, -2.20539088, -0.2868287 ,  1.49510245,  1.30204345]])
+
+
+
+
+The real cool stuff with dimarray
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The annoying thing with standard slicing is that one should know which dimension is where.
+As you might have already guessed, Dimarray offers a nice syntax for that:
+
+    >>> a.xs(lon=(30.5, 60.5), lat=45.5)
+    dimarray: 30 non-null elements (0 null)
+    name: "", units: "", descr: "", lat: "45.5"
+    dimensions: lon
+    lon (30): 30.5 to 59.5
+
+Note the tuple here indicates a slice, whereas a list just samples individual
+data points, quite consistently with what you would expect from standard slicing.
+
+    >>> a.xs(lon=[30.5, 60.5], lat=45.5)
+    dimarray: array([ 0.76372818,  2.15288386])
+    name: "", units: "", descr: "", lat: "45.5"
+    dimensions: lon
+    lon (2): 30.5 to 60.5
+
+Let's check the consistency just in case:
+
+    >>> a.xs(lon=(30.5, 60.5), lat=45.5).mean()
+    dimarray: array(-0.00802083197740012)
+
+    >>> a[45.5, 30.5:60.5].mean()
+    dimarray: array(-0.00802083197740012)
+
+And more !
+^^^^^^^^^^
+
+Well, it is nice but what happen for this kind of data?
+
+    >>> messy_axis = np.linspace(0,1, 100)
+    >>> x = da.array(range(100), messy_axis) 
+
+By the way, note the above statement for 1-D data is 
+permitted and interpreted as a list with names set
+to None, so labels are automatically generated
+
+    >>> da.array(range(100), [messy_axis])
+    dimarray: 100 non-null elements (0 null)
+    dimensions: x0
+    x0 (100): 0.0 to 1.0
+
+    >>> x
+    dimarray: 100 non-null elements (0 null)
+    dimensions: x0
+    x0 (100): 0.0 to 1.0
+
+
+Anyway, this is our messy_axis:
+
+    >>> x.x0 
+    array([ 0.        ,  0.01010101,  0.02020202,  0.03030303,  0.04040404,
+            0.05050505,  0.06060606,  0.07070707,  0.08080808,  0.09090909,
+            0.1010101 ,  0.11111111,  0.12121212,  0.13131313,  0.14141414,
+            0.15151515,  0.16161616,  0.17171717,  0.18181818,  0.19191919,
+            0.2020202 ,  0.21212121,  0.22222222,  0.23232323,  0.24242424,
+            0.25252525,  0.26262626,  0.27272727,  0.28282828,  0.29292929,
+            0.3030303 ,  0.31313131,  0.32323232,  0.33333333,  0.34343434,
+            0.35353535,  0.36363636,  0.37373737,  0.38383838,  0.39393939,
+            0.4040404 ,  0.41414141,  0.42424242,  0.43434343,  0.44444444,
+            0.45454545,  0.46464646,  0.47474747,  0.48484848,  0.49494949,
+            0.50505051,  0.51515152,  0.52525253,  0.53535354,  0.54545455,
+            0.55555556,  0.56565657,  0.57575758,  0.58585859,  0.5959596 ,
+            0.60606061,  0.61616162,  0.62626263,  0.63636364,  0.64646465,
+            0.65656566,  0.66666667,  0.67676768,  0.68686869,  0.6969697 ,
+            0.70707071,  0.71717172,  0.72727273,  0.73737374,  0.74747475,
+            0.75757576,  0.76767677,  0.77777778,  0.78787879,  0.7979798 ,
+            0.80808081,  0.81818182,  0.82828283,  0.83838384,  0.84848485,
+            0.85858586,  0.86868687,  0.87878788,  0.88888889,  0.8989899 ,
+            0.90909091,  0.91919192,  0.92929293,  0.93939394,  0.94949495,
+            0.95959596,  0.96969697,  0.97979798,  0.98989899,  1.        ])
+
+
+Fortunately, you should not enter the exact number. For floats, Dimarray 
+automatically looks for the nearest value. 
+
+    >>> x[0.1]  
+    dimarray: array(10)
+    name: "", units: "", descr: "", x0: "0.10101010101"
+
+Only for integer and string is an exact match required.
+It does also bound checking up to half a grid step:
+
+    >>> x[-0.02]
+    Traceback (most recent call last):
+      File "/usr/lib/python2.7/doctest.py", line 1289, in __run
+        compileflags, 1) in test.globs
+      File "<doctest README[88]>", line 1, in <module>
+        x[-0.02]
+      File "dimarray/core.py", line 274, in __getitem__
+        ix = loc[item]
+      File "dimarray/axes.py", line 404, in __getitem__
+        ix = Locator(ax.values, method)[item[i]]
+      File "dimarray/axes.py", line 286, in __getitem__
+        return self(ix)
+      File "dimarray/axes.py", line 341, in __call__
+        return loc(idx)
+      File "dimarray/axes.py", line 363, in nearest
+        raise ValueError("%f out of bounds ! (min: %f, max: %f, step: %f)" % (val, mi, ma, dx))
+    ValueError: -0.020000 out of bounds ! (min: 0.000000, max: 1.000000, step: 0.010101)
+
+But close enough works:
+
+    >>> x[-0.002]
+    dimarray: array(0)
+    name: "", units: "", descr: "", x0: "0.0"
+
+You can also use the `method=` parameter of the xs slicer, it can take three values:
+
+    *exact    : exact match with the required index
+    *nearest  : nearest match with the required index
+    *numpy    : numpy integer
+
+and the corresponding array-like slicers (trying to keep the syntax close to 
+pandas which also provides iloc and loc)
+    loc       : exact 
+    nloc      : nearest
+    iloc      : numpy integer
+
+    >>> x.xs(x0=0.1, method="nearest")
+    dimarray: array(10)
+    name: "", units: "", descr: "", x0: "0.10101010101"
+
+    >>> x.xs(x0=3, method="numpy")
+    dimarray: array(3)
+    name: "", units: "", descr: "", x0: "0.030303030303"
+
+    >>> x.iloc[3]
+    dimarray: array(3)
+    name: "", units: "", descr: "", x0: "0.030303030303"
+
+ 
+NetCDF I/O
+==========
+
+There is also direct netCDF I/O functionality, which is the natural data 
+format for variables with dimensions.
+
+Let'us come back to our three dimarrays    
+
+    >>> a
+    dimarray: 64800 non-null elements (0 null)
+    dimensions: lat x lon
+    lat (180): -89.5 to 89.5
+    lon (360): -179.5 to 179.5
+
+    >>> ts
+    dimarray: 150 non-null elements (0 null)
+    dimensions: time
+    time (150): 1950 to 2099
+
+    >>> cube
+    dimarray: 9720000 non-null elements (0 null)
+    dimensions: time x lat x lon
+    time (150): 1950 to 2099
+    lat (180): -89.5 to 89.5
+    lon (360): -179.5 to 179.5
+
+
+It is possible to save them sequentially, by giving them names if they do not 
+already have one:
+
+    >>> a.save("test.nc", "map")
+    write to test.nc
+
+    >>> cube.name = "cube"
+    >>> cube.save("test.nc",mode='a') # automatically used cube.name
+    write to test.nc
+
+    >>> ts.save("test.nc", "ts", mode='a') # no print message
+    write to test.nc
+
+And do a quick check of what is in there by reading netCDF metadata:
+
+    >>> summary("test.nc")
+    read from test.nc
+    dimensions: lat x lon x time
+    lat (180): -89.5 to 89.5
+    lon (360): -179.5 to 179.5
+    time (150): 1950 to 2099
+    map : lat x lon
+    cube : time x lat x lon
+    ts : time
+
+Now it is time to introduce another class named Dataset, which is a collection 
+of Dimarrays, and is itself a subclass of collections.OrderedDict. 
+It is mainly useful for I/O but also for data alignment (latter feature not yet implemented). 
+It is the natural class to store the content of a netCDF filem and derives its
+name from the netCDF module. 
+
+dimarray's `read` function can load either a Dimmaray if the variable name is given
+
+    >>> read("test.nc", "ts")
+    read from test.nc
+    dimarray: 150 non-null elements (0 null)
+    name: "", units: "", descr: ""
+    dimensions: time
+    time (150): 1950 to 2099
+
+
+or the whole file otherwise:
+ 
+    >>> b = read("test.nc")
+    read from test.nc
+
+    >>> b
+    Dataset of 3 variables
+    <BLANKLINE>
+    dimarray: 64800 non-null elements (0 null)
+    name: "map", units: "", descr: ""
+    dimensions: lat x lon
+    lat (180): -89.5 to 89.5
+    lon (360): -179.5 to 179.5
+    <BLANKLINE>
+    dimarray: 9720000 non-null elements (0 null)
+    name: "cube", units: "", descr: ""
+    dimensions: time x lat x lon
+    time (150): 1950 to 2099
+    lat (180): -89.5 to 89.5
+    lon (360): -179.5 to 179.5
+    <BLANKLINE>
+    dimarray: 150 non-null elements (0 null)
+    name: "ts", units: "", descr: ""
+    dimensions: time
+    time (150): 1950 to 2099
+
+Plotting 
+========
+
+At this point it is just a wrapper for pandas method, which itself is a wrapper
+for matplotlib with appropriate labelling. It works only for 1-D and 2-D data.
+    
+    ts.plot()
+    >>> mydata = da.array([ts.values, ts.values*0.2], items=['data1','data2'], time=ts.time)
+    >>> mydata
+    dimarray: 300 non-null elements (0 null)
+    dimensions: items x time
+    items (2): data1 to data2
+    time (150): 1950 to 2099
+
+    mydata.plot() # does not work for now
+
+    mydata.to_pandas().plot()
+    <matplotlib.axes.AxesSubplot object at 0x9e6ce6c>
+
+
+Miscellaneous
+=============
+
+The Defarray class is a subclass of Dimarray which has a fixed set of dimensions
+with an easier initialization call, and which can implement speicific methods.
+
+As a wink to pandas, which has inspired many of the features, there are also 
+classes named Series, DataFrame, Panel and Panel4D classes as subclass of Dimarray. 
+They have no more in common than dimension order though...
+
+    >>> sr = da.Series([2,4,21,6],range(4)) 
+    sr
+    >>> mydata = np.array([ts1, ts1*1.3])
+    >>> df = da.DataFrame(mydata, ["data1","data2"], ts1.time) 
+    df
+
+Conclusions
+===========
+
+At this stage we have been around most features for the core dimarray module. 
+There is also a companion module at the moment named `geotools`, which makes 
+use of dimarray capability to do some handy operations in geographic coordinates
+and includes Region classes with regional mean and extraction of data, but it
+is deliberately not part of dimarray to maintain the core functions clean and light, 
+which do not rely on particular axis name.
+
+Nevertheless, an architechture is present to instantiate Dimarray class and to 
+build dimension-specific operations, or even to recursively apply an operation 
+targeted to certain dimensions (e.g. regional mean applied at lon, lat will 
+be telescoped back to a n-D array as long as lon, lat are part of the initial 
+subset).
+
+As far as I know there is no other light-weight python package which provides
+numpy-like operation with full support for named dimensions (say, with a meaning 
+attached to it) and attributes and which is truely multidimensional. 
+
+Summary
+-------
+
+* Emulates a numpy array in many ways
+    * basic operations (addition, multiplication...)
+    * numpy's axes transforms are aliased (mean, median, sum, cumsum, etc...) 
+    * integer index slicing
+
+* with many additional features: 
+    * includes axes info with **named** dimensions:
+    * any axis operation also understands axis name (e.g. "lon", "lat", "time")
+    * an axis is either a numpy array (e.g. int, float) or a list of strings labels
+    * advanced slicing operations using dimension names, including multi*dimensions slicing (see tutorial)
+    * dictionary-like access (as a result)
+    * choice between three methods for indexing:
+    * "numpy" just as numpy would do
+    * "index" or "exact" look for the corresponding value on an axis  (must exactly match)
+    * "nearest" find the nearest match, with bound checking
+    
+* including one-line netCDF I/O capability (requires netCDF for that feature)
+
+* if pandas is installed, Dimarray makes use of its nice features:
+    * single-axis alignment
+    * plotting capability 
+    * re-indexing / 1-D interpolation on an axis basis
+    
+* in the geotools version of the module, there is more:
+    * regional transformation, 2-D interpolation
+    * plotting for different kinds of objects such as maps
+    * much is done internally via a Region object (which  exists independently of Dimarray), which can be a single location, a line, a box, a polygon, the World (or anything, really by subclassing)
+
+    TO DO: interface with cartopy, pyproj, basemep
+
+* What about pandas?
+    * This is in some ways similar to the excellent pandas, but closer to numpy because designed to be truely multidimensional and it assumes meaningful axes names (not just index, columns etc... for everything)
+    * to_pandas() method transform low-dimensional (up to 4-D) Dimarray objects into their pandas equivalent
+
+* And iris?
+    * Wait and see. The iris module looks very comprehensive and well thought,
+      but it seems that for now it comes at the cost of package size and verbosity.
+      The dimarray module tries to keep things at a minimum and just extend numpy 
+      capability to include named axes, with a reduced set of plotting methods 
+      based on matplotlib, and to stick to numpy/pandas's api.
