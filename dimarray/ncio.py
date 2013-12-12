@@ -50,27 +50,27 @@ def read(f, nms=None, *args, **kwargs):
     return obj
 
 
-def write(f, name, data, axes=None, dims=None, mode='w', **metadata):
-    """ Initialize a Dimarray and write to netCDF
-
-    Input:
-	f	: file name or buffer
-	name	: variable name
-	data	: numpy array
-	axes	: list of numpy arrays (or Axes objects)
-	dims	: dims of the axes (the dimensions) 
-	mode    : mode to access the netcdf: 'w' (default, overwrite) or 'a' (append)
-	**metadata: for convenience, can pass dimensions as keyword arguments (beware the order is lost)
-
-    data, axes, dims, **metadata are passed to dimarray to instantiate a Dimarray, see corresponding doc for details.
-
-    Provide dimensions as a list:
-
-    >>> write("test.nc", "testvar", np.randn(20, 30), [np.linspace(-90,90,20), np.linspace(-180,180,30)],['lat','lon'])
-    """
-    #axes = Axes.from_list(axes, dims)
-    obj = Dimarray.from_list(data, axes, dims, **metadata) # initialize a dimarray
-    obj.write(f, name, mode=mode) # write to file
+#def write(f, name, data, axes=None, dims=None, mode='w', **metadata):
+#    """ Initialize a Dimarray and write to netCDF
+#
+#    Input:
+#	f	: file name or buffer
+#	name	: variable name
+#	data	: numpy array
+#	axes	: list of numpy arrays (or Axes objects)
+#	dims	: dims of the axes (the dimensions) 
+#	mode    : mode to access the netcdf: 'w' (default, overwrite) or 'a' (append)
+#	**metadata: for convenience, can pass dimensions as keyword arguments (beware the order is lost)
+#
+#    data, axes, dims, **metadata are passed to dimarray to instantiate a Dimarray, see corresponding doc for details.
+#
+#    Provide dimensions as a list:
+#
+#    >>> write("test.nc", "testvar", np.randn(20, 30), [np.linspace(-90,90,20), np.linspace(-180,180,30)],['lat','lon'])
+#    """
+#    #axes = Axes.from_list(axes, dims)
+#    obj = Dimarray.from_list(data, axes, dims, **metadata) # initialize a dimarray
+#    obj.write(f, name, mode=mode) # write to file
 
 
 #

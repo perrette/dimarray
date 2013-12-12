@@ -1,27 +1,43 @@
-==========================================
-dimarray: Array with meaningful dimensions
-==========================================
+============================================================================
+dimarray: array with labelled dimensions and axes, metadata and NaN handling
+============================================================================
 
-Highlights
-----------
+Forget the underlying array shape and concentrate on what you aim at doing !
 
-* numpy's ndarrays with labelled axes, metadata and NaN handling
-* inspired by pandas but generalized to any dimension
-* forget the underlying array shape and concentrate on what you aim to do
-* intuitive multi-dimensional "slicing"/reshaping/reindexing by dimension name
-* mean, sum, cumsum and so on applicable on any subset of dimensions (by name)
-* handles axis-based weights (e.g. for averaging)
-* arithmetics between arrays of different dimensions with axis alignment
-* natural netCDF I/O (requires HDF5, netCDF4)
+Inspired by (but does not rely on) pandas:
 
+    * behave like a numpy array (operations, transformations)
+    * ...and to a certain extent like a dictionary
+    * labelled axes, NaN handling
+    * (quite) pretty printing
+    * align along axis values in operations
+    * `values` and `axes` attributes, `loc`, `iloc`, `xs` methods
+    * GroupedAxis object similar to pandas MultiIndex
 
-Main classes and functions
---------------------------
+But generalized to any dimension and augmented with new features:
 
-* Dimarray		    : main data structure (see alias `array`)
-* Dataset		    : ordered dictionary of Dimarray objects
-* Axes, Axis		    : axis and indexing
-* read, write, summary	    : netCDF I/O
+    * intuitive multi-dimensional slicing/reshaping/transforms by axis name
+    * expand method to repeat/broadcast an array along new dimensions
+      ==> arithmetics between arrays of different dimensions 
+    * group/ungroup methods to flatten any subset of dimensions (GroupedAxis)
+      ==> mean, sum, cumsum and so on applicable on any subset of dimensions
+    * support axis-based weights as user-defined array or function on axis values 
+      ==> mean/var/std can be weighted
+    * natural netCDF I/O  via netCDF4 python module (requires HDF5, netCDF4)
+
+Yet simpler with more control left to user (most attributes are non-protected, 
+e.g. `values` can be overwritten), and organized around a small number of 
+classes and methods:
+
+    * Dimarray			: main data structure (see alias `array`)
+    * Dataset		    	: ordered dictionary of Dimarray objects
+    * read, write, summary      : netCDF I/O (Dimarray and Dataset methods)
+    * Axis, Axes, GroupedAxis   : axis and indexing (under the hood)
+
+And for things pandas does better (low-dimensional data analysis, `groupby`, 
+I/O formats, etc...), just export via to_pandas() method (up to 4-D) (only
+if pandas is installed of course - otherwise dimarray does not rely on pandas)
+
 
 Get started
 -----------
