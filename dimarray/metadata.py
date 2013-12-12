@@ -148,38 +148,11 @@ class Metadata(object):
     #
     # add a new stamp to "stamp" list via json 
     #
-    def _metadata_append_stamp(self, stamp):
+    def _metadata_stamp(self, stamp=None):
 	""" append a new transform or operation stamp to metadata
 	"""
-	append_stamp(self._metadata, stamp, inplace=True)
-
-    #
-    # update metadata after an axis transform
-    #
-    def _metadata_update_transform(self, other, transform, axis):
-	""" 
-	other: Metadata instance
-	transform: transformation name
-	axis	: axis name
-	"""
-	# first copy all other metadata if applicable
-	if self._metadata_transform:
-	    self._metadata = other._metadata.copy() # this includes "stamp"
-
-	# new stamp
-	ax = other.axes[axis]
-	d = dict(transform=transform, axis=ax.name, start=ax.values[0], end=ax.values[-1])
-	stamp = "{transform}({axis}={start}:{end})".format(**d)
-
-	self._metadata_append_stamp(stamp)
-
-    #
-    # update metadata after an operation
-    #
-    def _metadata_update_operation(self, o1, other, op):
-	"""
-	"""
-	return # later (units.py module)
+	if stamp:
+	    append_stamp(self._metadata, stamp, inplace=True)
 
 def append_stamp(metadata, stamp, inplace=False):
     """ append a new transform or operation stamp to metadata

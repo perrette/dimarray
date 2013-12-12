@@ -188,6 +188,9 @@ class GroupedAxis(Axis):
 	last = tuple(ax.values[-1] for ax in self.axes)
 	return "{} ({}): {} to {}".format(self.name, self.size, first, last)
 
+    def __str__(self):
+	return ",".join([str(ax) for ax in self.axes])
+
 
 def _flatten(*list_of_arrays):
     """ flatten a list of arrays ax1, ax2, ... to  a list of tuples [(ax1[0], ax2[0], ax3[]..), (ax1[0], ax2[0], ax3[1]..), ...]

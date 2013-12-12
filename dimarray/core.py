@@ -6,7 +6,7 @@ import copy
 
 #import plotting
 
-from metadata import Metadata, append_stamp
+from metadata import Metadata
 from axes import Axis, Axes, GroupedAxis
 from tools import pandas_obj
 import transform  # numpy axis transformation, interpolation
@@ -308,7 +308,6 @@ a.units = "myunits"
 
 	# if resulting dimension has reduced, remove the corresponding axis
 	axes = copy.copy(self.axes)
-	metadata = self._metadata.copy()
 
 	# check for collapsed axis
 	collapsed = not isinstance(newaxis, Axis)
@@ -327,15 +326,18 @@ a.units = "myunits"
 	if collapsed:
 	    axes.remove(ax)
 	    stamp = "{}={}".format(ax.name, newaxis)
-	    append_stamp(metadata, stamp, inplace=True)
 
 	# Otherwise just update the axis
 	else:
 	    axes[axis_id] = newaxis
+	    stamp = None
 
 	# If result is a numpy array, make it a Dimarray
 	if isinstance(newval, np.ndarray):
-	    result = self._constructor(newval, axes, **metadata)
+	    result = self._constructor(newval, axes, **self._metadata)
+
+	    # append stamp
+	    if stamp: result._metadata_stamp(stamp)
 
 	# otherwise, return scalar
 	else:
@@ -530,22 +532,11 @@ a.units = "myunits"
 	else:
 	    newaxes = [ax for ax in self.axes if ax.name != axis_nm]
 
-	obj = self._constructor(result, newaxes)
+	obj = self._constructor(result, newaxes, **self._metadata)
 
-	# add metadata back in
-
-	# speed up GroupedAxis
-	def repr_ax(axis):
-	    if isinstance(axis, GroupedAxis):
-		group = axis
-		return ",".join([repr_ax(ax) for ax in group.axes])
-	    else:
-		#return "{nm}={start}:{end}".format(nm=axis.name, start=axis.values[0], end=axis.values[-1])
-		return str(axis)
-
-	stamp = "{transform}({axis})".format(transform=funcname, axis=repr_ax(axis_obj))
-
-	obj._metadata = append_stamp(self._metadata, stamp, inplace=False)
+	# add stamp
+	stamp = "{transform}({axis})".format(transform=funcname, axis=str(axis_obj))
+	obj._metadata_stamp(stamp)
 
 	return obj
 
