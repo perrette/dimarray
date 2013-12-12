@@ -2,6 +2,7 @@
 """
 import numpy as np
 import copy
+#import json
 
 #import plotting
 
@@ -472,9 +473,7 @@ a.units = "myunits"
 
 	    # otherwise convert to MaskedArray if needed
 	    else:
-		nans = np.isnan(values)
-		if np.any(nans):
-		    values = np.ma.array(values, mask=nans)
+		values = self.to_MaskedArray()
 
 	# Get axis name and idx
 	if axis is not None:
@@ -482,8 +481,15 @@ a.units = "myunits"
 	    axis_obj = self.axes[axis]
 	    axis_nm = axis_obj.name
 
+	# get actual function
+	if type(funcname) is str:
+	    func = getattr(np.ma, funcname)
+	else:
+	    func = funcname
+
 	kwargs['axis'] = axis
-	result = getattr(values, funcname)(*args, **kwargs) 
+	#result = getattr(values, funcname)(*args, **kwargs) 
+	result = func(values, *args, **kwargs) 
 
 	# Special treatment for argmax and argmin: return the corresponding index
 	if funcname in ("argmax","argmin","nanargmax","nanargmin"):
@@ -498,7 +504,7 @@ a.units = "myunits"
 	# otherwise, fill NaNs back in
 	if np.ma.isMaskedArray(result):
 	    result = result.filled(np.nan)
-
+	
 	# New axes
 	# ...nothing change for cumulative functions
 	if funcname.startswith('cum'):
@@ -516,6 +522,11 @@ a.units = "myunits"
 
 	else:
 	    newaxes = [ax for ax in self.axes if ax.name != axis_nm]
+
+#	if funcname == "cumsum":
+#	    print values
+#	    1/0
+#
 
 	obj = self._constructor(result, newaxes)
 
@@ -682,20 +693,21 @@ a.units = "myunits"
 	if keep:
 	    dims = tuple(d for d in self.dims if d not in dims)
 
-	# First transpose the array so that the dimensions to collapse are at the front
-	newdims = dims + tuple(nm for nm in self.dims if nm not in dims)
-	b = self.transpose(newdims) # dimensions to factorize in the front
+	# Make sure the dimensions to collapse are in the first position: transpose if needed
+	if dims != self.dims[:len(dims)]:
+	    newdims = dims + tuple(nm for nm in self.dims if nm not in dims)
+	    b = self.transpose(newdims) # dimensions to factorize in the front
+	    return b.collapse(dims)
 
 	# Then collapse the first len(dims) dimensions in one new axis
-
 	n = len(dims) # number of dimensions to collapse
-	first_dim = np.prod(b.shape[:n])
+	first_dim = np.prod(self.shape[:n])
 
 	# Each element of the new first axis is a tuple (or a subarray of dimension n)
-	axis_values = _expand(*[ax.values for ax in b.axes[:n]])
+	axis_values = _flatten(*[ax.values for ax in self.axes[:n]])
 
 	# Combine the weights as a product of the individual axis weights
-	axis_weights= _expand(*[ax.get_weights() for ax in b.axes[:n]]).prod(axis=1)
+	axis_weights= _flatten(*[ax.get_weights() for ax in self.axes[:n]]).prod(axis=1)
 
 	if np.all(axis_weights == 1):
 	    axis_weights = None
@@ -703,21 +715,39 @@ a.units = "myunits"
 	#assert first_dim == np.size(axis_values), "problem when reshaping: {} and {}".format(first_dim,np.size(axis_values))
 
 	# Define the new axis
-	first_axis = Axis(axis_values, name=dims, weights=axis_weights) 
+	#newname = json.dumps(dims) # new name: string representation of the tuple
+	newname = dims
+	first_axis = Axis(axis_values, name=newname, weights=axis_weights) 
 
 	# Reshape the actual array values
-	newshape = (first_dim,) + b.shape[n:]
-	newvalues = b.values.reshape(newshape)
+	newshape = (first_dim,) + self.shape[n:]
+	newvalues = self.values.reshape(newshape)
 
 	# Define the new array
-	new = self._constructor(newvalues, [first_axis,]+b.axes[n:], **b._metadata)
+	new = self._constructor(newvalues, [first_axis,]+self.axes[n:], **self._metadata)
 
 	return new
 
-    def _reexpand(self, *dims):
-	""" opposite from collapse
+    def _expand(self, axis=0):
+	""" opposite from collapse (appart from ordering)
 	"""
-	pass
+	ax = self.axes[axis]    # axis to expand
+
+	assert ax.values.ndim == 2, "can only expand axes made of tuples"
+
+	dim = ax.name	     # its name  (same as axis if axis is a str)
+	ax_id = self.dims.index(dim) # its index (same as axis if axis is an integer)
+	#dims = json.loads(dim)	# expanded dimensions
+	dims = dim
+	expanded_axes = [Axis(np.unique(ax.values[:,i]), nm) for i, nm in enumerate(dims)]
+	expanded_shape = [ax.size for ax in expanded_axes]
+
+	newshape = self.shape[:ax_id] + tuple(expanded_shape) + self.shape[ax_id+1:]
+	newvalues = self.values.reshape(newshape)
+	newaxes = self.axes[:ax_id] + expanded_axes + self.axes[ax_id+1:]
+
+	return self._constructor(newvalues, newaxes, **self._metadata)
+
 
     def squeeze(self, axis=None):
 	""" Analogous to numpy, but also allows axis name
@@ -981,6 +1011,14 @@ a.units = "myunits"
     #
     # export to other data types
     #
+    def to_MaskedArray(self):
+	nans = np.isnan(self.values)
+	if np.any(nans):
+	    mask = nans
+	else:
+	    mask = False
+	values = np.ma.array(self.values, mask=mask)
+	return values
 
     def to_list(self):
 	return [self[k] for k in self]
@@ -1009,7 +1047,7 @@ a.units = "myunits"
 	""" return the equivalent pandas object
 	"""
 	import la
-	a = la.larry(self.values, [ax.values for ax in self.axes])
+	a = la.larry(self.values, [list(ax.values) for ax in self.axes])
 	print "warning: dimension names have not been passed to larry"
 	return a
 
@@ -1188,12 +1226,17 @@ def _ndindex(indices, axis_id):
     """
     return (slice(None),)*axis_id + np.index_exp[indices]
 
-def _expand(*list_of_arrays):
-    """ Expand a list of arrays ax1, ax2, ... to  a list of tuples [(ax1[0], ax2[0], ax3[]..), (ax1[0], ax2[0], ax3[1]..), ...]
+def _flatten(*list_of_arrays):
+    """ flatten a list of arrays ax1, ax2, ... to  a list of tuples [(ax1[0], ax2[0], ax3[]..), (ax1[0], ax2[0], ax3[1]..), ...]
     """
     kwargs = dict(indexing="ij")
     grd = np.meshgrid(*list_of_arrays, **kwargs)
-    newaxis = np.array(zip(*[g.ravel() for g in grd]))
-    assert newaxis.shape[1] == len(list_of_arrays), "pb when reshaping: {} and {}".format(newaxis.shape, len(list_of_arrays))
-    assert newaxis.shape[0] == np.prod([x.size for x in list_of_arrays]), "pb when reshaping: {} and {}".format(newaxis.shape, np.prod([x.size for x in list_of_arrays]))
-    return newaxis
+    array_of_tuples = np.array(zip(*[g.ravel() for g in grd]))
+    assert array_of_tuples.shape[1] == len(list_of_arrays), "pb when reshaping: {} and {}".format(array_of_tuples.shape, len(list_of_arrays))
+    assert array_of_tuples.shape[0] == np.prod([x.size for x in list_of_arrays]), "pb when reshaping: {} and {}".format(array_of_tuples.shape, np.prod([x.size for x in list_of_arrays]))
+    return array_of_tuples
+
+def _expand(array_of_tuples):
+    """ opposite of _flatten
+    """
+    return list_of_arrays

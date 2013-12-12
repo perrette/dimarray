@@ -215,6 +215,8 @@ class Axes(list):
     ==> ambiguous determination of dimensions order via keyword arguments only
     ==> explictly supply `dims=` or use from_list() or from_tuples() methods" """
 	    argsort = [current_shape.index(k) for k in shape]
+
+	    assert len(argsort) == len(axes), "keyword arguments do not match shape !"
 	    axes = axes[argsort]
 
 	    current_shape = tuple([ax.size for ax in axes])
@@ -228,7 +230,7 @@ class Axes(list):
     def __getitem__(self, item):
 	""" get an axis by integer or name
 	"""
-	if type(item) is str:
+	if type(item) in [str, unicode, tuple]:
 	    item = self.get_idx(item)
 
 	if np.iterable(item):
