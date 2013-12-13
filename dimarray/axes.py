@@ -45,7 +45,7 @@ class Axis(Metadata):
 	    name = values.name # e.g pandas axis
 
 	# if string, make it an object-typed array
-	if isinstance(type(values[0]), str) or type(values[0]) is np.str_:
+	if type(values[0]) in (str, unicode, np.str_, np.unicode_) :
 	    values = np.array(values, dtype=object) # make sure data is stored with object type
 
 	# otherwise, just a normal array

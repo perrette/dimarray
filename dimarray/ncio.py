@@ -10,7 +10,7 @@ from axes import Axis, Axes
 from core import Dimarray as Dimarray
 from core import _ndindex
 
-__all__ = ['read',"summary","write"]
+__all__ = ['read',"summary"]
 
 #
 # wrapper functions which will make it to the api

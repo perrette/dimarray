@@ -5,9 +5,10 @@ from core import Dimarray, array
 from collect import Dataset
 
 try:
-    from ncio import read, write, summary
+    from ncio import read, summary
     _ncio = True
 except:
+    raise
     _ncio = False
     print "ncio not imported"
     pass

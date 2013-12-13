@@ -48,6 +48,7 @@ Get started
 
 Define some dummy data representing 3 items "a", "b" and "c" over 5 years:
 
+>>> np.random.seed(0) # just for the reproductivity of the examples below
 >>> values = np.random.randn(3,5)
 
 Defining a Dimarray from there is pretty straightforward
@@ -56,20 +57,20 @@ Defining a Dimarray from there is pretty straightforward
 >>> a = Dimarray(values, 'items', 'time')  # axis values assumed [0, 1, 2,...]
 >>> a = Dimarray(values, list("abc"), np.arange(1950,1955)) # "x0","x1" 
 >>> a = Dimarray(values, ('items',list("abc")), ('time',np.arange(1950,1955)))  # all labels
->>> a
+>>> a    
 dimarray: 15 non-null elements (0 null)
 dimensions: 'items', 'time'
 0 / items (3): a to c
 1 / time (5): 1950 to 1954
-array([[ 1.1428796 ,  0.41841267,  0.85425341,  0.27862345,  2.26674182],
-       [-1.34229184,  0.03654742, -0.6399767 ,  0.27653369,  0.62407923],
-       [ 0.94191144,  1.21903161,  0.95405128,  1.81493798, -0.58801474]])
+array([[ 1.76405235,  0.40015721,  0.97873798,  2.2408932 ,  1.86755799],
+       [-0.97727788,  0.95008842, -0.15135721, -0.10321885,  0.4105985 ],
+       [ 0.14404357,  1.45427351,  0.76103773,  0.12167502,  0.44386323]])
 
 For convenience, it is also possible to define an array via keyword arguments
 (but note this is unambiguous only when axes have different size, see tutorial)
 
->>> b = Dimarray.from_kwds(values, items=list("abc"), time=np.arange(1950,1955))
->>> a == b     
+>>> b = Dimarray.from_kw(values, items=list("abc"), time=np.arange(1950,1955))
+>>> np.all(a == b)
 True
 
 Can access underlying numpy array via `values` attributes
@@ -80,7 +81,9 @@ array(...)
 And the axes, too:
 
 >>> a.time
+array([1950, 1951, 1952, 1953, 1954])
 >>> a.items
+array(['a', 'b', 'c'], dtype=object)
 >>> np.all( a.time == a.axes["time"].values )
 True
 
@@ -95,7 +98,7 @@ True
 
 Arithmetics with reshaping and axis alignment
 
->>> ts = da.array(np.random.randn(10), time=np.arange(1950, 1955)) # alias for Dimarray.from_kwds
+>>> ts = da.array(np.random.randn(10), time=np.arange(1950, 1955)) # alias for Dimarray.from_kw
 >>> a * ts   # not commutative !  # doctest: +ELLIPSIS
 dimarray: 15 non-null elements (0 null)
 dimensions: 'items', 'time'
@@ -128,12 +131,20 @@ NetCDF I/O
 >>> a.write("test.nc","myvar") # write to netCDF4
 >>> da.summary("test.nc") # check the content
 >>> dataset = da.read("test.nc") # read in a Dataset class
+>>> dataset["myvar"]
+>>> a
 >>> dataset["myvar"] == a
 True
 
 Easy interfacing with pandas
 
 >>> a.to_pandas()
->>> a.to_pandas().plot()
+time       1950      1951      1952      1953      1954
+items                                                  
+a      1.764052  0.400157  0.978738  2.240893  1.867558
+b     -0.977278  0.950088 -0.151357 -0.103219  0.410599
+c      0.144044  1.454274  0.761038  0.121675  0.443863
 
+>>> a.to_pandas().plot()  # doctest: +ELLIPSIS
+...
 More complete documentation will follow...
