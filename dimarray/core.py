@@ -2,7 +2,7 @@
 """
 import numpy as np
 import copy
-from collection import OrderedDict
+from collections import OrderedDict
 #import json
 
 #import plotting
@@ -46,19 +46,19 @@ class Dimarray(Metadata):
 	options:
 
 	    - dtype, copy: passed to np.array()
-	    - _slicing: default slicing method "numpy", "nearest", "exact" (mostly for internal use)
+	    - _indexing: see xs_axis
 
 	key-word arguments:
 	    - metadata
 	"""
 	# filter **kwargs and keep metadata
-	default = dict(dtype=None, copy=False, _slicing=None)
+	default = dict(dtype=None, copy=False, _indexing="axis")
 	for k in default:
 	    if k in kwargs:
 		default[k] = kwargs.pop(k)
 
 	metadata = kwargs
-	_slicing= default.pop('_slicing')
+	_indexing = default.pop('_indexing')
 
 	#
 	# array values
@@ -114,7 +114,7 @@ class Dimarray(Metadata):
 	self.axes = axes
 
 	# options
-	self._slicing = _slicing
+	self._indexing = _indexing
 
 	#
 	# metadata (see Metadata type in metadata.py)
@@ -215,9 +215,9 @@ a.units = "myunits"
 	inplace: modify attributes in-place, return None 
 	otherwise first make a copy, and return new obj
 
-	a.set(_slicing="numpy")[:30]
-	a.set(_slicing="exact")[1971.42]
-	a.set(_slicing="nearest")[1971]
+	a.set(_indexing="numpy")[:30]
+	a.set(_indexing="exact")[1971.42]
+	a.set(_indexing="nearest")[1971]
 	a.set(name="myname", inplace=True) # modify attributes inplace
 	"""
 	if inplace: 
@@ -280,13 +280,18 @@ a.units = "myunits"
 
 	return self.xs(**ix_nd)
 
-    def xs_axis(self, ix, axis=0, method=None, keepdims=False, **kwargs):
+    def xs_axis(self, ix, axis=0, method="index", keepdims=False, **kwargs):
 	""" cross-section or slice along a single axis
 
 	input:
-	    - ix    : index as axis value or integer position 
-	    - axis  : int or str
-	    - method: None (default), "nearest", "exact", "numpy"
+	    - ix	: index as axis value or integer position 
+	    - axis  	: int or str
+	    - method    : indexing method, default to self.indexing
+			  - "numpy": numpy-like integer 
+		          - "index": look for exact match similarly to list.index
+			  - "nearest": (regular Axis only) nearest match, bound checking
+			  - "interp": (regular Axis only) interpolate
+
 	    - **kwargs: additional parameters passed to self.axes relative to slicing behaviour
 
 	output:
@@ -306,7 +311,7 @@ a.units = "myunits"
 
 	# get integer index/slice for axis valued index/slice
 	if method is None:
-	    method = self._slicing # slicing method
+	    method = self.indexing # slicing method
 
 	# numpy-like indexing, do nothing
 	if method == "numpy":
@@ -398,7 +403,7 @@ a.units = "myunits"
 	""" pandas-like: exact access to the index
 	"""
 	obj = self.copy(shallow=True)
-	obj._slicing = 'exact'
+	obj.indexing = 'exact'
 	return obj
 
     @property
@@ -406,7 +411,7 @@ a.units = "myunits"
 	""" integer index-access
 	"""
 	obj = self.copy(shallow=True)
-	obj._slicing = 'numpy'
+	obj.indexing = 'numpy'
 	return obj
 
     @property
@@ -1057,19 +1062,16 @@ a.units = "myunits"
     #
     # REINDEXING 
     #
- 
-    def reindex_axis(self, newaxis, axis=0, method='nearest'):
+    def reindex_axis(self, newaxis, axis=0, method='index'):
 	""" reindex an array along an axis
 
 	Input:
 	    - newaxis: array or list on the new axis
 	    - axis   : axis number or name
-	    - method : "nearest", "exact", "interp"
+	    - method : "index", "nearest", "interp" (see xs_axis)
 
 	Output:
 	    - Dimarray
-
-	TO DO: optimize?
 	"""
 	if axis is None:
 	    assert isinstance(newaxis, Axis), "provide name or an Axis object"

@@ -11,8 +11,8 @@ def _check_args(args=(), **kwargs):
     """ check input arguments for a Dataset object, return as list
     """
     # Check everything is a Dimarray
-    variables = args+kwargs.values():
-	for v in variables:
+    variables = args+kwargs.values()
+    for v in variables:
 	if not isinstance(v, Dimarray):
 	    raise TypeError("A Dataset can only store Dimarray instances")
 

@@ -7,6 +7,16 @@ from metadata import Metadata
 
 __all__ = ["Axis","Axes"]
 
+def _is_regular(values):
+    if values.dtype is np.dtype('O'): 
+	regular = False
+
+    else:
+	diff = np.diff(values)
+	step = diff[0]
+	regular = np.all(diff==step) and step > 0
+
+    return regular
 
 def _convert_dtype(dtype):
     """ convert numpy type in a python type
@@ -57,6 +67,7 @@ class Axis(Metadata):
 	self.values = values 
 	self.name = name 
 	self.weights = weights 
+	self.regular = None # regular axis
 
     def get_weights(self, weights=None):
 	""" return axis weights as a Dimarray
@@ -86,6 +97,16 @@ class Axis(Metadata):
 	ax = Axis(self.values, name=self.name)
 
 	return Dimarray(weights, ax)
+
+    def is_regular(self):
+	""" True if regular axis, meaning made of `int` or `float`, 
+	with regularly increasing values
+	"""
+	if self.regular is not None: # regular axis
+	    return self.regular
+
+	self.regular = _is_regular(values)
+	return self.regular
 
     def __getitem__(self, item):
 	""" access values elements & return an axis object
@@ -150,6 +171,7 @@ class GroupedAxis(Axis):
 
 	self.axes = Axes(axes)
 	self.name = ",".join([ax.name for ax in self.axes])
+	self.regular = False
 
     @property
     def values(self):
@@ -356,11 +378,8 @@ class Locator(object):
     where `values` represent the axis values
     and `method` is one of:
 
-    "exact"  : exact matching of the value to locate in `values`
+    "index"  : (default) exact matching of the value to locate in `values`
     "nearest": nearest match (with bound checking)
-
-    By default `method` is assumed to be "exact" for axes made of `int`
-    and `str`, and "nearest" for `float`.
 
     A locator instance is generated from within the Axis object, via 
     its properties loc (valued-based indexing) and iloc (integer-based)
@@ -393,12 +412,12 @@ class Locator(object):
     >>> loc = Locator(values)   
     >>> loc(1951) 
     1
-    >>> loc(1951.4) # also works in nearest approx
-    1
-    >>> loc(1951.4, method="exact")     # doctest: +ELLIPSIS
+    >>> loc(1951.4)     # doctest: +ELLIPSIS
     Exception raised:
 	...
 	ValueError: 1951.4000000000001 is not in list
+    >>> loc(1951.4, method="nearest")   # also works in nearest approx
+    1
     >>> loc([1960, 1980, 1999])		# a list if also fine 
     [10, 30, 49]
     >>> loc((1960,1970))		# or a tuple/slice (latest index included)
@@ -423,8 +442,11 @@ class Locator(object):
     def __init__(self, values, method=None):
 	"""
 	values	: string list or numpy array
+	regular	: is the axis regular?
 
-	method	: "index" (same as "exact") or "nearest" for float
+	method	: "index" (default)
+		  "nearest" (regular axis only)
+		  "interp" (regular axis only)
 
 	NOTE: for str or int, "index" is always used
 	"""
@@ -433,12 +455,6 @@ class Locator(object):
 	# default method: "nearest" (for float)
 	if method is None:
 	    method = "index"
-	    #method = "nearest"
-
-	## but set to "index" if str or int valued axis
-	#dtype = type(values[0])
-	#if dtype in [str, int]: 
-	#    method = "index"
 
 	self.method = method #  default method
 
@@ -493,17 +509,27 @@ class Locator(object):
 	#val = type(self.values[0])(val) # convert to the same type first
 	return list(self.values).index(val)
 
-    exact = index # alias for index, by opposition to nearest
-
-    def nearest(self, val, check_bounds = True):
+    def nearest(self, val, check_bounds=False):
 	""" return nearest index with bound checking
 	"""
 	if check_bounds:
-	    dx = self.step
+	    dx = self.values[1] - self.values[0]
 	    mi, ma = np.min(self.values), np.max(self.values)
 	    if val < mi - dx/2. or val > ma + dx/2.:
 		raise ValueError("%f out of bounds ! (min: %f, max: %f, step: %f)" % (val, mi, ma, dx))
 	return np.argmin(np.abs(val-self.values))
+
+    def interp(self, val, **check_bounds):
+	""" return fractional index for interpolation
+	"""
+	assert _is_regular(self.values), "interp method only makes sense for regular axes !"
+	# index of nearest neighbour
+	i = self.nearest(val, **check_bounds)
+	# and corresponding value
+	xi = self.values[i]
+	# axis step
+	dx = float(self.values[1] - self.values[0])
+	return i + (val-xi)/dx
 
     #
     # wrapper for single value
@@ -564,29 +590,8 @@ class Locator(object):
 	return slice(start, stop, step)
 
     @property
-    def step(self):
-	return self.values[1] - self.values[0]
-
-    @property
     def size(self):
 	return np.size(self.values)
-
-#def _common_axes(axes1, axes2):
-#    """ Align axes which have a dimension in common
-#
-#    input:
-#	axes1, axes2: Axes objects
-#    """
-#    # common list of dimensions
-#    dims1 =  [ax.name for ax in axes1] 
-#    dims =  [ax.name for ax in axes2 if ax.name in dims1] 
-#
-#    newaxes = []
-#    for name in dims:
-#	newaxis = _common_axis(axes1[name], axes2[name])
-#	newaxes.append(newaxis)
-#
-#    return Axes(newaxes)
 
 def test():
     """ test module
