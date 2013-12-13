@@ -288,7 +288,7 @@ class Axes(list):
 	    argsort = [current_shape.index(k) for k in shape]
 
 	    assert len(argsort) == len(axes), "keyword arguments do not match shape !"
-	    axes = axes[argsort]
+	    axes = [axes[i] for i in argsort]
 
 	    current_shape = tuple([ax.size for ax in axes])
 	    assert current_shape == shape, "dimensions mismatch (axes shape: {} != values shape: {}".format(current_shape, shape)
@@ -307,8 +307,9 @@ class Axes(list):
 	if type(item) in [str, unicode, tuple]:
 	    item = self.get_idx(item)
 
-	if np.iterable(item):
-	    return Axes([self[i] for i in item])
+	# confusing
+	#if np.iterable(item):
+	#    return Axes([self[i] for i in item])
 
 	return super(Axes,self).__getitem__(item)
 	#return super(Axes,self)[item]

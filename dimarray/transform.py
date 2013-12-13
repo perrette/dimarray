@@ -37,7 +37,7 @@ class NumpyDesc(object):
 # Define weighted mean/std/var
 #
 
-def weighted_mean(obj, axis=0, skipna=True, weights='axis', out=None):
+def weighted_mean(obj, axis=None, skipna=True, weights='axis'):
     """ mean over an axis or group of axes, possibly weighted 
 
     parameters:
@@ -58,14 +58,14 @@ def weighted_mean(obj, axis=0, skipna=True, weights='axis', out=None):
 
     # if no weights, just apply numpy's mean
     if not weights:
-	return obj.apply("mean", axis=axis, skipna=skipna, out=out)
+	return obj.apply("mean", axis=axis, skipna=skipna)
 
     # weighted mean
-    sum_values = (obj*weights).apply("sum", axis=axis, skipna=skipna, out=out)
-    sum_weights = weights.apply("sum", axis=axis, skipna=skipna, out=out)
+    sum_values = (obj*weights).apply("sum", axis=axis, skipna=skipna)
+    sum_weights = weights.apply("sum", axis=axis, skipna=skipna)
     return sum_values / sum_weights
 
-def weighted_var(obj, axis=0, skipna=True, weights="axis", ddof=0, out=None):
+def weighted_var(obj, axis=None, skipna=True, weights="axis", ddof=0):
     """ standard deviation over an axis or group of axes, possibly weighted 
 
     parameters:
@@ -89,12 +89,12 @@ def weighted_var(obj, axis=0, skipna=True, weights="axis", ddof=0, out=None):
 
     # if no weights, just apply numpy's var
     if not weights:
-	return obj.apply("var", axis=axis, skipna=skipna, ddof=ddof, out=out)
+	return obj.apply("var", axis=axis, skipna=skipna, ddof=ddof)
 
     # weighted mean
-    mean = obj.mean(axis=axis, skipna=skipna, weights=weights, out=out)
+    mean = obj.mean(axis=axis, skipna=skipna, weights=weights)
     dev = (obj-mean)**2
-    return dev.mean(axis=axis, skipna=skipna, weights=weights, out=mean)
+    return dev.mean(axis=axis, skipna=skipna, weights=weights)
 
 def weighted_std(obj, *args, **kwargs):
     """ alias for a.var()**0.5: see `var` method for doc

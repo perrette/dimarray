@@ -450,7 +450,7 @@ a.units = "myunits"
     #
     # NUMPY TRANSFORMS
     #
-    def apply(self, funcname, axis=0, skipna=True, args=(), **kwargs):
+    def apply(self, funcname, axis=None, skipna=True, args=(), **kwargs):
 	""" apply along-axis numpy method
 
 	parameters:
@@ -493,10 +493,12 @@ a.units = "myunits"
 	    # replace with the optimized numpy function if existing
 	    if funcname in ("sum","max","min","argmin","argmax"):
 		funcname = "nan"+funcname
+		module = np
 
 	    # otherwise convert to MaskedArray if needed
 	    else:
 		values = self.to_MaskedArray()
+		module = np.ma
 
 	# Get axis name and idx
 	if axis is not None:
@@ -506,7 +508,7 @@ a.units = "myunits"
 
 	# get actual function
 	if type(funcname) is str:
-	    func = getattr(np.ma, funcname)
+	    func = getattr(module, funcname)
 	else:
 	    func = funcname
 
@@ -571,9 +573,12 @@ a.units = "myunits"
     all = transform.NumpyDesc("apply", "all")
     any = transform.NumpyDesc("apply", "any")
 
-    #mean = transform.NumpyDesc("apply", "mean")
-    #std = transform.NumpyDesc("apply", "std")
-    #var = transform.NumpyDesc("apply", "var")
+    #
+    # Use weighted mean/std/var by default
+    #
+    _mean = transform.NumpyDesc("apply", "mean")
+    _std = transform.NumpyDesc("apply", "std")
+    _var = transform.NumpyDesc("apply", "var")
     mean = transform.weighted_mean
     std = transform.weighted_std
     var = transform.weighted_var
@@ -597,6 +602,10 @@ a.units = "myunits"
 
 	if axis is None:
 	    dims = self.dims
+
+	elif type(axis) is tuple:
+	    dims = axis
+
 	else:
 	    dims = (axis,)
 
@@ -606,17 +615,16 @@ a.units = "myunits"
 	# Create weights from the axes if not provided
 	if weights is None:
 
-	    all_weights = []
+	    weights = 1
 	    for axis in dims:
 		ax = self.axes[axis]
 		if ax.weights is None: continue
-		all_weights.append(ax.get_weights().reshape(dims).values)
+		weights = ax.get_weights().reshape(dims) * weights
 
-	    if len(all_weights) == 0:
+	    if weights == 1:
 		return None
-
-	    weights = np.prod(all_weights, axis=0)  # multiply the weights
-
+	    else:
+		weights = weights.values
 
 	# Now create a dimarray and make it full size
 	# ...already full-size
@@ -628,7 +636,15 @@ a.units = "myunits"
 	    weights = Dimarray(weights, *axes).expand(self.dims)
 
 	else:
-	    raise ValueError("weight dimensions not conform")
+	    try:
+		weights = weights + np.zeros_like(self.values)
+
+	    except:
+		raise ValueError("weight dimensions are not conform")
+	    weights = Dimarray(weights, *self.axes)
+
+	#else:
+	#    raise ValueError("weight dimensions not conform")
 
 	# fill NaNs in when necessary
 	if fill_nans:
@@ -682,11 +698,15 @@ a.units = "myunits"
 
 
     #
-    # RESHAPE THE ARRAY
+    # METHODS TO PLAY WITH DIMENSIONS
     #
-    def transpose(self, axes=None):
-	""" Analogous to numpy, but also allows axis names
+    
+    # Transpose: permute dimensions
 
+    def transpose(self, axes=None):
+	""" Permute dimensions
+	
+	Analogous to numpy, but also allows axis names
 	>>> a = da.array(np.zeros((5,6)), lon=np.arange(6), lat=np.arange(5))
 	>>> a          # doctest: +ELLIPSIS
 	dimensions(5, 6): lat, lon
@@ -713,6 +733,209 @@ a.units = "myunits"
 	result = self.values.transpose(axes)
 	newaxes = [self.axes[i] for i in axes]
 	return self._constructor(result, newaxes)
+
+    @property
+    def T(self):
+	return self.transpose()
+
+    #
+    # Remove / add singleton axis
+    #
+    def squeeze(self, axis=None):
+	""" Analogous to numpy, but also allows axis name
+
+	>>> b = a.take([0], axis='lat')
+	>>> b
+	dimensions(1, 6): lat, lon
+	array([[ 0.,  1.,  2.,  3.,  4.,  5.]])
+	>>> b.squeeze()
+	dimensions(6,): lon
+	array([ 0.,  1.,  2.,  3.,  4.,  5.])
+	"""
+	if axis is None:
+	    newaxes = [ax for ax in self.axes if ax.size != 1]
+	    res = self.values.squeeze()
+
+	else:
+	    idx, name = self.get_axis_info(axis) 
+	    res = self.values.squeeze(idx)
+	    newaxes = [ax for ax in self.axes if ax.name != name or ax.size != 1] 
+
+	return self.__constructor(res, newaxes, **self._metadata)
+
+    def newaxis(self, dim):
+	""" add a new axis, ready to broadcast
+	"""
+	assert type(dim) is str, "dim must be string"
+	if dim in self.dims:
+	    raise ValueError("dimension already present: "+dim)
+
+	values = self.values[np.newaxis] # newaxis is None 
+	axis = Axis([None], dim) # create new dummy axis
+	axes = self.axes.copy()
+	axes.insert(0, axis)
+	return self._constructor(values, axes, **self._metadata)
+
+    #
+    # Reshape by adding/removing as many singleton axes as needed to match prescribed dimensions
+    #
+    def reshape(self, newdims):
+	""" reshape an array according to a new set of dimensions
+
+	Note: involves transposing the array
+	"""
+	# first append missing dimensions
+	o = self
+	for dim in newdims:
+	    if dim not in self.dims:
+		o = o.newaxis(dim)
+
+	for dim in o.dims:
+	    if dim not in newdims:
+		o = o.squeeze(dim)
+
+	# now give it the right order
+	return o.transpose(newdims)
+
+    #
+    # Add an axis and repeat the array 
+    #
+    def expand_axis(self, values, axis=None):
+	""" expand the array along axis: analogous to numpy's repeat
+
+	input:
+	    values : integer (size of new axis) or ndarray (values  of new axis) or Axis object
+	    axis   : int or str
+		     axis position is ok to expand existing axis
+		     axis name is required to expand the whole array, unless values is an Axis object
+
+	output:
+	    Dimarray
+
+	Note: if not existing, the new axis is pre-pended
+
+	Examples:
+	--------
+	>>> a = da.Dimarray.from_kw(arange(2), lon=[30., 40.])
+	>>> a.expand_axis(np.arange(1950,1955), axis="time")  # doctest: +ELLIPSIS
+	dimarray: 10 non-null elements (0 null)
+	dimensions: 'time', 'lon'
+	0 / time (5): 1950 to 1954
+	1 / lon (2): 30.0 to 40.0
+	array([[0, 1],
+	       [0, 1],
+	       [0, 1],
+	       [0, 1],
+	       [0, 1]])
+	"""
+	# default axis values: 0, 1, 2, ...
+	if type(values) is int:
+	    values = np.arange(values)
+
+	# Create an axis object
+	if not isinstance(values, Axis):
+
+	    # find axis name from its position, if already existing
+	    if type(axis) is int:
+		assert axis < self.ndim, "provide new dimensions as strings !"
+		old_axis = self.axes[axis]
+		name = old_axis.name
+
+	    elif type(axis) is str:
+		name = axis
+
+	    else:
+		raise TypeError("`axis=` parameter to expand_axis must be integer or string")
+
+	    newaxis = Axis(values, name)
+
+	else:
+	    newaxis = values
+
+	# pre-pend a dimension if needed, and copy
+	if newaxis.name not in self.dims:
+	    obj = self.newaxis(newaxis.name)
+
+	else:
+	    obj = self.copy()
+
+	# Expand the axis !
+	idx = obj.dims.index(newaxis.name)
+
+	if obj.axes[idx].size > 1:
+	    if obj.axes[idx] == newaxis:
+		return obj  # do nothing
+	    else:
+		raise ValueError("cannot expand non-singleton dimensions")
+
+	# Update values and axes
+	obj.values = obj.values.repeat(newaxis.size, axis=idx)
+	obj.axes[idx] = newaxis
+
+	return obj
+
+    # alias to numpy's repeat method
+    repeat = expand_axis 
+
+    def expand(self, *newaxes, **kw_newaxes):
+	""" expand an array to other dimensions
+
+	A multi-dimensional version of expand_axis. Two possibilities:
+
+	*newaxes     : as variable list of Axis objects
+	**kw_newaxes : as keyword arguments 'name=values' (unordered)
+
+	Examples:
+	--------
+	Create some dummy data:
+	# ...create some dummy data:
+	>>> lon = np.linspace(10, 30, 2)
+	>>> lat = np.linspace(10, 50, 3)
+	>>> time = np.arange(1950,1955)
+	>>> ts = da.Dimarray.from_kw(np.arange(5), time=time)
+	>>> slab = da.Dimarray.from_kw(np.zeros((3,2)), lon=lon, lat=lat)  # lat x lon
+	>>> slab.axes  # doctest: +ELLIPSIS
+	dimensions: 'lon', 'lat', 'time'
+	0 / lat (3): 10.0 to 50.0
+	1 / lon (2): 10.0 to 30.0
+	2 / time (5): 1950 to 1954
+	...
+
+	# ...expand from variable list
+	>>> ts3D = ts.expand(*slab.axes) #  lat x lon x time
+	dimarray: 30 non-null elements (0 null)
+	dimensions: 'lon', 'lat', 'time'
+	0 / lat (3): 10.0 to 50.0
+	1 / lon (2): 10.0 to 30.0
+	2 / time (5): 1950 to 1954
+	array([[[0, 1, 2, 3, 4],
+		[0, 1, 2, 3, 4]],
+
+	       [[0, 1, 2, 3, 4],
+		[0, 1, 2, 3, 4]],
+
+	       [[0, 1, 2, 3, 4],
+		[0, 1, 2, 3, 4]]])
+
+	# ...expand from keyword arguments
+	>>> ts3D = ts.expand(lon=slab.lon, lat=slab.lat)  # doctest: +ELLIPSIS
+	...
+	dimensions: ...  
+	"""
+	obj = self
+
+	for newaxis in reversed(newaxes):
+	    obj = obj.expand_axis(newaxis)
+
+	for k in kw_newaxes:
+	    newaxis = Axis(kw_newaxes[k], k) # create a new axis
+	    obj = obj.expand_axis(newaxis)
+
+	return obj
+
+    #
+    # Group/ungroup subsets of axes to perform operations on partly flattened array
+    #
 
     def group(self, dims, keep=False, insert=None):
 	""" group (or flatten) a subset of dimensions
@@ -804,211 +1027,6 @@ a.units = "myunits"
 
 	return self._constructor(newvalues, newaxes, **self._metadata)
 
-
-    def squeeze(self, axis=None):
-	""" Analogous to numpy, but also allows axis name
-
-	>>> b = a.take([0], axis='lat')
-	>>> b
-	dimensions(1, 6): lat, lon
-	array([[ 0.,  1.,  2.,  3.,  4.,  5.]])
-	>>> b.squeeze()
-	dimensions(6,): lon
-	array([ 0.,  1.,  2.,  3.,  4.,  5.])
-	"""
-	if axis is None:
-	    axes = [ax for i, ax in enumerate(self.axes) if self.shape[i] > 1]
-	    res = self.values.squeeze()
-
-	else:
-	    axis = self.axes.get_idx(axis) 
-	    axes = self.axes.copy()
-	    if self.shape[axis] == 1:  # 0 is not removed by numpy...
-		axes.pop(axis)
-	    res = self.values.squeeze(axis)
-
-	return self.__constructor(res, axes, **self._metadata)
-
-    @property
-    def T(self):
-	return self.transpose()
-
-    #
-    # ADD A SINGLETON AXIS
-    #
-
-    def newaxis(self, dim):
-	""" add a new axis, ready to broadcast
-	"""
-	assert type(dim) is str, "dim must be string"
-	values = self.values[np.newaxis] # newaxis is None 
-	axis = Axis([None], dim) # create new dummy axis
-	axes = self.axes.copy()
-	axes.insert(0, axis)
-	return self._constructor(values, axes, **self._metadata)
-
-    #
-    # RESHAPE BY ADDING AS MANY SINGLETON AXES AS NEEDED TO MATCH PRESCRIBED DIMENSION
-    #
-
-    def reshape(self, newdims):
-	""" reshape an array according to a new set of dimensions
-
-	Note: involves transposing the array
-	"""
-	# first append missing dimensions
-	o = self
-	for dim in newdims:
-	    if dim not in self.dims:
-		o = o.newaxis(dim)
-
-	# now give it the right order
-	return o.transpose(newdims)
-
-    #
-    # REPEAT AN ARRAY TO CONFORM ANOTHER DIMENSION
-    #
-
-    def expand_axis(self, values, axis=None):
-	""" expand the array along axis: analogous to numpy's repeat
-
-	input:
-	    values : integer (size of new axis) or ndarray (values  of new axis) or Axis object
-	    axis   : int or str
-		     axis position is ok to expand existing axis
-		     axis name is required to expand the whole array, unless values is an Axis object
-
-	output:
-	    Dimarray
-
-	Note: if not existing, the new axis is pre-pended
-
-	Examples:
-	--------
-	>>> a = da.Dimarray.from_kw(arange(2), lon=[30., 40.])
-	>>> a.expand_axis(np.arange(1950,1955), axis="time")  # doctest: +ELLIPSIS
-	dimarray: 10 non-null elements (0 null)
-	dimensions: 'time', 'lon'
-	0 / time (5): 1950 to 1954
-	1 / lon (2): 30.0 to 40.0
-	array([[0, 1],
-	       [0, 1],
-	       [0, 1],
-	       [0, 1],
-	       [0, 1]])
-	"""
-	# default axis values: 0, 1, 2, ...
-	if type(values) is int:
-	    values = np.arange(values)
-
-	# Create an axis object
-	if not isinstance(values, Axis):
-
-	    # find axis name from its position, if already existing
-	    if type(axis) is int:
-		assert axis < self.ndim, "provide new dimensions as strings !"
-		old_axis = self.axes[axis]
-		name = old_axis.name
-
-	    elif type(axis) is str:
-		name = axis
-
-	    else:
-		raise TypeError("`axis=` parameter to expand_axis must be integer or string")
-
-	    newaxis = Axis(values, name)
-
-	else:
-	    newaxis = values
-
-	# pre-pend a dimension if needed, and copy
-	if newaxis.name not in self.dims:
-	    obj = self.newaxis(newaxis.name)
-
-	else:
-	    obj = self.copy()
-
-	# Expand the axis !
-	idx = obj.dims.index(newaxis.name)
-
-	if obj.axes[idx].size > 1:
-	    if obj.axes[idx] == newaxis:
-		return obj  # do nothing
-	    else:
-		raise ValueError("cannot expand non-singleton dimensions")
-
-	# Update values and axes
-	obj.values = obj.values.repeat(newaxis.size, axis=idx)
-	obj.axes[idx] = newaxis
-
-	return obj
-
-    def expand(self, *newaxes, **kw_newaxes):
-	""" expand an array to other dimensions
-
-	A multi-dimensional version of expand_axis. Two possibilities:
-
-	*newaxes     : as variable list of Axis objects
-	**kw_newaxes : as keyword arguments 'name=values' (unordered)
-
-	Examples:
-	--------
-	Create some dummy data:
-	# ...create some dummy data:
-	>>> lon = np.linspace(10, 30, 2)
-	>>> lat = np.linspace(10, 50, 3)
-	>>> time = np.arange(1950,1955)
-	>>> ts = da.Dimarray.from_kw(np.arange(5), time=time)
-	>>> slab = da.Dimarray.from_kw(np.zeros((3,2)), lon=lon, lat=lat)  # lat x lon
-
-	# ...expand from variable list
-	>>> ts3D = ts.expand(*slab.axes) #  lat x lon x time
-	dimarray: 30 non-null elements (0 null)
-	dimensions: 'lon', 'lat', 'time'
-	0 / lat (3): 10.0 to 50.0
-	1 / lon (2): 10.0 to 30.0
-	2 / time (5): 1950 to 1954
-	array([[[0, 1, 2, 3, 4],
-		[0, 1, 2, 3, 4]],
-
-	       [[0, 1, 2, 3, 4],
-		[0, 1, 2, 3, 4]],
-
-	       [[0, 1, 2, 3, 4],
-		[0, 1, 2, 3, 4]]])
-
-	# ...expand from keyword arguments
-	>>> ts3D = ts.expand(lon=slab.lon, lat=slab.lat)  # doctest: +ELLIPSIS
-	...  # random order !
-	"""
-	obj = self
-
-	for newaxis in reversed(newaxes):
-	    obj = obj.expand_axis(newaxis)
-
-	for k in kw_newaxes:
-	    newaxis = Axis(kw_newaxes[k], k) # create a new axis
-	    obj = obj.expand_axis(newaxis)
-
-	return obj
-
-    def expand_like(self, other):
-	""" expand Dimarray to conform another dimarray
-
-	Example:
-	-------
-	>>> lon = np.linspace(10, 30, 2)
-	>>> lat = np.linspace(10, 50, 3)
-	>>> time = np.arange(1950,1955)
-	>>> ts = da.Dimarray.from_kw(np.arange(5), time=time)
-	>>> values = lon[:, None].dot(lat[None,:])
-	>>> slab = da.Dimarray.from_kw(values, lon=lon, lat=lat)
-	>>> ts3D = ts.expand(lon=lon, lat=lat)
-	>>> ts.expand_like(ts3D)
-	True
-	"""
-	newaxes = [ax for ax in other.axes if ax.name not in self.dims]
-	return self.expand(*newaxes)
 
     #
     # REINDEXING 
