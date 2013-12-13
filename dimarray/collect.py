@@ -1,80 +1,138 @@
 """ collection of base obeje
 """
-from collections import OrderedDict
+from collections import OrderedDict as odict
 import numpy as np
 
-from axes import Axis
+from axes import Axis, Axes
 from core import Dimarray, array, _align_objects
 from tools import pandas_obj
 
-class Dataset(OrderedDict):
-    """ container for a mixture of objects of different types (different dimensions)
+def _check_args(args=(), **kwargs):
+    """ check input arguments for a Dataset object, return as list
     """
+    # Check everything is a Dimarray
+    variables = args+kwargs.values():
+	for v in variables:
+	if not isinstance(v, Dimarray):
+	    raise TypeError("A Dataset can only store Dimarray instances")
+
+    # Check args have a name
+    for v in args:
+	if not v.name:
+	    raise ValueError("Dimarray must have a name if provided as list, try using key-word arguments")
+
+    # Update the variable names
+    for k in kwargs:
+	kwargs[k].name = k
+
+    return args+kwargs.values()
+
+
+class Dataset(object):
+    """ Container for a set of aligned objects
+    """
+    def __init__(self, *args, **kwargs):
+	""" initialize a dataset from a set of objects of varying dimensions
+
+	args  : variable list of Dimarrays (must have a name)
+	kwargs: dimarrays as keyword arguments
+	"""
+	# Initialize an Axes object
+	self.axes = Axes()
+	self.variables = odict()
+
+	# Make basic checks and return a list of named variables
+	variables = _check_args(args, **kwargs)
+
+	# Align objects
+	variables = _align_objects(variables)
+
+	# Append to dictionary
+	for i, v in enumerate(variables):
+	    self[k] = v
+
+    @property
+    def dimensions(self):
+	""" dimensions present in the Dataset as a dictionary
+	"""
+	dims = odict()
+	for ax in self.axes:
+	    dims[ax.name] = ax.size
+	return dims
+
+    def update(self, odict):
+	""" update from another dataset or dictionary
+	"""
+	for k in enumerate(odict):
+	    self[k] = odict[k]
+	
+    def __getattr__(self, att):
+	"""
+	"""
+	return self.variables.__getattr__(att)
+
+    def __repr__(self):
+	""" string representation
+	"""
+	lines = []
+	header = "Dataset of %s variables" % (len(self))
+	lines.append(header)
+	axes = repr(self.axes)
+	lines.append(axes)
+	for nm in self.variables:
+	    dims = self.variables[nm].dims
+	    shape = self.variables[nm].shape
+	    print nm,":", ", ".join(dims)
+	    lines.append("{}: {}".format(", ".join(dims)))
+	return "\n".join(lines)
+
+    def __getitem__(self, item):
+	""" 
+	"""
+	return self.variables[item]
+
     def __setitem__(self, item, val):
-	""" convert the object with dimarray
+	""" Make sure the object is a Dimarray with appropriate axes
 	"""
-	assert isinstance(val, Dimarray), "can only append Dimarray instances"
+	if not isinstance(val, Dimarray):
+	    raise TypeError("can only append Dimarray instances")
 
-	# Ordered-Dict method
-	super(Dataset, self).__setitem__(item, val)
+	# Check dimensions
+	for axis in item.axes:
 
-    def apply(method, *args, **kwargs):
-	""" apply a dimarray method to every element...
-	"""
-	d = Dataset()
-	for k in self:
-	    res = getattr(self[k], method)(*args, **kwargs)
+	    # Check dimensions if already existing axis
+	    if axis.name in self.axes:
+		if not axis == self.axes[axis.name]:
+		    raise ValueError("axes values do not match, align data first.\
+			    \nDataset: {}, \nGot: {}".format(self.axes[axis.name], axis))
 
-	    # reinsert in the dictionary (typically False for plots, true for transformations)
-	    if isinstance(res, Dimarray): d[k] = res
+	    # Append new axis
+	    else:
+		self.axes.append(axis)
 
-	return d
+	# update name
+	val.name = item
+	self.variables[item] = val
 
-    def save(self, f, *args, **kwargs):
+    def write(self, f, *args, **kwargs):
 	import ncio
 	ncio.write_dataset(f, self, *args, **kwargs)
 
     @classmethod
-    def load(cls, f, *args, **kwargs):
+    def read(cls, f, *args, **kwargs):
 	import ncio
 	return ncio.read_dataset(f, *args, **kwargs)
 
-    def align(self, **kwargs):
-	""" align the data using pandas
+    def to_array(self):
+	""" Convert to Dimarray
 	"""
-	objs = [self[k] for k in self]
+	#if names is not None or dims is not None:
+	#    return self.subset(names=names, dims=dims).to_array()
 
-	newobjs = _align_objects(objs, **kwargs)
-
-	d = Dataset()
-
-	for i, k in enumerate(self):
-	    d[k] = newobjs[i]
-
-	return d
-
-    def isaligned(self):
-	""" check that axes are consistent
-	"""
-	axes = self.values()[0].axes
+	# align all variables to the same dimensions
+	data = odict()
 	for k in self:
-	    if len(self[k].axes) != len(axes):
-		return False
-	    for i, ax in enumerate(self[k].axes):
-		if not np.all(ax.values == axes[i].values):
-		    return False
-
-	return True
-
-    def to_dimarray(self, nms=None, dims=None):
-	""" return a set variable (can filter according to names or dimensions)
-	"""
-	if nms is not None or dims is not None:
-	    return self.subset(nms=nms, dims=dims).to_dimarray()
-
-	# align dimensions
-	if not self.isaligned():
-	    return self.align().to_dimarray()
+	    data[k] = self.reshape(self.dimensions.keys()).expand(*self.axes)
 
 	# make it a numpy array
 	data = [self[k].values for k in self]
@@ -88,6 +146,20 @@ class Dataset(OrderedDict):
 
 	return array(data, axes)
 
+    def subset(self, names=None, dims=None):
+	""" return a subset of the dictionary
+
+	names: variable names
+	dims : dimensions to conform too
+	"""
+	if names is None and dims is not None:
+	    names = self._filter_dims(dims)
+
+	d = self.__class__()
+	for nm in names:
+	    d[nm] = self[nm]
+	return d
+
     def _filter_dims(self, dims):
 	""" return variables names matching given dimensions
 	"""
@@ -96,25 +168,6 @@ class Dataset(OrderedDict):
 	    if tuple(self[nm].dims) == tuple(dims):
 		nms.append(nm)
 	return nms
-
-    def subset(self, nms=None, dims=None):
-	""" return a subset of the dictionary
-	"""
-	if nms is None and dims is not None:
-	    nms = self._filter_dims(dims)
-
-	d = self.__class__()
-	for nm in nms:
-	    d[nm] = self[nm]
-	return d
-
-    def __repr__(self):
-	""" string representation
-	"""
-	header = "Dataset of %s variables" % (len(self))
-	#content = "\n".join(["%s : %s" % (k, repr(self[k])) for k in self])
-	content = "\n\n".join([repr(self[k]) for k in self])
-	return "\n\n".join([header, content])
 
     def plots(self, axes=None, **kwargs):
 	""" Call the underlying methods: Individual plots in separate figures: 

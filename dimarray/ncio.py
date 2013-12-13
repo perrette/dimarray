@@ -27,7 +27,7 @@ def summary(fname):
     nms, _ = scan(fname, verbose=False)
     for nm in nms:
 	dims, shape = scan_var(fname, nm, verbose=False)
-	print nm,":", " x ".join(dims)
+	print nm,":", ", ".join(dims)
 
     #attr = read_attributes(f, name):
 
@@ -78,7 +78,7 @@ def read(f, nms=None, *args, **kwargs):
 # 
 
 
-def read_dimensions(f, name=None, verbose=True):
+def read_dimensions(f, name=None, verbose=False):
     """ return an Axes object
 
     name, optional: variable name

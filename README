@@ -129,11 +129,28 @@ Can also provide a subset of several dimensions as argument to operate on flatte
 NetCDF I/O
 
 >>> a.write("test.nc","myvar") # write to netCDF4
+write to test.nc
 >>> da.summary("test.nc") # check the content
+test.nc:
+-------
+dimensions: u'items', u'time'
+0 / items (3): a to c
+1 / time (5): 1950 to 1954
+myvar : items, time
 >>> dataset = da.read("test.nc") # read in a Dataset class
->>> dataset["myvar"]
->>> a
->>> dataset["myvar"] == a
+read from test.nc
+>>> dataset
+Dataset of 1 variables
+<BLANKLINE>
+dimarray: 15 non-null elements (0 null)
+name: myvar
+dimensions: u'items', u'time'
+0 / items (3): a to c
+1 / time (5): 1950 to 1954
+array([[ 1.76405235,  0.40015721,  0.97873798,  2.2408932 ,  1.86755799],
+       [-0.97727788,  0.95008842, -0.15135721, -0.10321885,  0.4105985 ],
+       [ 0.14404357,  1.45427351,  0.76103773,  0.12167502,  0.44386323]])
+>>> np.all(dataset["myvar"] == a)
 True
 
 Easy interfacing with pandas

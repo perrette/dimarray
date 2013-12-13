@@ -2,6 +2,7 @@
 """
 import numpy as np
 import copy
+from collection import OrderedDict
 #import json
 
 #import plotting
@@ -698,7 +699,7 @@ a.units = "myunits"
 
 
     #
-    # METHODS TO PLAY WITH DIMENSIONS
+    # METHODS TO CHANGE ARRAY SHAPE AND SIZE
     #
     
     # Transpose: permute dimensions
@@ -798,26 +799,25 @@ a.units = "myunits"
 	return o.transpose(newdims)
 
     #
-    # Add an axis and repeat the array 
+    # Repeat the array along *existing* axis
     #
-    def expand_axis(self, values, axis=None):
+    def repeat(self, values=None, axis=None, **kwargs):
 	""" expand the array along axis: analogous to numpy's repeat
 
 	input:
 	    values : integer (size of new axis) or ndarray (values  of new axis) or Axis object
-	    axis   : int or str
-		     axis position is ok to expand existing axis
-		     axis name is required to expand the whole array, unless values is an Axis object
+	    axis   : int or str (refer to the dimension along which to repeat) (must exist !)
+
+	EXPERIMENTAL: provide axes as keyword arguments, might be removed if not useful
 
 	output:
 	    Dimarray
 
-	Note: if not existing, the new axis is pre-pended
-
 	Examples:
 	--------
 	>>> a = da.Dimarray.from_kw(arange(2), lon=[30., 40.])
-	>>> a.expand_axis(np.arange(1950,1955), axis="time")  # doctest: +ELLIPSIS
+	>>> a = a.reshape(('time','lon'))
+	>>> a.repeat(np.arange(1950,1955), axis="time")  # doctest: +ELLIPSIS
 	dimarray: 10 non-null elements (0 null)
 	dimensions: 'time', 'lon'
 	0 / time (5): 1950 to 1954
@@ -827,63 +827,78 @@ a.units = "myunits"
 	       [0, 1],
 	       [0, 1],
 	       [0, 1]])
+
+	With keyword arguments:
+
+	>>> b = a.reshape(('lat','lon','time'))
+	>>> b.repeat(time=np.arange(1950,1955), lat=[0., 90.])  # doctest: +ELLIPSIS
+	dimarray: 20 non-null elements (0 null)
+	dimensions: 'lat', 'lon', 'time'
+	0 / lat (2): 0.0 to 90.  
+	1 / lon (2): 30.0 to 40.0
+	2 / time (5): 1950 to 1954
+	...
+	"""
+	# Recursive call if keyword arguments are provided
+	if len(kwargs) > 0:
+	    assert values is None, "can't input both values/axis and keywords arguments"
+	    dims = kwargs.keys()
+
+	    # First check that dimensions are there
+	    for k in dims:
+		if k not in self.dims:
+		    raise ValueError("can only repeat existing axis, need to reshape first (or use repeat_like)")
+
+	    # Choose the appropriate order for speed
+	    dims = [k for k in self.dims if k in dims]
+	    obj = self
+	    for k in reversed(dims):
+		obj = self._repeat(kwargs[k], axis=k)
+
+	else:
+	    obj = self._repeat(values, axis=axis)
+
+	return obj
+
+    def _repeat(self, values, axis=None):
+	""" called by repeat
 	"""
 	# default axis values: 0, 1, 2, ...
 	if type(values) is int:
 	    values = np.arange(values)
 
-	# Create an axis object
+	if axis is None:
+	    assert hasattr(values, name), "must provide axis name or position !"
+	    axis = values.name
+
+	# Axis position and name
+	idx, name = self.get_axis_info(axis) 
+
+	#if k not in self.dims:
+	#    raise ValueError("can only repeat existing axis, need to reshape first (or use repeat_like)")
+
+	# Numpy reshape: does the check
+	newvalues = self.values.reshape(np.size(values), idx)
+
+	# Create the new axis object
 	if not isinstance(values, Axis):
-
-	    # find axis name from its position, if already existing
-	    if type(axis) is int:
-		assert axis < self.ndim, "provide new dimensions as strings !"
-		old_axis = self.axes[axis]
-		name = old_axis.name
-
-	    elif type(axis) is str:
-		name = axis
-
-	    else:
-		raise TypeError("`axis=` parameter to expand_axis must be integer or string")
-
 	    newaxis = Axis(values, name)
 
 	else:
 	    newaxis = values
 
-	# pre-pend a dimension if needed, and copy
-	if newaxis.name not in self.dims:
-	    obj = self.newaxis(newaxis.name)
-
-	else:
-	    obj = self.copy()
-
-	# Expand the axis !
-	idx = obj.dims.index(newaxis.name)
-
-	if obj.axes[idx].size > 1:
-	    if obj.axes[idx] == newaxis:
-		return obj  # do nothing
-	    else:
-		raise ValueError("cannot expand non-singleton dimensions")
+	# New axes
+	newaxes = [ax for ax in self.axes]
+	newaxes[idx] = newaxis
 
 	# Update values and axes
-	obj.values = obj.values.repeat(newaxis.size, axis=idx)
-	obj.axes[idx] = newaxis
+	return self._constructor(newvalues, newaxes, **self._metadata)
 
-	return obj
 
-    # alias to numpy's repeat method
-    repeat = expand_axis 
+    def repeat_like(self, other):
+	""" broadcast the array along a set of axes by repeating it as necessay
 
-    def expand(self, *newaxes, **kw_newaxes):
-	""" expand an array to other dimensions
-
-	A multi-dimensional version of expand_axis. Two possibilities:
-
-	*newaxes     : as variable list of Axis objects
-	**kw_newaxes : as keyword arguments 'name=values' (unordered)
+	other	     : Dimarray or Axes objects or ordered Dictionary of axis values
 
 	Examples:
 	--------
@@ -893,16 +908,16 @@ a.units = "myunits"
 	>>> lat = np.linspace(10, 50, 3)
 	>>> time = np.arange(1950,1955)
 	>>> ts = da.Dimarray.from_kw(np.arange(5), time=time)
-	>>> slab = da.Dimarray.from_kw(np.zeros((3,2)), lon=lon, lat=lat)  # lat x lon
-	>>> slab.axes  # doctest: +ELLIPSIS
-	dimensions: 'lon', 'lat', 'time'
+	>>> cube = da.Dimarray.from_kw(np.zeros((3,2,5)), lon=lon, lat=lat, time=time)  # lat x lon x time
+	>>> cube.axes  # doctest: +ELLIPSIS
+	dimensions: 'lat', 'lon', 'time'
 	0 / lat (3): 10.0 to 50.0
 	1 / lon (2): 10.0 to 30.0
 	2 / time (5): 1950 to 1954
 	...
 
 	# ...expand from variable list
-	>>> ts3D = ts.expand(*slab.axes) #  lat x lon x time
+	>>> ts3D = ts.repeat_like(cube) #  lat x lon x time
 	dimarray: 30 non-null elements (0 null)
 	dimensions: 'lon', 'lat', 'time'
 	0 / lat (3): 10.0 to 50.0
@@ -916,20 +931,31 @@ a.units = "myunits"
 
 	       [[0, 1, 2, 3, 4],
 		[0, 1, 2, 3, 4]]])
-
-	# ...expand from keyword arguments
-	>>> ts3D = ts.expand(lon=slab.lon, lat=slab.lat)  # doctest: +ELLIPSIS
-	...
-	dimensions: ...  
 	"""
-	obj = self
+	if isinstance(other, list):
+	    newaxes = other
 
-	for newaxis in reversed(newaxes):
-	    obj = obj.expand_axis(newaxis)
+	elif isinstance(other, Dimarray):
+	    newaxes = other.axes
 
-	for k in kw_newaxes:
-	    newaxis = Axis(kw_newaxes[k], k) # create a new axis
-	    obj = obj.expand_axis(newaxis)
+	elif isinstance(other, OrderedDict):
+	    newaxes = [Axis(other[k], k) for k in other]
+
+	else:
+	    raise TypeError("should be a Dimarray, a list of Axis objects or an OrderedDict of Axis objects")
+
+	if not isinstance(newaxes[0], Axis):
+	    raise TypeError("should be a Dimarray, a list of Axis objects or an OrderedDict of Axis objects")
+
+	newshape = [ax.size for ax in newaxes]
+
+	# First give it the right shape
+	obj = self.reshape(newshape)
+
+	# Then repeat along axes
+	#for newaxis in newaxes:  
+	for newaxis in reversed(newaxes):  # should be faster ( CHECK ) 
+	    obj = obj.repeat(newaxis)
 
 	return obj
 
@@ -1286,7 +1312,7 @@ a.units = "myunits"
     #  I/O
     # 
 
-    def save(self, f, name=None, *args, **kwargs):
+    def write(self, f, name=None, *args, **kwargs):
 	import ncio
 
 	# add variable name if provided...
@@ -1296,7 +1322,7 @@ a.units = "myunits"
 	ncio.write_variable(f, self, name, *args, **kwargs)
 
     @classmethod
-    def load(cls, f, *args, **kwargs):
+    def read(cls, f, *args, **kwargs):
 	import ncio
 	return ncio.read_base(f, *args, **kwargs)
 
