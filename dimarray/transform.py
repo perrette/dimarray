@@ -34,6 +34,74 @@ class NumpyDesc(object):
 	return newmethod
 
 #
+# Define weighted mean/std/var
+#
+
+def weighted_mean(obj, axis=0, skipna=True, weights='axis', out=None):
+    """ mean over an axis or group of axes, possibly weighted 
+
+    parameters:
+    ----------
+	- axis    : int, str, tuple: axis or group of axes to apply the transform on
+	- skipna  : remove nans prior to transformation?
+	- weights : if weights, perform a weighted mean (see get_weights method)
+		    the default behaviour ("axis") is too look in individual axes 
+		    whether they have a not-None weight attribute
+    
+    returns:
+    --------
+	- Dimarray or scalar, consistently with ndarray behaviour
+    """
+    # Proceed to a weighted mean
+    if weights:
+	weights = obj.get_weights(weights, axis=axis, fill_nans=skipna)
+
+    # if no weights, just apply numpy's mean
+    if not weights:
+	return obj.apply("mean", axis=axis, skipna=skipna, out=out)
+
+    # weighted mean
+    sum_values = (obj*weights).apply("sum", axis=axis, skipna=skipna, out=out)
+    sum_weights = weights.apply("sum", axis=axis, skipna=skipna, out=out)
+    return sum_values / sum_weights
+
+def weighted_var(obj, axis=0, skipna=True, weights="axis", ddof=0, out=None):
+    """ standard deviation over an axis or group of axes, possibly weighted 
+
+    parameters:
+    ----------
+	- axis    : int, str, tuple: axis or group of axes to apply the transform on
+	- skipna  : remove nans prior to transformation?
+	- weights : if weights, perform a weighted var (see get_weights method)
+		    the default behaviour ("axis") is too look in individual axes 
+		    whether they have a not-None weight attribute
+	- ddof    : "Delta Degrees of Freedom": the divisor used in the calculation is
+		    ``N - ddof``, where ``N`` represents the number of elements. By default `ddof` is zero.
+		    Note ddof is ignored when weights are used
+    
+    returns:
+    --------
+	- Dimarray or scalar, consistently with ndarray behaviour
+    """
+    # Proceed to a weighted var
+    if weights:
+	weights = obj.get_weights(weights, axis=axis, fill_nans=skipna)
+
+    # if no weights, just apply numpy's var
+    if not weights:
+	return obj.apply("var", axis=axis, skipna=skipna, ddof=ddof, out=out)
+
+    # weighted mean
+    mean = obj.mean(axis=axis, skipna=skipna, weights=weights, out=out)
+    dev = (obj-mean)**2
+    return dev.mean(axis=axis, skipna=skipna, weights=weights, out=mean)
+
+def weighted_std(obj, *args, **kwargs):
+    """ alias for a.var()**0.5: see `var` method for doc
+    """
+    return obj.var(*args, **kwargs)**0.5
+
+#
 # recursively apply a Dimarray ==> Dimarray transform
 #
 def apply_recursive(obj, dims, fun, *args, **kwargs):
@@ -135,7 +203,7 @@ def interp2d_mpl(obj, newaxes, axes=None, order=1):
 
     # make sure input axes have the valid format
     newaxes = Axes.from_list(newaxes, axes) # valid format
-    newaxes.sort(self.dims) # re-order according to object's dimensions
+    newaxes.sort(obj.dims) # re-order according to object's dimensions
     x, y = newaxes  # 2-d interpolation
 
     # make new grid 2-D

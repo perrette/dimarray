@@ -58,22 +58,25 @@ class Axis(Metadata):
 	self.name = name 
 	self.weights = weights 
 
-    def get_weights(self):
+    def get_weights(self, weights=None):
 	""" return axis weights as a Dimarray
 	"""
 	from core import Dimarray
 
+	if weights is None:
+	    weights = self.weights
+
 	# no weights
-	if self.weights is None:
+	if weights is None:
 	    weights = np.ones_like(self.values)
 
 	# function of axis
-	elif callable(self.weights):
-	    weights = self.weights(self.values)
+	elif callable(weights):
+	    weights = weights(self.values)
 
 	# same weight for every element
-	elif np.size(self.weights) == 1:
-	    weights = np.zeros_like(self.values) + self.weights
+	elif np.size(weights) == 1:
+	    weights = np.zeros_like(self.values) + weights
 
 	# already an array of weights
 	else:
@@ -257,7 +260,7 @@ class Axes(list):
 	return cls.from_tuples(*zip(dims, list_of_arrays))
 
     @classmethod
-    def from_kwds(cls, dims=None, shape=None, **kwargs):
+    def from_kw(cls, dims=None, shape=None, **kwargs):
 	""" infer dimensions from key-word arguments
 	"""
 	# if no key-word argument is given, just return default axis
@@ -276,8 +279,9 @@ class Axes(list):
 
 	# alternative option: only the shape is given
 	elif shape is not None:
+	    assert len(shape) == len(kwargs), "shape does not match kwargs !"
 	    current_shape = [ax.size for ax in axes]
-	    assert len(set(current_shape)) == len(set([ax.name for ax in axes])), \
+	    assert len(set(shape)) == len(set(current_shape)) == len(set([ax.name for ax in axes])), \
     """ some axes have the same size !
     ==> ambiguous determination of dimensions order via keyword arguments only
     ==> explictly supply `dims=` or use from_list() or from_tuples() methods" """
@@ -291,6 +295,9 @@ class Axes(list):
 
 	else:
 	    raise Warning("no shape information: random order")
+
+	dims = [ax.name for ax in axes]
+	assert len(set(dims)) == len(dims), "what's wrong??"
 
 	return axes
 

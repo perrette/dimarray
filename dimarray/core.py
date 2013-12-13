@@ -42,21 +42,22 @@ class Dimarray(Metadata):
 	axes	: variable list of Axis objects or list of tuples ('dim', values)
 		  This argument can only be omitted if values is an instance of Dimarray
 
-	metadata: stored in _metadata dict
+	options:
 
-	dtype, copy: passed to np.array()
+	    - dtype, copy: passed to np.array()
+	    - _slicing: default slicing method "numpy", "nearest", "exact" (mostly for internal use)
 
-	_slicing: default slicing method "numpy", "nearest", "exact" (mostly for internal use)
+	key-word arguments:
+	    - metadata
 	"""
 	# filter **kwargs and keep metadata
-	default = dict(dtype=None, copy=False, _slicing=None, weights=None)
+	default = dict(dtype=None, copy=False, _slicing=None)
 	for k in default:
 	    if k in kwargs:
 		default[k] = kwargs.pop(k)
 
 	metadata = kwargs
 	_slicing= default.pop('_slicing')
-	weights = default.pop('weights')
 
 	#
 	# array values
@@ -113,7 +114,6 @@ class Dimarray(Metadata):
 
 	# options
 	self._slicing = _slicing
-	self.weights = weights
 
 	#
 	# metadata (see Metadata type in metadata.py)
@@ -170,7 +170,7 @@ class Dimarray(Metadata):
 	return cls(values, *axes, **kwargs)
 
     @classmethod
-    def from_kwds(cls, values, dims=None, **kwaxes):
+    def from_kw(cls, values, dims=None, **kwaxes):
 	""" initialize Dimarray with with axes as key-word arguments
 
 	values	    : numpy-like array (passed to array())
@@ -181,15 +181,15 @@ class Dimarray(Metadata):
 	    if type(kwaxes[k]) is str:
 		print "PASSED:",k,":",kwaxes[k]
 		msg = \
-""" no attribute can be passed with the from_kwds method 
+""" no attribute can be passed with the from_kw method 
 ==> try using the set() method instead, for example:
-a = Dimarray.from_kwds(values, **kwaxes)
+a = Dimarray.from_kw(values, **kwaxes)
 a.name = "myname"
 a.units = "myunits"
 """
 		raise ValueError(msg)
 
-	list_axes = Axes.from_kwds(shape=np.shape(values), dims=dims, **kwaxes)
+	list_axes = Axes.from_kw(shape=np.shape(values), dims=dims, **kwaxes)
 
 	return cls(values, *list_axes)
 
@@ -239,7 +239,7 @@ a.units = "myunits"
 	new = copy.copy(self) # shallow copy
 
 	if not shallow:
-	    new.values = values.copy()
+	    new.values = self.values.copy()
 	    new.axes = self.axes.copy()
 
 	return new
@@ -248,6 +248,20 @@ a.units = "myunits"
     #
     # SLICING
     #
+    def get_axis_info(axis):
+	""" return axis name and position
+	"""
+	if type(axis) is str:
+	    idx = self.dims.index(axis)
+
+	elif type(axis) is int:
+	    idx = axis
+
+	else:
+	    raise TypeError("axis must be int or str, got:"+repr(axis))
+
+	name = self.axes[idx].name
+	return idx, name
 
     @property
     def dims(self):
@@ -543,14 +557,13 @@ a.units = "myunits"
     #
     # Add numpy transforms
     #
-    mean = transform.NumpyDesc("apply", "mean")
     median = transform.NumpyDesc("apply", "median")
-    diff = transform.NumpyDesc("apply", "diff")
-    sum  = transform.NumpyDesc("apply", "sum")
     prod = transform.NumpyDesc("apply", "prod")
+    sum  = transform.NumpyDesc("apply", "sum")
 
-    cumsum = transform.NumpyDesc("apply", "cumsum")
     cumprod = transform.NumpyDesc("apply", "cumprod")
+    cumsum = transform.NumpyDesc("apply", "cumsum")
+    diff = transform.NumpyDesc("apply", "diff") # opposite to cumsum
 
     min = transform.NumpyDesc("apply", "min")
     max = transform.NumpyDesc("apply", "max")
@@ -558,36 +571,68 @@ a.units = "myunits"
     all = transform.NumpyDesc("apply", "all")
     any = transform.NumpyDesc("apply", "any")
 
-    def weighted_mean(self, axis=0, skipna=True, weights=None):
-	""" compute a weighted mean
-	"""
-	# use Dimarray future to get a N-D array of weights
+    #mean = transform.NumpyDesc("apply", "mean")
+    #std = transform.NumpyDesc("apply", "std")
+    #var = transform.NumpyDesc("apply", "var")
+    mean = transform.weighted_mean
+    std = transform.weighted_std
+    var = transform.weighted_var
 
-	# standard case: guess weights
+    def get_weights(self, weights=None, axis=None, fill_nans=True):
+	""" get weight associated to the array, or returns None if no weights
+
+	optional arguments: 
+	    weights: (numpy)array-like of weights, taken from axes if None or "axis" or "axes"
+	    axis   : int or str, if None a N-D weight is created
+
+	return:
+	    weights: Dimarray of weights
+	"""
+	# make sure weights is a nd-array
+	if weights is not None:
+	    weights = np.array(weights) 
+
+	if weights in ('axis','axes'):
+	    weights = None
+
+	if axis is None:
+	    dims = self.dims
+	else:
+	    dims = (axis,)
+
+	# axes over which the weight is defined
+	axes = [ax for ax in self.axes if ax.name in dims]
+
+	# Create weights from the axes if not provided
 	if weights is None:
-	    weights = self.get_weights()
 
-	# user-provided: set NaNs where needed
+	    all_weights = []
+	    for axis in dims:
+		ax = self.axes[axis]
+		if ax.weights is None: continue
+		all_weights.append(ax.get_weights().reshape(dims).values)
+
+	    if len(all_weights) == 0:
+		return None
+
+	    weights = np.prod(all_weights, axis=0)  # multiply the weights
+
+
+	# Now create a dimarray and make it full size
+	# ...already full-size
+	if weights.shape == self.shape:
+	    weights = Dimarray(weights, *self.axes)
+
+	# ...need to be expanded
+	elif weights.shape == tuple(ax.size for ax in axes):
+	    weights = Dimarray(weights, *axes).expand(self.dims)
+
 	else:
-	    weights.values[np.isnan(self.values)] = np.nan
-
-	# Multiply values by the weights 
-	sum_values = (self*weights).sum(axis=axis, skipna=skipna)
-	sum_weights = (weights).sum(axis=axis, skipna=skipna)
-	return sum_values / sum_weights
-
-    def get_weights(self):
-	""" get weight associated to the array
-	"""
-	if self.weights is not None:
-	    weights = Dimarray(self.weights, *self.axes, **{'copy':False})
-
-	else:
-	    all_weights = [ax.get_weights().reshape(self.dims) for ax in self.axes]
-	    weights = np.prod(all_weights, axis=0) # multiply the weights
+	    raise ValueError("weight dimensions not conform")
 
 	# fill NaNs in when necessary
-	weights = weights.values[np.isnan(self.values)] = np.nan
+	if fill_nans:
+	    weights.values[np.isnan(self.values)] = np.nan
 	
 	return weights
 
@@ -788,6 +833,10 @@ a.units = "myunits"
     def T(self):
 	return self.transpose()
 
+    #
+    # ADD A SINGLETON AXIS
+    #
+
     def newaxis(self, dim):
 	""" add a new axis, ready to broadcast
 	"""
@@ -797,6 +846,10 @@ a.units = "myunits"
 	axes = self.axes.copy()
 	axes.insert(0, axis)
 	return self._constructor(values, axes, **self._metadata)
+
+    #
+    # RESHAPE BY ADDING AS MANY SINGLETON AXES AS NEEDED TO MATCH PRESCRIBED DIMENSION
+    #
 
     def reshape(self, newdims):
 	""" reshape an array according to a new set of dimensions
@@ -812,7 +865,150 @@ a.units = "myunits"
 	# now give it the right order
 	return o.transpose(newdims)
 
-    #def expand(self, order=None, **newdims):
+    #
+    # REPEAT AN ARRAY TO CONFORM ANOTHER DIMENSION
+    #
+
+    def expand_axis(self, values, axis=None):
+	""" expand the array along axis: analogous to numpy's repeat
+
+	input:
+	    values : integer (size of new axis) or ndarray (values  of new axis) or Axis object
+	    axis   : int or str
+		     axis position is ok to expand existing axis
+		     axis name is required to expand the whole array, unless values is an Axis object
+
+	output:
+	    Dimarray
+
+	Note: if not existing, the new axis is pre-pended
+
+	Examples:
+	--------
+	>>> a = da.Dimarray.from_kw(arange(2), lon=[30., 40.])
+	>>> a.expand_axis(np.arange(1950,1955), axis="time")  # doctest: +ELLIPSIS
+	dimarray: 10 non-null elements (0 null)
+	dimensions: 'time', 'lon'
+	0 / time (5): 1950 to 1954
+	1 / lon (2): 30.0 to 40.0
+	array([[0, 1],
+	       [0, 1],
+	       [0, 1],
+	       [0, 1],
+	       [0, 1]])
+	"""
+	# default axis values: 0, 1, 2, ...
+	if type(values) is int:
+	    values = np.arange(values)
+
+	# Create an axis object
+	if not isinstance(values, Axis):
+
+	    # find axis name from its position, if already existing
+	    if type(axis) is int:
+		assert axis < self.ndim, "provide new dimensions as strings !"
+		old_axis = self.axes[axis]
+		name = old_axis.name
+
+	    elif type(axis) is str:
+		name = axis
+
+	    else:
+		raise TypeError("`axis=` parameter to expand_axis must be integer or string")
+
+	    newaxis = Axis(values, name)
+
+	else:
+	    newaxis = values
+
+	# pre-pend a dimension if needed, and copy
+	if newaxis.name not in self.dims:
+	    obj = self.newaxis(newaxis.name)
+
+	else:
+	    obj = self.copy()
+
+	# Expand the axis !
+	idx = obj.dims.index(newaxis.name)
+
+	if obj.axes[idx].size > 1:
+	    if obj.axes[idx] == newaxis:
+		return obj  # do nothing
+	    else:
+		raise ValueError("cannot expand non-singleton dimensions")
+
+	# Update values and axes
+	obj.values = obj.values.repeat(newaxis.size, axis=idx)
+	obj.axes[idx] = newaxis
+
+	return obj
+
+    def expand(self, *newaxes, **kw_newaxes):
+	""" expand an array to other dimensions
+
+	A multi-dimensional version of expand_axis. Two possibilities:
+
+	*newaxes     : as variable list of Axis objects
+	**kw_newaxes : as keyword arguments 'name=values' (unordered)
+
+	Examples:
+	--------
+	Create some dummy data:
+	# ...create some dummy data:
+	>>> lon = np.linspace(10, 30, 2)
+	>>> lat = np.linspace(10, 50, 3)
+	>>> time = np.arange(1950,1955)
+	>>> ts = da.Dimarray.from_kw(np.arange(5), time=time)
+	>>> slab = da.Dimarray.from_kw(np.zeros((3,2)), lon=lon, lat=lat)  # lat x lon
+
+	# ...expand from variable list
+	>>> ts3D = ts.expand(*slab.axes) #  lat x lon x time
+	dimarray: 30 non-null elements (0 null)
+	dimensions: 'lon', 'lat', 'time'
+	0 / lat (3): 10.0 to 50.0
+	1 / lon (2): 10.0 to 30.0
+	2 / time (5): 1950 to 1954
+	array([[[0, 1, 2, 3, 4],
+		[0, 1, 2, 3, 4]],
+
+	       [[0, 1, 2, 3, 4],
+		[0, 1, 2, 3, 4]],
+
+	       [[0, 1, 2, 3, 4],
+		[0, 1, 2, 3, 4]]])
+
+	# ...expand from keyword arguments
+	>>> ts3D = ts.expand(lon=slab.lon, lat=slab.lat)  # doctest: +ELLIPSIS
+	...  # random order !
+	"""
+	obj = self
+
+	for newaxis in reversed(newaxes):
+	    obj = obj.expand_axis(newaxis)
+
+	for k in kw_newaxes:
+	    newaxis = Axis(kw_newaxes[k], k) # create a new axis
+	    obj = obj.expand_axis(newaxis)
+
+	return obj
+
+    def expand_like(self, other):
+	""" expand Dimarray to conform another dimarray
+
+	Example:
+	-------
+	>>> lon = np.linspace(10, 30, 2)
+	>>> lat = np.linspace(10, 50, 3)
+	>>> time = np.arange(1950,1955)
+	>>> ts = da.Dimarray.from_kw(np.arange(5), time=time)
+	>>> values = lon[:, None].dot(lat[None,:])
+	>>> slab = da.Dimarray.from_kw(values, lon=lon, lat=lat)
+	>>> ts3D = ts.expand(lon=lon, lat=lat)
+	>>> ts.expand_like(ts3D)
+	True
+	"""
+	newaxes = [ax for ax in other.axes if ax.name not in self.dims]
+	return self.expand(*newaxes)
 
     #
     # REINDEXING 
@@ -958,7 +1154,11 @@ a.units = "myunits"
     def __int__(self):  return int(self.values)
 
     def __eq__(self, other): 
-	return isinstance(other, Dimarray) and np.all(self.values == other.values) and self.axes == other.axes
+	#return isinstance(other, Dimarray) and np.all(self.values == other.values) and self.axes == other.axes
+	if not isinstance(other, Dimarray) or not self.axes == other.axes:
+	    return False
+
+	return self._constructor(self.values == other.values, self.axes)
 
 
     #
@@ -1116,7 +1316,7 @@ def array(values, axes=None, dims=None, **kwaxes):
 	new = Dimarray.from_list(values, axes, dims=dims) 
 
     else:
-	new = Dimarray.from_kwds(values, dims, **kwaxes) 
+	new = Dimarray.from_kw(values, dims, **kwaxes) 
 
 
     return new
