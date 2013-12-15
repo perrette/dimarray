@@ -46,13 +46,12 @@ class Dimarray(Metadata):
 	options:
 
 	    - dtype, copy: passed to np.array()
-	    - _indexing: see xs_axis
 
 	key-word arguments:
 	    - metadata
 	"""
 	# filter **kwargs and keep metadata
-	default = dict(dtype=None, copy=False, _indexing="axis")
+	default = dict(dtype=None, copy=False, _indexing="index")
 	for k in default:
 	    if k in kwargs:
 		default[k] = kwargs.pop(k)
@@ -216,7 +215,7 @@ a.units = "myunits"
 	otherwise first make a copy, and return new obj
 
 	a.set(_indexing="numpy")[:30]
-	a.set(_indexing="exact")[1971.42]
+	a.set(_indexing="index")[1971.42]
 	a.set(_indexing="nearest")[1971]
 	a.set(name="myname", inplace=True) # modify attributes inplace
 	"""
@@ -280,46 +279,33 @@ a.units = "myunits"
 
 	return self.xs(**ix_nd)
 
-    def xs_axis(self, ix, axis=0, method="index", keepdims=False, **kwargs):
-	""" cross-section or slice along a single axis
-
-	input:
-	    - ix	: index as axis value or integer position 
-	    - axis  	: int or str
-	    - method    : indexing method, default to self.indexing
-			  - "numpy": numpy-like integer 
-		          - "index": look for exact match similarly to list.index
-			  - "nearest": (regular Axis only) nearest match, bound checking
-			  - "interp": (regular Axis only) interpolate
-
-	    - **kwargs: additional parameters passed to self.axes relative to slicing behaviour
-
-	output:
-	    - Dimarray object or python built-in type, consistently with numpy slicing
-
-	>>> a.xs(45.5, axis=0)	 # doctest: +ELLIPSIS
-	>>> a.xs(45.7, axis="lat") == a.xs(45.5, axis=0) # "nearest" matching
-	True
-	>>> a.xs(time=1952.5)
-	>>> a.xs(time=70, method="numpy") # 70th element along the time dimension
+    def _xs_axis(self, ix, axis=0, method="index", keepdims=False):
+	""" cross-section or slice along a single axis, see xs
 	"""
-	assert axis is not None, "axis= cannot be None in slicing"
+	assert axis is not None, "axis= must be provided"
+
+	# get integer index/slice for axis valued index/slice
+	if method is None:
+	    method = self._indexing # slicing method
+
+	# Linear interpolation between axis values, see _take_interp
+	if method in ('interp'):
+	    return self._take_interp(ix, axis=axis, keepdims=keepdims)
 
 	# get an axis object
 	ax = self.axes[axis] # axis object
 	axis_id = self.axes.index(ax) # corresponding integer index
-
-	# get integer index/slice for axis valued index/slice
-	if method is None:
-	    method = self.indexing # slicing method
 
 	# numpy-like indexing, do nothing
 	if method == "numpy":
 	    index = ix
 
 	# otherwise locate the values
+	elif method in ('nearest','index'):
+	    index = ax.loc(ix, method=method) 
+
 	else:
-	    index = ax.loc(ix, method=method, **kwargs) 
+	    raise ValueError("Unknown method: "+method)
 
 	# make a numpy index  and use numpy's slice method (`slice(None)` :: `:`)
 	index_nd = (slice(None),)*axis_id + (index,)
@@ -365,18 +351,76 @@ a.units = "myunits"
 
 	return result
 
+    def _take_interp(self, ix, axis, keepdims):
+	""" Take a number or an integer as from an axis
+	"""
+	assert type(ix) is not slice, "interp only work with integer and list indexing"
+
+	# return a "fractional" index
+	ax = self.axes[axis]
+	index = ax.loc(ix, method='interp') 
+	ii = np.array(index) # make sure it is array-like
+
+	# position indices of nearest neighbors
+	# ...last element, 
+	i0 = np.array(index, dtype=int)
+	i1 = i0+1
+
+	# make sure we are not beyond 
+	over = i1 == ax.size
+	if i1.size == 1:
+	    if over:
+		i0 -= 1
+		i1 -= 1
+	else:
+	    i0[over] = ax.size-2
+	    i1[over] = ax.size-1
+
+	# weight for interpolation
+	w1 = ii-i0 
+
+	# sample nearest neighbors
+	v0 = self._xs_axis(i0, axis=axis, method="numpy", keepdims=keepdims)
+	v1 = self._xs_axis(i1, axis=axis, method="numpy", keepdims=keepdims)
+
+	# result as weighted sum
+	values = v0.values*(1-w1) + v1.values*w1
+	axes = []
+	for d in v0.dims:
+	    if d == ax.name:
+		axis = Axis(v0.axes[d].values*(1-w1) + v1.axes[d].values*w1, d)
+	    else:
+		axis = self.axes[d]
+	    axes.append(axis)
+	return self._constructor(values, axes, **self._metadata)
+
+
     def xs(self, ix=None, axis=0, method=None, keepdims=False, **axes):
 	""" Cross-section, can be multidimensional
 
 	input:
 
-	    - ix : int or list or tuple or slice
-	    - axis   : int or str
-	    - method	: slicing method
-	    => passed to xs_axis
+	    - ix       : int or list or tuple or slice (index) 
+	    - axis     : int or str
+	    - method   : indexing method (default "index")
+			 - "numpy": numpy-like integer 
+		         - "index": look for exact match similarly to list.index
+			 - "nearest": (regular Axis only) nearest match, bound checking
+	    - keepdims : keep singleton dimensions
 
 	    - **axes  : provide axes as keyword arguments for multi-dimensional slicing
-	    => chained call to xs_axis
+			==> chained call to xs 
+			Note in this mode axis cannot be named after named keyword arguments
+			(`ix`, `axis`, `method` or `keepdims`)
+
+	output:
+	    - Dimarray object or python built-in type, consistently with numpy slicing
+
+	>>> a.xs(45.5, axis=0)	 # doctest: +ELLIPSIS
+	>>> a.xs(45.7, axis="lat") == a.xs(45.5, axis=0) # "nearest" matching
+	True
+	>>> a.xs(time=1952.5)
+	>>> a.xs(time=70, method="numpy") # 70th element along the time dimension
 
 	>>> a.xs(lon=(30.5, 60.5), lat=45.5) == a[:, 45.5, 30.5:60.5] # multi-indexing, slice...
 	True
@@ -384,14 +428,14 @@ a.units = "myunits"
 	"""
 	# single-axis slicing
 	if ix is not None:
-	    obj = self.xs_axis(ix, axis=axis, method=method, keepdims=keepdims)
+	    obj = self._xs_axis(ix, axis=axis, method=method, keepdims=keepdims)
 
 	# multi-dimensional slicing <axis name> : <axis index value>
 	# just a chained call
 	else:
 	    obj = self
 	    for nm, idx in axes.iteritems():
-		obj = obj.xs_axis(idx, axis=nm, method=method, keepdims=keepdims)
+		obj = obj._xs_axis(idx, axis=nm, method=method, keepdims=keepdims)
 
 	return obj
 
@@ -402,30 +446,26 @@ a.units = "myunits"
     def loc(self):
 	""" pandas-like: exact access to the index
 	"""
-	obj = self.copy(shallow=True)
-	obj.indexing = 'exact'
-	return obj
+	return self._constructor(self.values, self.axes, _indexing="index", **self._metadata)
 
     @property
     def iloc(self):
 	""" integer index-access
 	"""
-	obj = self.copy(shallow=True)
-	obj.indexing = 'numpy'
-	return obj
+	return self._constructor(self.values, self.axes, _indexing="numpy", **self._metadata)
 
-    @property
-    def ix(self):
-	""" automatic choice between numpy or axis-value indexing
-
-	question: should follow this path?? this is error prone
-	or rather make it an alias for iloc?
-	"""
-	if not self._pandas_like:
-	    return self.iloc
-
-	raise Warning("this method may disappear in the future")
-	raise NotImplementedError('add the method to Locator')
+#    @property
+#    def ix(self):
+#	""" automatic choice between numpy or axis-value indexing
+#
+#	question: should follow this path?? this is error prone
+#	or rather make it an alias for iloc?
+#	"""
+#	if not self._pandas_like:
+#	    return self.iloc
+#
+#	raise Warning("this method may disappear in the future")
+#	raise NotImplementedError('add the method to Locator')
 
 
     #
@@ -658,15 +698,15 @@ a.units = "myunits"
 	
 	return weights
 
-    def compress(self, condition, axis=None):
-	""" analogous to numpy `compress` method
-	"""
-	return self.apply("compress", axis=axis, skipna=False, args=(condition,))
-
-    def take(self, indices, axis=None):
-	""" analogous to numpy `take` method
-	"""
-	return self.apply("take", axis=axis, skipna=False, args=(indices,))
+#    def compress(self, condition, axis=None):
+#	""" analogous to numpy `compress` method
+#	"""
+#	return self.apply("compress", axis=axis, skipna=False, args=(condition,))
+#
+#    def take(self, indices, axis=None):
+#	""" analogous to numpy `take` method
+#	"""
+#	return self.apply("take", axis=axis, skipna=False, args=(indices,))
 
 
 #    #
@@ -1068,7 +1108,7 @@ a.units = "myunits"
 	Input:
 	    - newaxis: array or list on the new axis
 	    - axis   : axis number or name
-	    - method : "index", "nearest", "interp" (see xs_axis)
+	    - method : "index", "nearest", "interp" (see xs)
 
 	Output:
 	    - Dimarray
@@ -1089,7 +1129,7 @@ a.units = "myunits"
 	    return self
 
 	# indices along which to sample
-	if method in ("nearest","exact",None):
+	if method in ("nearest","index",None):
 
 	    indices = np.empty(np.size(newaxis), dtype=int)
 	    indices.fill(-1)
@@ -1228,7 +1268,7 @@ a.units = "myunits"
 	"""
 	# iterate over axis values
 	for k in self.axes[axis].values:
-	    val = self.xs_axis(k, axis=axis) # cross-section
+	    val = self._xs_axis(k, axis=axis) # cross-section
 	    yield k, val
 
     #
@@ -1474,6 +1514,8 @@ def _align_objects(*objects):
 	# update objects
 	for i, o in enumerate(objects):
 	    if o not in objs:
+		continue
+	    if o.axes[d] == ax_values:
 		continue
 
 	    objects[i] = o.reindex_axis(ax_values, axis=d)

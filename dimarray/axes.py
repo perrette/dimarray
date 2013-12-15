@@ -453,7 +453,8 @@ class Locator(object):
 	self.values = values
 
 	# default method: "nearest" (for float)
-	if method is None:
+	# only "index" for object type
+	if method is None or self.values.dtype is np.dtype('O'):
 	    method = "index"
 
 	self.method = method #  default method
@@ -468,7 +469,8 @@ class Locator(object):
 	if type(ix) is slice:
 	    return self.slice(ix)
 
-	elif type(ix) is list:
+	# list, array
+	elif np.iterable(ix):
 	    return self.take(ix)
 
 	# int, float, string
@@ -496,8 +498,8 @@ class Locator(object):
     def set(self, method):
 	""" convenience function for chained call: update methods and return itself 
 	"""
-	self.method = method
-	return self
+	#self.method = method
+	return Locator(self.values, method=method)
 
     #
     # methods to access single value
@@ -509,7 +511,7 @@ class Locator(object):
 	#val = type(self.values[0])(val) # convert to the same type first
 	return list(self.values).index(val)
 
-    def nearest(self, val, check_bounds=False):
+    def nearest(self, val, check_bounds=True):
 	""" return nearest index with bound checking
 	"""
 	if check_bounds:
@@ -542,13 +544,14 @@ class Locator(object):
 	return getattr(self, method)(val)
 
     #
-    # Access a list
+    # Access a list or array
     #
 
     def take(self, indices, method=None):
 	""" Return a list of indices
 	"""
-	assert type(indices) is list, "must provide a list !"
+	#assert type(indices) is list, "must provide a list !"
+	assert np.iterable(indices), "indices is not iterable!"
 	if method is None: method = self.method
 	return map(getattr(self, method), indices)
 
