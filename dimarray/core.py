@@ -193,6 +193,33 @@ a.units = "myunits"
 
 	return cls(values, *list_axes)
 
+    @classmethod
+    def from_dataset(cls, data, keys=None, axis="items"):
+	""" aggregate a collection of N-D Dimarrays into a N+1 D dimarray
+
+	Convenience method for: collect.Dataset(data, keys).to_array(axis)
+
+	input:
+	    - data : list or dict of Dimarrays
+	    - keys, optional : ordering of data (for dict)
+	    - axis, optional : axis along which to aggregate data (default "items")
+
+	output:
+	    - new Dimarray object
+	"""
+	from collect import Dataset
+	data = Dataset(data, keys=keys)
+	return data.to_array(axis=axis)
+
+    def to_dataset(self, axis=0):
+	""" split a Dimarray into a Dataset object (collection of Dimarrays)
+	"""
+	from collect import Dataset
+	# iterate over elements of one axis
+	data = [val for k, val in self.iter(axis)]
+	return Dataset(data)
+
+
     #
     # Attributes access
     #
@@ -248,7 +275,7 @@ a.units = "myunits"
     #
     # SLICING
     #
-    def get_axis_info(axis):
+    def get_axis_info(self, axis):
 	""" return axis name and position
 	"""
 	if type(axis) is str:
@@ -913,7 +940,7 @@ a.units = "myunits"
 	    values = np.arange(values)
 
 	if axis is None:
-	    assert hasattr(values, name), "must provide axis name or position !"
+	    assert hasattr(values, "name"), "must provide axis name or position !"
 	    axis = values.name
 
 	# Axis position and name
@@ -923,7 +950,7 @@ a.units = "myunits"
 	#    raise ValueError("can only repeat existing axis, need to reshape first (or use repeat_like)")
 
 	# Numpy reshape: does the check
-	newvalues = self.values.reshape(np.size(values), idx)
+	newvalues = self.values.repeat(np.size(values), idx)
 
 	# Create the new axis object
 	if not isinstance(values, Axis):
@@ -992,7 +1019,7 @@ a.units = "myunits"
 	if not isinstance(newaxes[0], Axis):
 	    raise TypeError("should be a Dimarray, a list of Axis objects or an OrderedDict of Axis objects")
 
-	newshape = [ax.size for ax in newaxes]
+	newshape = [ax.name for ax in newaxes]
 
 	# First give it the right shape
 	obj = self.reshape(newshape)
