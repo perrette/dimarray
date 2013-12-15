@@ -3,27 +3,29 @@ dimarray: array with labelled dimensions and axes, metadata and NaN handling
 ============================================================================
 
 Forget the underlying array shape and concentrate on what you aim at doing !
+The best of two worlds: numpy arrays and pandas DataFrame.
 
 Inspired by (but does not rely on) pandas:
 
     * behave like a numpy array (operations, transformations)
-    * ...and to a certain extent like a dictionary
     * labelled axes, NaN handling
-    * (quite) pretty printing
-    * align along axis values in operations
-    * `values` and `axes` attributes, `loc`, `iloc`, `xs` methods
-    * GroupedAxis object similar to pandas MultiIndex
+    * automatic axis aligment for +-/* between two Dimarray objects
+    * similar api (`values`, `axes`, `levels`, `xs`, `iloc`, `loc` etc...)
+    * group/ungroup methods to flatten any subset of dimensions into a 
+      GroupedAxis object, in some ways similar to pandas' MultiIndex.
+    * groupby method (planned)
 
 But generalized to any dimension and augmented with new features:
 
     * intuitive multi-dimensional slicing/reshaping/transforms by axis name
-    * expand method to repeat/broadcast an array along new dimensions
-      ==> arithmetics between arrays of different dimensions 
-    * group/ungroup methods to flatten any subset of dimensions (GroupedAxis)
-      ==> mean, sum, cumsum and so on applicable on any subset of dimensions
-    * support axis-based weights as user-defined array or function on axis values 
-      ==> mean/var/std can be weighted
+    * arithmetics between arrays of different dimensions (broadcasting)
+    * can assign weights to each axis (such as based on axis spacing)
+      ==> `mean`, `var`, `std` can be weighted
+    * in combination to `group`, can achieve area- or volumne- weighting
     * natural netCDF I/O  via netCDF4 python module (requires HDF5, netCDF4)
+    * stick to numpy's api when possible (but with enhanced capabilities):
+      `reshape`, `repeat`, `repeat_like`, `transpose`, `newaxis`, `squeeze`
+      
 
 Yet simpler with more control left to user (most attributes are non-protected, 
 e.g. `values` can be overwritten), and organized around a small number of 
