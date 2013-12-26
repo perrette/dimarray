@@ -541,7 +541,7 @@ a.units = "myunits"
 	NOTE: if an axis has weights, the `mean`, `std` and `var` will 
 	      use these weights.
 	"""
-	assert type(funcname) is str, "can only provide function as a string"
+	#assert type(funcname) is str, "can only provide function as a string"
 
 	# If axis is provided as a tuple, apply the function on the collapsed array
 	if type(axis) is tuple:
@@ -584,6 +584,7 @@ a.units = "myunits"
 	    func = getattr(module, funcname)
 	else:
 	    func = funcname
+	    funcname = func.__name__
 
 	kwargs['axis'] = axis
 	#result = getattr(values, funcname)(*args, **kwargs) 
@@ -608,16 +609,6 @@ a.units = "myunits"
 	if funcname.startswith('cum'):
 	    newaxes = self.axes.copy() # do not change anything
 
-	# ...diff without collapsing dimension: add a first slice of NaNs to conserve axis size
-	# ...and be bijective w.r.t. to reverse transform cumsum
-	elif  funcname == "diff" and result.ndim == self.ndim: 
-	    # first = (slice(None),)*axis + (0,) # first dimension along axis 
-	    #nan_slice = np.empty_like(result[first]) # make a slice ...
-	    nan_slice = np.empty_like(result.take([0], axis=axis)) # make a slice ...
-	    nan_slice.fill(np.nan) # ...filled with NaNs
-	    result = np.concatenate((nan_slice,result), axis=axis)
-	    newaxes = self.axes.copy() # do not change anything
-
 	else:
 	    newaxes = [ax for ax in self.axes if ax.name != axis_nm]
 
@@ -638,7 +629,6 @@ a.units = "myunits"
 
     cumprod = transform.NumpyDesc("apply", "cumprod")
     cumsum = transform.NumpyDesc("apply", "cumsum")
-    diff = transform.NumpyDesc("apply", "diff") # opposite to cumsum
 
     min = transform.NumpyDesc("apply", "min")
     max = transform.NumpyDesc("apply", "max")
@@ -655,6 +645,77 @@ a.units = "myunits"
     mean = transform.weighted_mean
     std = transform.weighted_std
     var = transform.weighted_var
+
+    def diff(self, n=1, axis=-1, scheme="forward"):
+	""" Analogous to numpy's diff
+
+	Calculate the n-th order discrete difference along given axis.
+
+	The first order difference is given by ``out[n] = a[n+1] - a[n]`` along
+	the given axis, higher order differences are calculated by using `diff`
+	recursively.
+
+	Parameters
+	----------
+	n : int, optional
+	    The number of times values are differenced.
+	axis : int or str, optional
+	    The axis along which the difference is taken, default is the last axis.
+	scheme: str, determines the values of the resulting axis
+	        "forward" : diff[i] = x[i+1] - x[i]
+		"backward": diff[i] = x[i] - x[i-1]
+		"centered": diff[i] = x[i+1/2] - x[i-1/2]
+		default is "forward"
+
+	Returns
+	-------
+	diff : Dimarray
+	    The `n` order differences. The shape of the output is the same as `a`
+	    except along `axis` where the dimension is smaller by `n`.
+
+	TODO: add a `keepsize` option to fill in missing value with NaNs for 
+	backward and forward schemes
+	"""
+	# Recursive call if n > 1
+	if n > 1:
+	    self = self.diff(n=n-1, axis=axis, scheme=scheme)
+	    n = 1
+
+	# n = 1
+	assert n == 1, "n must be integer greater or equal to one"
+
+	idx, name = self.get_axis_info(axis) 
+	result = np.diff(self.values, axis=idx)
+
+	#
+	# Determine new axis values
+	#
+	oldaxis = self.axes[idx]
+	if scheme == "forward":
+	    newaxis = oldaxis[:-1]
+
+	elif scheme == "backward":
+	    newaxis = oldaxis[1:]
+
+	elif scheme == "centered":
+	    axisvalues = 0.5*(oldaxis.values[:-1]+oldaxis.values[1:])
+	    newaxis = Axis(axisvalues, name)
+
+	else:
+	    raise ValueError("scheme must be one of 'forward', 'backward', 'central', got {}".format(scheme))
+
+	newaxes = self.axes.copy() # do not change anything
+	newaxes[idx] = newaxis
+
+	obj = self._constructor(result, newaxes, **self._metadata)
+
+	# # add a first slice of NaNs to conserve axis size to be more consistent
+	# # with reverse transform cumsum
+	# nan_slice = np.empty_like(result.take([0], axis=idx)) # make a slice ...
+	# nan_slice.fill(np.nan) # ...filled with NaNs
+	# result = np.concatenate((nan_slice,result), axis=idx)
+	# newaxes = self.axes.copy() # do not change anything
+	return obj
 
     def get_weights(self, weights=None, axis=None, fill_nans=True):
 	""" get weight associated to the array, or returns None if no weights
