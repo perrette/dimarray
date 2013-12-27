@@ -315,7 +315,56 @@ a.units = "myunits"
 
 	return self.xs(**ix_nd)
 
-    def _xs_axis(self, ix, axis=0, method="index", keepdims=False):
+
+    def xs(self, ix=None, axis=0, method=None, keepdims=False, **axes):
+	""" Cross-section, can be multidimensional
+
+	input:
+
+	    - ix       : int or list or tuple or slice (index) 
+	    - axis     : int or str
+	    - method   : indexing method (default "index")
+			 - "numpy": numpy-like integer 
+		         - "index": look for exact match similarly to list.index
+			 - "nearest": (regular Axis only) nearest match, bound checking
+	    - keepdims : keep singleton dimensions
+
+	    - **axes  : provide axes as keyword arguments for multi-dimensional slicing
+			==> chained call to xs 
+			Note in this mode axis cannot be named after named keyword arguments
+			(`ix`, `axis`, `method` or `keepdims`)
+
+	output:
+	    - Dimarray object or python built-in type, consistently with numpy slicing
+
+	>>> a.xs(45.5, axis=0)	 # doctest: +ELLIPSIS
+	>>> a.xs(45.7, axis="lat") == a.xs(45.5, axis=0) # "nearest" matching
+	True
+	>>> a.xs(time=1952.5)
+	>>> a.xs(time=70, method="numpy") # 70th element along the time dimension
+
+	>>> a.xs(lon=(30.5, 60.5), lat=45.5) == a[:, 45.5, 30.5:60.5] # multi-indexing, slice...
+	True
+	>>> a.xs(time=1952, lon=-40, lat=70, method="nearest") # lookup nearest element (with bound checking)
+	"""
+	if method is None:
+	    method = self._indexing
+
+	# single-axis slicing
+	if ix is not None:
+	    obj = self._xs(ix, axis=axis, method=method, keepdims=keepdims)
+
+	# multi-dimensional slicing <axis name> : <axis index value>
+	# just a chained call
+	else:
+	    obj = self
+	    for nm, idx in axes.iteritems():
+		obj = obj._xs(idx, axis=nm, method=method, keepdims=keepdims)
+
+	return obj
+
+
+    def _xs(self, ix, axis=0, method="index", keepdims=False):
 	""" cross-section or slice along a single axis, see xs
 	"""
 	assert axis is not None, "axis= must be provided"
@@ -416,8 +465,8 @@ a.units = "myunits"
 	w1 = ii-i0 
 
 	# sample nearest neighbors
-	v0 = self._xs_axis(i0, axis=axis, method="numpy", keepdims=keepdims)
-	v1 = self._xs_axis(i1, axis=axis, method="numpy", keepdims=keepdims)
+	v0 = self._xs(i0, axis=axis, method="numpy", keepdims=keepdims)
+	v1 = self._xs(i1, axis=axis, method="numpy", keepdims=keepdims)
 
 	# result as weighted sum
 	values = v0.values*(1-w1) + v1.values*w1
@@ -430,53 +479,6 @@ a.units = "myunits"
 	    axes.append(axis)
 	return self._constructor(values, axes, **self._metadata)
 
-
-    def xs(self, ix=None, axis=0, method=None, keepdims=False, **axes):
-	""" Cross-section, can be multidimensional
-
-	input:
-
-	    - ix       : int or list or tuple or slice (index) 
-	    - axis     : int or str
-	    - method   : indexing method (default "index")
-			 - "numpy": numpy-like integer 
-		         - "index": look for exact match similarly to list.index
-			 - "nearest": (regular Axis only) nearest match, bound checking
-	    - keepdims : keep singleton dimensions
-
-	    - **axes  : provide axes as keyword arguments for multi-dimensional slicing
-			==> chained call to xs 
-			Note in this mode axis cannot be named after named keyword arguments
-			(`ix`, `axis`, `method` or `keepdims`)
-
-	output:
-	    - Dimarray object or python built-in type, consistently with numpy slicing
-
-	>>> a.xs(45.5, axis=0)	 # doctest: +ELLIPSIS
-	>>> a.xs(45.7, axis="lat") == a.xs(45.5, axis=0) # "nearest" matching
-	True
-	>>> a.xs(time=1952.5)
-	>>> a.xs(time=70, method="numpy") # 70th element along the time dimension
-
-	>>> a.xs(lon=(30.5, 60.5), lat=45.5) == a[:, 45.5, 30.5:60.5] # multi-indexing, slice...
-	True
-	>>> a.xs(time=1952, lon=-40, lat=70, method="nearest") # lookup nearest element (with bound checking)
-	"""
-	if method is None:
-	    method = self._indexing
-
-	# single-axis slicing
-	if ix is not None:
-	    obj = self._xs_axis(ix, axis=axis, method=method, keepdims=keepdims)
-
-	# multi-dimensional slicing <axis name> : <axis index value>
-	# just a chained call
-	else:
-	    obj = self
-	    for nm, idx in axes.iteritems():
-		obj = obj._xs_axis(idx, axis=nm, method=method, keepdims=keepdims)
-
-	return obj
 
     # 
     # integer-access
@@ -1195,7 +1197,7 @@ a.units = "myunits"
 	"""
 	# iterate over axis values
 	for k in self.axes[axis].values:
-	    val = self._xs_axis(k, axis=axis) # cross-section
+	    val = self._xs(k, axis=axis) # cross-section
 	    yield k, val
 
     #
@@ -1359,7 +1361,7 @@ def _operation(func, o1, o2, reindex=True, transpose=True, constructor=Dimarray)
 
     # re-index 
     if reindex:
-	o1, o2 = _align_objects(o1, o2)
+	o1, o2 = align_axes(o1, o2)
 	## common list of dimensions
 	#dims1 =  [ax.name for ax in o1.axes] 
 	#common_dims =  [ax.name for ax in o2.axes if ax.name in dims1] 
@@ -1419,8 +1421,8 @@ def _get_dims(*objects):
     return dims
 
 
-def _align_objects(*objects):
-    """ align dimensions of a list of objects by reindexing
+def align_axes(*objects):
+    """ align axes of a list of objects by reindexing
     """
     # find the dimensiosn
     dims = _get_dims(*objects)

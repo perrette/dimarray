@@ -4,7 +4,7 @@ from collections import OrderedDict as odict
 import numpy as np
 
 from axes import Axis, Axes
-from core import Dimarray, array, _align_objects
+from core import Dimarray, array, align_axes
 from tools import pandas_obj
 
 class Dataset(object):
@@ -40,7 +40,7 @@ class Dataset(object):
 		raise ValueError("Dimarray must have a name if provided as list, provide `keys=` parameter")
 
 	# Align objects
-	data = _align_objects(*data)
+	data = align_axes(*data)
 
 	# Append to dictionary
 	for v in data:
