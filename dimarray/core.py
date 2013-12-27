@@ -463,6 +463,9 @@ a.units = "myunits"
 	True
 	>>> a.xs(time=1952, lon=-40, lat=70, method="nearest") # lookup nearest element (with bound checking)
 	"""
+	if method is None:
+	    method = self._indexing
+
 	# single-axis slicing
 	if ix is not None:
 	    obj = self._xs_axis(ix, axis=axis, method=method, keepdims=keepdims)
@@ -476,34 +479,18 @@ a.units = "myunits"
 
 	return obj
 
-    #
-    # here some aliases to make things compatible with pandas
+    # 
+    # integer-access
     #
     @property
-    def loc(self):
-	""" pandas-like: exact access to the index
-	"""
-	return self._constructor(self.values, self.axes, _indexing="index", **self._metadata)
-
-    @property
-    def iloc(self):
+    def ix(self):
 	""" integer index-access
 	"""
 	return self._constructor(self.values, self.axes, _indexing="numpy", **self._metadata)
 
-#    @property
-#    def ix(self):
-#	""" automatic choice between numpy or axis-value indexing
-#
-#	question: should follow this path?? this is error prone
-#	or rather make it an alias for iloc?
-#	"""
-#	if not self._pandas_like:
-#	    return self.iloc
-#
-#	raise Warning("this method may disappear in the future")
-#	raise NotImplementedError('add the method to Locator')
-
+    # pandas-like Alias, for back-compatibility
+    loc = __getitem__
+    iloc = ix
 
     #
     # Basic numpy array's properties

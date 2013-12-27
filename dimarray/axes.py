@@ -470,7 +470,7 @@ class Locator(object):
 	    return self.slice(ix)
 
 	# list, array
-	elif np.iterable(ix):
+	elif np.iterable(ix) and not isinstance(ix, str):
 	    return self.take(ix)
 
 	# int, float, string
