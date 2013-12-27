@@ -83,7 +83,7 @@ class Dataset(object):
     def __getattr__(self, att):
 	"""
 	"""
-	return self.variables.__getattr__(att)
+	return getattr(self.variables, att)
 
     def __repr__(self):
 	""" string representation
@@ -107,6 +107,9 @@ class Dataset(object):
 
     def __len__(self):
 	return len(self.variables)
+
+    def __iter__(self):
+	return iter(self.variables)
 
     def __setitem__(self, item, val):
 	""" Make sure the object is a Dimarray with appropriate axes
@@ -157,19 +160,16 @@ class Dataset(object):
 	# align all variables to the same dimensions
 	data = odict()
 	for k in self:
-	    data[k] = self.reshape(self.dimensions.keys()).expand(*self.axes)
+	    data[k] = self[k].reshape(self.dimensions.keys()).repeat_like(self.axes)
 
 	# make it a numpy array
-	data = [self[k].values for k in self]
+	data = [data[k].values for k in self]
 	data = np.array(data)
 
 	# determine axes
-	v0 = self.values()[0]
-	axes = [Axis(self.keys(), axis)] + v0.axes 
+	axes = [Axis(self.keys(), axis)] + self.axes 
 
-	#cls = base.get_class(('set',) + v0._dimensions) # get class
-
-	return array(data, axes)
+	return Dimarray(data, *axes)
 
     def subset(self, names=None, dims=None):
 	""" return a subset of the dictionary

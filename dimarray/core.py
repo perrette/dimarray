@@ -843,8 +843,11 @@ a.units = "myunits"
 	# Axis position and name
 	idx, name = self._get_axis_info(axis) 
 
-	#if k not in self.dims:
-	#    raise ValueError("can only repeat existing axis, need to reshape first (or use repeat_like)")
+	if name not in self.dims:
+	    raise ValueError("can only repeat existing axis, need to reshape first (or use repeat_like)")
+
+	if self.axes[idx].size != 1:
+	    raise ValueError("can only repeat singleton axes")
 
 	# Numpy reshape: does the check
 	newvalues = self.values.repeat(np.size(values), idx)
@@ -924,7 +927,8 @@ a.units = "myunits"
 	# Then repeat along axes
 	#for newaxis in newaxes:  
 	for newaxis in reversed(newaxes):  # should be faster ( CHECK ) 
-	    obj = obj.repeat(newaxis)
+	    if obj.axes[newaxis.name].size == 1 and newaxis.size != 1:
+		obj = obj.repeat(newaxis)
 
 	return obj
 
@@ -1241,14 +1245,14 @@ a.units = "myunits"
     def to_list(self):
 	return [self[k] for k in self]
 
-    def to_dict(self):
+    def to_dict(self, axis=0):
 	""" return an ordered dictionary of sets
 	"""
 	from collect import Dataset
-	d = Dataset()
-	for v in self:
-	    d[v] = self[v]
-	return d
+	d = dict()
+	for k, v in self.iter(axis):
+	    d[k] = v
+	return Dataset(d, keys=self.axes[axis].values)
 
     def to_pandas(self):
 	""" return the equivalent pandas object
