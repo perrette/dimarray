@@ -232,8 +232,7 @@ a.units = "myunits"
 	    return ax.values # return numpy array
 
 	else:
-	    super(Dimarray, self).__getattr__(att) # call Metadata's method
-
+	    return super(Dimarray, self).__getattr__(att) # call Metadata's method
 
     def set(self, inplace=False, **kwargs):
 	""" update multiple class attributes in-place or after copy

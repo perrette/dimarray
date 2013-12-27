@@ -205,9 +205,10 @@ def read_dataset(f, nms=None, *args, **kwargs):
 #    if nms is str:
 #	nms = [nms]
 
-    gen = Dataset() # 
+    gen = dict()
     for nm in nms:
 	gen[nm] = read_variable(f, nm, *args, **kwargs)
+    gen = Dataset(gen, keys=nms)
 
     if close: f.close()
 

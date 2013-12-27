@@ -60,7 +60,7 @@ def apply(obj, func, axis=None, skipna=True, args=(), **kwargs):
 	funcname = func.__name__
 
     # If `axis` was None (operations on the flattened array), just returns the numpy array
-    if axis is None:
+    if axis is None or not isinstance(result, np.ndarray):
 	return result
 
     #
@@ -504,7 +504,7 @@ def apply_recursive(obj, dims, fun, *args, **kwargs):
     for axisval in axis.values: # first axis
 
 	# take a slice of the data (exact matching)
-	slice_ = obj.xs_axis(axisval, axis=axis.name, method="index")
+	slice_ = obj._xs_axis(axisval, axis=axis.name, method="index")
 	#slice_ = obj.xs(**{ax.name:axisval, "method":"index"})
 
 	# apply the transform recursively

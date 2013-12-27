@@ -40,11 +40,11 @@ class Dataset(object):
 		raise ValueError("Dimarray must have a name if provided as list, provide `keys=` parameter")
 
 	# Align objects
-	variables = _align_objects(variables)
+	data = _align_objects(*data)
 
 	# Append to dictionary
-	for i, v in enumerate(variables):
-	    self[k] = v
+	for v in data:
+	    self[v.name] = v
 
 #    @classmethod
 #    def from_dict(cls, dict_, keys=()):
@@ -96,14 +96,17 @@ class Dataset(object):
 	for nm in self.variables:
 	    dims = self.variables[nm].dims
 	    shape = self.variables[nm].shape
-	    print nm,":", ", ".join(dims)
-	    lines.append("{}: {}".format(", ".join(dims)))
+	    #print nm,":", ", ".join(dims)
+	    lines.append("{}: {}".format(nm,", ".join(dims)))
 	return "\n".join(lines)
 
     def __getitem__(self, item):
 	""" 
 	"""
 	return self.variables[item]
+
+    def __len__(self):
+	return len(self.variables)
 
     def __setitem__(self, item, val):
 	""" Make sure the object is a Dimarray with appropriate axes
@@ -112,10 +115,10 @@ class Dataset(object):
 	    raise TypeError("can only append Dimarray instances")
 
 	# Check dimensions
-	for axis in item.axes:
+	for axis in val.axes:
 
 	    # Check dimensions if already existing axis
-	    if axis.name in self.axes:
+	    if axis.name in [ax.name for ax in self.axes]:
 		if not axis == self.axes[axis.name]:
 		    raise ValueError("axes values do not match, align data first.\
 			    \nDataset: {}, \nGot: {}".format(self.axes[axis.name], axis))
