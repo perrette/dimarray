@@ -275,9 +275,19 @@ a.units = "myunits"
     #
     # SLICING
     #
-    def get_axis_info(self, axis):
-	""" return axis name and position
+    def _get_axis_info(self, axis):
+	""" axis position and name
+
+	input  : 
+	    axis: `int` or `str` or None
+
+	returns: 
+	    idx	: `int`, axis position
+	    name: `str` or None, axis name
 	"""
+	if axis is None:
+	    return None, None
+
 	if type(axis) is str:
 	    idx = self.dims.index(axis)
 
@@ -523,199 +533,39 @@ a.units = "myunits"
     #
     # NUMPY TRANSFORMS
     #
-    def apply(self, funcname, axis=None, skipna=True, args=(), **kwargs):
-	""" apply along-axis numpy method
-
-	parameters:
-	----------
-	    - funcname: numpy function name (str)
-	    - axis    : int, str, tuple: axis or group of axes to apply the transform on
-	    - skipna  : remove nans?
-	    - args    : variable list of arguments before "axis"
-	    - kwargs  : variable dict of keyword arguments after "axis"
-	
-	returns:
-	--------
-	    - Dimarray or scalar, consistently with ndarray behaviour
-
-	NOTE: if an axis has weights, the `mean`, `std` and `var` will 
-	      use these weights.
-	"""
-	#assert type(funcname) is str, "can only provide function as a string"
-
-	# If axis is provided as a tuple, apply the function on the collapsed array
-	if type(axis) is tuple:
-	    grouped = self.group(axis)
-	    insert = self.dims.index(axis[0])  # position where the new axis has been inserted
-
-	    # checking
-	    ax = grouped.axes[insert] 
-	    assert isinstance(ax, GroupedAxis) and ax.axes[0].name == axis[0], "problem when grouping axes"
-
-	    # apply the transform at the position of the grouped axis
-	    return grouped.apply(funcname, axis=insert, skipna=skipna, args=args, **kwargs)
-
-#	# Apply weighted transform if applicable
-#	if funcname in ['mean','std','var'] and self.axes[axis].weights is not None:
-#	    return self._apply_weighted(funcname, axis=axis, skipna=skipna, args=args, **kwargs)
-
-	# Deal with NaNs
-	values = self.values
-	if skipna:
-
-	    # replace with the optimized numpy function if existing
-	    if funcname in ("sum","max","min","argmin","argmax"):
-		funcname = "nan"+funcname
-		module = np
-
-	    # otherwise convert to MaskedArray if needed
-	    else:
-		values = self.to_MaskedArray()
-		module = np.ma
-
-	# Get axis name and idx
-	if axis is not None:
-	    axis = self.axes.get_idx(axis)
-	    axis_obj = self.axes[axis]
-	    axis_nm = axis_obj.name
-
-	# get actual function
-	if type(funcname) is str:
-	    func = getattr(module, funcname)
-	else:
-	    func = funcname
-	    funcname = func.__name__
-
-	kwargs['axis'] = axis
-	#result = getattr(values, funcname)(*args, **kwargs) 
-	result = func(values, *args, **kwargs) 
-
-	# Special treatment for argmax and argmin: return the corresponding index
-	if funcname in ("argmax","argmin","nanargmax","nanargmin"):
-	    assert axis is not None, "axis must not be None for "+funcname+", or apply on values"
-	    result = axis_obj.values[result] # get actual axis values
-	    return result
-
-	# if scalar, just return it
-	if not isinstance(result, np.ndarray):
-	    return result
-
-	# otherwise, fill NaNs back in
-	if np.ma.isMaskedArray(result):
-	    result = result.filled(np.nan)
-	
-	# New axes
-	# ...nothing change for cumulative functions
-	if funcname.startswith('cum'):
-	    newaxes = self.axes.copy() # do not change anything
-
-	else:
-	    newaxes = [ax for ax in self.axes if ax.name != axis_nm]
-
-	obj = self._constructor(result, newaxes, **self._metadata)
-
-	# add stamp
-	stamp = "{transform}({axis})".format(transform=funcname, axis=str(axis_obj))
-	obj._metadata_stamp(stamp)
-
-	return obj
+    apply = transform.apply
 
     #
     # Add numpy transforms
     #
+
+    # basic, unmodified transforms
     median = transform.NumpyDesc("apply", "median")
     prod = transform.NumpyDesc("apply", "prod")
     sum  = transform.NumpyDesc("apply", "sum")
 
-    cumprod = transform.NumpyDesc("apply", "cumprod")
-    cumsum = transform.NumpyDesc("apply", "cumsum")
-
     min = transform.NumpyDesc("apply", "min")
     max = transform.NumpyDesc("apply", "max")
+
     ptp = transform.NumpyDesc("apply", "ptp")
     all = transform.NumpyDesc("apply", "all")
     any = transform.NumpyDesc("apply", "any")
 
-    #
-    # Use weighted mean/std/var by default
-    #
+    # slightly modified numpy transforms
+    argmin = transform.argmin
+    argmax = transform.argmax
+    cumsum = transform.cumsum
+    cumprod = transform.cumprod
+    diff = transform.diff
+
+    # use weighted mean/std/var by default
+    # ... unweighted as private functions
     _mean = transform.NumpyDesc("apply", "mean")
     _std = transform.NumpyDesc("apply", "std")
     _var = transform.NumpyDesc("apply", "var")
     mean = transform.weighted_mean
     std = transform.weighted_std
     var = transform.weighted_var
-
-    def diff(self, n=1, axis=-1, scheme="forward"):
-	""" Analogous to numpy's diff
-
-	Calculate the n-th order discrete difference along given axis.
-
-	The first order difference is given by ``out[n] = a[n+1] - a[n]`` along
-	the given axis, higher order differences are calculated by using `diff`
-	recursively.
-
-	Parameters
-	----------
-	n : int, optional
-	    The number of times values are differenced.
-	axis : int or str, optional
-	    The axis along which the difference is taken, default is the last axis.
-	scheme: str, determines the values of the resulting axis
-	        "forward" : diff[i] = x[i+1] - x[i]
-		"backward": diff[i] = x[i] - x[i-1]
-		"centered": diff[i] = x[i+1/2] - x[i-1/2]
-		default is "forward"
-
-	Returns
-	-------
-	diff : Dimarray
-	    The `n` order differences. The shape of the output is the same as `a`
-	    except along `axis` where the dimension is smaller by `n`.
-
-	TODO: add a `keepsize` option to fill in missing value with NaNs for 
-	backward and forward schemes
-	"""
-	# Recursive call if n > 1
-	if n > 1:
-	    self = self.diff(n=n-1, axis=axis, scheme=scheme)
-	    n = 1
-
-	# n = 1
-	assert n == 1, "n must be integer greater or equal to one"
-
-	idx, name = self.get_axis_info(axis) 
-	result = np.diff(self.values, axis=idx)
-
-	#
-	# Determine new axis values
-	#
-	oldaxis = self.axes[idx]
-	if scheme == "forward":
-	    newaxis = oldaxis[:-1]
-
-	elif scheme == "backward":
-	    newaxis = oldaxis[1:]
-
-	elif scheme == "centered":
-	    axisvalues = 0.5*(oldaxis.values[:-1]+oldaxis.values[1:])
-	    newaxis = Axis(axisvalues, name)
-
-	else:
-	    raise ValueError("scheme must be one of 'forward', 'backward', 'central', got {}".format(scheme))
-
-	newaxes = self.axes.copy() # do not change anything
-	newaxes[idx] = newaxis
-
-	obj = self._constructor(result, newaxes, **self._metadata)
-
-	# # add a first slice of NaNs to conserve axis size to be more consistent
-	# # with reverse transform cumsum
-	# nan_slice = np.empty_like(result.take([0], axis=idx)) # make a slice ...
-	# nan_slice.fill(np.nan) # ...filled with NaNs
-	# result = np.concatenate((nan_slice,result), axis=idx)
-	# newaxes = self.axes.copy() # do not change anything
-	return obj
 
     def get_weights(self, weights=None, axis=None, fill_nans=True):
 	""" get weight associated to the array, or returns None if no weights
@@ -891,7 +741,7 @@ a.units = "myunits"
 	    res = self.values.squeeze()
 
 	else:
-	    idx, name = self.get_axis_info(axis) 
+	    idx, name = self._get_axis_info(axis) 
 	    res = self.values.squeeze(idx)
 	    newaxes = [ax for ax in self.axes if ax.name != name or ax.size != 1] 
 
@@ -1005,7 +855,7 @@ a.units = "myunits"
 	    axis = values.name
 
 	# Axis position and name
-	idx, name = self.get_axis_info(axis) 
+	idx, name = self._get_axis_info(axis) 
 
 	#if k not in self.dims:
 	#    raise ValueError("can only repeat existing axis, need to reshape first (or use repeat_like)")
@@ -1334,16 +1184,15 @@ a.units = "myunits"
 
 	return self._constructor(self.values == other.values, self.axes)
 
+    ##
+    ## to behave like a dictionary w.r.t. first dimension (pandas-like)
+    ##
+    #def __iter__(self):
+    #    for k in self.keys():
+    #        yield k
 
-    #
-    # to behave like a dictionary w.r.t. first dimension (pandas-like)
-    #
-    def __iter__(self):
-	for k in self.keys():
-	    yield k
-
-    def keys(self):
-	return self.axes[0].values
+    #def keys(self):
+    #    return self.axes[0].values
 
     #
     # iteration over any dimension: key, value
@@ -1399,13 +1248,9 @@ a.units = "myunits"
     # export to other data types
     #
     def to_MaskedArray(self):
-	nans = np.isnan(self.values)
-	if np.any(nans):
-	    mask = nans
-	else:
-	    mask = False
-	values = np.ma.array(self.values, mask=mask)
-	return values
+	""" transform to MaskedArray, with NaNs as missing values
+	"""
+	return transform.to_MaskedArray(self.values)
 
     def to_list(self):
 	return [self[k] for k in self]
