@@ -1,5 +1,10 @@
 """ Module to deal with indexing
 """
+import numpy as np
+import copy 
+
+from axes import Axis, Axes, GroupedAxis
+
 def xs(self, ix=None, axis=0, method=None, keepdims=False, **axes):
     """ Cross-section, can be multidimensional
 
@@ -32,38 +37,38 @@ def xs(self, ix=None, axis=0, method=None, keepdims=False, **axes):
     >>> a.xs(time=1952, lon=-40, lat=70, method="nearest") # lookup nearest element (with bound checking)
     """
     if method is None:
-	method = self._indexing
+	method = self._INDEXING
 
     # single-axis slicing
     if ix is not None:
-	obj = self._xs(ix, axis=axis, method=method, keepdims=keepdims)
+	obj = _xs(self, ix, axis=axis, method=method, keepdims=keepdims)
 
     # multi-dimensional slicing <axis name> : <axis index value>
     # just a chained call
     else:
 	obj = self
 	for nm, idx in axes.iteritems():
-	    obj = obj._xs(idx, axis=nm, method=method, keepdims=keepdims)
+	    obj = _xs(obj, idx, axis=nm, method=method, keepdims=keepdims)
 
     return obj
 
 
-def _xs(self, ix, axis=0, method="index", keepdims=False):
+def _xs(obj, ix, axis=0, method="index", keepdims=False):
     """ cross-section or slice along a single axis, see xs
     """
     assert axis is not None, "axis= must be provided"
 
     # get integer index/slice for axis valued index/slice
     if method is None:
-	method = self._indexing # slicing method
+	method = obj._INDEXING # slicing method
 
     # Linear interpolation between axis values, see _take_interp
     if method in ('interp'):
-	return self._take_interp(ix, axis=axis, keepdims=keepdims)
+	return _take_interp(obj, ix, axis=axis, keepdims=keepdims)
 
     # get an axis object
-    ax = self.axes[axis] # axis object
-    axis_id = self.axes.index(ax) # corresponding integer index
+    ax = obj.axes[axis] # axis object
+    axis_id = obj.axes.index(ax) # corresponding integer index
 
     # numpy-like indexing, do nothing
     if method == "numpy":
@@ -78,11 +83,11 @@ def _xs(self, ix, axis=0, method="index", keepdims=False):
 
     # make a numpy index  and use numpy's slice method (`slice(None)` :: `:`)
     index_nd = (slice(None),)*axis_id + (index,)
-    newval = self.values[index_nd]
-    newaxis = self.axes[axis][index] # returns an Axis object
+    newval = obj.values[index_nd]
+    newaxis = obj.axes[axis][index] # returns an Axis object
 
     # if resulting dimension has reduced, remove the corresponding axis
-    axes = copy.copy(self.axes)
+    axes = copy.copy(obj.axes)
 
     # check for collapsed axis
     collapsed = not isinstance(newaxis, Axis)
@@ -90,8 +95,8 @@ def _xs(self, ix, axis=0, method="index", keepdims=False):
     # re-expand things even if the axis collapsed
     if collapsed and keepdims:
 
-	newaxis = Axis([newaxis], self.axes[axis].name) 
-	reduced_shape = list(self.shape)
+	newaxis = Axis([newaxis], obj.axes[axis].name) 
+	reduced_shape = list(obj.shape)
 	reduced_shape[axis_id] = 1 # reduce to one
 	newval = np.reshape(newval, reduced_shape)
 
@@ -109,7 +114,7 @@ def _xs(self, ix, axis=0, method="index", keepdims=False):
 
     # If result is a numpy array, make it a Dimarray
     if isinstance(newval, np.ndarray):
-	result = self._constructor(newval, axes, **self._metadata)
+	result = obj._constructor(newval, axes, **obj._metadata)
 
 	# append stamp
 	if stamp: result._metadata_stamp(stamp)
@@ -120,13 +125,13 @@ def _xs(self, ix, axis=0, method="index", keepdims=False):
 
     return result
 
-def _take_interp(self, ix, axis, keepdims):
+def _take_interp(obj, ix, axis, keepdims):
     """ Take a number or an integer as from an axis
     """
     assert type(ix) is not slice, "interp only work with integer and list indexing"
 
     # return a "fractional" index
-    ax = self.axes[axis]
+    ax = obj.axes[axis]
     index = ax.loc(ix, method='interp') 
     ii = np.array(index) # make sure it is array-like
 
@@ -149,8 +154,8 @@ def _take_interp(self, ix, axis, keepdims):
     w1 = ii-i0 
 
     # sample nearest neighbors
-    v0 = self._xs(i0, axis=axis, method="numpy", keepdims=keepdims)
-    v1 = self._xs(i1, axis=axis, method="numpy", keepdims=keepdims)
+    v0 = _xs(obj, i0, axis=axis, method="numpy", keepdims=keepdims)
+    v1 = _xs(obj, i1, axis=axis, method="numpy", keepdims=keepdims)
 
     # result as weighted sum
     values = v0.values*(1-w1) + v1.values*w1
@@ -159,19 +164,9 @@ def _take_interp(self, ix, axis, keepdims):
 	if d == ax.name:
 	    axis = Axis(v0.axes[d].values*(1-w1) + v1.axes[d].values*w1, d)
 	else:
-	    axis = self.axes[d]
+	    axis = obj.axes[d]
 	axes.append(axis)
-    return self._constructor(values, axes, **self._metadata)
-
-#    def compress(self, condition, axis=None):
-#	""" analogous to numpy `compress` method
-#	"""
-#	return self.apply("compress", axis=axis, skipna=False, args=(condition,))
-#
-#    def take(self, indices, axis=None):
-#	""" analogous to numpy `take` method
-#	"""
-#	return self.apply("take", axis=axis, skipna=False, args=(indices,))
+    return obj._constructor(values, axes, **obj._metadata)
 
 
 #    #

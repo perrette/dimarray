@@ -3,6 +3,9 @@
 NOTE: these functions are used as methods for Dimarray, thus the first argument 
 `self`
 """
+import numpy as np
+from axes import Axis, Axes, GroupedAxis
+
 def reindex_axis(self, newaxis, axis=0, method='index'):
     """ reindex an array along an axis
 

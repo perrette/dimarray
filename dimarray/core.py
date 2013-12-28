@@ -53,13 +53,13 @@ class Dimarray(Metadata):
 	    - metadata
 	"""
 	# filter **kwargs and keep metadata
-	default = dict(dtype=None, copy=False, _indexing="index")
+	default = dict(dtype=None, copy=False, _INDEXING="index")
 	for k in default:
 	    if k in kwargs:
 		default[k] = kwargs.pop(k)
 
 	metadata = kwargs
-	_indexing = default.pop('_indexing')
+	_INDEXING = default.pop('_INDEXING')
 
 	#
 	# array values
@@ -116,7 +116,7 @@ class Dimarray(Metadata):
 	self.axes = axes
 
 	# options
-	self._indexing = _indexing
+	self._INDEXING = _INDEXING
 
 	#
 	# metadata (see Metadata type in metadata.py)
@@ -169,7 +169,14 @@ class Dimarray(Metadata):
 	    return ax.values # return numpy array
 
 	else:
-	    return super(Dimarray, self).__getattr__(att) # call Metadata's method
+	    try:
+		return super(Dimarray, self).__getattr__(att) # call Metadata's method
+
+	    except AttributeError, msg:
+		raise AttributeError(msg)
+
+	    else:
+		raise
 
     def set(self, inplace=False, **kwargs):
 	""" update multiple class attributes in-place or after copy
@@ -177,9 +184,9 @@ class Dimarray(Metadata):
 	inplace: modify attributes in-place, return None 
 	otherwise first make a copy, and return new obj
 
-	a.set(_indexing="numpy")[:30]
-	a.set(_indexing="index")[1971.42]
-	a.set(_indexing="nearest")[1971]
+	a.set(_INDEXING="numpy")[:30]
+	a.set(_INDEXING="index")[1971.42]
+	a.set(_INDEXING="nearest")[1971]
 	a.set(name="myname", inplace=True) # modify attributes inplace
 	"""
 	if inplace: 
@@ -372,7 +379,7 @@ class Dimarray(Metadata):
     #
     # New general-purpose indexing method
     #
-    xs = _indexing.xs
+    xs = _indexing.xs 
 
     #
     # Standard indexing takes axis values
@@ -394,7 +401,7 @@ class Dimarray(Metadata):
     def ix(self):
 	""" integer index-access
 	"""
-	return self._constructor(self.values, self.axes, _indexing="numpy", **self._metadata)
+	return self._constructor(self.values, self.axes, _INDEXING="numpy", **self._metadata)
 
     #
     # TRANSFORMS
@@ -412,8 +419,8 @@ class Dimarray(Metadata):
     # NUMPY TRANSFORMS
     #
     median = _transform.median
-    median = _transform.median
     sum = _transform.sum
+    prod = _transform.prod
 
     # use weighted mean/std/var by default
     mean = _transform.weighted_mean
@@ -474,7 +481,7 @@ class Dimarray(Metadata):
     #
     # REINDEXING 
     #
-    reindex_axis = index_tricks.reindex_axis
+    reindex_axis = _reindex.reindex_axis
 
     #
     # BASIC OPERATTIONS

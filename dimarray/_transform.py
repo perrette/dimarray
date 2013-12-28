@@ -62,8 +62,7 @@ See Also:
 def apply_along_axis(obj, func, axis=None, skipna=True, args=(), **kwargs):
     """ Apply along-axis numpy method to Dimarray
 
-    As a function: apply_along_axis(obj, ...)
-    As a method  : obj.apply_along_axis(...)
+    apply_along_axis(obj, ...)
     Where ... are the parameters below:
 
     parameters:
@@ -223,7 +222,7 @@ class _NumpyDesc(object):
 	"""
 	"""
 	# convert self.apply to an actual function
-	newmethod = partial(apply_along_axis, self.numpy_method, axis=self.axis, **self.kwargs)
+	newmethod = partial(apply_along_axis, obj, self.numpy_method, axis=self.axis, **self.kwargs)
 
 	# Update doc string
 	newmethod.__doc__ = _doc_numpy.format(func=self.numpy_method, default_axis=self.axis)
@@ -248,7 +247,7 @@ cumprod = _NumpyDesc("cumprod", axis=-1)
 #
 # Special behaviour for argmin and argmax: return axis values instead of integer position
 #
-@format_doc(default_axis="None"}
+@format_doc(default_axis="None")
 @format_doc(axis=_doc_axis, skipna=_doc_skipna)
 def locmin(obj, axis=None, skipna=True):
     """ similar to numpy's argmin, but return axis values instead of integer position
@@ -259,7 +258,7 @@ def locmin(obj, axis=None, skipna=True):
     {skipna}
     """
     obj, idx, name = _deal_with_axis(obj, axis)
-    res = obj.apply('argmin', axis=idx, skipna=skipna)
+    res = apply_along_axis(obj, 'argmin', axis=idx, skipna=skipna)
 
     # along axis: single axis value
     if axis is not None: # res is Dimarray
@@ -282,7 +281,7 @@ def locmax(obj, axis=None, skipna=True):
     {skipna}
     """
     obj, idx, name = _deal_with_axis(obj, axis)
-    res = obj.apply('argmax', axis=idx, skipna=skipna)
+    res = apply_along_axis(obj, 'argmax', axis=idx, skipna=skipna)
 
     # along axis: single axis value
     if axis is not None: # res is Dimarray
@@ -461,11 +460,11 @@ def weighted_mean(obj, axis=None, skipna=True, weights='axis'):
 
     # if no weights, just apply numpy's mean
     if not weights:
-	return obj.apply("mean", axis=axis, skipna=skipna)
+	return apply_along_axis(obj, "mean", axis=axis, skipna=skipna)
 
     # weighted mean
-    sum_values = (obj*weights).apply("sum", axis=axis, skipna=skipna)
-    sum_weights = weights.apply("sum", axis=axis, skipna=skipna)
+    sum_values = apply_along_axis(obj*weights, "sum", axis=axis, skipna=skipna)
+    sum_weights = apply_along_axis(weights, "sum", axis=axis, skipna=skipna)
     return sum_values / sum_weights
 
 def weighted_var(obj, axis=None, skipna=True, weights="axis", ddof=0):
@@ -492,7 +491,7 @@ def weighted_var(obj, axis=None, skipna=True, weights="axis", ddof=0):
 
     # if no weights, just apply numpy's var
     if not weights:
-	return obj.apply("var", axis=axis, skipna=skipna, ddof=ddof)
+	return apply_along_axis(obj, "var", axis=axis, skipna=skipna, ddof=ddof)
 
     # weighted mean
     mean = obj.mean(axis=axis, skipna=skipna, weights=weights)

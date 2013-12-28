@@ -1,5 +1,9 @@
 """ Module to regroup methods related to changing Dimarray dimensions
 """
+import numpy as np
+from collections import OrderedDict
+
+from axes import Axis, Axes, GroupedAxis
 
 # Transpose: permute dimensions
 
@@ -149,14 +153,14 @@ def repeat(self, values=None, axis=None, **kwargs):
 	dims = [k for k in self.dims if k in dims]
 	obj = self
 	for k in reversed(dims):
-	    obj = self._repeat(kwargs[k], axis=k)
+	    obj = _repeat(self, kwargs[k], axis=k)
 
     else:
-	obj = self._repeat(values, axis=axis)
+	obj = _repeat(self, values, axis=axis)
 
     return obj
 
-def _repeat(self, values, axis=None):
+def _repeat(obj, values, axis=None):
     """ called by repeat
     """
     # default axis values: 0, 1, 2, ...
@@ -168,16 +172,16 @@ def _repeat(self, values, axis=None):
 	axis = values.name
 
     # Axis position and name
-    idx, name = self._get_axis_info(axis) 
+    idx, name = obj._get_axis_info(axis) 
 
-    if name not in self.dims:
+    if name not in obj.dims:
 	raise ValueError("can only repeat existing axis, need to reshape first (or use broadcast)")
 
-    if self.axes[idx].size != 1:
+    if obj.axes[idx].size != 1:
 	raise ValueError("can only repeat singleton axes")
 
     # Numpy reshape: does the check
-    newvalues = self.values.repeat(np.size(values), idx)
+    newvalues = obj.values.repeat(np.size(values), idx)
 
     # Create the new axis object
     if not isinstance(values, Axis):
@@ -187,12 +191,17 @@ def _repeat(self, values, axis=None):
 	newaxis = values
 
     # New axes
-    newaxes = [ax for ax in self.axes]
+    newaxes = [ax for ax in obj.axes]
     newaxes[idx] = newaxis
 
     # Update values and axes
-    return self._constructor(newvalues, newaxes, **self._metadata)
+    return obj._constructor(newvalues, newaxes, **obj._metadata)
 
+def is_Dimarray(obj):
+    """ avoid import conflict
+    """
+    from core import Dimarray
+    return isinstance(obj, Dimarray)
 
 def broadcast(self, other):
     """ broadcast the array along a set of axes by repeating it as necessay
@@ -234,7 +243,7 @@ def broadcast(self, other):
     if isinstance(other, list):
 	newaxes = other
 
-    elif isinstance(other, Dimarray):
+    elif is_Dimarray(other):
 	newaxes = other.axes
 
     elif isinstance(other, OrderedDict):

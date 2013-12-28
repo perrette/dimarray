@@ -160,7 +160,7 @@ class Dataset(object):
 	# align all variables to the same dimensions
 	data = odict()
 	for k in self:
-	    data[k] = self[k].reshape(self.dimensions.keys()).repeat_like(self.axes)
+	    data[k] = self[k].reshape(self.dimensions.keys()).broadcast(self.axes)
 
 	# make it a numpy array
 	data = [data[k].values for k in self]
