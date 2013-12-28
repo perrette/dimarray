@@ -1,3 +1,4 @@
+import inspect
 import functools
 
 def format_doc(*args, **kwargs):
@@ -11,25 +12,46 @@ def format_doc(*args, **kwargs):
 
     return pseudo_decorator
 
-class Desc(object):
-    """ Convert a function on Dimarray into a method
+def axes_as_keywords(func):
+    """ make a function func(self, values, axis, opt1=.., opt2=..) also accept 
+    axes as keyword arguments: func2(self, values, axis, **kwargs)
+    where **kwargs is opt1=..., opt2=..., **axes 
+    and where **axes is ax1=val1, ax2=val2 etc...
     """
-    def __init__(self, func):
-	""" func: function taking "obj" as first argument
-	"""
-	self.func = func
+    # arguments of func, including opt1, opt2 etc...
+    func_args = inspect.getargspec(func)[0]
 
-    def __get__(self, obj, cls=None):
-	""" return a bound method with updated documention
+    def newfunc(self, values=None, axis=None, **kwargs):
+	""" decorated function
 	"""
-	method = functools.partial(obj=self.func, **self.kwargs)
-	method = functools.update_wrapper(method, self.func)
+	# Separate optional arguments from axes
+	kwaxes = {}
+	for k in kwargs:
+	    if k not in func_args:
+		kwaxes[k] = kwargs.pop(k)
 
-	# Remove reference to obj
-	patt = 'obj: Dimarray instance\n'
-	if patt+'\n' in method.__doc__:
-	    method.__doc__ = method.__doc__.replace(patt+'\n','')
+	# Recursive call if keyword arguments are provided
+	if len(kwaxes) > 0:
+	    assert values is None, "can't input both values/axis and keywords arguments"
+	    dims = kwaxes.keys()
+
+	    # First check that dimensions are there
+	    for k in dims:
+		if k not in self.dims:
+		    raise ValueError("can only repeat existing axis, need to reshape first (or use broadcast)")
+
+	    # Choose the appropriate order for speed
+	    dims = [k for k in self.dims if k in dims]
+	    obj = self
+	    for k in reversed(dims):
+		obj = func(self, kwaxes[k], axis=k, **kwargs)
+
 	else:
-	    method.__doc__ = method.__doc__.replace(patt,'')
+	    obj = func(self, values, axis=axis)
 
-	return method
+	return obj
+
+    # update documentation (assume it already includes info about keyword arguments)
+    newfunc = functools.update_wrapper(newfunc, func)
+
+    return newfunc

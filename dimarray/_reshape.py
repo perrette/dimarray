@@ -4,6 +4,7 @@ import numpy as np
 from collections import OrderedDict
 
 from axes import Axis, Axes, GroupedAxis
+from decorators import axes_as_keywords
 
 # Transpose: permute dimensions
 
@@ -38,6 +39,84 @@ def transpose(self, axes=None):
     newaxes = [self.axes[i] for i in axes]
     return self._constructor(result, newaxes)
 
+#
+# Repeat the array along *existing* axis
+#
+@axes_as_keywords
+def repeat(self, values, axis=None):
+    """ expand the array along axis: analogous to numpy's repeat
+
+    repeat(values=None, axis=None, **kwaxes)
+
+    input:
+	values  : integer (size of new axis) or ndarray (values  of new axis) 
+	          or Axis object
+	axis    : int or str (refer to the dimension along which to repeat)
+
+	**kwaxes: alternatively, axes may be passed as keyword arguments 
+
+    output:
+	Dimarray
+
+    Examples:
+    --------
+    >>> a = da.Dimarray.from_kw(arange(2), lon=[30., 40.])
+    >>> a = a.reshape(('time','lon'))
+    >>> a.repeat(np.arange(1950,1955), axis="time")  # doctest: +ELLIPSIS
+    dimarray: 10 non-null elements (0 null)
+    dimensions: 'time', 'lon'
+    0 / time (5): 1950 to 1954
+    1 / lon (2): 30.0 to 40.0
+    array([[0, 1],
+	   [0, 1],
+	   [0, 1],
+	   [0, 1],
+	   [0, 1]])
+
+    With keyword arguments:
+
+    >>> b = a.reshape(('lat','lon','time'))
+    >>> b.repeat(time=np.arange(1950,1955), lat=[0., 90.])  # doctest: +ELLIPSIS
+    dimarray: 20 non-null elements (0 null)
+    dimensions: 'lat', 'lon', 'time'
+    0 / lat (2): 0.0 to 90.  
+    1 / lon (2): 30.0 to 40.0
+    2 / time (5): 1950 to 1954
+    ...
+    """
+    # default axis values: 0, 1, 2, ...
+    if type(values) is int:
+	values = np.arange(values)
+
+    if axis is None:
+	assert hasattr(values, "name"), "must provide axis name or position !"
+	axis = values.name
+
+    # Axis position and name
+    idx, name = self._get_axis_info(axis) 
+
+    if name not in self.dims:
+	raise ValueError("can only repeat existing axis, need to reshape first (or use broadcast)")
+
+    if self.axes[idx].size != 1:
+	raise ValueError("can only repeat singleton axes")
+
+    # Numpy reshape: does the check
+    newvalues = self.values.repeat(np.size(values), idx)
+
+    # Create the new axis object
+    if not isinstance(values, Axis):
+	newaxis = Axis(values, name)
+
+    else:
+	newaxis = values
+
+    # New axes
+    newaxes = [ax for ax in self.axes]
+    newaxes[idx] = newaxis
+
+    # Update values and axes
+    return self._constructor(newvalues, newaxes, **self._metadata)
 
 #
 # Remove / add singleton axis
@@ -98,111 +177,6 @@ def reshape(self, newdims):
     # now give it the right order
     return o.transpose(newdims)
 
-#
-# Repeat the array along *existing* axis
-#
-def repeat(self, values=None, axis=None, **kwargs):
-    """ expand the array along axis: analogous to numpy's repeat
-
-    input:
-	values : integer (size of new axis) or ndarray (values  of new axis) or Axis object
-	axis   : int or str (refer to the dimension along which to repeat) (must exist !)
-
-    EXPERIMENTAL: provide axes as keyword arguments, might be removed if not useful
-
-    output:
-	Dimarray
-
-    Examples:
-    --------
-    >>> a = da.Dimarray.from_kw(arange(2), lon=[30., 40.])
-    >>> a = a.reshape(('time','lon'))
-    >>> a.repeat(np.arange(1950,1955), axis="time")  # doctest: +ELLIPSIS
-    dimarray: 10 non-null elements (0 null)
-    dimensions: 'time', 'lon'
-    0 / time (5): 1950 to 1954
-    1 / lon (2): 30.0 to 40.0
-    array([[0, 1],
-	   [0, 1],
-	   [0, 1],
-	   [0, 1],
-	   [0, 1]])
-
-    With keyword arguments:
-
-    >>> b = a.reshape(('lat','lon','time'))
-    >>> b.repeat(time=np.arange(1950,1955), lat=[0., 90.])  # doctest: +ELLIPSIS
-    dimarray: 20 non-null elements (0 null)
-    dimensions: 'lat', 'lon', 'time'
-    0 / lat (2): 0.0 to 90.  
-    1 / lon (2): 30.0 to 40.0
-    2 / time (5): 1950 to 1954
-    ...
-    """
-    # Recursive call if keyword arguments are provided
-    if len(kwargs) > 0:
-	assert values is None, "can't input both values/axis and keywords arguments"
-	dims = kwargs.keys()
-
-	# First check that dimensions are there
-	for k in dims:
-	    if k not in self.dims:
-		raise ValueError("can only repeat existing axis, need to reshape first (or use broadcast)")
-
-	# Choose the appropriate order for speed
-	dims = [k for k in self.dims if k in dims]
-	obj = self
-	for k in reversed(dims):
-	    obj = _repeat(self, kwargs[k], axis=k)
-
-    else:
-	obj = _repeat(self, values, axis=axis)
-
-    return obj
-
-def _repeat(obj, values, axis=None):
-    """ called by repeat
-    """
-    # default axis values: 0, 1, 2, ...
-    if type(values) is int:
-	values = np.arange(values)
-
-    if axis is None:
-	assert hasattr(values, "name"), "must provide axis name or position !"
-	axis = values.name
-
-    # Axis position and name
-    idx, name = obj._get_axis_info(axis) 
-
-    if name not in obj.dims:
-	raise ValueError("can only repeat existing axis, need to reshape first (or use broadcast)")
-
-    if obj.axes[idx].size != 1:
-	raise ValueError("can only repeat singleton axes")
-
-    # Numpy reshape: does the check
-    newvalues = obj.values.repeat(np.size(values), idx)
-
-    # Create the new axis object
-    if not isinstance(values, Axis):
-	newaxis = Axis(values, name)
-
-    else:
-	newaxis = values
-
-    # New axes
-    newaxes = [ax for ax in obj.axes]
-    newaxes[idx] = newaxis
-
-    # Update values and axes
-    return obj._constructor(newvalues, newaxes, **obj._metadata)
-
-def is_Dimarray(obj):
-    """ avoid import conflict
-    """
-    from core import Dimarray
-    return isinstance(obj, Dimarray)
-
 def broadcast(self, other):
     """ broadcast the array along a set of axes by repeating it as necessay
 
@@ -258,15 +232,21 @@ def broadcast(self, other):
     newshape = [ax.name for ax in newaxes]
 
     # First give it the right shape
-    obj = self.reshape(newshape)
+    newobj = self.reshape(newshape)
 
     # Then repeat along axes
     #for newaxis in newaxes:  
     for newaxis in reversed(newaxes):  # should be faster ( CHECK ) 
-	if obj.axes[newaxis.name].size == 1 and newaxis.size != 1:
-	    obj = obj.repeat(newaxis)
+	if newobj.axes[newaxis.name].size == 1 and newaxis.size != 1:
+	    newobj = newobj.repeat(newaxis)
 
-    return obj
+    return newobj
+
+def is_Dimarray(obj):
+    """ avoid import conflict
+    """
+    from core import Dimarray
+    return isinstance(obj, Dimarray)
 
 #
 # Group/ungroup subsets of axes to perform operations on partly flattened array
