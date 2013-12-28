@@ -5,12 +5,16 @@ import copy
 from collections import OrderedDict
 #import json
 
-#import plotting
-
 from metadata import Metadata
 from axes import Axis, Axes, GroupedAxis
+
+import _transform  # numpy along-axis transformations, interpolation
+import _reindex	   # re-index + interpolation
+import _reshape	   # change array shape and dimensions
+import _indexing   # perform slicing and indexing operations
+
 from tools import pandas_obj
-import transform  # numpy axis transformation, interpolation
+#import plotting
 
 __all__ = []
 
@@ -29,8 +33,6 @@ class Dimarray(Metadata):
     _order = None  # set a general ordering relationship for dimensions
 
     _metadata_exclude = ("values","axes") # is NOT a metadata
-
-    _pandas_like = False # influences the behaviour of ix and loc
 
     #
     # NOW MAIN BODY OF THE CLASS
@@ -107,7 +109,8 @@ class Dimarray(Metadata):
 	# store all fields
 	#
 
-	super(Dimarray, self).__init__() # init an ordered dict self._metadata
+	# init an ordered dict self._metadata
+	super(Dimarray, self).__init__() 
 
 	self.values = avalues
 	self.axes = axes
@@ -136,8 +139,11 @@ class Dimarray(Metadata):
 	    order = missing + present # prepend dimensions not found in ordering relationship
 	    self.transpose(order, inplace=True)
 
-    @staticmethod
-    def _constructor(values, axes, **metadata):
+    #
+    # Internal constructor, useful for subclassing
+    #
+    @classmethod
+    def _constructor(cls, values, axes, **metadata):
 	""" Internal API for the constructor: check whether a pre-defined class exists
 
 	values	: numpy-like array
@@ -149,8 +155,385 @@ class Dimarray(Metadata):
 	This makes the sub-classing process easier since only this method needs to be 
 	overloaded to make the sub-class a "closed" class.
 	"""
-	return Dimarray(values, *axes, **metadata)
+	return cls(values, *axes, **metadata)
 
+    #
+    # Attributes access
+    #
+    def __getattr__(self, att):
+	""" return dimension or numpy attribue
+	"""
+	# check for dimensions
+	if att in self.dims:
+	    ax = self.axes[att]
+	    return ax.values # return numpy array
+
+	else:
+	    return super(Dimarray, self).__getattr__(att) # call Metadata's method
+
+    def set(self, inplace=False, **kwargs):
+	""" update multiple class attributes in-place or after copy
+
+	inplace: modify attributes in-place, return None 
+	otherwise first make a copy, and return new obj
+
+	a.set(_indexing="numpy")[:30]
+	a.set(_indexing="index")[1971.42]
+	a.set(_indexing="nearest")[1971]
+	a.set(name="myname", inplace=True) # modify attributes inplace
+	"""
+	if inplace: 
+	    for k in kwargs:
+		setattr(self, k, kwargs[k]) # include metadata check
+	    #self.__dict__.update(kwargs)
+
+	else:
+	    obj = self.copy(shallow=True)
+	    for k in kwargs:
+		setattr(obj, k, kwargs[k]) # include metadata check
+	    return obj
+
+    def copy(self, shallow=False):
+	""" copy of the object and update arguments
+
+	shallow: if True, does not copy values and axes
+	"""
+	import copy
+	new = copy.copy(self) # shallow copy
+
+	if not shallow:
+	    new.values = self.values.copy()
+	    new.axes = self.axes.copy()
+
+	return new
+	#return Dimarray(self.values.copy(), self.axes.copy(), slicing=self.slicing, **{k:getattr(self,k) for k in self.ncattrs()})
+
+    #
+    # Basic numpy array's properties
+    #
+    # basic numpy shape attributes as properties
+    @property
+    def shape(self): 
+	return self.values.shape
+
+    @property
+    def size(self): 
+	return self.values.size
+
+    @property
+    def ndim(self): 
+	return self.values.ndim
+
+    @property
+    def dtype(self): 
+	return self.values.dtype
+
+    @property
+    def __array__(self): 
+	return self.values.__array__
+
+    @property
+    def __iter__(self): 
+	""" iterates on values, consistently with a ndarray
+	"""
+	for k, val in self.iter():
+	    yield val
+
+    #
+    # Some additional properties
+    #
+    @property
+    def dims(self):
+	""" axis names 
+	"""
+	return tuple([ax.name for ax in self.axes])
+
+    #
+    # iteration over any dimension: key, value
+    #
+    def iter(self, axis=0):
+	""" Iterate over axis value and slice along an axis
+
+	for time, time_slice in myarray.iter('time'):
+	    do stuff
+	"""
+	# iterate over axis values
+	for k in self.axes[axis].values:
+	    val = self.xs(k, axis=axis) # cross-section
+	    yield k, val
+
+    #
+    # returns axis position and name based on either of them
+    #
+    def _get_axis_info(self, axis):
+	""" axis position and name
+
+	input  : 
+	    axis: `int` or `str` or None
+
+	returns: 
+	    idx	: `int`, axis position
+	    name: `str` or None, axis name
+	"""
+	if axis is None:
+	    return None, None
+
+	if type(axis) is str:
+	    idx = self.dims.index(axis)
+
+	elif type(axis) is int:
+	    idx = axis
+
+	else:
+	    raise TypeError("axis must be int or str, got:"+repr(axis))
+
+	name = self.axes[idx].name
+	return idx, name
+
+    #
+    # Return a weight for each array element, used for `mean`, `std` and `var`
+    #
+    def get_weights(self, weights=None, axis=None, fill_nans=True):
+	""" Weights associated to each array element
+	
+	optional arguments: 
+	    weights: (numpy)array-like of weights, taken from axes if None or "axis" or "axes"
+	    axis   : int or str, if None a N-D weight is created
+
+	return:
+	    weights: Dimarray of weights, or None
+
+	NOTE: this function is used by `mean`, `std` and `var`
+	"""
+	# make sure weights is a nd-array
+	if weights is not None:
+	    weights = np.array(weights) 
+
+	if weights in ('axis','axes'):
+	    weights = None
+
+	if axis is None:
+	    dims = self.dims
+
+	elif type(axis) is tuple:
+	    dims = axis
+
+	else:
+	    dims = (axis,)
+
+	# axes over which the weight is defined
+	axes = [ax for ax in self.axes if ax.name in dims]
+
+	# Create weights from the axes if not provided
+	if weights is None:
+
+	    weights = 1
+	    for axis in dims:
+		ax = self.axes[axis]
+		if ax.weights is None: continue
+		weights = ax.get_weights().reshape(dims) * weights
+
+	    if weights == 1:
+		return None
+	    else:
+		weights = weights.values
+
+	# Now create a dimarray and make it full size
+	# ...already full-size
+	if weights.shape == self.shape:
+	    weights = Dimarray(weights, *self.axes)
+
+	# ...need to be expanded
+	elif weights.shape == tuple(ax.size for ax in axes):
+	    weights = Dimarray(weights, *axes).expand(self.dims)
+
+	else:
+	    try:
+		weights = weights + np.zeros_like(self.values)
+
+	    except:
+		raise ValueError("weight dimensions are not conform")
+	    weights = Dimarray(weights, *self.axes)
+
+	#else:
+	#    raise ValueError("weight dimensions not conform")
+
+	# fill NaNs in when necessary
+	if fill_nans:
+	    weights.values[np.isnan(self.values)] = np.nan
+	
+	return weights
+
+
+    #
+    # INDEXING
+    #
+
+    #
+    # New general-purpose indexing method
+    #
+    xs = _indexing.xs
+
+    #
+    # Standard indexing takes axis values
+    #
+    def __getitem__(self, item): 
+	""" get a slice (use xs method)
+	"""
+	items = np.index_exp[item] # tuple
+    
+	# dictionary <axis name> : <axis index> to feed into xs
+	ix_nd = {self.axes[i].name: it for i, it in enumerate(items)}
+
+	return self.xs(**ix_nd)
+
+    # 
+    # Can also use integer-indexing via ix
+    #
+    @property
+    def ix(self):
+	""" integer index-access
+	"""
+	return self._constructor(self.values, self.axes, _indexing="numpy", **self._metadata)
+
+    #
+    # TRANSFORMS
+    # 
+
+    #
+    # ELEMENT-WISE TRANSFORMS
+    #
+    def apply(self, func, args=(), **kwargs):
+	""" Apply element-wise function to Dimarray
+	"""
+	return self._constructor(func(self.values, *args, **kwargs), self.axes.copy())
+
+    #
+    # NUMPY TRANSFORMS
+    #
+    median = _transform.median
+    median = _transform.median
+    sum = _transform.sum
+
+    # use weighted mean/std/var by default
+    mean = _transform.weighted_mean
+    std = _transform.weighted_std
+    var = _transform.weighted_var
+
+    #_mean = _transform.mean
+    #_var = _transform.var
+    #_std = _transform.std
+
+    all = _transform.all
+    any = _transform.any
+
+    min = _transform.min
+    max = _transform.max
+    ptp = _transform.ptp
+
+    #
+    # change `arg` to `loc`, suggesting change in indexing behaviour
+    #
+    locmin = _transform.locmin
+    locmax = _transform.locmax
+
+    cumsum = _transform.cumsum
+    cumprod = _transform.cumprod
+    diff = _transform.diff
+
+    #
+    # OTHER transformations 
+    #
+
+    # Recursive application of obj => obj transformation
+    apply_recursive = _transform.apply_recursive 
+
+    # 1D AND BILINEAR INTERPOLATION (RECURSIVELY APPLIED)
+    interp1d = _transform.interp1d_numpy
+    interp2d = _transform.interp2d_mpl
+
+
+    #
+    # METHODS TO CHANGE ARRAY SHAPE AND SIZE
+    #
+    #from _reshape import repeat, newaxis, transpose, reshape, broadcast, group, ungroup, squeeze
+    repeat = _reshape.repeat
+    newaxis = _reshape.newaxis
+    squeeze = _reshape.squeeze
+    transpose = _reshape.transpose
+    reshape = _reshape.reshape
+    broadcast = _reshape.broadcast
+    group = _reshape.group
+    ungroup = _reshape.ungroup
+    
+    @property
+    def T(self):
+	return self.transpose()
+
+
+    #
+    # REINDEXING 
+    #
+    reindex_axis = index_tricks.reindex_axis
+
+    #
+    # BASIC OPERATTIONS
+    #
+    def _operation(self, func, other, reindex=True, transpose=True):
+	""" make an operation: this include axis and dimensions alignment
+
+	Just for testing:
+	>>> b
+	...
+	array([[ 0.,  1.],
+	       [ 1.,  2.]])
+	>>> b == b
+	True
+	>>> b+2 == b + np.ones(b.shape)*2
+	True
+	>>> b+b == b*2
+	True
+	>>> b*b == b**2
+	True
+	>>> (b - b.values) == b - b
+	True
+	"""
+	result = _operation(func, self, other, constructor=self._constructor)
+	return result
+
+    def __add__(self, other): return self._operation(np.add, other)
+
+    def __sub__(self, other): return self._operation(np.subtract, other)
+
+    def __mul__(self, other): return self._operation(np.multiply, other)
+
+    def __div__(self, other): return self._operation(np.divide, other)
+
+    def __pow__(self, other): return self._operation(np.power, other)
+
+    def __float__(self):  return float(self.values)
+    def __int__(self):  return int(self.values)
+
+    def __eq__(self, other): 
+	#return isinstance(other, Dimarray) and np.all(self.values == other.values) and self.axes == other.axes
+	if not isinstance(other, Dimarray) or not self.axes == other.axes:
+	    return False
+
+	return self._constructor(self.values == other.values, self.axes)
+
+    ##
+    ## to behave like a dictionary w.r.t. first dimension (pandas-like)
+    ##
+    #def __iter__(self):
+    #    for k in self.keys():
+    #        yield k
+
+    #def keys(self):
+    #    return self.axes[0].values
+
+    #
+    # IMPORT FROM / EXPORT TO
+    #
     @classmethod
     def from_list(cls, values, axes=None, dims=None, **kwargs):
 	""" initialize Dimarray with with variable list of tuples, and attributes
@@ -220,985 +603,45 @@ a.units = "myunits"
 	return Dataset(data)
 
 
-    #
-    # Attributes access
-    #
-    def __getattr__(self, att):
-	""" return dimension or numpy attribue
-	"""
-	# check for dimensions
-	if att in self.dims:
-	    ax = self.axes[att]
-	    return ax.values # return numpy array
-
-	else:
-	    return super(Dimarray, self).__getattr__(att) # call Metadata's method
-
-    def set(self, inplace=False, **kwargs):
-	""" update multiple class attributes in-place or after copy
-
-	inplace: modify attributes in-place, return None 
-	otherwise first make a copy, and return new obj
-
-	a.set(_indexing="numpy")[:30]
-	a.set(_indexing="index")[1971.42]
-	a.set(_indexing="nearest")[1971]
-	a.set(name="myname", inplace=True) # modify attributes inplace
-	"""
-	if inplace: 
-	    for k in kwargs:
-		setattr(self, k, kwargs[k]) # include metadata check
-	    #self.__dict__.update(kwargs)
-
-	else:
-	    obj = self.copy(shallow=True)
-	    for k in kwargs:
-		setattr(obj, k, kwargs[k]) # include metadata check
-	    return obj
-
-    def copy(self, shallow=False):
-	""" copy of the object and update arguments
-
-	shallow: if True, does not copy values and axes
-	"""
-	import copy
-	new = copy.copy(self) # shallow copy
-
-	if not shallow:
-	    new.values = self.values.copy()
-	    new.axes = self.axes.copy()
-
-	return new
-	#return Dimarray(self.values.copy(), self.axes.copy(), slicing=self.slicing, **{k:getattr(self,k) for k in self.ncattrs()})
 
     #
-    # SLICING
+    # export to other data types
     #
-    def _get_axis_info(self, axis):
-	""" axis position and name
-
-	input  : 
-	    axis: `int` or `str` or None
-
-	returns: 
-	    idx	: `int`, axis position
-	    name: `str` or None, axis name
+    def to_MaskedArray(self):
+	""" transform to MaskedArray, with NaNs as missing values
 	"""
-	if axis is None:
-	    return None, None
+	return _transform.to_MaskedArray(self.values)
 
-	if type(axis) is str:
-	    idx = self.dims.index(axis)
+    def to_list(self):
+	return [self[k] for k in self]
 
-	elif type(axis) is int:
-	    idx = axis
-
-	else:
-	    raise TypeError("axis must be int or str, got:"+repr(axis))
-
-	name = self.axes[idx].name
-	return idx, name
-
-    @property
-    def dims(self):
-	""" axis names 
+    def to_dict(self, axis=0):
+	""" return an ordered dictionary of sets
 	"""
-	return tuple([ax.name for ax in self.axes])
+	from collect import Dataset
+	d = dict()
+	for k, v in self.iter(axis):
+	    d[k] = v
+	return Dataset(d, keys=self.axes[axis].values)
 
-    def __getitem__(self, item): 
-	""" get a slice (use xs method)
+    def to_pandas(self):
+	""" return the equivalent pandas object
 	"""
-	items = np.index_exp[item] # tuple
-    
-	# dictionary <axis name> : <axis index> to feed into xs
-	ix_nd = {self.axes[i].name: it for i, it in enumerate(items)}
+	obj = pandas_obj(self.values, *[ax.values for ax in self.axes])
 
-	return self.xs(**ix_nd)
-
-
-    def xs(self, ix=None, axis=0, method=None, keepdims=False, **axes):
-	""" Cross-section, can be multidimensional
-
-	input:
-
-	    - ix       : int or list or tuple or slice (index) 
-	    - axis     : int or str
-	    - method   : indexing method (default "index")
-			 - "numpy": numpy-like integer 
-		         - "index": look for exact match similarly to list.index
-			 - "nearest": (regular Axis only) nearest match, bound checking
-	    - keepdims : keep singleton dimensions
-
-	    - **axes  : provide axes as keyword arguments for multi-dimensional slicing
-			==> chained call to xs 
-			Note in this mode axis cannot be named after named keyword arguments
-			(`ix`, `axis`, `method` or `keepdims`)
-
-	output:
-	    - Dimarray object or python built-in type, consistently with numpy slicing
-
-	>>> a.xs(45.5, axis=0)	 # doctest: +ELLIPSIS
-	>>> a.xs(45.7, axis="lat") == a.xs(45.5, axis=0) # "nearest" matching
-	True
-	>>> a.xs(time=1952.5)
-	>>> a.xs(time=70, method="numpy") # 70th element along the time dimension
-
-	>>> a.xs(lon=(30.5, 60.5), lat=45.5) == a[:, 45.5, 30.5:60.5] # multi-indexing, slice...
-	True
-	>>> a.xs(time=1952, lon=-40, lat=70, method="nearest") # lookup nearest element (with bound checking)
-	"""
-	if method is None:
-	    method = self._indexing
-
-	# single-axis slicing
-	if ix is not None:
-	    obj = self._xs(ix, axis=axis, method=method, keepdims=keepdims)
-
-	# multi-dimensional slicing <axis name> : <axis index value>
-	# just a chained call
-	else:
-	    obj = self
-	    for nm, idx in axes.iteritems():
-		obj = obj._xs(idx, axis=nm, method=method, keepdims=keepdims)
+	# make sure the axes have the right name
+	for i, ax in enumerate(self.axes):
+	    obj.axes[i].name = ax.name
 
 	return obj
 
-
-    def _xs(self, ix, axis=0, method="index", keepdims=False):
-	""" cross-section or slice along a single axis, see xs
+    def to_larry(self):
+	""" return the equivalent pandas object
 	"""
-	assert axis is not None, "axis= must be provided"
-
-	# get integer index/slice for axis valued index/slice
-	if method is None:
-	    method = self._indexing # slicing method
-
-	# Linear interpolation between axis values, see _take_interp
-	if method in ('interp'):
-	    return self._take_interp(ix, axis=axis, keepdims=keepdims)
-
-	# get an axis object
-	ax = self.axes[axis] # axis object
-	axis_id = self.axes.index(ax) # corresponding integer index
-
-	# numpy-like indexing, do nothing
-	if method == "numpy":
-	    index = ix
-
-	# otherwise locate the values
-	elif method in ('nearest','index'):
-	    index = ax.loc(ix, method=method) 
-
-	else:
-	    raise ValueError("Unknown method: "+method)
-
-	# make a numpy index  and use numpy's slice method (`slice(None)` :: `:`)
-	index_nd = (slice(None),)*axis_id + (index,)
-	newval = self.values[index_nd]
-	newaxis = self.axes[axis][index] # returns an Axis object
-
-	# if resulting dimension has reduced, remove the corresponding axis
-	axes = copy.copy(self.axes)
-
-	# check for collapsed axis
-	collapsed = not isinstance(newaxis, Axis)
-	    
-	# re-expand things even if the axis collapsed
-	if collapsed and keepdims:
-
-	    newaxis = Axis([newaxis], self.axes[axis].name) 
-	    reduced_shape = list(self.shape)
-	    reduced_shape[axis_id] = 1 # reduce to one
-	    newval = np.reshape(newval, reduced_shape)
-
-	    collapsed = False # set as not collapsed
-
-	# If collapsed axis, just remove it and add new stamp
-	if collapsed:
-	    axes.remove(ax)
-	    stamp = "{}={}".format(ax.name, newaxis)
-
-	# Otherwise just update the axis
-	else:
-	    axes[axis_id] = newaxis
-	    stamp = None
-
-	# If result is a numpy array, make it a Dimarray
-	if isinstance(newval, np.ndarray):
-	    result = self._constructor(newval, axes, **self._metadata)
-
-	    # append stamp
-	    if stamp: result._metadata_stamp(stamp)
-
-	# otherwise, return scalar
-	else:
-	    result = newval
-
-	return result
-
-    def _take_interp(self, ix, axis, keepdims):
-	""" Take a number or an integer as from an axis
-	"""
-	assert type(ix) is not slice, "interp only work with integer and list indexing"
-
-	# return a "fractional" index
-	ax = self.axes[axis]
-	index = ax.loc(ix, method='interp') 
-	ii = np.array(index) # make sure it is array-like
-
-	# position indices of nearest neighbors
-	# ...last element, 
-	i0 = np.array(index, dtype=int)
-	i1 = i0+1
-
-	# make sure we are not beyond 
-	over = i1 == ax.size
-	if i1.size == 1:
-	    if over:
-		i0 -= 1
-		i1 -= 1
-	else:
-	    i0[over] = ax.size-2
-	    i1[over] = ax.size-1
-
-	# weight for interpolation
-	w1 = ii-i0 
-
-	# sample nearest neighbors
-	v0 = self._xs(i0, axis=axis, method="numpy", keepdims=keepdims)
-	v1 = self._xs(i1, axis=axis, method="numpy", keepdims=keepdims)
-
-	# result as weighted sum
-	values = v0.values*(1-w1) + v1.values*w1
-	axes = []
-	for d in v0.dims:
-	    if d == ax.name:
-		axis = Axis(v0.axes[d].values*(1-w1) + v1.axes[d].values*w1, d)
-	    else:
-		axis = self.axes[d]
-	    axes.append(axis)
-	return self._constructor(values, axes, **self._metadata)
-
-
-    # 
-    # integer-access
-    #
-    @property
-    def ix(self):
-	""" integer index-access
-	"""
-	return self._constructor(self.values, self.axes, _indexing="numpy", **self._metadata)
-
-    # pandas-like Alias, for back-compatibility
-    loc = __getitem__
-    iloc = ix
-
-    #
-    # Basic numpy array's properties
-    #
-
-    # basic numpy shape attributes as properties
-    @property
-    def shape(self): 
-	return self.values.shape
-
-    @property
-    def size(self): 
-	return self.values.size
-
-    @property
-    def ndim(self): 
-	return self.values.ndim
-
-    @property
-    def dtype(self): 
-	return self.values.dtype
-
-    @property
-    def __array__(self): 
-	return self.values.__array__
-
-    #
-    # NUMPY TRANSFORMS
-    #
-    apply = transform.apply
-
-    #
-    # Add numpy transforms
-    #
-
-    # basic, unmodified transforms
-    median = transform.NumpyDesc("apply", "median")
-    prod = transform.NumpyDesc("apply", "prod")
-    sum  = transform.NumpyDesc("apply", "sum")
-
-    min = transform.NumpyDesc("apply", "min")
-    max = transform.NumpyDesc("apply", "max")
-
-    ptp = transform.NumpyDesc("apply", "ptp")
-    all = transform.NumpyDesc("apply", "all")
-    any = transform.NumpyDesc("apply", "any")
-
-    # slightly modified numpy transforms
-    argmin = transform.argmin
-    argmax = transform.argmax
-    cumsum = transform.cumsum
-    cumprod = transform.cumprod
-    diff = transform.diff
-
-    # use weighted mean/std/var by default
-    # ... unweighted as private functions
-    _mean = transform.NumpyDesc("apply", "mean")
-    _std = transform.NumpyDesc("apply", "std")
-    _var = transform.NumpyDesc("apply", "var")
-    mean = transform.weighted_mean
-    std = transform.weighted_std
-    var = transform.weighted_var
-
-    def get_weights(self, weights=None, axis=None, fill_nans=True):
-	""" get weight associated to the array, or returns None if no weights
-
-	optional arguments: 
-	    weights: (numpy)array-like of weights, taken from axes if None or "axis" or "axes"
-	    axis   : int or str, if None a N-D weight is created
-
-	return:
-	    weights: Dimarray of weights
-	"""
-	# make sure weights is a nd-array
-	if weights is not None:
-	    weights = np.array(weights) 
-
-	if weights in ('axis','axes'):
-	    weights = None
-
-	if axis is None:
-	    dims = self.dims
-
-	elif type(axis) is tuple:
-	    dims = axis
-
-	else:
-	    dims = (axis,)
-
-	# axes over which the weight is defined
-	axes = [ax for ax in self.axes if ax.name in dims]
-
-	# Create weights from the axes if not provided
-	if weights is None:
-
-	    weights = 1
-	    for axis in dims:
-		ax = self.axes[axis]
-		if ax.weights is None: continue
-		weights = ax.get_weights().reshape(dims) * weights
-
-	    if weights == 1:
-		return None
-	    else:
-		weights = weights.values
-
-	# Now create a dimarray and make it full size
-	# ...already full-size
-	if weights.shape == self.shape:
-	    weights = Dimarray(weights, *self.axes)
-
-	# ...need to be expanded
-	elif weights.shape == tuple(ax.size for ax in axes):
-	    weights = Dimarray(weights, *axes).expand(self.dims)
-
-	else:
-	    try:
-		weights = weights + np.zeros_like(self.values)
-
-	    except:
-		raise ValueError("weight dimensions are not conform")
-	    weights = Dimarray(weights, *self.axes)
-
-	#else:
-	#    raise ValueError("weight dimensions not conform")
-
-	# fill NaNs in when necessary
-	if fill_nans:
-	    weights.values[np.isnan(self.values)] = np.nan
-	
-	return weights
-
-#    def compress(self, condition, axis=None):
-#	""" analogous to numpy `compress` method
-#	"""
-#	return self.apply("compress", axis=axis, skipna=False, args=(condition,))
-#
-#    def take(self, indices, axis=None):
-#	""" analogous to numpy `take` method
-#	"""
-#	return self.apply("take", axis=axis, skipna=False, args=(indices,))
-
-
-#    #
-#    # add an extra "where" method
-#    #
-#    def where(self, condition, otherwise=None, axis=None):
-#	""" 
-#	parameters:
-#	-----------
-#
-#	    condition: bool array of same size as self, unless `axis=` is provided
-#		 OR    `str` indicating a condition on axes
-#	    otherwise: array of same size as self or scalar, replacement value when condition is False
-#	    axis     : if provided, interpret the condition as applying along an axis
-#
-#	returns:
-#	--------
-#	    
-#	    array with self values when condition is True, and `otherwise` if False
-#	    if only `condition` is provided, return axis values for which `condition` is True
-#
-#	Examples:
-#	---------
-#	    a.where(a > 0)
-#	"""
-#	# convert scalar to the right shape
-#	if np.size(otherwise) == 1:
-#	    otherwise += np.zeros_like(self.values)
-#
-#	# evaluate str condition
-#	if type(condition) is str:
-#	    result = eval(condition, {ax.name:ax.values})
-#
-#	result = np.where(condition, [self.values, otherwise])
-
-
-    #
-    # METHODS TO CHANGE ARRAY SHAPE AND SIZE
-    #
-    
-    # Transpose: permute dimensions
-
-    def transpose(self, axes=None):
-	""" Permute dimensions
-	
-	Analogous to numpy, but also allows axis names
-	>>> a = da.array(np.zeros((5,6)), lon=np.arange(6), lat=np.arange(5))
-	>>> a          # doctest: +ELLIPSIS
-	dimensions(5, 6): lat, lon
-	array(...)
-	>>> a.T         # doctest: +ELLIPSIS
-	dimensions(6, 5): lon, lat
-	array(...)
-	>>> a.transpose([1,0]) == a.T == a.transpose(['lon','lat'])
-	True
-	"""
-	if axes is None:
-	    if self.ndim == 2:
-		axes = [1,0] # numpy, 2-D case
-	    elif self.ndim == 1:
-		axes = [0]
-
-	    else:
-		raise ValueError("indicate axes value to transpose")
-
-	# get equivalent indices 
-	if type(axes[0]) is str:
-	    axes = [self.dims.index(nm) for nm in axes]
-
-	result = self.values.transpose(axes)
-	newaxes = [self.axes[i] for i in axes]
-	return self._constructor(result, newaxes)
-
-    @property
-    def T(self):
-	return self.transpose()
-
-    #
-    # Remove / add singleton axis
-    #
-    def squeeze(self, axis=None):
-	""" Analogous to numpy, but also allows axis name
-
-	>>> b = a.take([0], axis='lat')
-	>>> b
-	dimensions(1, 6): lat, lon
-	array([[ 0.,  1.,  2.,  3.,  4.,  5.]])
-	>>> b.squeeze()
-	dimensions(6,): lon
-	array([ 0.,  1.,  2.,  3.,  4.,  5.])
-	"""
-	if axis is None:
-	    newaxes = [ax for ax in self.axes if ax.size != 1]
-	    res = self.values.squeeze()
-
-	else:
-	    idx, name = self._get_axis_info(axis) 
-	    res = self.values.squeeze(idx)
-	    newaxes = [ax for ax in self.axes if ax.name != name or ax.size != 1] 
-
-	return self.__constructor(res, newaxes, **self._metadata)
-
-    def newaxis(self, dim):
-	""" add a new axis, ready to broadcast
-	"""
-	assert type(dim) is str, "dim must be string"
-	if dim in self.dims:
-	    raise ValueError("dimension already present: "+dim)
-
-	values = self.values[np.newaxis] # newaxis is None 
-	axis = Axis([None], dim) # create new dummy axis
-	axes = self.axes.copy()
-	axes.insert(0, axis)
-	return self._constructor(values, axes, **self._metadata)
-
-    #
-    # Reshape by adding/removing as many singleton axes as needed to match prescribed dimensions
-    #
-    def reshape(self, newdims):
-	""" reshape an array according to a new set of dimensions
-
-	Note: involves transposing the array
-	"""
-	# first append missing dimensions
-	o = self
-	for dim in newdims:
-	    if dim not in self.dims:
-		o = o.newaxis(dim)
-
-	for dim in o.dims:
-	    if dim not in newdims:
-		o = o.squeeze(dim)
-
-	# now give it the right order
-	return o.transpose(newdims)
-
-    #
-    # Repeat the array along *existing* axis
-    #
-    def repeat(self, values=None, axis=None, **kwargs):
-	""" expand the array along axis: analogous to numpy's repeat
-
-	input:
-	    values : integer (size of new axis) or ndarray (values  of new axis) or Axis object
-	    axis   : int or str (refer to the dimension along which to repeat) (must exist !)
-
-	EXPERIMENTAL: provide axes as keyword arguments, might be removed if not useful
-
-	output:
-	    Dimarray
-
-	Examples:
-	--------
-	>>> a = da.Dimarray.from_kw(arange(2), lon=[30., 40.])
-	>>> a = a.reshape(('time','lon'))
-	>>> a.repeat(np.arange(1950,1955), axis="time")  # doctest: +ELLIPSIS
-	dimarray: 10 non-null elements (0 null)
-	dimensions: 'time', 'lon'
-	0 / time (5): 1950 to 1954
-	1 / lon (2): 30.0 to 40.0
-	array([[0, 1],
-	       [0, 1],
-	       [0, 1],
-	       [0, 1],
-	       [0, 1]])
-
-	With keyword arguments:
-
-	>>> b = a.reshape(('lat','lon','time'))
-	>>> b.repeat(time=np.arange(1950,1955), lat=[0., 90.])  # doctest: +ELLIPSIS
-	dimarray: 20 non-null elements (0 null)
-	dimensions: 'lat', 'lon', 'time'
-	0 / lat (2): 0.0 to 90.  
-	1 / lon (2): 30.0 to 40.0
-	2 / time (5): 1950 to 1954
-	...
-	"""
-	# Recursive call if keyword arguments are provided
-	if len(kwargs) > 0:
-	    assert values is None, "can't input both values/axis and keywords arguments"
-	    dims = kwargs.keys()
-
-	    # First check that dimensions are there
-	    for k in dims:
-		if k not in self.dims:
-		    raise ValueError("can only repeat existing axis, need to reshape first (or use repeat_like)")
-
-	    # Choose the appropriate order for speed
-	    dims = [k for k in self.dims if k in dims]
-	    obj = self
-	    for k in reversed(dims):
-		obj = self._repeat(kwargs[k], axis=k)
-
-	else:
-	    obj = self._repeat(values, axis=axis)
-
-	return obj
-
-    def _repeat(self, values, axis=None):
-	""" called by repeat
-	"""
-	# default axis values: 0, 1, 2, ...
-	if type(values) is int:
-	    values = np.arange(values)
-
-	if axis is None:
-	    assert hasattr(values, "name"), "must provide axis name or position !"
-	    axis = values.name
-
-	# Axis position and name
-	idx, name = self._get_axis_info(axis) 
-
-	if name not in self.dims:
-	    raise ValueError("can only repeat existing axis, need to reshape first (or use repeat_like)")
-
-	if self.axes[idx].size != 1:
-	    raise ValueError("can only repeat singleton axes")
-
-	# Numpy reshape: does the check
-	newvalues = self.values.repeat(np.size(values), idx)
-
-	# Create the new axis object
-	if not isinstance(values, Axis):
-	    newaxis = Axis(values, name)
-
-	else:
-	    newaxis = values
-
-	# New axes
-	newaxes = [ax for ax in self.axes]
-	newaxes[idx] = newaxis
-
-	# Update values and axes
-	return self._constructor(newvalues, newaxes, **self._metadata)
-
-
-    def repeat_like(self, other):
-	""" broadcast the array along a set of axes by repeating it as necessay
-
-	other	     : Dimarray or Axes objects or ordered Dictionary of axis values
-
-	Examples:
-	--------
-	Create some dummy data:
-	# ...create some dummy data:
-	>>> lon = np.linspace(10, 30, 2)
-	>>> lat = np.linspace(10, 50, 3)
-	>>> time = np.arange(1950,1955)
-	>>> ts = da.Dimarray.from_kw(np.arange(5), time=time)
-	>>> cube = da.Dimarray.from_kw(np.zeros((3,2,5)), lon=lon, lat=lat, time=time)  # lat x lon x time
-	>>> cube.axes  # doctest: +ELLIPSIS
-	dimensions: 'lat', 'lon', 'time'
-	0 / lat (3): 10.0 to 50.0
-	1 / lon (2): 10.0 to 30.0
-	2 / time (5): 1950 to 1954
-	...
-
-	# ...expand from variable list
-	>>> ts3D = ts.repeat_like(cube) #  lat x lon x time
-	dimarray: 30 non-null elements (0 null)
-	dimensions: 'lon', 'lat', 'time'
-	0 / lat (3): 10.0 to 50.0
-	1 / lon (2): 10.0 to 30.0
-	2 / time (5): 1950 to 1954
-	array([[[0, 1, 2, 3, 4],
-		[0, 1, 2, 3, 4]],
-
-	       [[0, 1, 2, 3, 4],
-		[0, 1, 2, 3, 4]],
-
-	       [[0, 1, 2, 3, 4],
-		[0, 1, 2, 3, 4]]])
-	"""
-	if isinstance(other, list):
-	    newaxes = other
-
-	elif isinstance(other, Dimarray):
-	    newaxes = other.axes
-
-	elif isinstance(other, OrderedDict):
-	    newaxes = [Axis(other[k], k) for k in other]
-
-	else:
-	    raise TypeError("should be a Dimarray, a list of Axis objects or an OrderedDict of Axis objects")
-
-	if not isinstance(newaxes[0], Axis):
-	    raise TypeError("should be a Dimarray, a list of Axis objects or an OrderedDict of Axis objects")
-
-	newshape = [ax.name for ax in newaxes]
-
-	# First give it the right shape
-	obj = self.reshape(newshape)
-
-	# Then repeat along axes
-	#for newaxis in newaxes:  
-	for newaxis in reversed(newaxes):  # should be faster ( CHECK ) 
-	    if obj.axes[newaxis.name].size == 1 and newaxis.size != 1:
-		obj = obj.repeat(newaxis)
-
-	return obj
-
-    #
-    # Group/ungroup subsets of axes to perform operations on partly flattened array
-    #
-
-    def group(self, dims, keep=False, insert=None):
-	""" group (or flatten) a subset of dimensions
-
-	Input:
-	    - *dims: variable list of axis names
-	    - keep [False]: if True, dims are interpreted as the dimensions to keep (mirror)
-	    - insert: position where to insert the grouped axis 
-		      (by default, just reshape in the numpy sense if possible, 
-		      otherwise insert at the position of the first dimension to group)
-
-	Output:
-	    - Dimarray appropriately reshaped, with collapsed dimensions as first axis (tuples)
-
-	This is useful to do a regional mean with missing values
-
-	Note: can be passed via the "axis" parameter of the transformation, too
-
-	Example:
-	--------
-
-	a.group(('lon','lat')).mean()
-
-	Is equivalent to:
-
-	a.mean(axis=('lon','lat')) 
-	"""
-	assert type(keep) is bool, "keep must be a boolean !"
-	assert type(dims[0]) is str, "dims must be strings"
-
-	# keep? mirror call
-	if keep:
-	    dims = tuple(d for d in self.dims if d not in dims)
-
-	n = len(dims) # number of dimensions to group
-	ii = self.dims.index(dims[0]) # start
-	if insert is None: 
-	    insert = ii
-
-	# If dimensions do not follow each other, have all dimensions as first axis
-	if dims != self.dims[insert:insert+len(dims)]:
-
-	    # new array shape, assuming dimensions are properly aligned
-	    newdims = [ax.name for ax in self.axes if ax.name not in dims]
-	    newdims = newdims[:insert] + list(dims) + newdims[insert:]
-	
-	    b = self.transpose(newdims) # dimensions to factorize in the front
-	    return b.group(dims, insert=insert)
-
-	# Create a new grouped axis
-	newaxis = GroupedAxis(*[ax for ax in self.axes if ax.name in dims])
-
-	# New axes
-	newaxes = [ax for ax in self.axes if ax.name not in dims]
-	newaxes.insert(insert, newaxis)
-
-	# Reshape the actual array values
-	newshape = [ax.size for ax in newaxes]
-	newvalues = self.values.reshape(newshape)
-
-	# Define the new array
-	new = self._constructor(newvalues, newaxes, **self._metadata)
-
-	return new
-
-    def ungroup(self, axis=None):
-	""" opposite from group
-
-	axis: axis to ungroup as int or str (default: ungroup all)
-	"""
-	# by default, ungroup all
-	if axis is None:
-	    grouped_axes = [ax.name for ax in self.axes if isinstance(ax, GroupedAxis)]
-	    obj = self
-	    for axis in grouped_axes:
-		obj = obj.ungroup(axis=axis)
-	    return obj
-
-	assert type(axis) in (str, int), "axis must be integer or string"
-
-	group = self.axes[axis]    # axis to expand
-	axis = self.dims.index(group.name) # make axis be an integer
-
-	assert isinstance(group, GroupedAxis), "can only ungroup a GroupedAxis"
-
-	newshape = self.shape[:axis] + tuple(ax.size for ax in group.axes) + self.shape[axis+1:]
-	newvalues = self.values.reshape(newshape)
-	newaxes = self.axes[:axis] + group.axes + self.axes[axis+1:]
-
-	return self._constructor(newvalues, newaxes, **self._metadata)
-
-
-    #
-    # REINDEXING 
-    #
-    def reindex_axis(self, newaxis, axis=0, method='index'):
-	""" reindex an array along an axis
-
-	Input:
-	    - newaxis: array or list on the new axis
-	    - axis   : axis number or name
-	    - method : "index", "nearest", "interp" (see xs)
-
-	Output:
-	    - Dimarray
-	"""
-	if axis is None:
-	    assert isinstance(newaxis, Axis), "provide name or an Axis object"
-	    axis = newaxis.name
-
-	if isinstance(newaxis, Axis):
-	    newaxis = newaxis.values
-
-	axis_id = self.axes.get_idx(axis)
-	axis_nm = self.axes.get_idx(axis)
-	ax = self.axes[axis_id] # Axis object
-
-	# do nothing if axis is same or only None element
-	if ax.values[0] is None or np.all(newaxis==ax.values):
-	    return self
-
-	# indices along which to sample
-	if method in ("nearest","index",None):
-
-	    indices = np.empty(np.size(newaxis), dtype=int)
-	    indices.fill(-1)
-
-	    # locate elements one by one...
-	    for i, val in enumerate(newaxis):
-		try:
-		    idx = ax.loc.locate(val, method=method)
-		    indices[i] = idx
-
-		except Exception, msg:
-		    # not found, will be filled with Nans
-		    pass
-
-	    # prepare array to slice
-	    values = self.values.take(indices, axis=axis_id)
-
-	    # missing indices
-	    # convert int to floats if necessary
-	    if values.dtype == np.dtype(int):
-		values = np.array(values, dtype=float, copy=False)
-
-	    missing = (slice(None),)*axis_id + np.where(indices==-1)
-	    #missing = _ndindex(np.where(indices==-1), axis_id)
-	    values[missing] = np.nan # set missing values to NaN
-
-	elif method == "interp":
-	    raise NotImplementedError(method)
-
-	else:
-	    #return self.interp1d(newaxis, axis)
-	    raise ValueError(method)
-
-	# new Dimarray
-	# ...replace the axis
-	new_ax = Axis(newaxis, ax.name)
-	axes = self.axes.copy()
-	axes[axis_id] = new_ax # replace the new axis
-
-	# ...initialize Dimarray
-	obj = self._constructor(values, axes, **self._metadata)
-	return obj
-
-
-    def _reindex_axes(self, axes, method=None):
-	""" reindex according to a list of axes
-	"""
-	obj = self
-	newdims = [ax2.name for ax2 in axes]
-	for ax in self.axes:
-	    if ax.name in newdims:
-		newaxis = axes[ax.name].values
-		obj = obj.reindex_axis(newaxis, axis=ax.name, method=method)
-
-	return obj
-
-    def reindex_like(self, other, method=None):
-	""" reindex like another axis
-
-	note: only reindex axes which are present in other
-	"""
-	return self._reindex_axes(other.axes, method=method)
-
-    def reindex(self, method=None, **kwds):
-	""" reindex over several dimensions via keyword arguments, for convenience
-	"""
-	obj = self
-	for k in kwds:
-	    obj = obj.reindex_axis(kwds[k], axis=k, method=method)
-	return obj
-
-    #
-    # BASIC OPERATTIONS
-    #
-    def _operation(self, func, other, reindex=True, transpose=True):
-	""" make an operation: this include axis and dimensions alignment
-
-	Just for testing:
-	>>> b
-	...
-	array([[ 0.,  1.],
-	       [ 1.,  2.]])
-	>>> b == b
-	True
-	>>> b+2 == b + np.ones(b.shape)*2
-	True
-	>>> b+b == b*2
-	True
-	>>> b*b == b**2
-	True
-	>>> (b - b.values) == b - b
-	True
-	"""
-	result = _operation(func, self, other, constructor=self._constructor)
-	return result
-
-    def __add__(self, other): return self._operation(np.add, other)
-
-    def __sub__(self, other): return self._operation(np.subtract, other)
-
-    def __mul__(self, other): return self._operation(np.multiply, other)
-
-    def __div__(self, other): return self._operation(np.divide, other)
-
-    def __pow__(self, other): return self._operation(np.power, other)
-
-    def __float__(self):  return float(self.values)
-    def __int__(self):  return int(self.values)
-
-    def __eq__(self, other): 
-	#return isinstance(other, Dimarray) and np.all(self.values == other.values) and self.axes == other.axes
-	if not isinstance(other, Dimarray) or not self.axes == other.axes:
-	    return False
-
-	return self._constructor(self.values == other.values, self.axes)
-
-    ##
-    ## to behave like a dictionary w.r.t. first dimension (pandas-like)
-    ##
-    #def __iter__(self):
-    #    for k in self.keys():
-    #        yield k
-
-    #def keys(self):
-    #    return self.axes[0].values
-
-    #
-    # iteration over any dimension: key, value
-    #
-    def iter(self, axis=0):
-	""" Iterate over axis value and slice along an axis
-
-	for time, time_slice in myarray.iter('time'):
-	    do stuff
-	"""
-	# iterate over axis values
-	for k in self.axes[axis].values:
-	    val = self._xs(k, axis=axis) # cross-section
-	    yield k, val
+	import la
+	a = la.larry(self.values, [list(ax.values) for ax in self.axes])
+	print "warning: dimension names have not been passed to larry"
+	return a
 
     #
     # pretty printing
@@ -1237,45 +680,6 @@ a.units = "myunits"
 
 
     #
-    # export to other data types
-    #
-    def to_MaskedArray(self):
-	""" transform to MaskedArray, with NaNs as missing values
-	"""
-	return transform.to_MaskedArray(self.values)
-
-    def to_list(self):
-	return [self[k] for k in self]
-
-    def to_dict(self, axis=0):
-	""" return an ordered dictionary of sets
-	"""
-	from collect import Dataset
-	d = dict()
-	for k, v in self.iter(axis):
-	    d[k] = v
-	return Dataset(d, keys=self.axes[axis].values)
-
-    def to_pandas(self):
-	""" return the equivalent pandas object
-	"""
-	obj = pandas_obj(self.values, *[ax.values for ax in self.axes])
-
-	# make sure the axes have the right name
-	for i, ax in enumerate(self.axes):
-	    obj.axes[i].name = ax.name
-
-	return obj
-
-    def to_larry(self):
-	""" return the equivalent pandas object
-	"""
-	import la
-	a = la.larry(self.values, [list(ax.values) for ax in self.axes])
-	print "warning: dimension names have not been passed to larry"
-	return a
-
-    #
     #  I/O
     # 
 
@@ -1296,22 +700,12 @@ a.units = "myunits"
     #
     # Plotting
     #
-
     def plot(self, *args, **kwargs):
 	""" by default, use pandas for plotting
 	"""
+	assert self.ndim <= 2, "only support plotting for 1- and 2-D objects"
 	return self.to_pandas().plot(*args, **kwargs)
 
-#
-# Add a few transformations and plotting methods
-#
-
-# recursive application of obj => obj transformation
-Dimarray.apply_recursive = transform.apply_recursive 
-
-# 1D and bilinear interpolation (recursively applied)
-Dimarray.interp1d = transform.interp1d_numpy
-Dimarray.interp2d = transform.interp2d_mpl
 
 def array(values, axes=None, dims=None, **kwaxes):
     """ Wrapper for initialization

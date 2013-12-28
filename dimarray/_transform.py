@@ -1,52 +1,83 @@
+""" Numpy-like Axis transformations
+"""
 import numpy as np
 from functools import partial
+from decorators import format_doc
 from axes import Axis, Axes, GroupedAxis
 
-def apply(obj, func, axis=None, skipna=True, args=(), **kwargs):
-    """ Apply `func` to Dimarray
-    
-    Generic method to apply along-axis or single-argument ufunc numpy method
+#
+# Some general documention which is used in several methods
+#
+
+_doc_axis = """
+axis: axis along which to apply the tranform. 
+      Can be given as axis position (`int`), as axis name (`str`), as a 
+      `tuple` of axes (positions or names) to collapse into one before 
+      applying transform. If `axis` is `None`, just apply the transform on
+      the flatten array consistently with numpy (in this case will return
+      a scalar).
+      Default is `{default_axis}`.
+"""
+
+_doc_skipna = """
+skipna: If True, treat NaN as missing values (either using MaskedArray or,
+        when available, specific numpy function)
+"""
+
+_doc_numpy = """ Analogous to numpy's {func}
+
+Signature: 
+----------
+
+{func}(..., axis=None, skipna=True, ...)
+
+Accepts the same parameters as the equivalent numpy function, 
+with modified behaviour of the `axis` parameter and an additional 
+`skipna` parameter to handle NaNs (by default considered missing values)
+
+{axis}
+{skipna}
+
+`...` stand for any other parameters required by the function, and depends
+on the particular function being called 
+
+Returns:
+--------
+Dimarray, or numpy array or scalar (e.g. in some cases if `axis` is None)
+
+See help on numpy.{func} or numpy.ma.{func} for other parameters 
+and more information.
+
+See Also:
+---------
+`apply_along_axis`: is called by this method
+`to_MaskedArray`: is used if skipna is True
+""".format(axis=_doc_axis, skipna=_doc_skipna, func="{func}")
+
+#
+# Actual transforms
+#
+
+@format_doc(skipna=_doc_skipna, axis=_doc_axis.format(default_axis="None"))
+def apply_along_axis(obj, func, axis=None, skipna=True, args=(), **kwargs):
+    """ Apply along-axis numpy method to Dimarray
+
+    As a function: apply_along_axis(obj, ...)
+    As a method  : obj.apply_along_axis(...)
+    Where ... are the parameters below:
 
     parameters:
     ----------
-    - func: numpy function (can be provided by name)
-
-    - axis    : None, int, str, tuple
-		axis or group of axes to apply the transform on.
-		- None : applies the transform on the flattened array, 
-		         consistently with numpy.
-		- `int`: axis position 
-		- `str`: axis name
-		- `tuple`: group of axes to flatten before applying the 
-		           transform on
-		Default is None
-
-    - skipna  : If True, call corresponding np.ma method using NaN as mask 
-		to convert into a MaskedArray.
-		For "sum","max","min" the corresponding 
-		`nan` numpy function is called.
-
+    - func: numpy function name (`str`)
+    - {axis}
+    - {skipna}
     - args    : variable list of arguments before "axis"
     - kwargs  : variable dict of keyword arguments after "axis"
     
     returns:
     --------
-    - Dimarray, or scalar (if `axis` is None)
-
-    NOTE: if an axis has weights, `mean`, `std` and `var` will use these weights
+    - Dimarray, or scalar 
     """
-    #
-    # For ufunc, the axes remain the same
-    #
-    if _is_ufunc(func):
-	if type(func) is str:
-	    func = getattr(np, func)
-	return obj._constructor(func(obj.values), obj.axes.copy())
-
-    #
-    # Functions that operate along-axis
-    #
-
     # Deal with `axis` parameter, whether `int`, `str` or `tuple`
     obj, idx, name = _deal_with_axis(obj, axis)
 
@@ -106,7 +137,7 @@ def _apply_nans(values, funcname, axis=None, skipna=True, args=(), **kwargs):
 
 	# otherwise convert to MaskedArray if needed
 	else:
-	    values = to_MaskedArray(values)
+	    values = _to_MaskedArray(values)
 	    module = np.ma
     
     # use basic numpy functions 
@@ -132,7 +163,7 @@ def _apply_nans(values, funcname, axis=None, skipna=True, args=(), **kwargs):
 
     return result
 
-def to_MaskedArray(values):
+def _to_MaskedArray(values):
     """ convert a numpy array to MaskedArray
     """
     # fast-check for NaNs, thanks to
@@ -144,20 +175,12 @@ def to_MaskedArray(values):
     values = np.ma.array(values, mask=mask)
     return values
 
-def _is_ufunc(func):
-    """ check whether a function is a ufun 
-    (e.g. `sin`, `sqrt` etc...: functions that operate element by element on whole arrays.)
-    """
-    if type(func) is str:
-	func = getattr(np, func)
-    return isinstance(func, np.ufunc)
-
 def _deal_with_axis(obj, axis):
     """ deal with the `axis` parameter 
 
     input:
 	obj: Dimarray object
-	axis: `int` or `str` or `tuple`
+	axis: `int` or `str` or `tuple` or None
 
     return:
 	newobj: reshaped obj if axis is tuple otherwise obj
@@ -183,41 +206,100 @@ def _deal_with_axis(obj, axis):
 #
 # Technicalities to apply numpy methods
 #
-class NumpyDesc(object):
+class _NumpyDesc(object):
     """ to apply a numpy function which reduces an axis
     """
-    def __init__(self, apply_method, numpy_method, **kwargs):
+    def __init__(self, numpy_method, axis=None, **kwargs):
 	"""
-	apply_method: as the string name of the bound method to consider
         numpy_method: as a string name of the numpy function to apply
 	**kwargs    : default values for keyword arguments to numpy_method
 	"""
-	assert type(apply_method) is str, "can only provide method name as a string"
 	assert type(numpy_method) is str, "can only provide method name as a string"
 	self.numpy_method = numpy_method
-	self.apply_method = apply_method
+	self.axis = axis
 	self.kwargs = kwargs
 
     def __get__(self, obj, cls=None):
 	"""
 	"""
 	# convert self.apply to an actual function
-	apply_method = getattr(obj, self.apply_method) 
-	newmethod = partial(apply_method, self.numpy_method, **self.kwargs)
-	#newmethod = deco_numpy(apply_method, self.numpy_method, **self.kwargs)
+	newmethod = partial(apply_along_axis, self.numpy_method, axis=self.axis, **self.kwargs)
 
-	# Now replace the doc string with "apply" docstring
-	newmethod.__doc__ = apply_method.__doc__.replace("`func`","`"+self.numpy_method+"`")
-	newmethod.__doc__ = newmethod.__doc__.replace("- func: numpy function (can be provided by name)\n\n","")
+	# Update doc string
+	newmethod.__doc__ = _doc_numpy.format(func=self.numpy_method, default_axis=self.axis)
 
 	return newmethod
 
-cumsum = NumpyDesc("apply", "cumsum", axis=-1)
-cumsum.__doc__ = cumsum.__doc__.replace("Default is None","Default is -1 (last axis)")
+# basic, unmodified transforms
+median = _NumpyDesc("median")
+prod = _NumpyDesc("prod")
+sum  = _NumpyDesc("sum")
 
-cumprod = NumpyDesc("apply", "cumprod", axis=-1)
-cumprod.__doc__ = cumprod.__doc__.replace("Default is None","Default is -1 (last axis)")
+min = _NumpyDesc("min")
+max = _NumpyDesc("max")
 
+ptp = _NumpyDesc("ptp")
+all = _NumpyDesc("all")
+any = _NumpyDesc("any")
+
+cumsum = _NumpyDesc("cumsum", axis=-1)
+cumprod = _NumpyDesc("cumprod", axis=-1)
+
+#
+# Special behaviour for argmin and argmax: return axis values instead of integer position
+#
+@format_doc(default_axis="None"}
+@format_doc(axis=_doc_axis, skipna=_doc_skipna)
+def locmin(obj, axis=None, skipna=True):
+    """ similar to numpy's argmin, but return axis values instead of integer position
+
+    Parameters:
+    -----------
+    {axis}
+    {skipna}
+    """
+    obj, idx, name = _deal_with_axis(obj, axis)
+    res = obj.apply('argmin', axis=idx, skipna=skipna)
+
+    # along axis: single axis value
+    if axis is not None: # res is Dimarray
+	res.values = obj.axes[idx].values[res.values] 
+	return res
+
+    # flattened array: tuple of axis values
+    else: # res is ndarray
+	res = np.unravel_index(res, obj.shape)
+	return tuple(obj.axes[i].values[v] for i, v in enumerate(res))
+
+@format_doc(default_axis="None")
+@format_doc(axis=_doc_axis, skipna=_doc_skipna)
+def locmax(obj, axis=None, skipna=True):
+    """ similar to numpy's argmax, but return axis values instead of integer position
+
+    Parameters:
+    -----------
+    {axis}
+    {skipna}
+    """
+    obj, idx, name = _deal_with_axis(obj, axis)
+    res = obj.apply('argmax', axis=idx, skipna=skipna)
+
+    # along axis: single axis value
+    if axis is not None: # res is Dimarray
+	res.values = obj.axes[idx].values[res.values] 
+	return res
+
+    # flattened array: tuple of axis values
+    else: # res is ndarray
+	res = np.unravel_index(res, obj.shape)
+	return tuple(obj.axes[i].values[v] for i, v in enumerate(res))
+
+#
+# Also define numpy.diff as method, with additional options
+#
+
+@format_doc(default_axis=-1)
+@format_doc(axis=_doc_axis)
 def diff(obj, n=1, axis=-1, scheme="backward", keepaxis=False):
     """ Analogous to numpy's diff
 
@@ -231,10 +313,7 @@ def diff(obj, n=1, axis=-1, scheme="backward", keepaxis=False):
     ----------
     n : int, optional
 	The number of times values are differenced.
-
-    axis : int, str, tuple (optional)
-	The axis along which the difference is taken, default is the last
-	axis, for consistency with numpy
+    {axis}
 
     scheme: str, determines the values of the resulting axis
 	    "forward" : diff[i] = x[i+1] - x[i]
@@ -329,6 +408,8 @@ def diff(obj, n=1, axis=-1, scheme="backward", keepaxis=False):
 def _append_nans(result, axis, first=False):
     """ insert a slice of NaNs at the front of an array along axis
     or append the slice if append is True
+
+    axis: `int`
     """
     nan_slice = np.empty_like(result.take([0], axis=axis)) # make a slice ...
     nan_slice.fill(np.nan) # ...filled with NaNs
@@ -342,41 +423,6 @@ def _append_nans(result, axis, first=False):
 	result = np.concatenate((result, nan_slice), axis=axis)
 
     return result
-
-#
-# Special behaviour for argmin and argmax: return axis values instead of integer position
-#
-def argmin(obj, axis=None, skipna=True):
-    """ similar to numpy's argmin, but return axis values instead of integer position
-    """
-    obj, idx, name = _deal_with_axis(obj, axis)
-    res = obj.apply('argmin', axis=idx, skipna=skipna)
-
-    # along axis: single axis value
-    if axis is not None: # res is Dimarray
-	res.values = obj.axes[idx].values[res.values] 
-	return res
-
-    # flattened array: tuple of axis values
-    else: # res is ndarray
-	res = np.unravel_index(res, obj.shape)
-	return tuple(obj.axes[i].values[v] for i, v in enumerate(res))
-
-def argmax(obj, axis=None, skipna=True):
-    """ similar to numpy's argmax, but return axis values instead of integer position
-    """
-    obj, idx, name = _deal_with_axis(obj, axis)
-    res = obj.apply('argmax', axis=idx, skipna=skipna)
-
-    # along axis: single axis value
-    if axis is not None: # res is Dimarray
-	res.values = obj.axes[idx].values[res.values] 
-	return res
-
-    # flattened array: tuple of axis values
-    else: # res is ndarray
-	res = np.unravel_index(res, obj.shape)
-	return tuple(obj.axes[i].values[v] for i, v in enumerate(res))
 
 #def _apply_minmax(obj, funcname, axis=None, skipna=True, args=(), **kwargs):
 #    """ apply min/max/argmin/argmax
