@@ -46,7 +46,7 @@ def transpose(self, axes=None):
 def repeat(self, values, axis=None):
     """ expand the array along axis: analogous to numpy's repeat
 
-    repeat(values=None, axis=None, **kwaxes)
+    Signature: repeat(values=None, axis=None, **kwaxes)
 
     input:
 	values  : integer (size of new axis) or ndarray (values  of new axis) 
@@ -118,6 +118,64 @@ def repeat(self, values, axis=None):
     # Update values and axes
     return self._constructor(newvalues, newaxes, **self._metadata)
 
+
+def newaxis(self, name, values=None, pos=0):
+    """ add a new axis, ready to broadcast
+
+    name: `str`, axis name
+    values: optional, if provided, broadcast the array along the new axis
+	    call `repeat(name, values)` after inserting the new singleton 
+	    dimension (see `repeat`) for more information.
+    pos: `int`, optional: axis position, default 0 (first axis)
+
+    Examples:
+    ---------
+    >>> a = Dimarray([1,2])
+    dimarray: 2 non-null elements (0 null)
+    dimensions: 'x0'
+    0 / x0 (2): 0 to 1
+    array([1, 2])
+    >>> a.newaxis('new', pos=1)
+    dimarray: 2 non-null elements (0 null)
+    dimensions: 'x0', 'new'
+    0 / x0 (2): 0 to 1
+    1 / new (1): None to None
+    array([[1],
+	   [2]])
+    >>> a.newaxis('new', values=['a','b'],pos=1)
+    dimarray: 4 non-null elements (0 null)
+    dimensions: 'x0', 'new'
+    0 / x0 (2): 0 to 1
+    1 / new (2): a to b
+    array([[1, 1],
+	   [2, 2]])
+    """
+    assert type(name) is str, "name must be string"
+    if name in self.dims:
+	raise ValueError("dimension already present: "+name)
+
+    assert type(pos) is int
+    if pos == -1: pos = len(self.dims)
+
+    newaxis = (slice(None),)*pos + (np.newaxis,) # pad with ":" to match pos
+    newvalues = self.values[newaxis] 
+
+    # create new dummy axis
+    axis = Axis([None], name) 
+
+    # insert new axis
+    axes = self.axes.copy()
+    axes.insert(pos, axis)
+
+    # create new object
+    newobj = self._constructor(newvalues, axes, **self._metadata)
+
+    # If values is provided, repeat the array along values
+    if values is not None:
+	newobj = newobj.repeat(values, axis=pos)
+
+    return newobj
+
 #
 # Remove / add singleton axis
 #
@@ -142,19 +200,6 @@ def squeeze(self, axis=None):
 	newaxes = [ax for ax in self.axes if ax.name != name or ax.size != 1] 
 
     return self.__constructor(res, newaxes, **self._metadata)
-
-def newaxis(self, dim):
-    """ add a new axis, ready to broadcast
-    """
-    assert type(dim) is str, "dim must be string"
-    if dim in self.dims:
-	raise ValueError("dimension already present: "+dim)
-
-    values = self.values[np.newaxis] # newaxis is None 
-    axis = Axis([None], dim) # create new dummy axis
-    axes = self.axes.copy()
-    axes.insert(0, axis)
-    return self._constructor(values, axes, **self._metadata)
 
 #
 # Reshape by adding/removing as many singleton axes as needed to match prescribed dimensions

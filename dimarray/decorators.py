@@ -26,7 +26,7 @@ def axes_as_keywords(func):
 	"""
 	# Separate optional arguments from axes
 	kwaxes = {}
-	for k in kwargs:
+	for k in kwargs.keys():
 	    if k not in func_args:
 		kwaxes[k] = kwargs.pop(k)
 
@@ -47,7 +47,7 @@ def axes_as_keywords(func):
 		obj = func(self, kwaxes[k], axis=k, **kwargs)
 
 	else:
-	    obj = func(self, values, axis=axis)
+	    obj = func(self, values, axis=axis, **kwargs)
 
 	return obj
 

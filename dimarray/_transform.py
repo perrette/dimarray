@@ -12,9 +12,9 @@ from axes import Axis, Axes, GroupedAxis
 _doc_axis = """
 axis: axis along which to apply the tranform. 
       Can be given as axis position (`int`), as axis name (`str`), as a 
-      `tuple` of axes (positions or names) to collapse into one before 
+      `tuple` of axes (positions or names) to collapse into one axis before 
       applying transform. If `axis` is `None`, just apply the transform on
-      the flatten array consistently with numpy (in this case will return
+      the flattened array consistently with numpy (in this case will return
       a scalar).
       Default is `{default_axis}`.
 """
@@ -38,7 +38,7 @@ with modified behaviour of the `axis` parameter and an additional
 {axis}
 {skipna}
 
-`...` stand for any other parameters required by the function, and depends
+`...` stands for any other parameters required by the function, and depends
 on the particular function being called 
 
 Returns:
@@ -81,7 +81,7 @@ def apply_along_axis(obj, func, axis=None, skipna=True, args=(), **kwargs):
     obj, idx, name = _deal_with_axis(obj, axis)
 
     # Apply numpy function, dealing with NaNs
-    result = _apply_nans(obj.values, func, axis=idx, skipna=skipna, args=(), **kwargs)
+    result = _apply_along_axis(obj.values, func, axis=idx, skipna=skipna, args=(), **kwargs)
 
     if type(func) is str:
 	funcname = func
@@ -123,7 +123,7 @@ def apply_along_axis(obj, func, axis=None, skipna=True, args=(), **kwargs):
 
     return newobj
 
-def _apply_nans(values, funcname, axis=None, skipna=True, args=(), **kwargs):
+def _apply_along_axis(values, funcname, axis=None, skipna=True, args=(), **kwargs):
     """ apply a numpy transform on numpy array but dealing with NaNs
     """
     # Deal with NaNs
