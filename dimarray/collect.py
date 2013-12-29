@@ -90,6 +90,7 @@ class Dataset(object):
 	"""
 	lines = []
 	header = "Dataset of %s variables" % (len(self))
+	if len(self) == 1: header = header.replace('variables','variable')
 	lines.append(header)
 	axes = repr(self.axes)
 	lines.append(axes)

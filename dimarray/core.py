@@ -643,6 +643,12 @@ class Dimarray(Metadata):
 
 	values	    : numpy-like array (passed to array())
 	**kwaxes      : axes passed as keyword arguments <axis name>=<axis val>
+
+	NOTE: no attribute can be passed with the from_kw method 
+	      ==> try using setncattr() method instead or for example:
+	      a = Dimarray.from_kw(values, **kwaxes)
+	      a.name = "myname"
+	      a.setncattr('units', "myunits")
 	
 	Examples:
 	---------
@@ -666,18 +672,11 @@ class Dimarray(Metadata):
 	for k in kwaxes:
 	    if type(kwaxes[k]) is str:
 		print "PASSED:",k,":",kwaxes[k]
-		msg = \
-""" no attribute can be passed with the from_kw method 
-==> try using setncattr() method instead or for example:
-a = Dimarray.from_kw(values, **kwaxes)
-a.name = "myname"
-a.setncattr('units', "myunits")
-"""
-		raise ValueError(msg)
+		raise ValueError("invalid axis values, see doc about how to pass metadata")
 
 	list_axes = Axes.from_kw(shape=np.shape(values), dims=dims, **kwaxes)
 
-	return cls(values, *list_axes)
+	return cls._constructor(values, list_axes)
 
     @classmethod
     def from_dataset(cls, data, keys=None, axis="items"):
@@ -777,7 +776,9 @@ a.setncattr('units', "myunits")
 
 	if self.size < 100:
 	    line = repr(self.values)
-	    lines.append(line)
+	else:
+	    line = "array(...)"
+	lines.append(line)
 
 	return "\n".join(lines)
 

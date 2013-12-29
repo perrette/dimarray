@@ -303,6 +303,7 @@ class Axes(list):
 	elif shape is not None:
 	    assert len(shape) == len(kwargs), "shape does not match kwargs !"
 	    current_shape = [ax.size for ax in axes]
+	    assert set(shape) == set(current_shape), "mismatch between array shape and axes"
 	    assert len(set(shape)) == len(set(current_shape)) == len(set([ax.name for ax in axes])), \
     """ some axes have the same size !
     ==> ambiguous determination of dimensions order via keyword arguments only
