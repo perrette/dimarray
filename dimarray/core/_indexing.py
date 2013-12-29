@@ -92,6 +92,10 @@ def _xs(obj, ix, axis=0, method="index", keepdims=False, raise_error=True, **kwa
     # Pick-up values 
     if method == "interp":
 	result = _take_interp(obj, indices, axis=axis, keepdims=keepdims)
+	# fix type
+	ix = np.array(ix) # make sure ix is an array
+	if axis < result.ndim:
+	    result.axes[axis].values = np.array(result.axes[axis].values, dtype=ix.dtype)
 
     else:
 	result = _take(obj, indices, axis=axis, keepdims=keepdims)
@@ -102,6 +106,8 @@ def _xs(obj, ix, axis=0, method="index", keepdims=False, raise_error=True, **kwa
 	# make sure we do not have a slice 
 	if type(ix) in (slice, tuple):
 	    raise ValueError("problem when retrieving value, set raise_error to True for more info")
+
+	ix = np.array(ix) # make sure ix is an array
 
 	bad_nd = (slice(None),)*axis + (bad,)
 	result.axes[axis].values[bad] = ix[bad]
@@ -197,6 +203,10 @@ def _take_interp(obj, indices, axis, keepdims):
     if not hasattr(v0, 'values'): # scalar
 	return v0*(1-w1) + v1*w1
 
+#    values = 0
+#    for i, w in enumerate(w1):
+#	i_nd = (slice(None),)*axis + (i,)
+#	values += v0.values[i_nd]*(1-w) + v1.values[i_nd]*w
     values = v0.values*(1-w1) + v1.values*w1
 
     axes = []
@@ -288,7 +298,7 @@ def reindex_axis(self, values, axis=0, method='index', raise_error=False):
     ax0 = Axis(values, ax.name)
     ax1 = newobj.axes[axis_id]
     
-    assert np.all((np.isnan(ax0.values) | ax0.values == ax1.values)), "pb when reindexing"
+    assert np.all((np.isnan(ax0.values) | (ax0.values == ax1.values))), "pb when reindexing"
 
     return newobj
 
