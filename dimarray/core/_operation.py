@@ -3,8 +3,8 @@ Operation and axis aligmnent
 """
 import numpy as np
 
-from lib.reshape import align_dims
-from lib.reindex import align_axes
+from ..lib.align import align_dims, align_axes
+from ..lib.tools import is_Dimarray
 
 def operation(func, o1, o2, reindex=True, broadcast=True, constructor=None):
     """ operation on LaxArray objects
@@ -23,7 +23,7 @@ def operation(func, o1, o2, reindex=True, broadcast=True, constructor=None):
 	constructor = o1._constructor
 
     # second operand is not a Dimarray: let numpy do the job 
-    if not isinstance(o2, Dimarray):
+    if not is_Dimarray(o2): # isinstance
 	if np.ndim(o2) > o1.ndim:
 	    raise ValueError("bad input: second operand's dimensions not documented")
 	res = func(o1.values, np.array(o2))

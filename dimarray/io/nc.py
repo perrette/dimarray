@@ -21,8 +21,11 @@ def summary(fname):
 	fname: netCDF file name
     """
     print fname+":\n"+"-"*len(fname)
-    print read_dimensions(fname, verbose=False)
     nms, _ = scan(fname, verbose=False)
+    header = "Dataset of %s variables" % (len(nms))
+    if len(nms) == 1: header = header.replace('variables','variable')
+    print header
+    print read_dimensions(fname, verbose=False)
     for nm in nms:
 	dims, shape = scan_var(fname, nm, verbose=False)
 	print nm,":", ", ".join(dims)
@@ -232,7 +235,7 @@ def write_dataset(f, obj, mode='w'):
     f, close = check_file(f, mode)
     nms = obj.keys()
     for nm in obj:
-	write_variable(f, obs[nm], nm)
+	write_variable(f, obj[nm], nm)
 
 
 def write_variable(f, obj, name=None, mode='w'):

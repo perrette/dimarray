@@ -1,6 +1,7 @@
 """ Additional transformations
 """
 import numpy as np
+from ..core.axes import Axes, Axis
 
 #
 # recursively apply a Dimarray ==> Dimarray transform

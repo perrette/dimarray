@@ -136,12 +136,12 @@ class Dataset(object):
 	self.variables[item] = val
 
     def write(self, f, *args, **kwargs):
-	import ncio
+	import io.nc as ncio
 	ncio.write_dataset(f, self, *args, **kwargs)
 
     @classmethod
     def read(cls, f, *args, **kwargs):
-	import ncio
+	import io.nc as ncio
 	return ncio.read_dataset(f, *args, **kwargs)
 
     def to_array(self, axis="items"):

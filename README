@@ -33,7 +33,7 @@ classes and methods:
 
     * Dimarray			: main data structure (see alias `array`)
     * Dataset		    	: ordered dictionary of Dimarray objects
-    * read, write, summary      : netCDF I/O (Dimarray and Dataset methods)
+    * read_nc, write_nc, summary_nc: netCDF I/O (Dimarray and Dataset methods)
     * Axis, Axes, GroupedAxis   : axis and indexing (under the hood)
 
 And for things pandas does better (low-dimensional data analysis, `groupby`, 
@@ -171,16 +171,17 @@ array([-0.08412077, -0.37666392,  0.0517213 , -0.07892575,  0.2153213 ])
 
 NetCDF I/O
 
->>> a.write("test.nc","myvar") # write to netCDF4
+>>> a.write_nc("test.nc","myvar") # write to netCDF4
 write to test.nc
->>> da.summary("test.nc") # check the content
+>>> da.summary_nc("test.nc") # check the content
 test.nc:
 -------
+Dataset of 1 variable
 dimensions: u'items', u'time'
 0 / items (3): a to c
 1 / time (5): 1950 to 1954
 myvar : items, time
->>> dataset = da.read("test.nc") # read in a Dataset class
+>>> dataset = da.read_nc("test.nc") # read in a Dataset class
 read from test.nc
 >>> dataset
 Dataset of 1 variable

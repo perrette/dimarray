@@ -12,6 +12,7 @@ from axes import Axis, Axes, GroupedAxis
 import _transform  # numpy along-axis transformations, interpolation
 import _reshape	   # change array shape and dimensions
 import _indexing   # perform slicing and indexing operations
+import _operation  # operation between Dimarrays
 
 from dimarray.lib.tools import pandas_obj
 
@@ -562,7 +563,7 @@ class Dimarray(Metadata):
 	>>> (b - b.values) == b - b
 	True
 	"""
-	result = _operation(func, self, other, broadcast=Config.op_broadcast, reindex=Config.op_reindex, constructor=self._constructor)
+	result = _operation.operation(func, self, other, broadcast=Config.op_broadcast, reindex=Config.op_reindex, constructor=self._constructor)
 	return result
 
     def __add__(self, other): return self._operation(np.add, other)
@@ -702,7 +703,7 @@ class Dimarray(Metadata):
     def to_dict(self, axis=0):
 	""" return an ordered dictionary of sets
 	"""
-	from dataset import Dataset
+	from ..dataset import Dataset
 	d = dict()
 	for k, v in self.iter(axis):
 	    d[k] = v
@@ -769,7 +770,9 @@ class Dimarray(Metadata):
     #  I/O
     # 
 
-    def write(self, f, name=None, *args, **kwargs):
+    def write_nc(self, f, name=None, *args, **kwargs):
+	""" Write to netCDF
+	"""
 	import dimarray.io.nc as ncio
 
 	# add variable name if provided...
@@ -779,9 +782,15 @@ class Dimarray(Metadata):
 	ncio.write_variable(f, self, name, *args, **kwargs)
 
     @classmethod
-    def read(cls, f, *args, **kwargs):
+    def read_nc(cls, f, *args, **kwargs):
+	""" Read from netCDF
+	"""
 	import dimarray.io.nc as ncio
 	return ncio.read_base(f, *args, **kwargs)
+
+    # Aliases
+    write = write_nc
+    read = read_nc
 
     #
     # Plotting
