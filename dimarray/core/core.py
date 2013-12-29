@@ -10,7 +10,6 @@ from metadata import Metadata
 from axes import Axis, Axes, GroupedAxis
 
 import _transform  # numpy along-axis transformations, interpolation
-import _reindex	   # re-index + interpolation
 import _reshape	   # change array shape and dimensions
 import _indexing   # perform slicing and indexing operations
 
@@ -135,7 +134,7 @@ class Dimarray(Metadata):
 	    axes = data.axes
 
 	# filter **kwargs to retrieve options
-	opt = dict(dtype=None, copy=False, _INDEXING=config.indexing)
+	opt = dict(dtype=None, copy=False, _INDEXING=Config.indexing)
 	for k in opt:
 	    if k in kwargs:
 		opt[k] = kwargs.pop(k)
@@ -538,8 +537,8 @@ class Dimarray(Metadata):
     #
     # REINDEXING 
     #
-    interp = _regrid.reindex_axis
-    interp_like = _regrid.reindex_like
+    reindex_axis = _indexing.reindex_axis
+    reindex_like = _indexing.reindex_like
 
     #
     # BASIC OPERATTIONS
@@ -563,7 +562,7 @@ class Dimarray(Metadata):
 	>>> (b - b.values) == b - b
 	True
 	"""
-	result = _operation(func, self, other, broadcast=config.op_broadcast, reindex=config.op_reindex, constructor=self._constructor)
+	result = _operation(func, self, other, broadcast=Config.op_broadcast, reindex=Config.op_reindex, constructor=self._constructor)
 	return result
 
     def __add__(self, other): return self._operation(np.add, other)

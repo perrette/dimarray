@@ -1,5 +1,57 @@
-""" Functions related to reshaping an array
+""" Functions associated to array alignment
 """
+import numpy as np
+import itertools
+from ..core.axes import Axes, Axis
+
+def broadcast_arrays(*objects):
+    """ Analogous to numpy.broadcast_arrays
+    
+    but with looser requirements on input shape
+    and returns copy instead of views
+
+    objects: variable list of Dimarrays
+
+    Examples:
+    ---------
+    Just as numpy's broadcast_arrays:
+    >>> x = da.array([[1,2,3]])
+    >>> y = da.array([[1],[2],[3]])
+    >>> da.broadcast_arrays(x, y)
+    dimensions: 'x0', 'x1'
+    0 / x0 (3): 0 to 2
+    1 / x1 (3): 0 to 2
+    array([[1, 2, 3],
+	   [1, 2, 3],
+	   [1, 2, 3]]),
+     dimarray: 9 non-null elements (0 null)
+    dimensions: 'x0', 'x1'
+    0 / x0 (3): 0 to 2
+    1 / x1 (3): 0 to 2
+    array([[1, 1, 1],
+	   [2, 2, 2],
+	   [3, 3, 3]])]
+    """
+    # give all objects the same dimension (without changing the size)
+    objects = align_dims(*objects)
+
+    # get axes object made of all non-singleton common axes
+    try:
+	axes = get_axes(*objects)
+
+    # fails if axes are not aligned
+    except AssertionError, msg:
+	raise ValueError(msg)
+
+    # now broadcast each Dimarray along commmon axes
+    newobjects = []
+    for o in objects:
+	o = o.broadcast(axes)
+	newobjects.append(o)
+
+    return newobjects
+
+
 
 def get_dims(*objects):
     """ find all dimensions from a variable list of objects
@@ -78,52 +130,46 @@ def align_dims(*objects):
     return newobjects
 
 
-def broadcast_arrays(*objects):
-    """ Analogous to numpy.broadcast_arrays
-    
-    but with looser requirements on input shape
-    and returns copy instead of views
-
-    objects: variable list of Dimarrays
-
-    Examples:
-    ---------
-    Just as numpy's broadcast_arrays:
-    >>> x = da.array([[1,2,3]])
-    >>> y = da.array([[1],[2],[3]])
-    >>> da.broadcast_arrays(x, y)
-    dimensions: 'x0', 'x1'
-    0 / x0 (3): 0 to 2
-    1 / x1 (3): 0 to 2
-    array([[1, 2, 3],
-	   [1, 2, 3],
-	   [1, 2, 3]]),
-     dimarray: 9 non-null elements (0 null)
-    dimensions: 'x0', 'x1'
-    0 / x0 (3): 0 to 2
-    1 / x1 (3): 0 to 2
-    array([[1, 1, 1],
-	   [2, 2, 2],
-	   [3, 3, 3]])]
+def align_axes(*objects):
+    """ align axes of a list of objects by reindexing
     """
-    # give all objects the same dimension (without changing the size)
-    objects = align_dims(*objects)
+    # find the dimensiosn
+    dims = get_dims(*objects)
 
-    # get axes object made of all non-singleton common axes
-    try:
-	axes = get_axes(*objects)
+    objects = list(objects)
+    for d in dims:
 
-    # fails if axes are not aligned
-    except AssertionError, msg:
-	raise ValueError(msg)
+	# objects which have that dimension
+	objs = filter(lambda o: d in o.dims, objects)
 
-    # now broadcast each Dimarray along commmon axes
-    newobjects = []
-    for o in objects:
-	o = o.broadcast(axes)
-	newobjects.append(o)
+	# common axis to reindex on
+	ax_values = common_axis(*[o.axes[d] for o in objs])
 
-    return newobjects
+	# update objects
+	for i, o in enumerate(objects):
+	    if o not in objs:
+		continue
+	    if o.axes[d] == ax_values:
+		continue
+
+	    objects[i] = o.reindex_axis(ax_values, axis=d)
+
+    return objects
+
+
+def common_axis(*axes):
+    """ find the common axis between a list of axes
+    """
+
+    # First merge the axes with duplicates (while preserving the order of the lists)
+    axes_lists = [list(ax.values) for ax in axes] # axes as lists
+    newaxis_val = axes_lists[0]
+    for val in itertools.chain(*axes_lists[1:]):
+	if val not in newaxis_val:
+	    newaxis_val.append(val)
+
+    return Axis(newaxis_val, axes[0].name)
+
 
 #def aligned(objects, skip_missing=True, skip_singleton=True):
 #    """ test whether common non-singleton axes are equal

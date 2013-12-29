@@ -5,7 +5,7 @@ import copy
 
 from axes import Axis, Axes, GroupedAxis
 
-def xs(self, ix=None, axis=0, method=None, keepdims=False, **axes):
+def xs(self, ix=None, axis=0, method=None, keepdims=False, raise_error=True, fallback=np.nan, **axes):
     """ Cross-section, can be multidimensional
 
     input:
@@ -17,6 +17,9 @@ def xs(self, ix=None, axis=0, method=None, keepdims=False, **axes):
 		     - "index": look for exact match similarly to list.index
 		     - "nearest": (regular Axis only) nearest match, bound checking
 	- keepdims : keep singleton dimensions
+
+	- raise_error: raise error if index not found? (default True)
+	- fallback: replacement value if index not found and raise_error is False (default np.nan)
 
 	- **axes  : provide axes as keyword arguments for multi-dimensional slicing
 		    ==> chained call to xs 
@@ -41,50 +44,85 @@ def xs(self, ix=None, axis=0, method=None, keepdims=False, **axes):
 
     # single-axis slicing
     if ix is not None:
-	obj = _xs(self, ix, axis=axis, method=method, keepdims=keepdims)
+	obj = _xs(self, ix, axis=axis, method=method, keepdims=keepdims, raise_error=raise_error, fallback=fallback)
 
     # multi-dimensional slicing <axis name> : <axis index value>
     # just a chained call
     else:
 	obj = self
 	for nm, idx in axes.iteritems():
-	    obj = _xs(obj, idx, axis=nm, method=method, keepdims=keepdims)
+	    obj = _xs(obj, idx, axis=nm, method=method, keepdims=keepdims, raise_error=raise_error, fallback=fallback)
 
     return obj
 
 
-def _xs(obj, ix, axis=0, method="index", keepdims=False):
+def _xs(obj, ix, axis=0, method="index", keepdims=False, raise_error=True, **kwargs):
     """ cross-section or slice along a single axis, see xs
     """
     assert axis is not None, "axis= must be provided"
+
+    axis, name = obj._get_axis_info(axis)
 
     # get integer index/slice for axis valued index/slice
     if method is None:
 	method = obj._INDEXING # slicing method
 
-    # Linear interpolation between axis values, see _take_interp
-    if method in ('interp'):
-	return _take_interp(obj, ix, axis=axis, keepdims=keepdims)
-
     # get an axis object
     ax = obj.axes[axis] # axis object
-    axis_id = obj.axes.index(ax) # corresponding integer index
 
     # numpy-like indexing, do nothing
     if method == "numpy":
-	index = ix
+	indices = ix
 
     # otherwise locate the values
-    elif method in ('nearest','index'):
-	index = ax.loc(ix, method=method) 
+    elif method in ('nearest','index', 'interp'):
+	indices = ax.loc(ix, method=method, raise_error=raise_error, **kwargs) 
 
     else:
 	raise ValueError("Unknown method: "+method)
 
+    # Filter bad from good indices: this would happen only for raise_error == False
+    if not raise_error:
+	bad = np.isnan(indices)
+	if np.size(bad) > 0:
+	    indices = np.where(bad,0,indices)
+	    if method != "interp":
+		indices = np.array(indices, dtype=int) # NaNs produced conversion to float
+
+    # Pick-up values 
+    if method == "interp":
+	result = _take_interp(obj, indices, axis=axis, keepdims=keepdims)
+
+    else:
+	result = _take(obj, indices, axis=axis, keepdims=keepdims)
+
+    # Refill NaNs back in
+    if not raise_error and np.size(bad) > 0:
+
+	# make sure we do not have a slice 
+	if type(ix) in (slice, tuple):
+	    raise ValueError("problem when retrieving value, set raise_error to True for more info")
+
+	bad_nd = (slice(None),)*axis + (bad,)
+	result.axes[axis].values[bad] = ix[bad]
+
+	# convert to float 
+	if result.dtype is np.dtype(int):
+	    result.values = np.array(result.values, dtype=float)
+	result.values[bad_nd] = np.nan
+
+    return result
+
+
+def _take(obj, indices, axis, keepdims=False):
+    """ same as _xs, but just for numpy indices
+    """
+    ax = obj.axes[axis]
+
     # make a numpy index  and use numpy's slice method (`slice(None)` :: `:`)
-    index_nd = (slice(None),)*axis_id + (index,)
-    newval = obj.values[index_nd]
-    newaxis = obj.axes[axis][index] # returns an Axis object
+    indices_nd = (slice(None),)*axis + (indices,)
+    newval = obj.values[indices_nd]
+    newaxis = ax[indices] # returns an Axis object
 
     # if resulting dimension has reduced, remove the corresponding axis
     axes = copy.copy(obj.axes)
@@ -95,9 +133,9 @@ def _xs(obj, ix, axis=0, method="index", keepdims=False):
     # re-expand things even if the axis collapsed
     if collapsed and keepdims:
 
-	newaxis = Axis([newaxis], obj.axes[axis].name) 
+	newaxis = Axis([newaxis], ax.name) 
 	reduced_shape = list(obj.shape)
-	reduced_shape[axis_id] = 1 # reduce to one
+	reduced_shape[axis] = 1 # reduce to one
 	newval = np.reshape(newval, reduced_shape)
 
 	collapsed = False # set as not collapsed
@@ -109,7 +147,7 @@ def _xs(obj, ix, axis=0, method="index", keepdims=False):
 
     # Otherwise just update the axis
     else:
-	axes[axis_id] = newaxis
+	axes[axis] = newaxis
 	stamp = None
 
     # If result is a numpy array, make it a Dimarray
@@ -125,19 +163,17 @@ def _xs(obj, ix, axis=0, method="index", keepdims=False):
 
     return result
 
-def _take_interp(obj, ix, axis, keepdims):
+def _take_interp(obj, indices, axis, keepdims):
     """ Take a number or an integer as from an axis
     """
-    assert type(ix) is not slice, "interp only work with integer and list indexing"
+    assert type(indices) is not slice, "interp only work with integer and list indexing"
 
     # return a "fractional" index
     ax = obj.axes[axis]
-    index = ax.loc(ix, method='interp') 
-    ii = np.array(index) # make sure it is array-like
 
     # position indices of nearest neighbors
     # ...last element, 
-    i0 = np.array(index, dtype=int)
+    i0 = np.array(indices, dtype=int)
     i1 = i0+1
 
     # make sure we are not beyond 
@@ -151,18 +187,26 @@ def _take_interp(obj, ix, axis, keepdims):
 	i1[over] = ax.size-1
 
     # weight for interpolation
-    w1 = ii-i0 
+    w1 = indices-i0 
 
     # sample nearest neighbors
     v0 = _xs(obj, i0, axis=axis, method="numpy", keepdims=keepdims)
     v1 = _xs(obj, i1, axis=axis, method="numpy", keepdims=keepdims)
 
     # result as weighted sum
+    if not hasattr(v0, 'values'): # scalar
+	return v0*(1-w1) + v1*w1
+
     values = v0.values*(1-w1) + v1.values*w1
+
     axes = []
     for d in v0.dims:
+
+	# only for list indexing or if keepdims is True
 	if d == ax.name:
 	    axis = Axis(v0.axes[d].values*(1-w1) + v1.axes[d].values*w1, d)
+
+	# other dimensions not affected by slicing
 	else:
 	    axis = obj.axes[d]
 	axes.append(axis)
@@ -201,3 +245,69 @@ def _take_interp(obj, ix, axis, keepdims):
 #	    result = eval(condition, {ax.name:ax.values})
 #
 #	result = np.where(condition, [self.values, otherwise])
+
+#
+# Reindex axis
+#
+
+def reindex_axis(self, values, axis=0, method='index', raise_error=False):
+    """ reindex an array along an axis
+
+    Input:
+	- values : array-like or Axis: new axis values
+	- axis   : axis number or name
+	- method : "index", "nearest", "interp" (see xs)
+	- raise_error: if True, raise error when an axis value is not present 
+	               otherwise just fill-in with NaN. Defaulf is False.
+
+    Output:
+	- Dimarray
+    """
+    if isinstance(values, Axis):
+	newaxis = values
+	values = newaxis.values
+	axis = newaxis.name
+
+    axis_id = self.axes.get_idx(axis)
+    axis_nm = self.axes.get_idx(axis)
+    ax = self.axes[axis_id] # Axis object
+
+    # do nothing if axis is same or only None element
+    if ax.values[0] is None or np.all(values==ax.values):
+	return self
+
+    # indices along which to sample
+    if method in ("nearest","index","interp", None):
+	newobj = self.xs(values, axis=axis, method=method, raise_error=raise_error)
+
+    else:
+	raise ValueError("invalid reindex_axis method: "+repr(method))
+
+    # new Dimarray
+    # ...replace the axis
+    ax0 = Axis(values, ax.name)
+    ax1 = newobj.axes[axis_id]
+    
+    assert np.all((np.isnan(ax0.values) | ax0.values == ax1.values)), "pb when reindexing"
+
+    return newobj
+
+
+def _reindex_axes(self, axes, method=None, **kwargs):
+    """ reindex according to a list of axes
+    """
+    obj = self
+    newdims = [ax2.name for ax2 in axes]
+    for ax in self.axes:
+	if ax.name in newdims:
+	    newaxis = axes[ax.name].values
+	    obj = obj.reindex_axis(newaxis, axis=ax.name, method=method, **kwargs)
+
+    return obj
+
+def reindex_like(self, other, method=None, **kwargs):
+    """ reindex like another axis
+
+    note: only reindex axes which are present in other
+    """
+    return _reindex_axes(self, other.axes, method=method, **kwargs)

@@ -1,5 +1,7 @@
 """ Additional transformations
 """
+import numpy as np
+
 #
 # recursively apply a Dimarray ==> Dimarray transform
 #
@@ -59,3 +61,74 @@ def apply_recursive(obj, dims, fun, *args, **kwargs):
     # automatically sort in the appropriate order
     new = obj._constructor(data, newaxes)
     return new
+
+#
+# INTERPOLATION
+#
+
+def interp1d_numpy(obj, values=None, axis=0, left=np.nan, right=np.nan):
+    """ interpolate along one axis: wrapper around numpy's interp
+
+    input:
+	obj : Dimarray
+	newaxis_values: 1d array, or Axis object
+	newaxis_name, optional: `str` (axis name), required if newaxis is an array
+
+    output:
+	interpolated data (n-d)
+    """
+    newaxis = Axis(values, axis)
+
+    def interp1d(obj):
+	""" 2-D interpolation function appled recursively on the object
+	"""
+	xp = obj.axes[newaxis.name].values
+	fp = obj.values
+	result = np.interp(newaxis.values, xp, fp, left=left, right=right)
+	return obj._constructor(result, [newaxis], **obj._metadata)
+
+    result = apply_recursive(obj, (newaxis.name,), interp1d)
+    return result.transpose(obj.dims) # transpose back to original dimensions
+
+def interp1d(obj, values=None, axis=0, method='linear', **kwargs):
+    """ interpolate along one axis
+    """
+    if method == "linear":
+	return interp1d_numpy(obj, values, axis, **kwargs)
+
+    else:
+	raise NotImplementedError(method)
+	#return obj.reindex_axis(values, axis, method=method **kwargs)
+
+def interp2d_mpl(obj, newaxes, axes=None, order=1):
+    """ bilinear interpolation: wrapper around mpl_toolkits.basemap.interp
+
+    input:
+	obj : Dimarray
+	newaxes: list of Axis object, or list of 1d arrays
+	axes, optional: list of str (axis names), required if newaxes is a list of arrays
+
+    output:
+	interpolated data (n-d)
+    """
+    from mpl_toolkits.basemap import interp
+
+    # make sure input axes have the valid format
+    newaxes = Axes.from_list(newaxes, axes) # valid format
+    newaxes.sort(obj.dims) # re-order according to object's dimensions
+    x, y = newaxes  # 2-d interpolation
+
+    # make new grid 2-D
+    x1, x1 = np.meshgrid(x.values, y.values, indexing='ij')
+
+    def interp2d(obj, order=1):
+	""" 2-D interpolation function appled recursively on the object
+	"""
+	x0, y0 = obj.axes[x.name].values, obj.axes[y.name].values
+	res = interp(obj.values, x0, y0, x1, y1, order=order)
+	return obj._constructor(res, newaxes, **obj._metadata)
+
+    result = apply_recursive(obj, (x.name, y.name), interp2d)
+    return result.transpose(obj.dims) # transpose back to original dimensions
+
+interp2d = interp2d_mpl # alias

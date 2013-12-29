@@ -33,6 +33,6 @@ def ndindex(indices, pos):
 def is_Dimarray(obj):
     """ avoid import conflict
     """
-    from core import Dimarray
+    from dimarray import Dimarray
     return isinstance(obj, Dimarray)
 

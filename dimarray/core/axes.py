@@ -2,6 +2,7 @@ import numpy as np
 from collections import OrderedDict
 import string
 import copy
+import functools
 
 from metadata import Metadata
 
@@ -440,7 +441,7 @@ class Locator(object):
     >>> loc[ix] == np.index_exp[loc[ix]][0]
     True
     """
-    def __init__(self, values, method=None):
+    def __init__(self, values, method=None, raise_error=True, fallback=np.nan):
 	"""
 	values	: string list or numpy array
 	regular	: is the axis regular?
@@ -448,6 +449,9 @@ class Locator(object):
 	method	: "index" (default)
 		  "nearest" (regular axis only)
 		  "interp" (regular axis only)
+
+	raise_error: raise error if index not found? (default True)
+	fallback: replacement value if index not found and raise_error is False (default np.nan)
 
 	NOTE: for str or int, "index" is always used
 	"""
@@ -459,6 +463,8 @@ class Locator(object):
 	    method = "index"
 
 	self.method = method #  default method
+	self.raise_error = raise_error 
+	self.fallback = fallback 
 
     #
     # wrapper methods: __getitem__ and __call__
@@ -478,7 +484,7 @@ class Locator(object):
 	else:
 	    return self.locate(ix)
 
-    def __call__(self, idx, method = None):
+    def __call__(self, idx, **kwargs):
 	""" general wrapper method
 	
 	input:
@@ -493,14 +499,14 @@ class Locator(object):
 	if type(idx) is tuple:
 	    idx = slice(*idx)
 
-	if method is None: method = self.method
-	return self.set(method=method)[idx]
+	#if method is None: method = self.method
+	return self.set(**kwargs)[idx]
 
-    def set(self, method):
+    def set(self, **kwargs):
 	""" convenience function for chained call: update methods and return itself 
 	"""
 	#self.method = method
-	return Locator(self.values, method=method)
+	return Locator(self.values, **kwargs)
 
     #
     # methods to access single value
@@ -516,10 +522,12 @@ class Locator(object):
 	""" return nearest index with bound checking
 	"""
 	if check_bounds:
-	    dx = self.values[1] - self.values[0]
+	    #dx = self.values[1] - self.values[0]
 	    mi, ma = np.min(self.values), np.max(self.values)
-	    if val < mi - dx/2. or val > ma + dx/2.:
-		raise ValueError("%f out of bounds ! (min: %f, max: %f, step: %f)" % (val, mi, ma, dx))
+	    if val < mi or val > ma:
+	#    if val < mi - dx/2. or val > ma + dx/2.:
+	 #	raise ValueError("%f out of bounds ! (min: %f, max: %f, step: %f)" % (val, mi, ma, dx))
+	 	raise ValueError("%f out of bounds ! (min: %f, max: %f)" % (val, mi, ma))
 	return np.argmin(np.abs(val-self.values))
 
     def interp(self, val, **check_bounds):
@@ -538,23 +546,36 @@ class Locator(object):
     # wrapper for single value
     #
 
-    def locate(self, val, method=None):
+    def locate(self, val, method=None, raise_error=None, fallback=None):
 	""" wrapper to locate single values
+
+	method, raise_error, fallback: if None, look in self.__dict__
 	"""
 	if method is None: method = self.method
-	return getattr(self, method)(val)
+	if raise_error is None: raise_error = self.raise_error
+	if fallback is None: fallback = self.fallback 
+	try:
+	    loc = getattr(self, method)(val)
+	except:
+	    if raise_error:
+		raise
+	    else:
+		loc = fallback
+	return loc
 
     #
     # Access a list or array
     #
 
-    def take(self, indices, method=None):
+    def take(self, indices, **kwargs):
 	""" Return a list of indices
+
+	**kwargs: passed to locate
 	"""
 	#assert type(indices) is list, "must provide a list !"
 	assert np.iterable(indices), "indices is not iterable!"
-	if method is None: method = self.method
-	return map(getattr(self, method), indices)
+	locate = functools.partial(self.locate, **kwargs)
+	return map(locate, indices)
 
     #
     # Access a slice

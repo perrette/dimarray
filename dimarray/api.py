@@ -1,10 +1,10 @@
 """ User-interface, should be relatively stable
 """
-from core import Dimarray, array
-from axes import Axis, Axes
+from config import set_option, get_option, Config
+from core import Dimarray, array, Axis, Axes
 from dataset import Dataset
-from lib.reindex import align_axes, interp2d
-from lib.reshape import broadcast_arrays, align_dims
+from lib.align import broadcast_arrays, align_dims, align_axes
+from lib.transform import interp1d, interp2d, apply_recursive
 
 try:
     from io.nc import read as read_nc, summary as summary_nc
