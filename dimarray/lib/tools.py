@@ -18,3 +18,21 @@ def pandas_obj(values, *axes):
     else:
 	cls = pandas_classes[n-1] 
 	return cls(values, *axes)
+
+def ndindex(indices, pos):
+    """ return the N-D index from an along-axis index
+
+    inputs:
+	indices: `int` or `list` or `slice`
+	pos : axis position
+    returns:
+	tuple
+    """
+    return (slice(None),)*pos + np.index_exp[indices]
+
+def is_Dimarray(obj):
+    """ avoid import conflict
+    """
+    from core import Dimarray
+    return isinstance(obj, Dimarray)
+

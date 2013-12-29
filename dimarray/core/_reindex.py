@@ -10,19 +10,16 @@ def reindex_axis(self, newaxis, axis=0, method='index'):
     """ reindex an array along an axis
 
     Input:
-	- newaxis: array or list on the new axis
+	- newaxis: Axis or array-like new axis
 	- axis   : axis number or name
 	- method : "index", "nearest", "interp" (see xs)
 
     Output:
 	- Dimarray
     """
-    if axis is None:
-	assert isinstance(newaxis, Axis), "provide name or an Axis object"
-	axis = newaxis.name
-
     if isinstance(newaxis, Axis):
 	newaxis = newaxis.values
+	axis = newaxis.name
 
     axis_id = self.axes.get_idx(axis)
     axis_nm = self.axes.get_idx(axis)
@@ -57,7 +54,7 @@ def reindex_axis(self, newaxis, axis=0, method='index'):
 	    values = np.array(values, dtype=float, copy=False)
 
 	missing = (slice(None),)*axis_id + np.where(indices==-1)
-	#missing = _ndindex(np.where(indices==-1), axis_id)
+	#missing = ndindex(np.where(indices==-1), axis_id)
 	values[missing] = np.nan # set missing values to NaN
 
     elif method == "interp":
@@ -96,11 +93,3 @@ def reindex_like(self, other, method=None):
     note: only reindex axes which are present in other
     """
     return self._reindex_axes(other.axes, method=method)
-
-def reindex(self, method=None, **kwds):
-    """ reindex over several dimensions via keyword arguments, for convenience
-    """
-    obj = self
-    for k in kwds:
-	obj = obj.reindex_axis(kwds[k], axis=k, method=method)
-    return obj

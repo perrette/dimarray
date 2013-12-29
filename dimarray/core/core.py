@@ -12,9 +12,9 @@ import _reindex	   # re-index + interpolation
 import _reshape	   # change array shape and dimensions
 import _indexing   # perform slicing and indexing operations
 
-from _reshape import align_axes, align_dims, broadcast_arrays
+from lib.tools import pandas_obj
 
-from tools import pandas_obj
+__all__ = ["Dimarray", "array"]
 
 class Dimarray(Metadata):
     """ numpy's ndarray with physical dimensions (named and values axes)
@@ -692,14 +692,14 @@ class Dimarray(Metadata):
 	output:
 	    - new Dimarray object
 	"""
-	from collect import Dataset
+	from dataset import Dataset
 	data = Dataset(data, keys=keys)
 	return data.to_array(axis=axis)
 
     def to_dataset(self, axis=0):
 	""" split a Dimarray into a Dataset object (collection of Dimarrays)
 	"""
-	from collect import Dataset
+	from dataset import Dataset
 	# iterate over elements of one axis
 	data = [val for k, val in self.iter(axis)]
 	return Dataset(data)
@@ -720,7 +720,7 @@ class Dimarray(Metadata):
     def to_dict(self, axis=0):
 	""" return an ordered dictionary of sets
 	"""
-	from collect import Dataset
+	from dataset import Dataset
 	d = dict()
 	for k, v in self.iter(axis):
 	    d[k] = v
@@ -788,7 +788,7 @@ class Dimarray(Metadata):
     # 
 
     def write(self, f, name=None, *args, **kwargs):
-	import ncio
+	import dimarray.io.nc as ncio
 
 	# add variable name if provided...
 	if name is None and hasattr(self, "name"):
@@ -798,7 +798,7 @@ class Dimarray(Metadata):
 
     @classmethod
     def read(cls, f, *args, **kwargs):
-	import ncio
+	import dimarray.io.nc as ncio
 	return ncio.read_base(f, *args, **kwargs)
 
     #
@@ -818,52 +818,3 @@ def array(values, *args, **kwargs):
 
 array.__doc__ += Dimarray.__doc__.replace("Dimarray","da.array")
 
-#
-# Operation and axis aligmnent
-#
-
-def _operation(func, o1, o2, reindex=True, transpose=True, constructor=Dimarray):
-    """ operation on LaxArray objects
-
-    input:
-	func	: operator
-	o1    	: LHS operand: Dimarray
-	o2    	: RHS operand: at least: be convertible by np.array())
-	align, optional: if True, use pandas to align the axes
-
-    output:
-	values: array values
-	dims : dimension names
-    """
-    # second operand is not a Dimarray: let numpy do the job 
-    if not isinstance(o2, Dimarray):
-	if np.ndim(o2) > o1.ndim:
-	    raise ValueError("bad input: second operand's dimensions not documented")
-	res = func(o1.values, np.array(o2))
-	return constructor(res, o1.axes)
-
-    # both objects are dimarrays
-
-    # Align axes by re-indexing
-    if reindex:
-	o1, o2 = align_axes(o1, o2)
-
-    # Align dimensions by adding new axes and transposing if necessary
-    o1, o2 = align_dims(o1, o2)
-
-    # make the new axes
-    newaxes = o1.axes.copy()
-
-    # ...make sure no singleton value is included
-    for i, ax in enumerate(newaxes):
-	if ax.values[0] is None:
-	    newaxes[i] = o2.axes[ax.name]
-
-    res = func(o1.values, o2.values)
-
-    return constructor(res, newaxes)
-
-def _ndindex(indices, axis_id):
-    """ return the N-D index from an along-axis index
-    """
-    return (slice(None),)*axis_id + np.index_exp[indices]

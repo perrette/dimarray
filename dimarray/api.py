@@ -1,11 +1,13 @@
 """ User-interface, should be relatively stable
 """
+from core import Dimarray, array
 from axes import Axis, Axes
-from core import Dimarray, array, align_axes, align_dims, broadcast_arrays
-from collect import Dataset
+from dataset import Dataset
+from lib.reindex import align_axes, interp2d
+from lib.reshape import broadcast_arrays, align_dims
 
 try:
-    from ncio import read, summary
+    from io.nc import read as read_nc, summary as summary_nc
     _ncio = True
 except:
     raise

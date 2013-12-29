@@ -4,11 +4,9 @@ import os
 import netCDF4 as nc
 import numpy as np
 #from geo.data.index import to_slice, _slice3D
-from collect import Dataset
-from axes import Axis, Axes
-#import core as da
-from core import Dimarray as Dimarray
-from core import _ndindex
+
+from dataset import Dataset
+from core import Dimarray, Axis, Axes
 
 __all__ = ['read',"summary"]
 
