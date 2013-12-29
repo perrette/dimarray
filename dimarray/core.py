@@ -13,6 +13,9 @@ import _reindex	   # re-index + interpolation
 import _reshape	   # change array shape and dimensions
 import _indexing   # perform slicing and indexing operations
 
+# useful functions
+from _reshape import align_axes, align_dims, broadcast_arrays
+
 from tools import pandas_obj
 #import plotting
 
@@ -737,7 +740,6 @@ def array(values, axes=None, dims=None, **kwaxes):
 # Operation and axis aligmnent
 #
 
-
 def _operation(func, o1, o2, reindex=True, transpose=True, constructor=Dimarray):
     """ operation on LaxArray objects
 
@@ -760,30 +762,17 @@ def _operation(func, o1, o2, reindex=True, transpose=True, constructor=Dimarray)
 
     # both objects are dimarrays
 
-    # re-index 
+    # Align axes by re-indexing
     if reindex:
 	o1, o2 = align_axes(o1, o2)
-	## common list of dimensions
-	#dims1 =  [ax.name for ax in o1.axes] 
-	#common_dims =  [ax.name for ax in o2.axes if ax.name in dims1] 
 
-	## reindex both operands
-	#for name in common_dims:
-	#    ax_values = _common_axis(o1.axes[name].values, o2.axes[name].values)
-	#    o1 = o1.reindex_axis(ax_values, axis=name)
-	#    o2 = o2.reindex_axis(ax_values, axis=name)
-
-    # determine the dimensions of the result
-    newdims = _get_dims(o1, o2) 
-
-    # make sure all dimensions are present
-    o1 = o1.reshape(newdims)
-    o2 = o2.reshape(newdims)
-    assert o1.dims == o2.dims, "problem in transpose"
+    # Align dimensions by adding new axes and transposing if necessary
+    o1, o2 = align_dims(o1, o2)
 
     # make the new axes
     newaxes = o1.axes.copy()
-    # ...make sure no singletong value is included
+
+    # ...make sure no singleton value is included
     for i, ax in enumerate(newaxes):
 	if ax.values[0] is None:
 	    newaxes[i] = o2.axes[ax.name]
@@ -791,62 +780,6 @@ def _operation(func, o1, o2, reindex=True, transpose=True, constructor=Dimarray)
     res = func(o1.values, o2.values)
 
     return constructor(res, newaxes)
-
-#
-# Axis alignment for operations
-#
-def _common_axis(*axes):
-    """ find the common axis between 
-    """
-    #from heapq import merge
-    import itertools
-
-    # First merge the axes with duplicates (while preserving the order of the lists)
-    axes_lists = [list(ax.values) for ax in axes] # axes as lists
-    newaxis_val = axes_lists[0]
-    for val in itertools.chain(*axes_lists[1:]):
-	if val not in newaxis_val:
-	    newaxis_val.append(val)
-
-    return Axis(newaxis_val, axes[0].name)
-
-def _get_dims(*objects):
-    """ find all dimensions from a variable list of objects
-    """
-    dims = []
-    for o in objects:
-	for dim in o.dims:
-	    if dim not in dims:
-		dims.append(dim)
-
-    return dims
-
-
-def align_axes(*objects):
-    """ align axes of a list of objects by reindexing
-    """
-    # find the dimensiosn
-    dims = _get_dims(*objects)
-
-    objects = list(objects)
-    for d in dims:
-
-	# objects which have that dimension
-	objs = filter(lambda o: d in o.dims, objects)
-
-	# common axis to reindex on
-	ax_values = _common_axis(*[o.axes[d] for o in objs])
-
-	# update objects
-	for i, o in enumerate(objects):
-	    if o not in objs:
-		continue
-	    if o.axes[d] == ax_values:
-		continue
-
-	    objects[i] = o.reindex_axis(ax_values, axis=d)
-
-    return objects
 
 def _ndindex(indices, axis_id):
     """ return the N-D index from an along-axis index
