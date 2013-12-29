@@ -6,7 +6,7 @@ import numpy as np
 from lib.reshape import align_dims
 from lib.reindex import align_axes
 
-def operation(func, o1, o2, reindex=True, transpose=True, constructor=Dimarray):
+def operation(func, o1, o2, reindex=True, broadcast=True, constructor=None):
     """ operation on LaxArray objects
 
     input:
@@ -19,6 +19,9 @@ def operation(func, o1, o2, reindex=True, transpose=True, constructor=Dimarray):
 	values: array values
 	dims : dimension names
     """
+    if constructor is None:
+	constructor = o1._constructor
+
     # second operand is not a Dimarray: let numpy do the job 
     if not isinstance(o2, Dimarray):
 	if np.ndim(o2) > o1.ndim:
@@ -33,7 +36,8 @@ def operation(func, o1, o2, reindex=True, transpose=True, constructor=Dimarray):
 	o1, o2 = align_axes(o1, o2)
 
     # Align dimensions by adding new axes and transposing if necessary
-    o1, o2 = align_dims(o1, o2)
+    if broadcast:
+	o1, o2 = align_dims(o1, o2)
 
     # make the new axes
     newaxes = o1.axes.copy()

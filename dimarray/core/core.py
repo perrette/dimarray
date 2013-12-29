@@ -4,6 +4,8 @@ import numpy as np
 import copy
 from collections import OrderedDict
 
+from dimarray.config import Config
+
 from metadata import Metadata
 from axes import Axis, Axes, GroupedAxis
 
@@ -12,7 +14,7 @@ import _reindex	   # re-index + interpolation
 import _reshape	   # change array shape and dimensions
 import _indexing   # perform slicing and indexing operations
 
-from lib.tools import pandas_obj
+from dimarray.lib.tools import pandas_obj
 
 __all__ = ["Dimarray", "array"]
 
@@ -38,12 +40,18 @@ class Dimarray(Metadata):
 
     options: 
 	- dtype, copy: passed to np.array()
-	- _INDEXING (internal purpose): default values for `method=` in xs(method=...)
+
+	Internal use only:
+
+	- _INDEXING: default "index". This is the default value for `method=` in 
+		    xs(method=...) and this also determine the behaviour of 
+		    __getitem__. Note the `ix` property acts as a toogle 
+		    between "numpy" and all other methods (back to `index`)
 
     metadata: <att=val> keywords, where val can be any mutable object 
 	      (`str`, `tuple`, `int`, `float`...).
 	      metadata describe the array, including "name", "units" and "stamp"
-	      `att` cannot be one of ("dtype", "copy", "_INDEXING")
+	      `att` cannot be one of ("dtype", "copy", "INDEXING")
 	      In these particular cases, use setncattr method instead.
     
     kwaxes: axes as keyword arguments, <name = values>, where values is 
@@ -127,7 +135,7 @@ class Dimarray(Metadata):
 	    axes = data.axes
 
 	# filter **kwargs to retrieve options
-	opt = dict(dtype=None, copy=False, _INDEXING="index")
+	opt = dict(dtype=None, copy=False, _INDEXING=config.indexing)
 	for k in opt:
 	    if k in kwargs:
 		opt[k] = kwargs.pop(k)
@@ -252,28 +260,6 @@ class Dimarray(Metadata):
 
 	    else:
 		raise
-
-    def set(self, inplace=False, **kwargs):
-	""" update multiple class attributes in-place or after copy
-
-	inplace: modify attributes in-place, return None 
-	otherwise first make a copy, and return new obj
-
-	a.set(_INDEXING="numpy")[:30]
-	a.set(_INDEXING="index")[1971.42]
-	a.set(_INDEXING="nearest")[1971]
-	a.set(name="myname", inplace=True) # modify attributes inplace
-	"""
-	if inplace: 
-	    for k in kwargs:
-		setattr(self, k, kwargs[k]) # include metadata check
-	    #self.__dict__.update(kwargs)
-
-	else:
-	    obj = self.copy(shallow=True)
-	    for k in kwargs:
-		setattr(obj, k, kwargs[k]) # include metadata check
-	    return obj
 
     def copy(self, shallow=False):
 	""" copy of the object and update arguments
@@ -474,9 +460,17 @@ class Dimarray(Metadata):
     #
     @property
     def ix(self):
-	""" integer index-access
+	""" integer index-access (unless _INDEXING is already numpy ==> go to index)
 	"""
-	return self._constructor(self.values, self.axes, _INDEXING="numpy", **self._metadata)
+	# special case where user set self.INDEXING to "index"
+	if self._INDEXING == "numpy":
+	    _INDEXING = "index"
+
+	# standard case:
+	else:
+	    _INDEXING = "numpy"
+
+	return self._constructor(self.values, self.axes, _INDEXING=_INDEXING, **self._metadata)
 
     #
     # TRANSFORMS
@@ -524,18 +518,6 @@ class Dimarray(Metadata):
     diff = _transform.diff
 
     #
-    # OTHER transformations 
-    #
-
-    # Recursive application of obj => obj transformation
-    apply_recursive = _transform.apply_recursive 
-
-    # 1D AND BILINEAR INTERPOLATION (RECURSIVELY APPLIED)
-    interp1d = _transform.interp1d_numpy
-    interp2d = _transform.interp2d_mpl
-
-
-    #
     # METHODS TO CHANGE ARRAY SHAPE AND SIZE
     #
     #from _reshape import repeat, newaxis, transpose, reshape, broadcast, group, ungroup, squeeze
@@ -556,12 +538,13 @@ class Dimarray(Metadata):
     #
     # REINDEXING 
     #
-    reindex_axis = _reindex.reindex_axis
+    interp = _regrid.reindex_axis
+    interp_like = _regrid.reindex_like
 
     #
     # BASIC OPERATTIONS
     #
-    def _operation(self, func, other, reindex=True, transpose=True):
+    def _operation(self, func, other):
 	""" make an operation: this include axis and dimensions alignment
 
 	Just for testing:
@@ -580,7 +563,7 @@ class Dimarray(Metadata):
 	>>> (b - b.values) == b - b
 	True
 	"""
-	result = _operation(func, self, other, constructor=self._constructor)
+	result = _operation(func, self, other, broadcast=config.op_broadcast, reindex=config.op_reindex, constructor=self._constructor)
 	return result
 
     def __add__(self, other): return self._operation(np.add, other)
@@ -774,7 +757,7 @@ class Dimarray(Metadata):
 	    line = repr(self.axes)
 	    lines.append(line)
 
-	if self.size < 100:
+	if self.size < Config.display_max:
 	    line = repr(self.values)
 	else:
 	    line = "array(...)"

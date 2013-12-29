@@ -5,7 +5,7 @@ import itertools
 
 from dimarray.axes import Axes, Axis
 from reshape import get_dims
-from tools import apply_recursive
+from transform import apply_recursive
 
 def align_axes(*objects):
     """ align axes of a list of objects by reindexing
@@ -56,6 +56,7 @@ def interp1d_numpy(obj, values=None, axis=0, left=None, right=None):
     """ interpolate along one axis: wrapper around numpy's interp
 
     input:
+	obj : Dimarray
 	newaxis_values: 1d array, or Axis object
 	newaxis_name, optional: `str` (axis name), required if newaxis is an array
 
@@ -75,12 +76,13 @@ def interp1d_numpy(obj, values=None, axis=0, left=None, right=None):
     result = apply_recursive(obj, (newaxis.name,), interp1d)
     return result.transpose(obj.dims) # transpose back to original dimensions
 
-interp = interp1d_numpy # alias
+interp1d = interp1d_numpy # alias
 
 def interp2d_mpl(obj, newaxes, axes=None, order=1):
     """ bilinear interpolation: wrapper around mpl_toolkits.basemap.interp
 
     input:
+	obj : Dimarray
 	newaxes: list of Axis object, or list of 1d arrays
 	axes, optional: list of str (axis names), required if newaxes is a list of arrays
 
