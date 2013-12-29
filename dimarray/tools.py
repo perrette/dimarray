@@ -18,11 +18,3 @@ def pandas_obj(values, *axes):
     else:
 	cls = pandas_classes[n-1] 
 	return cls(values, *axes)
-
-def keyword(func):
-    """ decorator to make a function of the form func(val, axis, p1, p2, ...) 
-    accept axis-keyword arguments func(val, axis, p1, p2, ..., **kwargs)
-    """
-    def newfunc(*args, **kwargs):
-	"""
-	"""
