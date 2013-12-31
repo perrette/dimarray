@@ -99,7 +99,7 @@ class Dimarray(Metadata):
     >>> a = Dimarray(values, ('items',list("ab")), ('time',np.arange(1950,1953)))
     >>> b = Dimarray(values, items=list("ab"), time=np.arange(1950,1953))
     >>> c = Dimarray.from_kw(values, items=list("ab"), time=np.arange(1950,1953), dims=['items', 'time']) 
-    >>> d = Dimarray.from_list(values, [list("ab"), np.arange(1950,1953)], dims=['items','time']) 
+    >>> d = Dimarray.from_arrays(values, [list("ab"), np.arange(1950,1953)], dims=['items','time']) 
     >>> a == b == c == d
     True
     >>> a
@@ -179,7 +179,7 @@ class Dimarray(Metadata):
 
 	# only axis values are provided: default names
 	elif isinstance(axes[0], np.ndarray) or isinstance(axes[0], list):
-	    axes = Axes.from_list(axes)
+	    axes = Axes.from_arrays(axes)
 
 	# only dimension names are provided: default values
 	elif isinstance(axes[0], str):
@@ -600,13 +600,13 @@ class Dimarray(Metadata):
     # IMPORT FROM / EXPORT TO
     #
     @classmethod
-    def from_list(cls, values, axes=None, dims=None, **kwargs):
+    def from_arrays(cls, values, axes=None, dims=None, **kwargs):
 	""" initialize Dimarray with with variable list of tuples, and attributes
 
 	values	    : numpy-like array (passed to array())
 	axes	    : list of axis values
 	dims	    : list of axis dims
-	(axes, dims) are passed to Axes.from_list
+	(axes, dims) are passed to Axes.from_arrays
 	**kwargs    : passed to Dimarray (attributes)
 
 	Example:
@@ -616,7 +616,7 @@ class Dimarray(Metadata):
 	    axes = Axes.from_shape(np.shape(values), dims)
 
 	else:
-	    axes = Axes.from_list(axes, dims)
+	    axes = Axes.from_arrays(axes, dims)
 
 	return cls(values, *axes, **kwargs)
 

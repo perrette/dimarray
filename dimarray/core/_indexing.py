@@ -5,7 +5,7 @@ import copy
 
 from axes import Axis, Axes, GroupedAxis
 
-def xs(self, ix=None, axis=0, method=None, keepdims=False, raise_error=True, fallback=np.nan, **axes):
+def xs(self, ix=None, axis=0, method=None, keepdims=False, raise_error=True, fallback=np.nan, **kwaxes):
     """ Cross-section, can be multidimensional
 
     input:
@@ -21,7 +21,7 @@ def xs(self, ix=None, axis=0, method=None, keepdims=False, raise_error=True, fal
 	- raise_error: raise error if index not found? (default True)
 	- fallback: replacement value if index not found and raise_error is False (default np.nan)
 
-	- **axes  : provide axes as keyword arguments for multi-dimensional slicing
+	- **kwaxes  : provide kwaxes as keyword arguments for multi-dimensional slicing
 		    ==> chained call to xs 
 		    Note in this mode axis cannot be named after named keyword arguments
 		    (`ix`, `axis`, `method` or `keepdims`)
@@ -50,7 +50,7 @@ def xs(self, ix=None, axis=0, method=None, keepdims=False, raise_error=True, fal
     # just a chained call
     else:
 	obj = self
-	for nm, idx in axes.iteritems():
+	for nm, idx in kwaxes.iteritems():
 	    obj = _xs(obj, idx, axis=nm, method=method, keepdims=keepdims, raise_error=raise_error, fallback=fallback)
 
     return obj

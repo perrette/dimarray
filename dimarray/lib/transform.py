@@ -115,7 +115,7 @@ def interp2d_mpl(obj, newaxes, axes=None, order=1):
     from mpl_toolkits.basemap import interp
 
     # make sure input axes have the valid format
-    newaxes = Axes.from_list(newaxes, axes) # valid format
+    newaxes = Axes.from_arrays(newaxes, axes) # valid format
     newaxes.sort(obj.dims) # re-order according to object's dimensions
     x, y = newaxes  # 2-d interpolation
 

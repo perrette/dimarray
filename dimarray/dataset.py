@@ -60,7 +60,7 @@ class Dataset(object):
 #	return cls(*args, **dict_)
 #     
 #    @classmethod
-#    def from_list(cls, ):
+#    def from_arrays(cls, ):
 #	""" initialize from dictionary
 #	"""
 #	pass

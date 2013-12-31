@@ -271,7 +271,7 @@ class Axes(list):
 	return axes
 
     @classmethod
-    def from_list(cls, list_of_arrays, dims=None):
+    def from_arrays(cls, list_of_arrays, dims=None):
 	"""  list of np.ndarrays and dims
 	"""
 	assert type(list_of_arrays) in (list, tuple), "need to provide a list of arrays !"
@@ -308,7 +308,7 @@ class Axes(list):
 	    assert len(set(shape)) == len(set(current_shape)) == len(set([ax.name for ax in axes])), \
     """ some axes have the same size !
     ==> ambiguous determination of dimensions order via keyword arguments only
-    ==> explictly supply `dims=` or use from_list() or from_tuples() methods" """
+    ==> explictly supply `dims=` or use from_arrays() or from_tuples() methods" """
 	    argsort = [current_shape.index(k) for k in shape]
 
 	    assert len(argsort) == len(axes), "keyword arguments do not match shape !"
