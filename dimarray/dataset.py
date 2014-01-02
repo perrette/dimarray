@@ -3,7 +3,7 @@
 from collections import OrderedDict as odict
 import numpy as np
 
-from core import Dimarray, array, Axis, Axes
+from core import DimArray, array, Axis, Axes
 from lib.align import align_axes 
 from lib.tools import pandas_obj
 
@@ -13,7 +13,7 @@ class Dataset(object):
     def __init__(self, data, keys=None):
 	""" initialize a dataset from a set of objects of varying dimensions
 
-	data  : dict of Dimarrays or list of named Dimarrays
+	data  : dict of DimArrays or list of named DimArrays
 	keys  : keys to order data if provided as dict, or to name data if list
 	"""
 	# Initialize an Axes object
@@ -26,10 +26,10 @@ class Dataset(object):
 		keys = data.keys()
 	    data = [data[k] for k in keys]
 
-	# Check everything is a Dimarray
+	# Check everything is a DimArray
 	for v in data:
-	    if not isinstance(v, Dimarray):
-		raise TypeError("A Dataset can only store Dimarray instances")
+	    if not isinstance(v, DimArray):
+		raise TypeError("A Dataset can only store DimArray instances")
 
 	# Check names
 	for i, v in enumerate(data):
@@ -37,7 +37,7 @@ class Dataset(object):
 		v.name = keys[i]
 
 	    if not v.name:
-		raise ValueError("Dimarray must have a name if provided as list, provide `keys=` parameter")
+		raise ValueError("DimArray must have a name if provided as list, provide `keys=` parameter")
 
 	# Align objects
 	data = align_axes(*data)
@@ -113,10 +113,10 @@ class Dataset(object):
 	return iter(self.variables)
 
     def __setitem__(self, item, val):
-	""" Make sure the object is a Dimarray with appropriate axes
+	""" Make sure the object is a DimArray with appropriate axes
 	"""
-	if not isinstance(val, Dimarray):
-	    raise TypeError("can only append Dimarray instances")
+	if not isinstance(val, DimArray):
+	    raise TypeError("can only append DimArray instances")
 
 	# Check dimensions
 	for axis in val.axes:
@@ -145,7 +145,7 @@ class Dataset(object):
 	return ncio.read_dataset(f, *args, **kwargs)
 
     def to_array(self, axis="items"):
-	""" Convert to Dimarray
+	""" Convert to DimArray
 
 	axis  : axis name, by default "items"
 
@@ -170,7 +170,7 @@ class Dataset(object):
 	# determine axes
 	axes = [Axis(self.keys(), axis)] + self.axes 
 
-	return Dimarray(data, *axes)
+	return DimArray(data, *axes)
 
     def subset(self, names=None, dims=None):
 	""" return a subset of the dictionary

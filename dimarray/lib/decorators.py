@@ -7,10 +7,21 @@ def format_doc(*args, **kwargs):
     def pseudo_decorator(func):
 	""" not a real decorator as it modifies the function in place
 	"""
-	func.__doc__ = func.__doc__.format(*args, **kwargs)
+	try:
+	    func.__doc__ = func.__doc__.format(*args, **kwargs)
+	except AttributeError: # non writable
+	    print "failed for", func
+	    func = _update_doc(func, *args, **kwargs)
 	return func
 
     return pseudo_decorator
+
+def _update_doc(cls, *args, **kwargs):
+    """ update docstring of an object instance
+    """
+    clsdict = {k:cls.__dict__[k] for k in cls.__dict__}
+    clsdict['__doc__'] = cls.__doc__.format(*args, **kwargs)
+    return type(cls.__name__, (cls,), clsdict)
 
 def axes_as_keywords(func):
     """ make a function func(self, values, axis, opt1=.., opt2=..) also accept 

@@ -30,7 +30,7 @@ def take(self, ix=None, axis=None, method=None, keepdims=False, raise_error=True
 		    (`ix`, `axis`, `method` or `keepdims`)
 
     output:
-	- Dimarray object or python built-in type, consistently with numpy slicing
+	- DimArray object or python built-in type, consistently with numpy slicing
 
     >>> a.take(45.5, axis=0)	 # doctest: +ELLIPSIS
     >>> a.take(45.7, axis="lat") == a.take(45.5, axis=0) # "nearest" matching
@@ -59,7 +59,7 @@ def take(self, ix=None, axis=None, method=None, keepdims=False, raise_error=True
     return obj
 
 def put(obj, ix, axis=0, method=None):
-    """ Put new values into Dimarray
+    """ Put new values into DimArray
     """
     if method is None:
 	method = self._indexing
@@ -167,7 +167,7 @@ def _take_numpy(obj, indices, axis, keepdims=False):
 	axes[axis] = newaxis
 	stamp = None
 
-    # If result is a numpy array, make it a Dimarray
+    # If result is a numpy array, make it a DimArray
     if isinstance(newval, np.ndarray):
 	result = obj._constructor(newval, axes, **obj._metadata)
 
@@ -282,7 +282,7 @@ def reindex_axis(self, values, axis=0, method='values', raise_error=False):
 	               otherwise just fill-in with NaN. Defaulf is False.
 
     Output:
-	- Dimarray
+	- DimArray
     """
     if isinstance(values, Axis):
 	newaxis = values
@@ -304,7 +304,7 @@ def reindex_axis(self, values, axis=0, method='values', raise_error=False):
     else:
 	raise ValueError("invalid reindex_axis method: "+repr(method))
 
-    # new Dimarray
+    # new DimArray
     # ...replace the axis
     ax0 = Axis(values, ax.name)
     ax1 = newobj.axes[axis_id]

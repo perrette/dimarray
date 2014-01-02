@@ -6,7 +6,7 @@ import numpy as np
 #from geo.data.index import to_slice, _slice3D
 
 from ..dataset import Dataset
-from ..core import Dimarray, Axis, Axes
+from ..core import DimArray, Axis, Axes
 
 __all__ = ['read',"summary"]
 
@@ -52,7 +52,7 @@ def read(f, nms=None, *args, **kwargs):
 
 
 #def write(f, name, data, axes=None, dims=None, mode='w', **metadata):
-#    """ Initialize a Dimarray and write to netCDF
+#    """ Initialize a DimArray and write to netCDF
 #
 #    Input:
 #	f	: file name or buffer
@@ -63,14 +63,14 @@ def read(f, nms=None, *args, **kwargs):
 #	mode    : mode to access the netcdf: 'w' (default, overwrite) or 'a' (append)
 #	**metadata: for convenience, can pass dimensions as keyword arguments (beware the order is lost)
 #
-#    data, axes, dims, **metadata are passed to dimarray to instantiate a Dimarray, see corresponding doc for details.
+#    data, axes, dims, **metadata are passed to dimarray to instantiate a DimArray, see corresponding doc for details.
 #
 #    Provide dimensions as a list:
 #
 #    >>> write("test.nc", "testvar", np.randn(20, 30), [np.linspace(-90,90,20), np.linspace(-180,180,30)],['lat','lon'])
 #    """
 #    #axes = Axes.from_list(axes, dims)
-#    obj = Dimarray.from_list(data, axes, dims, **metadata) # initialize a dimarray
+#    obj = DimArray.from_list(data, axes, dims, **metadata) # initialize a dimarray
 #    obj.write(f, name, mode=mode) # write to file
 
 
@@ -137,7 +137,7 @@ def read_variable(f, v, ix=None, **kwaxes):
 
     Returns:
 
-	Dimarray object (e.g. TimeSeries, Slab, Cube ...)
+	DimArray object (e.g. TimeSeries, Slab, Cube ...)
 
     >>> data = read_variable('myfile.nc','dynsealevel')  # load full file
     >>> data = read_variable('myfile.nc','dynsealevel', time=2000,2100, lon=50,70)  # load only a chunck of the data
@@ -176,7 +176,7 @@ def read_variable(f, v, ix=None, **kwaxes):
     newaxes = [ax[ix[i]] for i, ax in enumerate(axes)] # also get the appropriate axes
 
     # initialize a dimarray
-    obj = Dimarray(newdata, *newaxes)
+    obj = DimArray(newdata, *newaxes)
     obj.name = v
 
     # Read attributes
@@ -223,7 +223,7 @@ def write_obj(f, obj, *args, **kwargs):
     """  call write_dataset or write_variable
     """
     import core
-    if isinstance(obj, core.Dimarray):
+    if isinstance(obj, core.DimArray):
 	write_variable(f, obj, *args, **kwargs)
 
     else:
@@ -239,10 +239,10 @@ def write_dataset(f, obj, mode='w'):
 
 
 def write_variable(f, obj, name=None, mode='w'):
-    """ save Dimarray instance to file
+    """ save DimArray instance to file
 
     f	: file name or netCDF file handle
-    obj : Dimarray object
+    obj : DimArray object
     name: variable name
     mode: 'w' or 'a' 
     """

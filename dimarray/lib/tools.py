@@ -1,6 +1,7 @@
 """ various tools
 """
 import inspect
+import numpy as np
 
 def pandas_obj(values, *axes):
     """ return a pandas object adapted to the dimensions of values
@@ -30,9 +31,16 @@ def ndindex(indices, pos):
     """
     return (slice(None),)*pos + np.index_exp[indices]
 
-def is_Dimarray(obj):
+def is_DimArray(obj):
     """ avoid import conflict
     """
-    from dimarray import Dimarray
-    return isinstance(obj, Dimarray)
+    from dimarray import DimArray
+    return isinstance(obj, DimArray)
 
+def is_array_equiv(a):
+    " test if a is convertible to an array object"
+    try:
+	a = np.asarray(a)
+    except:
+	return False
+    return True

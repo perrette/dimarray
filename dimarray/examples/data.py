@@ -3,7 +3,7 @@
 import os
 import numpy as np
 
-from geotools import Dimarray, Map, TimeSeries, Axes, Axis, _ncio
+from geotools import DimArray, Map, TimeSeries, Axes, Axis, _ncio
 if _ncio:
     from geotools import ncio as nc
 

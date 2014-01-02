@@ -4,7 +4,7 @@ import numpy as np
 from ..core.axes import Axes, Axis
 
 #
-# recursively apply a Dimarray ==> Dimarray transform
+# recursively apply a DimArray ==> DimArray transform
 #
 def apply_recursive(obj, dims, fun, *args, **kwargs):
     """ recursively apply a multi-axes transform
@@ -12,7 +12,7 @@ def apply_recursive(obj, dims, fun, *args, **kwargs):
     dims   : dimensions to apply the function on
 		Recursive call until dimensions match
 
-    fun     : function to (recursively) apply, must returns a Dimarray instance or something compatible
+    fun     : function to (recursively) apply, must returns a DimArray instance or something compatible
     *args, **kwargs: arguments passed to fun in addition to the axes
     """
     #
@@ -71,7 +71,7 @@ def interp1d_numpy(obj, values=None, axis=0, left=np.nan, right=np.nan):
     """ interpolate along one axis: wrapper around numpy's interp
 
     input:
-	obj : Dimarray
+	obj : DimArray
 	newaxis_values: 1d array, or Axis object
 	newaxis_name, optional: `str` (axis name), required if newaxis is an array
 
@@ -105,7 +105,7 @@ def interp2d_mpl(obj, newaxes, axes=None, order=1):
     """ bilinear interpolation: wrapper around mpl_toolkits.basemap.interp
 
     input:
-	obj : Dimarray
+	obj : DimArray
 	newaxes: list of Axis object, or list of 1d arrays
 	axes, optional: list of str (axis names), required if newaxes is a list of arrays
 

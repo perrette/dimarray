@@ -48,7 +48,7 @@ class Axis(Metadata):
     """
     _metadata_exclude = ("values", "name", "weights") # variables which are NOT metadata
 
-    def __init__(self, values, name="", weights=None, slicing=None, **attrs):
+    def __init__(self, values, name="", weights=None, **kwargs):
 	""" 
 	"""
 	if not name:
@@ -70,10 +70,14 @@ class Axis(Metadata):
 	self.weights = weights 
 	self.regular = None # regular axis
 
+	# set metadata
+	for k in kwargs:
+	    self.setncattr(k, kwargs[k])
+
     def get_weights(self, weights=None):
-	""" return axis weights as a Dimarray
+	""" return axis weights as a DimArray
 	"""
-	from core import Dimarray
+	from core import DimArray
 
 	if weights is None:
 	    weights = self.weights
@@ -97,7 +101,7 @@ class Axis(Metadata):
 	# index on one dimension
 	ax = Axis(self.values, name=self.name)
 
-	return Dimarray(weights, ax)
+	return DimArray(weights, ax)
 
     def is_regular(self):
 	""" True if regular axis, meaning made of `int` or `float`, 
@@ -124,7 +128,7 @@ class Axis(Metadata):
 	else:
 	    weights = self.weights
 
-	return Axis(values, self.name, weights=weights)
+	return Axis(values, self.name, weights=weights, **self._metadata)
 
     def __eq__(self, other):
 	return isinstance(other, Axis) and np.all(other.values == self.values)
@@ -271,16 +275,16 @@ class Axes(list):
 	return axes
 
     @classmethod
-    def from_list(cls, list_of_arrays, dims=None):
+    def from_arrays(cls, arrays, dims=None):
 	"""  list of np.ndarrays and dims
 	"""
-	assert type(list_of_arrays) in (list, tuple), "need to provide a list of arrays !"
+	assert np.iterable(arrays) and (dims is None or len(dims) == np.size(arrays)), "invalid input arrays={}, dims={}".format(arrays, dims)
 
 	# default names
 	if dims is None: 
-	    dims = ["x{}".format(i) for i in range(len(list_of_arrays))]
+	    dims = ["x{}".format(i) for i in range(len(arrays))]
 
-	return cls.from_tuples(*zip(dims, list_of_arrays))
+	return cls.from_tuples(*zip(dims, arrays))
 
     @classmethod
     def from_kw(cls, dims=None, shape=None, **kwargs):
@@ -308,7 +312,7 @@ class Axes(list):
 	    assert len(set(shape)) == len(set(current_shape)) == len(set([ax.name for ax in axes])), \
     """ some axes have the same size !
     ==> ambiguous determination of dimensions order via keyword arguments only
-    ==> explictly supply `dims=` or use from_list() or from_tuples() methods" """
+    ==> explictly supply `dims=` or use from_arrays() or from_tuples() methods" """
 	    argsort = [current_shape.index(k) for k in shape]
 
 	    assert len(argsort) == len(axes), "keyword arguments do not match shape !"

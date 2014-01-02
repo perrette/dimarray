@@ -10,7 +10,7 @@ def broadcast_arrays(*objects):
     but with looser requirements on input shape
     and returns copy instead of views
 
-    objects: variable list of Dimarrays
+    objects: variable list of DimArrays
 
     Examples:
     ---------
@@ -43,7 +43,7 @@ def broadcast_arrays(*objects):
     except AssertionError, msg:
 	raise ValueError(msg)
 
-    # now broadcast each Dimarray along commmon axes
+    # now broadcast each DimArray along commmon axes
     newobjects = []
     for o in objects:
 	o = o.broadcast(axes)
@@ -65,7 +65,7 @@ def get_dims(*objects):
     return dims
 
 def get_axes(*objects):
-    """ find list of axes from a list of axis-aligned Dimarray objects
+    """ find list of axes from a list of axis-aligned DimArray objects
     """
     dims = get_dims(*objects) # all dimensions present in objects
     axes = Axes()
@@ -98,8 +98,8 @@ def get_axes(*objects):
 def align_dims(*objects):
     """ Align dimensions of a list of objects, ready to broadcast
 
-    >>> x = da.Dimarray(np.arange(2), 'x0')
-    >>> y = da.Dimarray(np.arange(3), 'x1')
+    >>> x = da.DimArray(np.arange(2), 'x0')
+    >>> y = da.DimArray(np.arange(3), 'x1')
     >>> da.align_dims(x, y)
     [dimarray: 2 non-null elements (0 null)
     dimensions: 'x0', 'x1'
@@ -121,7 +121,7 @@ def align_dims(*objects):
     # Determine the dimensions of the result
     newdims = get_dims(*objects) 
 
-    # Reshape all Dimarrays
+    # Reshape all DimArrays
     newobjects = []
     for o in objects:
 	o = o.reshape(newdims)

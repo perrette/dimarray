@@ -1,12 +1,12 @@
-""" Module to regroup methods related to changing Dimarray dimensions
+""" Module to regroup methods related to changing DimArray dimensions
 
-Note: functions with self as first arguments are used as Dimarray methods
+Note: functions with self as first arguments are used as DimArray methods
 """
 import numpy as np
 from collections import OrderedDict
 
 from axes import Axis, Axes, GroupedAxis
-from dimarray.lib.tools import is_Dimarray
+from dimarray.lib.tools import is_DimArray
 from dimarray.lib.decorators import axes_as_keywords
 
 #
@@ -15,7 +15,7 @@ from dimarray.lib.decorators import axes_as_keywords
 def broadcast(self, other):
     """ broadcast the array along a set of axes by repeating it as necessay
 
-    other	     : Dimarray or Axes objects or ordered Dictionary of axis values
+    other	     : DimArray or Axes objects or ordered Dictionary of axis values
 
     Examples:
     --------
@@ -24,8 +24,8 @@ def broadcast(self, other):
     >>> lon = np.linspace(10, 30, 2)
     >>> lat = np.linspace(10, 50, 3)
     >>> time = np.arange(1950,1955)
-    >>> ts = da.Dimarray.from_kw(np.arange(5), time=time)
-    >>> cube = da.Dimarray.from_kw(np.zeros((3,2,5)), lon=lon, lat=lat, time=time)  # lat x lon x time
+    >>> ts = da.DimArray.from_kw(np.arange(5), time=time)
+    >>> cube = da.DimArray.from_kw(np.zeros((3,2,5)), lon=lon, lat=lat, time=time)  # lat x lon x time
     >>> cube.axes  # doctest: +ELLIPSIS
     dimensions: 'lat', 'lon', 'time'
     0 / lat (3): 10.0 to 50.0
@@ -53,8 +53,8 @@ def broadcast(self, other):
     if isinstance(other, list):
 	newaxes = other
 
-    # Or as Dimarray
-    elif is_Dimarray(other):
+    # Or as DimArray
+    elif is_DimArray(other):
 	newaxes = other.axes
 
     # Or as OrderedDict of axis names, axis values
@@ -62,10 +62,10 @@ def broadcast(self, other):
 	newaxes = [Axis(other[k], k) for k in other]
 
     else:
-	raise TypeError("should be a Dimarray, a list of Axis objects or an OrderedDict of Axis objects")
+	raise TypeError("should be a DimArray, a list of Axis objects or an OrderedDict of Axis objects")
 
     if not isinstance(newaxes[0], Axis):
-	raise TypeError("should be a Dimarray, a list of Axis objects or an OrderedDict of Axis objects")
+	raise TypeError("should be a DimArray, a list of Axis objects or an OrderedDict of Axis objects")
 
     newshape = [ax.name for ax in newaxes]
 
@@ -131,11 +131,11 @@ def repeat(self, values, axis=None):
 	**kwaxes: alternatively, axes may be passed as keyword arguments 
 
     output:
-	Dimarray
+	DimArray
 
     Examples:
     --------
-    >>> a = da.Dimarray.from_kw(arange(2), lon=[30., 40.])
+    >>> a = da.DimArray.from_kw(arange(2), lon=[30., 40.])
     >>> a = a.reshape(('time','lon'))
     >>> a.repeat(np.arange(1950,1955), axis="time")  # doctest: +ELLIPSIS
     dimarray: 10 non-null elements (0 null)
@@ -205,7 +205,7 @@ def newaxis(self, name, values=None, pos=0):
 
     Examples:
     ---------
-    >>> a = Dimarray([1,2])
+    >>> a = DimArray([1,2])
     dimarray: 2 non-null elements (0 null)
     dimensions: 'x0'
     0 / x0 (2): 0 to 1
@@ -286,13 +286,13 @@ def reshape(self, newdims):
 	newdims: tuple or list of dimensions (`str`)
 
     output:
-	reshape: Dimarray with reshape.dims == tuple(newdims)
+	reshape: DimArray with reshape.dims == tuple(newdims)
     
     Method: add/remove singleton dimensions and transpose array
 
     Examples:
     ---------
-    >>> a = Dimarray([[7,8]])
+    >>> a = DimArray([[7,8]])
     >>> a
     >>> a.reshape(('x0','new'))
     """
@@ -333,7 +333,7 @@ def group(self, dims, keep=False, insert=None):
 		  otherwise insert at the position of the first dimension to group)
 
     Output:
-	- Dimarray appropriately reshaped, with collapsed dimensions as first axis (tuples)
+	- DimArray appropriately reshaped, with collapsed dimensions as first axis (tuples)
 
     This is useful to do a regional mean with missing values
 

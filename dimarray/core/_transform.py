@@ -44,7 +44,7 @@ on the particular function being called
 
 Returns:
 --------
-Dimarray, or numpy array or scalar (e.g. in some cases if `axis` is None)
+DimArray, or numpy array or scalar (e.g. in some cases if `axis` is None)
 
 See help on numpy.{func} or numpy.ma.{func} for other parameters 
 and more information.
@@ -61,7 +61,7 @@ See Also:
 
 @format_doc(skipna=_doc_skipna, axis=_doc_axis.format(default_axis="None"))
 def apply_along_axis(obj, func, axis=None, skipna=True, args=(), **kwargs):
-    """ Apply along-axis numpy method to Dimarray
+    """ Apply along-axis numpy method to DimArray
 
     apply_along_axis(obj, ...)
     Where ... are the parameters below:
@@ -76,7 +76,7 @@ def apply_along_axis(obj, func, axis=None, skipna=True, args=(), **kwargs):
     
     returns:
     --------
-    - Dimarray, or scalar 
+    - DimArray, or scalar 
     """
     # Deal with `axis` parameter, whether `int`, `str` or `tuple`
     obj, idx, name = _deal_with_axis(obj, axis)
@@ -179,7 +179,7 @@ def _deal_with_axis(obj, axis):
     """ deal with the `axis` parameter 
 
     input:
-	obj: Dimarray object
+	obj: DimArray object
 	axis: `int` or `str` or `tuple` or None
 
     return:
@@ -262,7 +262,7 @@ def locmin(obj, axis=None, skipna=True):
     res = apply_along_axis(obj, 'argmin', axis=idx, skipna=skipna)
 
     # along axis: single axis value
-    if axis is not None: # res is Dimarray
+    if axis is not None: # res is DimArray
 	res.values = obj.axes[idx].values[res.values] 
 	return res
 
@@ -285,7 +285,7 @@ def locmax(obj, axis=None, skipna=True):
     res = apply_along_axis(obj, 'argmax', axis=idx, skipna=skipna)
 
     # along axis: single axis value
-    if axis is not None: # res is Dimarray
+    if axis is not None: # res is DimArray
 	res.values = obj.axes[idx].values[res.values] 
 	return res
 
@@ -328,7 +328,7 @@ def diff(obj, n=1, axis=-1, scheme="backward", keepaxis=False):
 
     Returns
     -------
-    diff : Dimarray
+    diff : DimArray
 	The `n` order differences. The shape of the output is the same as `a`
 	except along `axis` where the dimension is smaller by `n`.
     """
@@ -453,7 +453,7 @@ def weighted_mean(obj, axis=None, skipna=True, weights='axis'):
     
     returns:
     --------
-	- Dimarray or scalar, consistently with ndarray behaviour
+	- DimArray or scalar, consistently with ndarray behaviour
     """
     # Proceed to a weighted mean
     if weights:
@@ -484,7 +484,7 @@ def weighted_var(obj, axis=None, skipna=True, weights="axis", ddof=0):
     
     returns:
     --------
-	- Dimarray or scalar, consistently with ndarray behaviour
+	- DimArray or scalar, consistently with ndarray behaviour
     """
     # Proceed to a weighted var
     if weights:

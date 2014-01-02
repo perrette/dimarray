@@ -4,14 +4,14 @@ Operation and axis aligmnent
 import numpy as np
 
 from ..lib.align import align_dims, align_axes
-from ..lib.tools import is_Dimarray
+from ..lib.tools import is_DimArray
 
 def operation(func, o1, o2, reindex=True, broadcast=True, constructor=None):
     """ operation on LaxArray objects
 
     input:
 	func	: operator
-	o1    	: LHS operand: Dimarray
+	o1    	: LHS operand: DimArray
 	o2    	: RHS operand: at least: be convertible by np.array())
 	align, optional: if True, use pandas to align the axes
 
@@ -22,8 +22,8 @@ def operation(func, o1, o2, reindex=True, broadcast=True, constructor=None):
     if constructor is None:
 	constructor = o1._constructor
 
-    # second operand is not a Dimarray: let numpy do the job 
-    if not is_Dimarray(o2): # isinstance
+    # second operand is not a DimArray: let numpy do the job 
+    if not is_DimArray(o2): # isinstance
 	if np.ndim(o2) > o1.ndim:
 	    raise ValueError("bad input: second operand's dimensions not documented")
 	res = func(o1.values, np.array(o2))
