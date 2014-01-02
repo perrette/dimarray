@@ -152,7 +152,7 @@ def read_variable(f, v, ix=None, **kwaxes):
 
     - int, float: retrieve corresponding index matching the axis value
 
-    - tuple of int or float: retrieve range matching the axsis value
+    - tuple of int or float: retrieve range matching the axis value
 
     For the last two, a nearest neighbour search is performed to retrieve 
     closest location on the axis.  For an exact match, add keyword argument:

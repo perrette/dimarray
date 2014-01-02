@@ -380,7 +380,7 @@ class Locator(object):
     where `values` represent the axis values
     and `method` is one of:
 
-    "index"  : (default) exact matching of the value to locate in `values`
+    "exact"  : (default) exact matching of the value to locate in `values`
     "nearest": nearest match (with bound checking)
 
     A locator instance is generated from within the Axis object, via 
@@ -446,14 +446,14 @@ class Locator(object):
 	values	: string list or numpy array
 	regular	: is the axis regular?
 
-	method	: "index" (default)
+	method	: "exact" (default)
 		  "nearest" (regular axis only)
 		  "interp" (regular axis only)
 
 	raise_error: raise error if index not found? (default True)
 	fallback: replacement value if index not found and raise_error is False (default np.nan)
 
-	NOTE: for str or int, "index" is always used
+	NOTE: for str or int, "exact" is always used
 	"""
 	self.values = values
 
@@ -511,7 +511,7 @@ class Locator(object):
     #
     # methods to access single value
     #
-    def index(self, val):
+    def exact(self, val):
 	""" exactly locate a value on the axis (use built-in list `index` method)
 	val: index value
 	"""

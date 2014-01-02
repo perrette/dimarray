@@ -2,6 +2,7 @@
 """
 import numpy as np
 import copy
+import warnings
 from collections import OrderedDict
 
 from dimarray.config import Config
@@ -24,46 +25,51 @@ class Dimarray(Metadata):
     Initialization:
     ---------------
 
-    Dimarray(values)
-    Dimarray(values, 'x0', 'x1', ...)
-    Dimarray(values, val0, val1, ...)
-    Dimarray(values, ('x0', val0), ('x1', val1), ...)
-    Dimarray(values, x0=val0, x1=val1, ...)   # ONLY if val0.size != val1.size 
-    Dimarray(values, ..., name='mydata', units='m')  
+    Dimarray(values=None, axes=None, dims=None, **kwargs)
 
     Parameters:
     -----------
     values	: numpy-like array, or Dimarray instance
-    axes	: variable list of Axis objects or list of tuples ('dim', values)
+		  If `values` is not provided, will initialize an empty array 
+		  with dimensions inferred from axes (in that case `axes=` 
+		  must be provided).
 
-    Optional keyword arguments **kwargs: 
+    axes	: optional, list or tuple: axis values as ndarrays, whose order 
+		  matches axis names (the dimensions) provided via `dims=` 
+		  parameter. Each axis can also be provided as a tuple 
+		  (str, array-like) which contains both axis name and axis 
+		  values, in which case `dims=` becomes superfluous.
+		  `axes=` can also be provided with a list of Axis objects
+		  If `axes=` is omitted, a standard axis `np.arange(shape[i])`
+		  is created for each axis `i`.
 
-    options: 
-	- dtype, copy: passed to np.array()
+    dims	: optional, list or tuple: dimensions (or axis names)
+		  This parameter can be omitted if dimensions are already 
+		  provided by other means, such as passing a list of tuple 
+		  to `axes=`. If axes are passed as keyword arguments (via 
+		  **kwargs), `dims=` is used to determine the order of 
+		  dimensions. If `dims` is not provided by any of the means 
+		  mentioned above, default dimension names are 
+		  given `x0`, `x1`, ...`xn`, where n is the number of 
+		  dimensions.
 
-	Internal use only:
+    dtype	: optional, data type, passed to np.array() 
+    copy	: optional, passed to np.array()
 
-	- _INDEXING: default "index". This is the default value for `method=` in 
-		    xs(method=...) and this also determine the behaviour of 
-		    __getitem__. Note the `ix` property acts as a toogle 
-		    between "numpy" and all other methods (back to `index`)
+    **kwargs	: metadata or axes as keyword arguments, depending on type
+                  `str`, `tuple`, `int`, `float`: metadata
+	          `list`, `ndarray`: axes as keyword-arguments 
 
-    metadata: <att=val> keywords, where val can be any mutable object 
-	      (`str`, `tuple`, `int`, `float`...).
-	      metadata describe the array, including "name", "units" and "stamp"
-	      `att` cannot be one of ("dtype", "copy", "INDEXING")
-	      In these particular cases, use setncattr method instead.
-    
-    kwaxes: axes as keyword arguments, <name = values>, where values is 
-	    a list or ndarray object
+		  If axes as passed as kwargs, `dims=` also needs to be provided
+		  or an error will be raised, unless values's shape is 
+		  sufficient to determine ordering (when all axes have different 
+		  sizes).  This is a consequence of the fact 
+		  that keyword arguments are *not* ordered in python (any order
+		  is lost since kwargs is a dict object)
 
-    The latter options is provided as convenience
-     
-    Note this is similar to Dimarray.from_kw except that it does not 
-    allow for providing `dims=`, so that it cannot resolve ambiguous cases
-    such as two or more axes with the same size. For such cases, use 
-    Dimarray.from_kw or another format for input axes.
-
+		  NOTE: neither metadata or axes passed this way can be named 
+		  after one of other parameters ("values", "axes", "dims", "dtype",
+		  "copy"). See also `setncattr`.
 
     Examples:
     ---------
@@ -78,7 +84,7 @@ class Dimarray(Metadata):
     array([[1, 2, 3],
 	   [4, 5, 6]])
 
-    >>> Dimarray(values, 'items','time')  # axis names only
+    >>> Dimarray([[1,2,3],[4,5,6]], dims=['items','time'])  # axis names only
     dimarray: 6 non-null elements (0 null)
     dimensions: 'items', 'time'
     0 / x0 (2): 0 to 1
@@ -86,7 +92,7 @@ class Dimarray(Metadata):
     array([[1, 2, 3],
 	   [4, 5, 6]])
 
-    >>> Dimarray(values, list("ab"), np.arange(1950,1953)) # axis values only
+    >>> Dimarray([[1,2,3],[4,5,6]], axes=[list("ab"), np.arange(1950,1953)]) # axis values only
     dimarray: 6 non-null elements (0 null)
     dimensions: 'x0', 'x1'
     0 / x0 (2): 'a' to 'b'
@@ -94,13 +100,12 @@ class Dimarray(Metadata):
     array([[1, 2, 3],
 	   [4, 5, 6]])
 
-    More general case
+    More general case:
 
-    >>> a = Dimarray(values, ('items',list("ab")), ('time',np.arange(1950,1953)))
-    >>> b = Dimarray(values, items=list("ab"), time=np.arange(1950,1953))
-    >>> c = Dimarray.from_kw(values, items=list("ab"), time=np.arange(1950,1953), dims=['items', 'time']) 
-    >>> d = Dimarray.from_list(values, [list("ab"), np.arange(1950,1953)], dims=['items','time']) 
-    >>> a == b == c == d
+    >>> a = Dimarray([[1,2,3],[4,5,6]], axes=[list("ab"), np.arange(1950,1953)], dims=['items','time']) 
+    >>> b = Dimarray([[1,2,3],[4,5,6]], axes=[('items',list("ab")), ('time',np.arange(1950,1953))])
+    >>> c = Dimarray([[1,2,3],[4,5,6]], items=list("ab"), time=np.arange(1950,1953)) # here dims can be omitted because shape = (2, 3)
+    >>> a == b == c
     True
     >>> a
     dimarray: 6 non-null elements (0 null)
@@ -109,18 +114,36 @@ class Dimarray(Metadata):
     1 / time (3): 1950 to 1952
     array([[1, 2, 3],
 	   [4, 5, 6]])
+
+    Empty data
+
+    >>> a = Dimarray(axes=[('items',list("ab")), ('time',np.arange(1950,1953))])
+
+    Metadata
+
+    >>> a = Dimarray([[1,2,3],[4,5,6]], name='test', units='none') 
     """
     _order = None  # set a general ordering relationship for dimensions
-
     _metadata_exclude = ("values","axes") # is NOT a metadata
 
     #
     # NOW MAIN BODY OF THE CLASS
     #
 
-    def __init__(self, values, *axes, **kwargs):
-	""" Initialization
+    def __init__(self, values=None, axes=None, dims=None, copy=False, dtype=None, _indexing="exact", **kwargs):
+	""" Initialization. See help on Dimarray.
 	"""
+	#    _indexing	: str. This describes how array values
+	#		 are accessed, either based on integer index ("numpy") or 
+	#		 axis values ("exact"). "nearest" and "interp" are additional
+	#		 methods for float-values axes. Default is "exact". This parameter 
+	#		 is intended for internal purpose only
+
+	#
+	# array values
+	#
+	if values is not None:
+	    avalues = np.array(values, copy=copy, dtype=dtype)
 
 	# filter **kwargs to retrieve axes
 	kwaxes = {}
@@ -129,25 +152,15 @@ class Dimarray(Metadata):
 		kwaxes[k] = kwargs.pop(k)
 
 	# define axes from keyword arguments, if applicable
-	assert not (len(kwaxes) > 0 and len(axes) > 0), "cannot provide both list and keywords arguments"
+	assert not (len(kwaxes) > 0 and axes is not None), "cannot provide both list and keywords arguments"
 	if len(kwaxes) > 0:
-	    data = self.__class__.from_kw(values, **kwaxes)
+	    shape = avalues.shape if values is not None else None
+	    list_axes = Axes.from_kw(shape=shape, dims=dims, **kwaxes)
+	    data = self.__class__.from_kw(values, dims=dims, **kwaxes)
 	    axes = data.axes
-
-	# filter **kwargs to retrieve options
-	opt = dict(dtype=None, copy=False, _INDEXING=Config.indexing)
-	for k in opt:
-	    if k in kwargs:
-		opt[k] = kwargs.pop(k)
-
 
 	# what remains is metadata
 	metadata = kwargs
-
-	#
-	# array values
-	#
-	avalues = np.array(values, copy=opt['copy'], dtype=opt['dtype'])
 
 	#
 	# Initialize the axes
@@ -155,12 +168,12 @@ class Dimarray(Metadata):
 	# Can be one of
 	# - list of Axis objects
 	# - list of tuples `dim, array`
-	# - list of str for dimension names
 	# - list of arrays (unnamed dimensions)
 	# - nothing
 
 	# axis not provided: check whether values has an axes field
-	if len(axes) == 0:
+	if axes is None:
+	    assert values is not None, "values= or/and axes= required"
 
 	    # check if attached to values (e.g. Dimarray or pandas object)
 	    if hasattr(values, "axes"):
@@ -181,12 +194,17 @@ class Dimarray(Metadata):
 	elif isinstance(axes[0], np.ndarray) or isinstance(axes[0], list):
 	    axes = Axes.from_list(axes)
 
-	# only dimension names are provided: default values
-	elif isinstance(axes[0], str):
-	    axes = Axes.from_shape(avalues.shape, dims=axes)
-
 	else:
 	    raise TypeError("axes, if provided, must be a list of: `Axis` or `tuple` or `str` or arrays")
+
+	# if values not provided, create empty data (filled with NaNs if dtype is float, -999999 for int)
+	if values is None:
+	    values = np.empty([ax.size for ax in axes], dtype=dtype)
+	    avalues = values
+	    if dtype in (float, None, np.dtype(float)):
+		values.fill(np.nan)
+	    else:
+		warnings.warn("no nan representation for {}, array left empty".format(repr(dtype)))
 
 	#
 	# store all fields
@@ -199,7 +217,10 @@ class Dimarray(Metadata):
 	self.axes = axes
 
 	# options
-	self._INDEXING = opt['_INDEXING']
+	methods = ("numpy", "exact","nearest","interp")
+	if _indexing not in methods: 
+	    raise ValueError("_indexing can only be {}, got ".format(methods)+repr(_indexing))
+	self._indexing = _indexing
 
 	#
 	# metadata (see Metadata type in metadata.py)
@@ -238,7 +259,7 @@ class Dimarray(Metadata):
 	This makes the sub-classing process easier since only this method needs to be 
 	overloaded to make the sub-class a "closed" class.
 	"""
-	return cls(values, *axes, **metadata)
+	return cls(values, axes, **metadata)
 
     #
     # Attributes access
@@ -327,7 +348,7 @@ class Dimarray(Metadata):
 	"""
 	# iterate over axis values
 	for k in self.axes[axis].values:
-	    val = self.xs(k, axis=axis) # cross-section
+	    val = self.take(k, axis=axis) # cross-section
 	    yield k, val
 
     #
@@ -440,37 +461,42 @@ class Dimarray(Metadata):
     #
     # New general-purpose indexing method
     #
-    xs = _indexing.xs 
+    take = _indexing.take
+    put = _indexing.put  
 
     #
     # Standard indexing takes axis values
     #
     def __getitem__(self, item): 
-	""" get a slice (use xs method)
+	""" get a slice (use take method)
 	"""
 	items = np.index_exp[item] # tuple
     
-	# dictionary <axis name> : <axis index> to feed into xs
+	# dictionary <axis name> : <axis index> to feed into take
 	ix_nd = {self.axes[i].name: it for i, it in enumerate(items)}
+	
+	o = self
+	for k in ix_nd:
+	    o = o.take(ix_nd[k], axis=k)
 
-	return self.xs(**ix_nd)
+	return o
 
     # 
     # Can also use integer-indexing via ix
     #
     @property
     def ix(self):
-	""" integer index-access (unless _INDEXING is already numpy ==> go to index)
+	""" integer index-access (toogle between integer-based and values-based indexing)
 	"""
-	# special case where user set self.INDEXING to "index"
-	if self._INDEXING == "numpy":
-	    _INDEXING = "index"
+	# special case where user set self._indexing to "index"
+	if self._indexing == "numpy":
+	    _indexing = "exact"
 
 	# standard case:
 	else:
-	    _INDEXING = "numpy"
+	    _indexing = "numpy"
 
-	return self._constructor(self.values, self.axes, _INDEXING=_INDEXING, **self._metadata)
+	return self._constructor(self.values, self.axes, _indexing=_indexing, **self._metadata)
 
     #
     # TRANSFORMS

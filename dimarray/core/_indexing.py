@@ -5,59 +5,70 @@ import copy
 
 from axes import Axis, Axes, GroupedAxis
 
-def xs(self, ix=None, axis=0, method=None, keepdims=False, raise_error=True, fallback=np.nan, **axes):
+def take(self, ix=None, axis=None, method=None, keepdims=False, raise_error=True, fallback=np.nan, **axes):
     """ Cross-section, can be multidimensional
 
     input:
 
-	- ix       : int or list or tuple or slice (index) 
-	- axis     : int or str
-	- method   : indexing method (default "index")
-		     - "numpy": numpy-like integer 
-		     - "index": look for exact match similarly to list.index
-		     - "nearest": (regular Axis only) nearest match, bound checking
+	- ix       : int or list or tuple or slice (indices) 
+		     if axis is None, does not operate on the flatten array but except a tuple of length `ndim`
+	- axis     : int or str or None
+	- method   : indexing method when 
+		     - "numpy": numpy-like integer indexing
+		     - "exact": locate based on axis values
+		     - "nearest": nearest match, bound checking
+		     - "interp": linear interpolation between nearest match and values immediately above.
+		     default is "exact"
 	- keepdims : keep singleton dimensions
 
 	- raise_error: raise error if index not found? (default True)
 	- fallback: replacement value if index not found and raise_error is False (default np.nan)
 
 	- **axes  : provide axes as keyword arguments for multi-dimensional slicing
-		    ==> chained call to xs 
+		    ==> chained call to take 
 		    Note in this mode axis cannot be named after named keyword arguments
 		    (`ix`, `axis`, `method` or `keepdims`)
 
     output:
 	- Dimarray object or python built-in type, consistently with numpy slicing
 
-    >>> a.xs(45.5, axis=0)	 # doctest: +ELLIPSIS
-    >>> a.xs(45.7, axis="lat") == a.xs(45.5, axis=0) # "nearest" matching
+    >>> a.take(45.5, axis=0)	 # doctest: +ELLIPSIS
+    >>> a.take(45.7, axis="lat") == a.take(45.5, axis=0) # "nearest" matching
     True
-    >>> a.xs(time=1952.5)
-    >>> a.xs(time=70, method="numpy") # 70th element along the time dimension
+    >>> a.take(time=1952.5)
+    >>> a.take(time=70, method="numpy") # 70th element along the time dimension
 
-    >>> a.xs(lon=(30.5, 60.5), lat=45.5) == a[:, 45.5, 30.5:60.5] # multi-indexing, slice...
+    >>> a.take(lon=(30.5, 60.5), lat=45.5) == a[:, 45.5, 30.5:60.5] # multi-indexing, slice...
     True
-    >>> a.xs(time=1952, lon=-40, lat=70, method="nearest") # lookup nearest element (with bound checking)
+    >>> a.take(time=1952, lon=-40, lat=70, method="nearest") # lookup nearest element (with bound checking)
     """
     if method is None:
-	method = self._INDEXING
+	method = self._indexing
 
     # single-axis slicing
     if ix is not None:
-	obj = _xs(self, ix, axis=axis, method=method, keepdims=keepdims, raise_error=raise_error, fallback=fallback)
+	obj = _take_axis(self, ix, axis=axis, method=method, keepdims=keepdims, raise_error=raise_error, fallback=fallback)
 
     # multi-dimensional slicing <axis name> : <axis index value>
     # just a chained call
     else:
 	obj = self
 	for nm, idx in axes.iteritems():
-	    obj = _xs(obj, idx, axis=nm, method=method, keepdims=keepdims, raise_error=raise_error, fallback=fallback)
+	    obj = _take_axis(obj, idx, axis=nm, method=method, keepdims=keepdims, raise_error=raise_error, fallback=fallback)
 
     return obj
 
+def put(obj, ix, axis=0, method=None):
+    """ Put new values into Dimarray
+    """
+    if method is None:
+	method = self._indexing
+     
 
-def _xs(obj, ix, axis=0, method="index", keepdims=False, raise_error=True, **kwargs):
-    """ cross-section or slice along a single axis, see xs
+# default axis = None !!
+
+def _take_axis(obj, ix, axis=0, method="exact", keepdims=False, raise_error=True, **kwargs):
+    """ cross-section or slice along a single axis, see take
     """
     assert axis is not None, "axis= must be provided"
 
@@ -65,17 +76,17 @@ def _xs(obj, ix, axis=0, method="index", keepdims=False, raise_error=True, **kwa
 
     # get integer index/slice for axis valued index/slice
     if method is None:
-	method = obj._INDEXING # slicing method
+	method = obj._indexing # slicing method
 
     # get an axis object
     ax = obj.axes[axis] # axis object
 
     # numpy-like indexing, do nothing
-    if method == "numpy":
+    if method in ("numpy"):
 	indices = ix
 
     # otherwise locate the values
-    elif method in ('nearest','index', 'interp'):
+    elif method in ('exact','nearest', 'interp'):
 	indices = ax.loc(ix, method=method, raise_error=raise_error, **kwargs) 
 
     else:
@@ -98,7 +109,7 @@ def _xs(obj, ix, axis=0, method="index", keepdims=False, raise_error=True, **kwa
 	    result.axes[axis].values = np.array(result.axes[axis].values, dtype=ix.dtype)
 
     else:
-	result = _take(obj, indices, axis=axis, keepdims=keepdims)
+	result = _take_numpy(obj, indices, axis=axis, keepdims=keepdims)
 
     # Refill NaNs back in
     if not raise_error and np.size(bad) > 0:
@@ -120,8 +131,8 @@ def _xs(obj, ix, axis=0, method="index", keepdims=False, raise_error=True, **kwa
     return result
 
 
-def _take(obj, indices, axis, keepdims=False):
-    """ same as _xs, but just for numpy indices
+def _take_numpy(obj, indices, axis, keepdims=False):
+    """ same as _take, but just for numpy indices
     """
     ax = obj.axes[axis]
 
@@ -196,8 +207,8 @@ def _take_interp(obj, indices, axis, keepdims):
     w1 = indices-i0 
 
     # sample nearest neighbors
-    v0 = _xs(obj, i0, axis=axis, method="numpy", keepdims=keepdims)
-    v1 = _xs(obj, i1, axis=axis, method="numpy", keepdims=keepdims)
+    v0 = _take_axis(obj, i0, axis=axis, method="numpy", keepdims=keepdims)
+    v1 = _take_axis(obj, i1, axis=axis, method="numpy", keepdims=keepdims)
 
     # result as weighted sum
     if not hasattr(v0, 'values'): # scalar
@@ -260,13 +271,13 @@ def _take_interp(obj, indices, axis, keepdims):
 # Reindex axis
 #
 
-def reindex_axis(self, values, axis=0, method='index', raise_error=False):
+def reindex_axis(self, values, axis=0, method='values', raise_error=False):
     """ reindex an array along an axis
 
     Input:
 	- values : array-like or Axis: new axis values
 	- axis   : axis number or name
-	- method : "index", "nearest", "interp" (see xs)
+	- method : "exact", "nearest", "interp" (see take)
 	- raise_error: if True, raise error when an axis value is not present 
 	               otherwise just fill-in with NaN. Defaulf is False.
 
@@ -287,8 +298,8 @@ def reindex_axis(self, values, axis=0, method='index', raise_error=False):
 	return self
 
     # indices along which to sample
-    if method in ("nearest","index","interp", None):
-	newobj = self.xs(values, axis=axis, method=method, raise_error=raise_error)
+    if method in ("nearest","exact","interp", None):
+	newobj = self.take(values, axis=axis, method=method, raise_error=raise_error)
 
     else:
 	raise ValueError("invalid reindex_axis method: "+repr(method))
