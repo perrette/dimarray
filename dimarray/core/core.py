@@ -74,16 +74,16 @@ class DimArray(Metadata):
     >>> DimArray([[1,2,3],[4,5,6]], dims=['items','time'])  # axis names only
     dimarray: 6 non-null elements (0 null)
     dimensions: 'items', 'time'
-    0 / x0 (2): 0 to 1
-    1 / x1 (3): 0 to 2
+    0 / items (2): 0 to 1
+    1 / time (3): 0 to 2
     array([[1, 2, 3],
 	   [4, 5, 6]])
 
     >>> DimArray([[1,2,3],[4,5,6]], axes=[list("ab"), np.arange(1950,1953)]) # axis values only
     dimarray: 6 non-null elements (0 null)
     dimensions: 'x0', 'x1'
-    0 / x0 (2): 'a' to 'b'
-    1 / x1 (3): 1950 to 1953
+    0 / x0 (2): a to b
+    1 / x1 (3): 1950 to 1952
     array([[1, 2, 3],
 	   [4, 5, 6]])
 
@@ -92,7 +92,7 @@ class DimArray(Metadata):
     >>> a = DimArray([[1,2,3],[4,5,6]], axes=[list("ab"), np.arange(1950,1953)], dims=['items','time']) 
     >>> b = DimArray([[1,2,3],[4,5,6]], axes=[('items',list("ab")), ('time',np.arange(1950,1953))])
     >>> c = DimArray.from_kw([[1,2,3],[4,5,6]], items=list("ab"), time=np.arange(1950,1953)) # here dims can be omitted because shape = (2, 3)
-    >>> a == b == c
+    >>> np.all(a == b == c)
     True
     >>> a
     dimarray: 6 non-null elements (0 null)
@@ -150,7 +150,7 @@ class DimArray(Metadata):
 		axes = values.axes
 
 	    # define a default set of axes if not provided
-	    axes = Axes.from_shape(values.shape)
+	    axes = Axes.from_shape(values.shape, dims=dims)
 
 	# list of Axis objects
 	elif isinstance(axes[0], Axis):
@@ -238,14 +238,13 @@ class DimArray(Metadata):
         Axes passed by keyword arguments cannot have name already taken by other 
         parameters such as "values", "axes", "dims", "dtype" or "copy"
 
-	da.array is an alias for DimArray.from_kw
-
-	Examples:
+	Examples: 
 	---------
-	>>> a = DimArray([[1,2,3],[4,5,6]], axes=[list("ab"), np.arange(1950,1953)], dims=['items','time']) 
-	>>> b = DimArray([[1,2,3],[4,5,6]], axes=[('items',list("ab")), ('time',np.arange(1950,1953))])
-	>>> c = DimArray.from_kw([[1,2,3],[4,5,6]], items=list("ab"), time=np.arange(1950,1953)) # here dims can be omitted because shape = (2, 3)
-	>>> a == b == c
+	(da.array is an alias for DimArray.from_kw)
+	>>> a = da.array([[1,2,3],[4,5,6]], axes=[list("ab"), np.arange(1950,1953)], dims=['items','time']) 
+	>>> b = da.array([[1,2,3],[4,5,6]], axes=[('items',list("ab")), ('time',np.arange(1950,1953))])
+	>>> c = da.array([[1,2,3],[4,5,6]], items=list("ab"), time=np.arange(1950,1953)) # here dims can be omitted because shape = (2, 3)
+	>>> np.all(a == b == c)
 	True
 
 	See also DimArray's doc for more examples
@@ -592,19 +591,20 @@ class DimArray(Metadata):
 	""" make an operation: this include axis and dimensions alignment
 
 	Just for testing:
+	>>> b = DimArray([[0.,1],[1,2]])
 	>>> b
-	...
+	... # doctest: +SKIP
 	array([[ 0.,  1.],
 	       [ 1.,  2.]])
-	>>> b == b
+	>>> np.all(b == b)
 	True
-	>>> b+2 == b + np.ones(b.shape)*2
+	>>> np.all(b+2 == b + np.ones(b.shape)*2)
 	True
-	>>> b+b == b*2
+	>>> np.all(b+b == b*2)
 	True
-	>>> b*b == b**2
+	>>> np.all(b*b == b**2)
 	True
-	>>> (b - b.values) == b - b
+	>>> np.all((b - b.values) == b - b)
 	True
 	"""
 	result = _operation.operation(func, self, other, broadcast=Config.op_broadcast, reindex=Config.op_reindex, constructor=self._constructor)
@@ -783,5 +783,13 @@ class DimArray(Metadata):
 def array(*args, **kwargs):
     return DimArray.from_kw(*args, **kwargs)
 
-array.__doc__ = DimArray.from_kw.__doc__.replace("DimArray","da.array")
+def test():
+    from dimarray.testing import testmod
+    import dimarray.core.core
+    import dimarray as da
+    from dimarray import DimArray
+    testmod(dimarray.core.core, globs={'da':da, 'DimArray':DimArray, 'np':np})
 
+# test docstrings
+if __name__ == "__main__":
+    test()
