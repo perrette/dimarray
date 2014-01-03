@@ -5,8 +5,8 @@ import copy
 
 from axes import Axis, Axes, GroupedAxis
 
-def take(self, ix=None, axis=0, method=None, keepdims=False, raise_error=True, fallback=np.nan, **axes):
-    """ Cross-section, can be multidimensional
+def take(self, ix=None, axis=0, method=None, keepdims=False, raise_error=True, fallback=np.nan):
+    """ Retrieve values from a DimArray
 
     input:
 
@@ -22,9 +22,6 @@ def take(self, ix=None, axis=0, method=None, keepdims=False, raise_error=True, f
 
 	- raise_error: raise error if index not found? (default True)
 	- fallback: replacement value if index not found and raise_error is False (default np.nan)
-
-	- **axes  : provide axes as keyword arguments for multi-dimensional slicing
-		    (`ix`, `axis`, `method` or `keepdims`)
 
     output:
 	- DimArray object or python built-in type, consistently with numpy slicing
@@ -54,8 +51,7 @@ def take(self, ix=None, axis=0, method=None, keepdims=False, raise_error=True, f
     array([ 1.,  4.])
     >>> b = v.take(10, axis=1)  # take, by axis position
     >>> c = v.take(10, axis='d1')  # take, by axis name
-    >>> d = v.take(d1=10)  # take, as keyword argument: EXPERIMENTAL
-    >>> np.all(a == b == c == d)
+    >>> np.all(a == b == c)
     True
     >>> v["a", 10]  # also work with string axis
     1.0
@@ -112,6 +108,12 @@ def take(self, ix=None, axis=0, method=None, keepdims=False, raise_error=True, f
     array([[ 1.],
            [ 4.]])
 
+    Multi-dimensional indexing just as []
+    >>> a = v["a", 20]
+    >>> b = v.take(("a", 20))
+    >>> np.all(a == b)
+    True
+
     Keep dimensions 
     >>> a = v[["a"]]
     >>> b = v.take("a",keepdims=True)
@@ -121,55 +123,31 @@ def take(self, ix=None, axis=0, method=None, keepdims=False, raise_error=True, f
     if method is None:
 	method = self._indexing
 
-    # single-axis slicing
-    if ix is not None:
-	obj = _take_axis(self, ix, axis=axis, method=method, keepdims=keepdims, raise_error=raise_error, fallback=fallback)
-
-    # multi-dimensional slicing <axis name> : <axis index value>
-    # just a chained call
-    else:
+    # multi-dimensional slicing? 
+    if type(ix) is tuple:
+	assert axis in (None, 0), "cannot have axis > 0 for tuple (multi-dimensional) indexing"
+	indices = [(self.axes[i].name, val) for i, val in enumerate(ix)]
 	obj = self
-	for nm, idx in axes.iteritems():
-	    obj = _take_axis(obj, idx, axis=nm, method=method, keepdims=keepdims, raise_error=raise_error, fallback=fallback)
+	for name, val in indices:
+	    obj = take(obj, val, axis=name, method=method, keepdims=keepdims, raise_error=raise_error, fallback=fallback)
+	return obj
 
-    return obj
-
-def take_kw(obj, *args, **kwargs):
-    """ A version of take that accept keyword arguments for slicing (EXPERIMENTAL)
-    """
-    pass
-
-def put(obj, ix, axis=0, method=None):
-    """ Put new values into DimArray
-    """
-    if method is None:
-	method = self._indexing
-     
-
-# default axis = None !!
-
-def _take_axis(obj, ix, axis, method, keepdims, raise_error=True, **kwargs):
-    """ cross-section or slice along a single axis, see take
-    """
     assert axis is not None, "axis= must be provided"
+    assert type(ix) is not tuple, "axis is tuple, pb with multidimensional slicing"
 
-    axis, name = obj._get_axis_info(axis)
-
-    # get integer index/slice for axis valued index/slice
-    if method is None:
-	method = obj._indexing # slicing method
+    axis, name = self._get_axis_info(axis)
 
     # get an axis object
-    ax = obj.axes[axis] # axis object
+    ax = self.axes[axis] # axis object
 
     # numpy-like indexing, do nothing
     if method in ("numpy"):
-	if type(ix) is tuple: ix = slice(*ix)
+	#if type(ix) is tuple: ix = slice(*ix)
 	indices = ix
 
     # otherwise locate the values
     elif method in ('exact','nearest', 'interp'):
-	indices = ax.loc(ix, method=method, raise_error=raise_error, **kwargs) 
+	indices = ax.loc(ix, method=method, raise_error=raise_error, fallback=fallback) 
 
     else:
 	raise ValueError("Unknown method: "+method)
@@ -184,14 +162,14 @@ def _take_axis(obj, ix, axis, method, keepdims, raise_error=True, **kwargs):
 
     # Pick-up values 
     if method == "interp":
-	result = _take_interp(obj, indices, axis=axis, keepdims=keepdims)
+	result = _take_interp(self, indices, axis=axis, keepdims=keepdims)
 	# fix type
 	ix = np.array(ix) # make sure ix is an array
 	if axis < result.ndim:
 	    result.axes[axis].values = np.array(result.axes[axis].values, dtype=ix.dtype)
 
     else:
-	result = _take_numpy(obj, indices, axis=axis, keepdims=keepdims)
+	result = _take_numpy(self, indices, axis=axis, keepdims=keepdims)
 
     # Refill NaNs back in
     if not raise_error and np.size(bad) > 0:
@@ -212,6 +190,50 @@ def _take_axis(obj, ix, axis, method, keepdims, raise_error=True, **kwargs):
 
     return result
 
+
+def take_kw(self, *opts, **kwaxes):
+    """ A version of take that accept keyword arguments for slicing (EXPERIMENTAL)
+
+    *opt: options as unnamed, variable-list arguments.
+	   ["method", ["keepdims", ["raise_error", ["fallback"]]]]: see take for explanation
+    **kwaxes: `axis name = axis value(s)` 
+
+    See also:
+    ---------
+    take
+
+    Examples:
+    ---------
+    >>> v = DimArray([[1,2,3],[4,5,6]], axes=[["a","b"], [10.,20.,30.]], dims=['d0','d1'], dtype=float) 
+    >>> a = v.take_kw(d1=20)  # take, as keyword argument: EXPERIMENTAL
+    >>> b = v.take_kw("numpy", d1=1)  # add "method" as first argument
+    >>> c = v.take(20, axis="d1")
+    >>> np.all(a == b == c)
+    True
+    """
+    # get options from variable list
+    list_of_opts = ["method", "keepdims","raise_error", "fallback"]
+    kwopt = {}
+    for i, o in enumerate(opts):
+	kwopt[list_of_opts[i]] = o
+	 
+    # a chained call: multi-dimensional slicing <axis name> : <axis index value>
+    obj = self
+    for nm, idx in kwaxes.iteritems():
+	obj = take(obj, idx, axis=nm, **kwopt)
+
+    return obj
+
+
+
+def put(obj, ix, axis=0, method=None):
+    """ Put new values into DimArray
+    """
+    if method is None:
+	method = self._indexing
+     
+
+# default axis = None !!
 
 def _take_numpy(obj, indices, axis, keepdims=False):
     """ same as _take, but just for numpy indices
@@ -289,8 +311,8 @@ def _take_interp(obj, indices, axis, keepdims):
     w1 = indices-i0 
 
     # sample nearest neighbors
-    v0 = _take_axis(obj, i0, axis=axis, method="numpy", keepdims=keepdims)
-    v1 = _take_axis(obj, i1, axis=axis, method="numpy", keepdims=keepdims)
+    v0 = take(obj, i0, axis=axis, method="numpy", keepdims=keepdims)
+    v1 = take(obj, i1, axis=axis, method="numpy", keepdims=keepdims)
 
     # result as weighted sum
     if not hasattr(v0, 'values'): # scalar

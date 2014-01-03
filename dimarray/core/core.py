@@ -496,6 +496,7 @@ mismatch between values and axes""".format(inferred, self.values,shape)
     # New general-purpose indexing method
     #
     take = _indexing.take
+    take_kw = _indexing.take_kw
     put = _indexing.put  
 
     #
