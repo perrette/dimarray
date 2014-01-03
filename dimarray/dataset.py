@@ -170,7 +170,7 @@ class Dataset(object):
 	# determine axes
 	axes = [Axis(self.keys(), axis)] + self.axes 
 
-	return DimArray(data, *axes)
+	return DimArray(data, axes)
 
     def subset(self, names=None, dims=None):
 	""" return a subset of the dictionary

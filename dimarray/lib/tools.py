@@ -39,8 +39,12 @@ def is_DimArray(obj):
 
 def is_array1d_equiv(a):
     " test if a is convertible to a 1-D array of scalar"
-    try:
-	a = np.asarray(a)
-    except:
-	return False
-    return a.ndim == 1 and (a[0] is str) or np.isscalar(a[0])
+    if isinstance(a, np.ndarray) and a.ndim == 1:
+	res = True
+    else:
+	try:
+	    a = np.asarray(a)
+	    res = a.ndim == 1 and ((a[0] is str) or np.isscalar(a[0]))
+	except:
+	    res = False
+    return res
