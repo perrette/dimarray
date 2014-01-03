@@ -505,16 +505,19 @@ mismatch between values and axes""".format(inferred, self.values,shape)
     def __getitem__(self, item): 
 	""" get a slice (use take method)
 	"""
-	items = np.index_exp[item] # tuple
-    
+	#items = np.index_exp[item] # tuple
 	# dictionary <axis name> : <axis index> to feed into take
-	ix_nd = {self.axes[i].name: it for i, it in enumerate(items)}
-	
-	o = self
-	for k in ix_nd:
-	    o = o.take(ix_nd[k], axis=k, method=self._indexing)
+	#ix_nd = {self.axes[i].name: it for i, it in enumerate(items)}
+	#o = self
+	#for k in ix_nd:
+	#    o = o.take(ix_nd[k], axis=k, method=self._indexing)
+	#return o
+	return self.take(item)
 
-	return o
+    def __setitem__(self, ix, val):
+	"""
+	"""
+	self.put(val, ix)
 
     # 
     # Can also use integer-indexing via ix

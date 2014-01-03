@@ -118,28 +118,26 @@ def read_attributes(f, name=None):
     if close: f.close()
     return attr
 
-def read_variable(f, v, method=None, **kwaxes):
-    """ read one variable from netCDF4 file
 
+def read_variable(f, v, ix=None, axis=None, method='exact'):
+    """ read one variable from netCDF4 file
     Input:
 
-	- f    	    : file name or file handle
-	- v         : netCDF variable name to extract
+	f    	    : file name or file handle
+	v         : netCDF variable name to extract
+	ix	  : indices, as `int` or `list` or `slice` or `tuple` or `dict` 
+	method    : "numpy", "exact" (default), "nearest" 
 
-	- method    : "numpy", "index" (default), "nearest" 
-	**kwaxes: keyword arguments for axes
-
-	Please see help on `Dimarray.xs` for more information.
+	Please see help on `Dimarray.take` for more information.
 
     Returns:
 
-	DimArray object (e.g. TimeSeries, Slab, Cube ...)
+	DimArray object 
 
     >>> data = read_variable('myfile.nc','dynsealevel')  # load full file
-    >>> data = read_variable('myfile.nc','dynsealevel', time=2000,2100, lon=50,70)  # load only a chunck of the data
+    >>> data = read_variable('myfile.nc','dynsealevel', {"time":2100, "lon":slice(70,None)})  # load only a chunck of the data
     """
     f, close = check_file(f, mode='r')
-
     axes = read_dimensions(f, v)
 
     # Construct the indices
@@ -155,7 +153,7 @@ def read_variable(f, v, method=None, **kwaxes):
     newaxes = [ax[ix[i]] for i, ax in enumerate(axes)] # also get the appropriate axes
 
     # initialize a dimarray
-    obj = DimArray(newdata, *newaxes)
+    obj = DimArray(newdata, newaxes)
     obj.name = v
 
     # Read attributes

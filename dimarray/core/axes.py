@@ -148,7 +148,7 @@ class Axis(Metadata):
     def loc(self):
 	""" Access the slicer to locate axis elements
 	"""
-	return Locator(self.values)
+	return Locator_axis(self.values)
 
     def copy(self):
 	return copy.copy(self)
@@ -384,10 +384,10 @@ class Axes(list):
 # Return a slice for an axis
 #
 
-class Locator(object):
+class Locator_axis(object):
     """ This class is the core of indexing in dimarray. 
 
-	loc = Locator(values [, method])  
+	loc = Locator_axis(values [, method])  
 
     where `values` represent the axis values
     and `method` is one of:
@@ -398,7 +398,7 @@ class Locator(object):
     A locator instance is generated from within the Axis object, via 
     its properties loc (valued-based indexing) and iloc (integer-based)
 
-	axis.loc  ==> Locator(values)  
+	axis.loc  ==> Locator_axis(values)  
 
     A locator is hashable is a similar way to a numpy array, but also 
     callable to provide the "method" parameter on-the-fly.
@@ -423,7 +423,7 @@ class Locator(object):
     >>> values = np.arange(1950.,2000.)
     >>> values  # doctest: +ELLIPSIS
     array([ 1950., ... 1999.])
-    >>> loc = Locator(values)   
+    >>> loc = Locator_axis(values)   
     >>> loc(1951) 
     1
     >>> loc(1951.4, method="nearest")   # also works in nearest approx
@@ -449,7 +449,7 @@ class Locator(object):
     >>> loc[ix] == np.index_exp[loc[ix]][0]
     True
     """
-    def __init__(self, values, method=None, raise_error=True, fallback=np.nan):
+    def __init__(self, values, method=None, keepdims=None, raise_error=True, missing=np.nan):
 	"""
 	values	: string list or numpy array
 	regular	: is the axis regular?
@@ -458,8 +458,9 @@ class Locator(object):
 		  "nearest" (regular axis only)
 		  "interp" (regular axis only)
 
+	keepdims : keep dimensions: change any scalar to a list
 	raise_error: raise error if index not found? (default True)
-	fallback: replacement value if index not found and raise_error is False (default np.nan)
+	missing: replacement value if index not found and raise_error is False (default np.nan)
 
 	NOTE: for str or int, "exact" is always used
 	"""
@@ -471,8 +472,9 @@ class Locator(object):
 	    method = "exact"
 
 	self.method = method #  default method
+	self.keepdims = keepdims 
 	self.raise_error = raise_error 
-	self.fallback = fallback 
+	self.missing = missing 
 
     #
     # wrapper methods: __getitem__ and __call__
@@ -481,40 +483,64 @@ class Locator(object):
     def __getitem__(self, ix):
 	""" 
 	"""
+	#
+	# check special cases
+	#
+	# do not do anything in numpy mode
+	if self.method == "numpy":
+	    return ix
+
+	# ...nor with boolean indexing
+	if type(ix) is np.ndarray and ix.dtype is np.dtype(bool):
+	    return ix
+
+	# make sure (1,) is understood as 1 just as numpy would
+	if type(ix) is tuple:
+	    if len(ix) == 1:
+		ix = ix[0]
+	    else:
+		raise ValueError("dimension mismatch")
+
+	#
+	# look up corresponding numpy indices
+	#
+	# e.g. 45:56
 	if type(ix) is slice:
 	    return self.slice(ix)
 
+	# int, float, string
+	elif np.isscalar(ix):
+	    return self.locate(ix)
+
 	# list, array
-	elif np.iterable(ix) and not isinstance(ix, str):
+	elif np.iterable(ix):
 	    return self.take(ix)
 
-	# int, float, string
 	else:
-	    return self.locate(ix)
+	    raise TypeError("unknown type: "+repr(ix))
 
     def __call__(self, idx, **kwargs):
 	""" general wrapper method
 	
 	input:
 	    idx: int, list, slice, tuple (on integer index or axis values)
-
-	    method: see class documentation
+	    **kwargs: see help on Locator_axis
 
 	return:
 	    `int`, list of `int` or slice of `int`
 	
 	"""
-	if type(idx) is tuple:
-	    idx = slice(*idx)
-
 	#if method is None: method = self.method
-	return self.set(**kwargs)[idx]
+	loc = self.set(**kwargs)
+	if self.keepdims and np.isscalar(idx):
+	    idx = [idx]
+	return loc[idx]
 
     def set(self, **kwargs):
 	""" convenience function for chained call: update methods and return itself 
 	"""
 	#self.method = method
-	return Locator(self.values, **kwargs)
+	return Locator_axis(self.values, **kwargs)
 
     #
     # methods to access single value
@@ -553,28 +579,26 @@ class Locator(object):
     #
     # wrapper for single value
     #
-
-    def locate(self, val, method=None, raise_error=None, fallback=None):
+    def locate(self, val, method=None, raise_error=None, missing=None):
 	""" wrapper to locate single values
 
-	method, raise_error, fallback: if None, look in self.__dict__
+	method, raise_error, missing: if None, look in self.__dict__
 	"""
 	if method is None: method = self.method
 	if raise_error is None: raise_error = self.raise_error
-	if fallback is None: fallback = self.fallback 
+	if missing is None: missing = self.missing 
 	try:
 	    loc = getattr(self, method)(val)
 	except:
 	    if raise_error:
 		raise
 	    else:
-		loc = fallback
+		loc = missing
 	return loc
 
     #
     # Access a list or array
     #
-
     def take(self, indices, **kwargs):
 	""" Return a list of indices
 
@@ -588,7 +612,6 @@ class Locator(object):
     #
     # Access a slice
     #
-
     def slice(self, slice_, method=None, include_last=True):
 	""" Return a slice_ object
 
@@ -599,9 +622,8 @@ class Locator(object):
 	This is in contrast with slicing in numpy arrays.
 	"""
 	# Check type
-	assert type(slice_) in (tuple, slice), "must provide a slice or a tuple"
-	if type(slice_) is tuple:
-	    slice_ = slice(*slice_)
+	if type(slice_) is not slice:
+	    raise TypeError("should be slice !")
 
 	# update method
 	if method is None: method = self.method
@@ -625,6 +647,60 @@ class Locator(object):
     @property
     def size(self):
 	return np.size(self.values)
+
+
+class Locator_axes(object):
+    """ return indices over multiple axes
+    """
+    def __init__(self, axes, **opt):
+	"""
+	"""
+	assert type(axes) is list and isinstance(axes[0], Axis), "must be list of axes objects"
+	self.axes = axes
+	self.opt = opt
+
+    def set(self, **kwargs):
+	""" convenience function for chained call: update methods and return itself 
+	"""
+	return Locator_axes(self.axes, **kwargs)
+
+    def __getitem__(self, indices):
+	"""
+	"""
+	# Construct the indices
+	indices = np.index_exp[indices]
+	numpy_indices = ()
+	for i, ix in enumerate(indices):
+	    numpy_indices += Locator_axis(self.axes[i].values, **self.opt)[ix]
+
+	# Just add slice(None) if some indices are missing
+	for i in range(len(axes) - len(numpy_indices)):
+	    numpy_indices += slice(None)
+
+	return numpy_indices
+
+    def __call__(self, indices=None, axis=0, **opt):
+	"""
+	"""
+	self = self.set(**opt)
+
+	# dict: just convert to appropriately ordered tuple
+	if isinstance(indices, dict):
+	    kw = indices
+	    indices = ()
+	    for ax in self.axes:
+		if ax.name in kw:
+		    ix = kw[ax.name]
+		else:
+		    ix = slice(None)
+		indices += ix,
+
+	if type(indices) is tuple:
+	    assert axis in (None, 0), "cannot have axis > 0 for tuple (multi-dimensional) indexing"
+	    return self[indices]
+
+	# along-axis slicing
+	return Locator_axis(self.axes[axis].values, **self.opt)[indices]
 
 def test():
     """ test module
