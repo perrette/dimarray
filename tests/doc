@@ -39,14 +39,14 @@ dimensions: 'items', 'time'
 1 / time (5): 1950 to 1954
 array(...)
 >>> b = Dimarray.from_kwds(values, items=list("abc"), time=np.arange(1950,1955)) # keyword arguments
->>> c = Dimarray.from_list(values, [list("abc"), np.arange(1950,1955)], ['items','time']) # list
+>>> c = Dimarray.from_arrays(values, [list("abc"), np.arange(1950,1955)], ['items','time']) # list
 >>> a == b == c
 True
 >>> d = da.array(values, items=list("abc"), time=np.arange(1950,1955))	# alias to Dimarray.from_kwds
 >>> d == b
 True
 
-NOTE: for convenience, an alias `array` exists for from_kwds and from_list methods:
+NOTE: for convenience, an alias `array` exists for from_kwds and from_arrays methods:
 
 >>> d = da.array(values, items=list("abc"), time=np.arange(1950,1955)) # keyword arguments
 >>> e = da.array(values, [list("abc"), np.arange(1950,1955)], ['items','time']) # list
@@ -120,7 +120,7 @@ Keyword arguments:
 
 A list of numpy arrays and a list of axis names:
 
-    >>> c = Dimarray.from_list(values, [lat,lon],["lat","lon"])
+    >>> c = Dimarray.from_arrays(values, [lat,lon],["lat","lon"])
     >>> a == b == c
     True
 
@@ -150,10 +150,10 @@ This is an example of what can go bad:
       File "dimarray/core.py", line 140, in from_dict
         axes = Axes.from_dict(shape=np.shape(values), names=names, **kwargs)
       File "dimarray/axes.py", line 157, in from_dict
-        ==> explictly supply `names=` or use from_list() or from_tuples() methods" """
+        ==> explictly supply `names=` or use from_arrays() or from_tuples() methods" """
     AssertionError:  some axes have the same size !
         ==> ambiguous determination of dimensions order via keyword arguments only
-        ==> explictly supply `names=` or use from_list() or from_tuples() methods" 
+        ==> explictly supply `names=` or use from_arrays() or from_tuples() methods" 
 
 In such a case, just use one of the two other forms. The preferred form is:
 
@@ -169,7 +169,7 @@ In such a case, just use one of the two other forms. The preferred form is:
 *NOTE: It is also possible to enter an array without named, dimensions: 
 it will be generated automatically.
 
-    >>> Dimarray.from_list(values, [lat,lon])
+    >>> Dimarray.from_arrays(values, [lat,lon])
     dimarray: 64800 non-null elements (0 null)
     dimensions: x0 x x1
     x0 (180): -89.5 to 89.5

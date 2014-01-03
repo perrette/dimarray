@@ -118,22 +118,18 @@ def read_attributes(f, name=None):
     if close: f.close()
     return attr
 
+def read_variable(f, v, method=None, **kwaxes):
+    """ read one variable from netCDF4 file
 
-def read_variable(f, v, ix=None, **kwaxes):
-    """ read any one variable from netCDF4 file with dimensions "sample","time","lat","lon"
     Input:
 
 	- f    	    : file name or file handle
 	- v         : netCDF variable name to extract
-	- ix	    : [None] integer index slice for N-D numpy array
 
-	**kwaxes: keyword arguments to indices axes subregions
-	- sample    : [None] time
-	- time	    : [None] time
-	- lat       : [None] latitude
-	- lon       : [None] longitude
+	- method    : "numpy", "index" (default), "nearest" 
+	**kwaxes: keyword arguments for axes
 
-	- exact     : [False]  # make sure slices match exactly
+	Please see help on `Dimarray.xs` for more information.
 
     Returns:
 
@@ -141,35 +137,18 @@ def read_variable(f, v, ix=None, **kwaxes):
 
     >>> data = read_variable('myfile.nc','dynsealevel')  # load full file
     >>> data = read_variable('myfile.nc','dynsealevel', time=2000,2100, lon=50,70)  # load only a chunck of the data
-
-    DOC:
-
-    Any of the dimension have the following types:
-
-    - None: full axis
-
-    - slice: direct slice access like ix above
-
-    - int, float: retrieve corresponding index matching the axis value
-
-    - tuple of int or float: retrieve range matching the axis value
-
-    For the last two, a nearest neighbour search is performed to retrieve 
-    closest location on the axis.  For an exact match, add keyword argument:
     """
     f, close = check_file(f, mode='r')
 
     axes = read_dimensions(f, v)
 
-    # get the slice object
-    if ix is None:
-	ix = ()
-	for ax in axes:
-	    if ax.name in kwaxes:
-		ix += (kwargs[ax.name],)
-	    else:
-		ix += (slice(None),)
-	ix = np.index_exp[ix] # just to make sure
+    # Construct the indices
+    ix = ()
+    for ax in axes:
+	if ax.name in kwaxes:
+	    ix += np.index_exp[ax.loc(kwaxes[ax.name], method=method)]
+	else:
+	    ix += np.index_exp[:] # slice(None),
 
     # slice the data and dimensions
     newdata = f.variables[v][ix]
