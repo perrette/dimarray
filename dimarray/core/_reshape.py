@@ -87,14 +87,23 @@ def transpose(self, axes=None):
     """ Permute dimensions
     
     Analogous to numpy, but also allows axis names
-    >>> a = da.array(np.zeros((5,6)), lon=np.arange(6), lat=np.arange(5))
-    >>> a          # doctest: +ELLIPSIS
-    dimensions(5, 6): lat, lon
-    array(...)
-    >>> a.T         # doctest: +ELLIPSIS
-    dimensions(6, 5): lon, lat
-    array(...)
-    >>> a.transpose([1,0]) == a.T == a.transpose(['lon','lat'])
+    >>> a = da.DimArray(np.zeros((2,3)), dims=['x0','x1'])
+    >>> a          
+    dimarray: 6 non-null elements (0 null)
+    dimensions: 'x0', 'x1'
+    0 / x0 (2): 0 to 1
+    1 / x1 (3): 0 to 2
+    array([[ 0.,  0.,  0.],
+           [ 0.,  0.,  0.]])
+    >>> a.T       
+    dimarray: 6 non-null elements (0 null)
+    dimensions: 'x1', 'x0'
+    0 / x1 (3): 0 to 2
+    1 / x0 (2): 0 to 1
+    array([[ 0.,  0.],
+           [ 0.,  0.],
+           [ 0.,  0.]])
+    >>> np.all(a.transpose([1,0]) == a.T == a.transpose(['x1','x0']))
     True
     """
     if axes is None:
@@ -138,18 +147,16 @@ def repeat(self, values, axis=None):
 
     Examples:
     --------
-    >>> a = da.DimArray.from_kw(np.arange(2), time=[1950., 1951., 1952.])
+    >>> a = da.DimArray.from_kw(np.arange(3), time=[1950., 1951., 1952.])
     >>> a2d = a.reshape(('time','lon')) # lon is now singleton dimension
     >>> a2d.repeat([30., 50.], axis="lon")  
-    dimarray: 10 non-null elements (0 null)
+    dimarray: 6 non-null elements (0 null)
     dimensions: 'time', 'lon'
-    0 / time (5): 1950 to 1954
-    1 / lon (2): 30.0 to 40.0
-    array([[0, 1],
-	   [0, 1],
-	   [0, 1],
-	   [0, 1],
-	   [0, 1]])
+    0 / time (3): 1950.0 to 1952.0
+    1 / lon (2): 30.0 to 50.0
+    array([[0, 0],
+	   [1, 1],
+	   [2, 2]])
     """
     # default axis values: 0, 1, 2, ...
     if type(values) is int:
@@ -250,14 +257,25 @@ def newaxis(self, name, values=None, pos=0):
 def squeeze(self, axis=None):
     """ Analogous to numpy, but also allows axis name
 
-    >>> a = da.DimArray(np.zeros((5,6)), lon=np.arange(6), lat=np.arange(5))
-    >>> b = a.take([0], axis='lat')
-    >>> b
-    dimensions(1, 6): lat, lon
-    array([[ 0.,  1.,  2.,  3.,  4.,  5.]])
-    >>> b.squeeze()
-    dimensions(6,): lon
-    array([ 0.,  1.,  2.,  3.,  4.,  5.])
+    >>> a = da.DimArray([[[1,2,3]]])
+    >>> a
+    dimarray: 3 non-null elements (0 null)
+    dimensions: 'x0', 'x1', 'x2'
+    0 / x0 (1): 0 to 0
+    1 / x1 (1): 0 to 0
+    2 / x2 (3): 0 to 2
+    array([[[1, 2, 3]]])
+    >>> a.squeeze()
+    dimarray: 3 non-null elements (0 null)
+    dimensions: 'x2'
+    0 / x2 (3): 0 to 2
+    array([1, 2, 3])
+    >>> a.squeeze(axis='x1')
+    dimarray: 3 non-null elements (0 null)
+    dimensions: 'x0', 'x2'
+    0 / x0 (1): 0 to 0
+    1 / x2 (3): 0 to 2
+    array([[1, 2, 3]])
     """
     if axis is None:
 	newaxes = [ax for ax in self.axes if ax.size != 1]
@@ -268,7 +286,7 @@ def squeeze(self, axis=None):
 	res = self.values.squeeze(idx)
 	newaxes = [ax for ax in self.axes if ax.name != name or ax.size != 1] 
 
-    return self.__constructor(res, newaxes, **self._metadata)
+    return self._constructor(res, newaxes, **self._metadata)
 
 #
 # Reshape by adding/removing as many singleton axes as needed to match prescribed dimensions
@@ -286,9 +304,19 @@ def reshape(self, newdims):
 
     Examples:
     ---------
-    >>> a = DimArray([[7,8]])
+    >>> a = DimArray([7,8])
     >>> a
+    dimarray: 2 non-null elements (0 null)
+    dimensions: 'x0'
+    0 / x0 (2): 0 to 1
+    array([7, 8])
     >>> a.reshape(('x0','new'))
+    dimarray: 2 non-null elements (0 null)
+    dimensions: 'x0', 'new'
+    0 / x0 (2): 0 to 1
+    1 / new (1): None to None
+    array([[7],
+           [8]])
     """
     # Do nothing if dimensions already match
     if tuple(newdims) == self.dims:
