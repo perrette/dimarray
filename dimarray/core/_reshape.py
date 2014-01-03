@@ -26,28 +26,28 @@ def broadcast(self, other):
     >>> time = np.arange(1950,1955)
     >>> ts = da.DimArray.from_kw(np.arange(5), time=time)
     >>> cube = da.DimArray.from_kw(np.zeros((3,2,5)), lon=lon, lat=lat, time=time)  # lat x lon x time
-    >>> cube.axes  # doctest: +ELLIPSIS
+    >>> cube.axes  
     dimensions: 'lat', 'lon', 'time'
     0 / lat (3): 10.0 to 50.0
     1 / lon (2): 10.0 to 30.0
     2 / time (5): 1950 to 1954
-    ...
 
     # ...broadcast timeseries to 3D data
     >>> ts3D = ts.broadcast(cube) #  lat x lon x time
+    >>> ts3D
     dimarray: 30 non-null elements (0 null)
-    dimensions: 'lon', 'lat', 'time'
+    dimensions: 'lat', 'lon', 'time'
     0 / lat (3): 10.0 to 50.0
     1 / lon (2): 10.0 to 30.0
     2 / time (5): 1950 to 1954
     array([[[0, 1, 2, 3, 4],
-	    [0, 1, 2, 3, 4]],
-
-	   [[0, 1, 2, 3, 4],
-	    [0, 1, 2, 3, 4]],
-
-	   [[0, 1, 2, 3, 4],
-	    [0, 1, 2, 3, 4]]])
+            [0, 1, 2, 3, 4]],
+    <BLANKLINE>
+           [[0, 1, 2, 3, 4],
+            [0, 1, 2, 3, 4]],
+    <BLANKLINE>
+           [[0, 1, 2, 3, 4],
+            [0, 1, 2, 3, 4]]])
     """
     # Input as axes
     if isinstance(other, list):
@@ -76,7 +76,7 @@ def broadcast(self, other):
     #for newaxis in newaxes:  
     for newaxis in reversed(newaxes):  # should be faster ( CHECK ) 
 	if newobj.axes[newaxis.name].size == 1 and newaxis.size != 1:
-	    newobj = newobj.repeat(newaxis)
+	    newobj = newobj.repeat(newaxis.values, axis=newaxis.name)
 
     return newobj
 
@@ -117,7 +117,6 @@ def transpose(self, axes=None):
 #
 # Repeat the array along *existing* axis
 #
-@axes_as_keywords
 def repeat(self, values, axis=None):
     """ expand the array along axis: analogous to numpy's repeat
 
@@ -133,11 +132,15 @@ def repeat(self, values, axis=None):
     output:
 	DimArray
 
+    Sea Also:
+    ---------
+    newaxis
+
     Examples:
     --------
-    >>> a = da.DimArray.from_kw(arange(2), lon=[30., 40.])
-    >>> a = a.reshape(('time','lon'))
-    >>> a.repeat(np.arange(1950,1955), axis="time")  # doctest: +ELLIPSIS
+    >>> a = da.DimArray.from_kw(np.arange(2), time=[1950., 1951., 1952.])
+    >>> a2d = a.reshape(('time','lon')) # lon is now singleton dimension
+    >>> a2d.repeat([30., 50.], axis="lon")  
     dimarray: 10 non-null elements (0 null)
     dimensions: 'time', 'lon'
     0 / time (5): 1950 to 1954
@@ -147,17 +150,6 @@ def repeat(self, values, axis=None):
 	   [0, 1],
 	   [0, 1],
 	   [0, 1]])
-
-    With keyword arguments:
-
-    >>> b = a.reshape(('lat','lon','time'))
-    >>> b.repeat(time=np.arange(1950,1955), lat=[0., 90.])  # doctest: +ELLIPSIS
-    dimarray: 20 non-null elements (0 null)
-    dimensions: 'lat', 'lon', 'time'
-    0 / lat (2): 0.0 to 90.  
-    1 / lon (2): 30.0 to 40.0
-    2 / time (5): 1950 to 1954
-    ...
     """
     # default axis values: 0, 1, 2, ...
     if type(values) is int:
@@ -206,6 +198,7 @@ def newaxis(self, name, values=None, pos=0):
     Examples:
     ---------
     >>> a = DimArray([1,2])
+    >>> a
     dimarray: 2 non-null elements (0 null)
     dimensions: 'x0'
     0 / x0 (2): 0 to 1
@@ -257,6 +250,7 @@ def newaxis(self, name, values=None, pos=0):
 def squeeze(self, axis=None):
     """ Analogous to numpy, but also allows axis name
 
+    >>> a = da.DimArray(np.zeros((5,6)), lon=np.arange(6), lat=np.arange(5))
     >>> b = a.take([0], axis='lat')
     >>> b
     dimensions(1, 6): lat, lon

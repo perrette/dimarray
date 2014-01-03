@@ -5,14 +5,13 @@ import copy
 
 from axes import Axis, Axes, GroupedAxis
 
-def take(self, ix=None, axis=None, method=None, keepdims=False, raise_error=True, fallback=np.nan, **axes):
+def take(self, ix=None, axis=0, method=None, keepdims=False, raise_error=True, fallback=np.nan, **axes):
     """ Cross-section, can be multidimensional
 
     input:
 
-	- ix       : int or list or tuple or slice (indices) 
-		     if axis is None, does not operate on the flatten array but except a tuple of length `ndim`
-	- axis     : int or str or None
+	- ix       : int or list or slice (single-dimensional indices) or a tuple of those (multi-dimensional)
+	- axis     : int or str
 	- method   : indexing method when 
 		     - "numpy": numpy-like integer indexing
 		     - "exact": locate based on axis values
@@ -25,22 +24,99 @@ def take(self, ix=None, axis=None, method=None, keepdims=False, raise_error=True
 	- fallback: replacement value if index not found and raise_error is False (default np.nan)
 
 	- **axes  : provide axes as keyword arguments for multi-dimensional slicing
-		    ==> chained call to take 
-		    Note in this mode axis cannot be named after named keyword arguments
 		    (`ix`, `axis`, `method` or `keepdims`)
 
     output:
 	- DimArray object or python built-in type, consistently with numpy slicing
 
-    >>> a.take(45.5, axis=0)	 # doctest: +ELLIPSIS
-    >>> a.take(45.7, axis="lat") == a.take(45.5, axis=0) # "nearest" matching
-    True
-    >>> a.take(time=1952.5)
-    >>> a.take(time=70, method="numpy") # 70th element along the time dimension
+    See also:
+    ---------
+    take_kw
 
-    >>> a.take(lon=(30.5, 60.5), lat=45.5) == a[:, 45.5, 30.5:60.5] # multi-indexing, slice...
+    Examples:
+    ---------
+
+    >>> v = DimArray([[1,2,3],[4,5,6]], axes=[["a","b"], [10.,20.,30.]], dims=['d0','d1'], dtype=float) 
+    >>> v
+    dimarray: 6 non-null elements (0 null)
+    dimensions: 'd0', 'd1'
+    0 / d0 (2): a to b
+    1 / d1 (3): 10.0 to 30.0
+    array([[ 1.,  2.,  3.],
+	   [ 4.,  5.,  6.]])
+
+    Indexing via axis values (default, method="exact")
+    >>> a = v[:,10]   # python slicing method
+    >>> a
+    dimarray: 2 non-null elements (0 null)
+    dimensions: 'd0'
+    0 / d0 (2): a to b
+    array([ 1.,  4.])
+    >>> b = v.take(10, axis=1)  # take, by axis position
+    >>> c = v.take(10, axis='d1')  # take, by axis name
+    >>> d = v.take(d1=10)  # take, as keyword argument: EXPERIMENTAL
+    >>> np.all(a == b == c == d)
     True
-    >>> a.take(time=1952, lon=-40, lat=70, method="nearest") # lookup nearest element (with bound checking)
+    >>> v["a", 10]  # also work with string axis
+    1.0
+
+    Indexing via integer index (method="numpy" or `ix` property)
+
+    >>> np.all(v.ix[:,0] == v[:,10])
+    True
+    >>> np.all(v.take(0, axis="d1", method="numpy") == v.take(10, axis="d1"))
+    True
+
+    Experimental: "nearest" and "interp" methods (for int and float axes only)
+    >>> v.take(12, axis="d1", method='nearest')
+    dimarray: 2 non-null elements (0 null)
+    dimensions: 'd0'
+    0 / d0 (2): a to b
+    array([ 1.,  4.])
+    >>> v.take(12, axis="d1", method='interp')
+    dimarray: 2 non-null elements (0 null)
+    dimensions: 'd0'
+    0 / d0 (2): a to b
+    array([ 1.2,  4.2])
+
+    Take a list of indices (default, "exact" method)
+    >>> a = v[:,[10,20]] # also work with a list of index
+    >>> a
+    dimarray: 4 non-null elements (0 null)
+    dimensions: 'd0', 'd1'
+    0 / d0 (2): a to b
+    1 / d1 (2): 10.0 to 20.0
+    array([[ 1.,  2.],
+	   [ 4.,  5.]])
+    >>> b = v.take([10,20], axis='d1')
+    >>> np.all(a == b)
+    True
+
+    Take a slice:
+    >>> c = v[:,10:20] # axis values: slice includes last element
+    >>> c
+    dimarray: 4 non-null elements (0 null)
+    dimensions: 'd0', 'd1'
+    0 / d0 (2): a to b
+    1 / d1 (2): 10.0 to 20.0
+    array([[ 1.,  2.],
+	   [ 4.,  5.]])
+    >>> d = v.take(slice(10,20), axis='d1') # `take` accepts `slice` objects
+    >>> np.all(c == d)
+    True
+    >>> v.ix[:,0:1] # integer position: does *not* include last element
+    dimarray: 2 non-null elements (0 null)
+    dimensions: 'd0', 'd1'
+    0 / d0 (2): a to b
+    1 / d1 (1): 10.0 to 10.0
+    array([[ 1.],
+           [ 4.]])
+
+    Keep dimensions 
+    >>> a = v[["a"]]
+    >>> b = v.take("a",keepdims=True)
+    >>> np.all(a == b)
+    True
     """
     if method is None:
 	method = self._indexing
@@ -58,6 +134,11 @@ def take(self, ix=None, axis=None, method=None, keepdims=False, raise_error=True
 
     return obj
 
+def take_kw(obj, *args, **kwargs):
+    """ A version of take that accept keyword arguments for slicing (EXPERIMENTAL)
+    """
+    pass
+
 def put(obj, ix, axis=0, method=None):
     """ Put new values into DimArray
     """
@@ -67,7 +148,7 @@ def put(obj, ix, axis=0, method=None):
 
 # default axis = None !!
 
-def _take_axis(obj, ix, axis=0, method="exact", keepdims=False, raise_error=True, **kwargs):
+def _take_axis(obj, ix, axis, method, keepdims, raise_error=True, **kwargs):
     """ cross-section or slice along a single axis, see take
     """
     assert axis is not None, "axis= must be provided"
@@ -83,6 +164,7 @@ def _take_axis(obj, ix, axis=0, method="exact", keepdims=False, raise_error=True
 
     # numpy-like indexing, do nothing
     if method in ("numpy"):
+	if type(ix) is tuple: ix = slice(*ix)
 	indices = ix
 
     # otherwise locate the values
@@ -271,18 +353,44 @@ def _take_interp(obj, indices, axis, keepdims):
 # Reindex axis
 #
 
-def reindex_axis(self, values, axis=0, method='values', raise_error=False):
+def reindex_axis(self, values, axis=0, method='exact', raise_error=False):
     """ reindex an array along an axis
 
     Input:
 	- values : array-like or Axis: new axis values
 	- axis   : axis number or name
-	- method : "exact", "nearest", "interp" (see take)
+	- method : "exact" (default), "nearest", "interp" (see take)
 	- raise_error: if True, raise error when an axis value is not present 
 	               otherwise just fill-in with NaN. Defaulf is False.
 
     Output:
 	- DimArray
+
+    Examples:
+    ---------
+
+    Basic reindexing: fill missing values with NaN
+    >>> a = da.DimArray([1,2,3],('x0', [1,2,3]))
+    >>> b = da.DimArray([3,4],('x0',[1,3]))
+    >>> b.reindex_axis([1,2,3])
+    dimarray: 2 non-null elements (1 null)
+    dimensions: 'x0'
+    0 / x0 (3): 1 to 3
+    array([  3.,  nan,   4.])
+
+    "nearest" mode
+    >>> b.reindex_axis([0,1,2,3], method='nearest') # out-of-bound to NaN
+    dimarray: 3 non-null elements (1 null)
+    dimensions: 'x0'
+    0 / x0 (4): 0 to 3
+    array([ nan,   3.,   3.,   4.])
+
+    "interp" mode
+    >>> b.reindex_axis([0,1,2,3], method='interp') # out-of-bound to NaN
+    dimarray: 3 non-null elements (1 null)
+    dimensions: 'x0'
+    0 / x0 (4): 0 to 3
+    array([ nan,  3. ,  3.5,  4. ])
     """
     if isinstance(values, Axis):
 	newaxis = values
@@ -309,7 +417,7 @@ def reindex_axis(self, values, axis=0, method='values', raise_error=False):
     ax0 = Axis(values, ax.name)
     ax1 = newobj.axes[axis_id]
     
-    assert np.all((np.isnan(ax0.values) | (ax0.values == ax1.values))), "pb when reindexing"
+    #assert np.all((np.isnan(ax0.values) | (ax0.values == ax1.values))), "pb when reindexing"
 
     return newobj
 
@@ -330,5 +438,16 @@ def reindex_like(self, other, method=None, **kwargs):
     """ reindex like another axis
 
     note: only reindex axes which are present in other
+
+    Example:
+    --------
+
+    >>> b = da.DimArray([3,4],('x0',[1,3]))
+    >>> c = da.DimArray([[1,2,3], [1,2,3]],[('x1',["a","b"]),('x0',[1, 2, 3])])
+    >>> b.reindex_like(c, method='interp')
+    dimarray: 3 non-null elements (0 null)
+    dimensions: 'x0'
+    0 / x0 (3): 1 to 3
+    array([ 3. ,  3.5,  4. ])
     """
     return _reindex_axes(self, other.axes, method=method, **kwargs)

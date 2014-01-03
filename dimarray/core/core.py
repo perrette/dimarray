@@ -15,7 +15,7 @@ import _reshape	   # change array shape and dimensions
 import _indexing   # perform slicing and indexing operations
 import _operation  # operation between DimArrays
 
-from dimarray.lib.tools import pandas_obj, is_array_equiv
+from dimarray.lib.tools import pandas_obj, is_array1d_equiv
 
 __all__ = ["DimArray", "array"]
 
@@ -132,6 +132,20 @@ class DimArray(Metadata):
 	if values is not None:
 	    values = np.array(values, copy=copy, dtype=dtype)
 
+	# special case: 1D object: accept single axis instead of list of axes/dimensions
+	if values is not None and values.ndim == 1:
+	    
+	    # accept a tuple ('dim', axis values) instead of [(...)]
+	    if type(axes) is tuple:
+		if len(axes) == 2 and type(axes[0]) is str and is_array1d_equiv(axes[1]):
+		    axes = [axes]
+
+	    # accept axes=axis, dims='dim' (instead of list)
+	    elif (axes is None or is_array1d_equiv(axes)) and (type(dims) in (str, type(None))):
+		#if axes is not None: assert np.size(axes) == values.size, "invalid argument: bad size"
+		axes = [axes] if axes is not None else None
+		dims = [dims] if dims is not None else None
+
 	#
 	# Initialize the axes
 	# 
@@ -161,7 +175,8 @@ class DimArray(Metadata):
 	    axes = Axes.from_tuples(*axes)
 
 	# axes contains only axis values, with names possibly provided in `dims=`
-	elif is_array_equiv(axes[0]): 
+	#elif is_array_equiv(axes[0]): 
+	elif type(axes[0]) in (list, np.ndarray): 
 	    axes = Axes.from_arrays(axes, dims=dims)
 
 	else:
@@ -201,9 +216,11 @@ class DimArray(Metadata):
 	# Check consistency between axes and values
 	inferred = tuple([ax.size for ax in self.axes])
 	if inferred != self.values.shape:
-	    print "shape inferred from axes: ",inferred
-	    print "shape inferred from data: ",self.values.shape
-	    raise Exception("mismatch between values and axes")
+	    msg = """\
+shape inferred from axes: {}
+shape inferred from data: {}
+mismatch between values and axes""".format(inferred, self.values,shape)
+	    raise Exception(msg)
 
 	# If a general ordering relationship of the class is assumed,
 	# always sort the class
@@ -494,7 +511,7 @@ class DimArray(Metadata):
 	
 	o = self
 	for k in ix_nd:
-	    o = o.take(ix_nd[k], axis=k)
+	    o = o.take(ix_nd[k], axis=k, method=self._indexing)
 
 	return o
 
@@ -625,10 +642,22 @@ class DimArray(Metadata):
     def __int__(self):  return int(self.values)
 
     def __eq__(self, other): 
-	if not isinstance(other, DimArray) or not self.axes == other.axes:
-	    return False
+	if isinstance(other, np.ndarray):
+	    res = self.values == other
 
-	return self._constructor(self.values == other.values, self.axes)
+	elif not isinstance(other, DimArray):
+	    res = False
+
+	elif not self.axes == other.axes:
+	    res = False
+
+	else:
+	    res = self.values == other.values
+
+	if isinstance(res, np.ndarray):
+	    return self._constructor(res, self.axes)
+	else:
+	    return res
 
     def __lt__(self, other): 
 	return self._constructor(self.values < other.values, self.axes)
@@ -786,9 +815,7 @@ def array(*args, **kwargs):
 def test():
     from dimarray.testing import testmod
     import dimarray.core.core
-    import dimarray as da
-    from dimarray import DimArray
-    testmod(dimarray.core.core, globs={'da':da, 'DimArray':DimArray, 'np':np})
+    testmod(dimarray.core.core)
 
 # test docstrings
 if __name__ == "__main__":

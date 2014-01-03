@@ -27,8 +27,7 @@ class Metadata(object):
     1) the list is permanently up-to-date and 2) it is ordered (which is not the 
     case for self.__dict__)
 
-    >>> import dimarray.metadata as md
-    >>> v = md.Metadata()
+    >>> v = Metadata()
     >>> v.yo = 123
     >>> v.name = 'myname'
     >>> v.ya = 'hio'

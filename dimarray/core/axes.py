@@ -162,6 +162,14 @@ class Axis(Metadata):
     def dtype(self): 
 	return _convert_dtype(np.array(self.values).dtype)
 
+    @property
+    def __array__(self): 
+	return self.values.__array__
+
+    @property
+    def __len__(self): 
+	return self.values.__len__
+
 
 class GroupedAxis(Axis):
     """ an Axis that contains two axes flattened together
@@ -418,10 +426,6 @@ class Locator(object):
     >>> loc = Locator(values)   
     >>> loc(1951) 
     1
-    >>> loc(1951.4)     # doctest: +ELLIPSIS
-    Exception raised:
-	...
-	ValueError: 1951.4000000000001 is not in list
     >>> loc(1951.4, method="nearest")   # also works in nearest approx
     1
     >>> loc([1960, 1980, 1999])		# a list if also fine 
@@ -464,7 +468,7 @@ class Locator(object):
 	# default method: "nearest" (for float)
 	# only "index" for object type
 	if method is None or self.values.dtype is np.dtype('O'):
-	    method = "index"
+	    method = "exact"
 
 	self.method = method #  default method
 	self.raise_error = raise_error 

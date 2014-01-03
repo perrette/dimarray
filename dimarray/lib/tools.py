@@ -37,10 +37,10 @@ def is_DimArray(obj):
     from dimarray import DimArray
     return isinstance(obj, DimArray)
 
-def is_array_equiv(a):
-    " test if a is convertible to an array object"
+def is_array1d_equiv(a):
+    " test if a is convertible to a 1-D array of scalar"
     try:
 	a = np.asarray(a)
     except:
 	return False
-    return True
+    return a.ndim == 1 and (a[0] is str) or np.isscalar(a[0])
