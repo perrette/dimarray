@@ -496,7 +496,6 @@ mismatch between values and axes""".format(inferred, self.values,shape)
     # New general-purpose indexing method
     #
     take = _indexing.take
-    take_kw = _indexing.take_kw
     put = _indexing.put  
 
     #
@@ -505,14 +504,7 @@ mismatch between values and axes""".format(inferred, self.values,shape)
     def __getitem__(self, item): 
 	""" get a slice (use take method)
 	"""
-	#items = np.index_exp[item] # tuple
-	# dictionary <axis name> : <axis index> to feed into take
-	#ix_nd = {self.axes[i].name: it for i, it in enumerate(items)}
-	#o = self
-	#for k in ix_nd:
-	#    o = o.take(ix_nd[k], axis=k, method=self._indexing)
-	#return o
-	return self.take(item)
+	return self.take(item, mode=self._indexing)
 
     def __setitem__(self, ix, val):
 	"""
