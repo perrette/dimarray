@@ -97,14 +97,15 @@ class Axis(Metadata):
     def loc(self):
 	""" Access the slicer to locate axis elements
 	"""
-	if self.dtype is np.dtype('O'):
+	if self.values.dtype is np.dtype('O'):
 	    return ObjLocator(self.values)
 	else:
 	    return NumLocator(self.values, modulo=self.modulo)
 
 
     def __eq__(self, other):
-	return isinstance(other, Axis) and np.all(other.values == self.values)
+	#return hasattr(other, "name") and hasattr(other, "values") and np.all(other.values == self.values) and self.name == other.name
+	return isinstance(other, Axis) and np.all(other.values == self.values) and self.name == other.name
 
     def __repr__(self):
 	""" string representation for printing to screen
@@ -185,7 +186,6 @@ class GroupedAxis(Axis):
     def values(self):
 	""" values as 2-D numpy array, to keep things consistent with Axis
 	"""
-
 	# Each element of the new axis is a tuple, which makes a 2-D numpy array
 	return _flatten(*[ax.values for ax in self.axes])
 
@@ -385,8 +385,11 @@ class Axes(list):
 #
 
 ## indexing errors
-#class OutBoundError(KeyError):
+#class OutBoundError(IndexError):
 #    pass
+
+def locate(values, *args, **kwargs):
+    return Axis(values).loc(*args, **kwargs)
 
 class LocatorAxis(object):
     """ This class is the core of indexing in dimarray. 
@@ -414,38 +417,8 @@ class LocatorAxis(object):
 
 	loc(idx, **kwargs) :: loc.set(**kwargs)[idx]
 
-    Examples:
-    ---------
-    >>> values = np.arange(1950.,2000.)
-    >>> values  # doctest: +ELLIPSIS
-    array([ 1950., ... 1999.])
-    >>> loc = LocatorAxis(values)   
-    >>> loc(1951) 
-    1
-    >>> loc([1960, 1980, 1999])		# a list if also fine 
-    [10, 30, 49]
-    >>> loc(slice(1960,1970))		# or a tuple/slice (latest index included)
-    slice(10, 21, None)
-    >>> loc[1960:1970] == _		# identical, as any of the commands above
-    True
-    >>> loc([1960, -99, 1999], raise_error=False)  # handles missing values
-    [10, None, 49]
-
-    Test equivalence with np.index_exp
-    >>> ix = 1951
-    >>> loc[ix] == np.index_exp[loc[ix]][0]
-    True
-    >>> ix = [1960, 1980, 1999]
-    >>> loc[ix] == np.index_exp[loc[ix]][0]
-    True
-    >>> ix = slice(1960,1970)
-    >>> loc[ix] == np.index_exp[loc[ix]][0]
-    True
-    >>> ix = 1951
-    >>> loc[ix] == np.index_exp[loc[ix]][0]
-    True
     """
-    _check_params = False
+    _check_params = False # false  for multi indexing
 
     def __init__(self, values, raise_error=True, position_index = False, keepdims = False, **opt):
 	"""
@@ -511,11 +484,11 @@ class LocatorAxis(object):
 	"""
 	return type(ix) in (list, np.ndarray)
 
-    def __call__(self, idx, **kwargs):
+    def __call__(self, ix, **kwargs):
 	""" general wrapper method
 	
 	input:
-	    idx: int, list, slice, tuple (on integer index or axis values)
+	    ix: int, list, slice, tuple (on integer index or axis values)
 	    **kwargs: see help on LocatorAxis
 
 	return:
@@ -526,10 +499,10 @@ class LocatorAxis(object):
 	if len(kwargs) > 0:
 	    self = self.set(**kwargs)
 
-	if self.keepdims and not self._islist(idx):
-	    idx = [idx]
+	if self.keepdims and not self._islist(ix) and not type(ix) is slice:
+	    ix = [ix]
 
-	return self[idx]
+	return self[ix]
 
     def set(self, **kwargs):
 	""" convenience function for chained call: update methods and return itself 
@@ -548,7 +521,7 @@ class LocatorAxis(object):
 	try:
 	    res = self._locate(val)
 
-	except KeyError, msg:
+	except IndexError, msg:
 	    if self.raise_error:
 		raise
 	    else:
@@ -601,13 +574,41 @@ class ObjLocator(LocatorAxis):
     def _locate(self, val):
 	""" find a string
 	"""
-	try:
-	    return self.values.tolist().index(val)
-	except ValueError, msg:
-	    raise KeyError(msg)
+	return self.values.tolist().index(val)
 
 class NumLocator(LocatorAxis):
     """ Locator for axis of integers or floats to be treated as numbers (with tolerance parameters)
+
+    Examples:
+    ---------
+    >>> values = np.arange(1950.,2000.)
+    >>> values  # doctest: +ELLIPSIS
+    array([ 1950., ... 1999.])
+    >>> loc = NumLocator(values)   
+    >>> loc(1951) 
+    1
+    >>> loc([1960, 1980, 1999])		# a list if also fine 
+    [10, 30, 49]
+    >>> loc(slice(1960,1970))		# or a tuple/slice (latest index included)
+    slice(10, 21, None)
+    >>> loc[1960:1970] == _		# identical, as any of the commands above
+    True
+    >>> loc([1960, -99, 1999], raise_error=False)  # handles missing values
+    [10, None, 49]
+
+    Test equivalence with np.index_exp
+    >>> ix = 1951
+    >>> loc[ix] == np.index_exp[loc[ix]][0]
+    True
+    >>> ix = [1960, 1980, 1999]
+    >>> loc[ix] == np.index_exp[loc[ix]][0]
+    True
+    >>> ix = slice(1960,1970)
+    >>> loc[ix] == np.index_exp[loc[ix]][0]
+    True
+    >>> ix = 1951
+    >>> loc[ix] == np.index_exp[loc[ix]][0]
+    True
     """
     tol = 1e-8  # tolerance
     modulo = None
@@ -615,6 +616,11 @@ class NumLocator(LocatorAxis):
     def _locate(self, val):
 	""" 
 	"""
+	try:
+	    val+1
+	except TypeError, msg:
+	    raise TypeError("locate: wrong type: {}".format(val))
+
 	values = self.values
 
 	# modulo calculation, val = val +/- modulo*n, where n is an integer
@@ -629,8 +635,7 @@ class NumLocator(LocatorAxis):
 	loc = np.argmin(np.abs(val-values))
 
 	if np.abs(values[loc]-val) > self.tol:
-	    print "%f not found within tol %f (closest match %i:%f)" % (val, self.tol, loc, values[loc])
-	    raise KeyError("%f not found within tol %f (closest match %i:%f)" % (val, self.tol, loc, values[loc]))
+	    raise IndexError("%f not found within tol %f (closest match %i:%f)" % (val, self.tol, loc, values[loc]))
 
 	return loc
 
@@ -733,10 +738,10 @@ class LocatorAxes(object):
 	numpy_indices = ()
 	for i, ix in enumerate(indices):
 	    loc = self.axes[i].loc(ix, **self.opt)
-	    assert np.isscalar(loc) \
-		    or type(loc) is slice \
-		    or type(loc) in (np.ndarray, list) and np.asarray(loc).dtype != np.dtype('O'), \
-		    "pb with LocatorAxis {} => {}".format(ix,loc)
+	#    assert np.isscalar(loc) \
+	#	    or type(loc) is slice \
+	#	    or type(loc) in (np.ndarray, list) and np.asarray(loc).dtype != np.dtype('O'), \
+	#	    "pb with LocatorAxis {} => {}".format(ix,loc)
 	    numpy_indices += loc,
 
 	return numpy_indices
@@ -765,7 +770,9 @@ class LocatorAxes(object):
 		    ix = slice(None)
 		indices += ix,
 
-	return LocatorAxes(self.axes, **self.opt)[indices]
+	kwargs = self.opt.copy()
+	kwargs.update(opt)
+	return LocatorAxes(self.axes, **kwargs)[indices]
 
 
 

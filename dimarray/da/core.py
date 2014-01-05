@@ -117,7 +117,7 @@ class DimArray(Metadata):
     # NOW MAIN BODY OF THE CLASS
     #
 
-    def __init__(self, values=None, axes=None, dims=None, copy=False, dtype=None, _indexing_mode=None, **kwargs):
+    def __init__(self, values=None, axes=None, dims=None, copy=False, dtype=None, _indexing="values", **kwargs):
 	""" Initialization. See help on DimArray.
 	"""
 	#
@@ -196,7 +196,7 @@ class DimArray(Metadata):
 	self.axes = axes
 
 	## options
-	self._indexing_mode = _indexing_mode
+	self._indexing = _indexing
 
 	#
 	# metadata (see Metadata type in metadata.py)
@@ -275,7 +275,7 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     def _constructor(cls, values, axes, **metadata):
 	""" Internal API for the constructor: check whether a pre-defined class exists
 
-	values	: numpy-like array
+	values	: array-like
 	axes	: Axes instance 
 
 	This static method is used whenever a new DimArray needs to be instantiated
@@ -495,14 +495,14 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     def __getitem__(self, indices): 
 	""" get a slice (use take method)
 	"""
-	#indexing_mode = self.axes.loc[indices]
-	#return self.take(indexing_mode, position_index=True)
-	return self.take(indices)
+	#indexing = self.axes.loc[indices]
+	#return self.take(indexing, position_index=True)
+	return self.take(indices, indexing=self._indexing)
 
     def __setitem__(self, ix, val):
 	"""
 	"""
-	self.put(val, ix)
+	self.put(val, ix, indexing=self._indexing, inplace=True)
 
     # 
     # Can also use integer-indexing via ix
@@ -511,11 +511,11 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     def ix(self):
 	""" integer index-access (toogle between integer-based and values-based indexing)
 	"""
-	if self._indexing_mode is None: 
-	    _indexing_mode = "numpy"
+	if self._indexing is "values": 
+	    _indexing = "position"
 	else:
-	    _indexing_mode = None
-	return self._constructor(self.values, self.axes, _indexing_mode=_indexing_mode , **self._metadata)
+	    _indexing = "values"
+	return self._constructor(self.values, self.axes, _indexing=_indexing , **self._metadata)
 
     #
     # TRANSFORMS
@@ -583,8 +583,8 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     #
     # REINDEXING 
     #
-    #reindex_axis = _indexing.reindex_axis
-    #reindex_like = _indexing.reindex_like
+    reindex_axis = _indexing.reindex_axis
+    reindex_like = _indexing.reindex_like
 
     #
     # BASIC OPERATTIONS

@@ -119,13 +119,13 @@ def read_attributes(f, name=None):
     return attr
 
 
-def read_variable(f, v, *args, **kwargs):
+def read_variable(f, v, indices=slice(None), axis=0, *args, **kwargs):
     """ read one variable from netCDF4 file
     Input:
 
 	f    	    : file name or file handle
 	v         : netCDF variable name to extract
-	*args, **kwargs: passed to Axes.loc
+	indices, axis, *args, **kwargs: passed to take
 
 	Please see help on `Dimarray.take` for more information.
 
@@ -140,7 +140,7 @@ def read_variable(f, v, *args, **kwargs):
 
     # Construct the indices
     axes = read_dimensions(f, v)
-    ix = axes.loc(mode=mode, tol=tol)(indices, axis=axis)
+    ix = axes.loc(indices, axis=axis, *args, **kwargs)
 
     # slice the data and dimensions
     newaxes = [ax[ix[i]] for i, ax in enumerate(axes)] # also get the appropriate axes
