@@ -39,15 +39,18 @@ def _convert_dtype(dtype):
 class Axis(Metadata):
     """ Axis
 
-    Required Attributes:
+    values: numpy array (or list) 
+    name  : name (attribute)
 
-	values: numpy array (or list) 
-	name  : name (attribute)
+    weights: [None] associated list of weights 
+    modulo: [None] if not None, consider axis values as being defined +/- n*modulo, where n is an integer
+	    this modify `loc` behaviour only, but does not impose any constraint on actual axis values
 
+    + metadata
     """
     _metadata_exclude = ("values", "name", "weights") # variables which are NOT metadata
 
-    def __init__(self, values, name="", weights=None, **kwargs):
+    def __init__(self, values, name="", weights=None, modulo=None, **kwargs):
 	""" 
 	"""
 	if not name:
@@ -62,16 +65,77 @@ class Axis(Metadata):
 	else:
 	    values = np.array(values, copy=False)
 
-	super(Axis, self).__init__() # init an ordered dict of metadata
+	Metadata.__init__(self)
 
 	self.values = values 
 	self.name = name 
 	self.weights = weights 
-	self.regular = None # regular axis
+	self.modulo = modulo
 
 	# set metadata
 	for k in kwargs:
 	    self.setncattr(k, kwargs[k])
+
+    def __getitem__(self, item):
+	""" access values elements & return an axis object
+	"""
+	values = self.values[item]
+
+	# if collapsed to scalar, just return it
+	if not isinstance(values, np.ndarray):
+	    return values
+
+	if isinstance(self.weights, np.ndarray):
+	    weights = self.weights[item]
+
+	else:
+	    weights = self.weights
+
+	return Axis(values, self.name, weights=weights, **self._metadata)
+
+    @property
+    def loc(self):
+	""" Access the slicer to locate axis elements
+	"""
+	if self.dtype is np.dtype('O'):
+	    return ObjLocator(self.values)
+	else:
+	    return NumLocator(self.values, modulo=self.modulo)
+
+
+    def __eq__(self, other):
+	return isinstance(other, Axis) and np.all(other.values == self.values)
+
+    def __repr__(self):
+	""" string representation for printing to screen
+	""" 
+	return "{} ({}): {} to {}".format(self.name, self.size, self.values[0], self.values[-1])
+
+    def __str__(self):
+	""" simple string representation
+	"""
+	#return "{}={}:{}".format(self.name, self.values[0], self.values[-1])
+	return "{}({})={}:{}".format(self.name, self.size, self.values[0], self.values[-1])
+
+    def copy(self):
+	return copy.copy(self)
+
+    # a few array-like properties
+    @property
+    def size(self): 
+	return self.values.size
+
+    @property
+    def dtype(self): 
+	return _convert_dtype(np.array(self.values).dtype)
+
+    @property
+    def __array__(self): 
+	return self.values.__array__
+
+    @property
+    def __len__(self): 
+	return self.values.__len__
 
     def get_weights(self, weights=None):
 	""" return axis weights as a DimArray
@@ -102,76 +166,9 @@ class Axis(Metadata):
 
 	return DimArray(weights, ax)
 
-    def is_regular(self):
-	""" True if regular axis, meaning made of `int` or `float`, 
-	with regularly increasing values
-	"""
-	if self.regular is not None: # regular axis
-	    return self.regular
-
-	self.regular = is_regular(values)
-	return self.regular
-
-    def __getitem__(self, item):
-	""" access values elements & return an axis object
-	"""
-	values = self.values[item]
-
-	# if collapsed to scalar, just return it
-	if not isinstance(values, np.ndarray):
-	    return values
-
-	if isinstance(self.weights, np.ndarray):
-	    weights = self.weights[item]
-
-	else:
-	    weights = self.weights
-
-	return Axis(values, self.name, weights=weights, **self._metadata)
-
-    def __eq__(self, other):
-	return isinstance(other, Axis) and np.all(other.values == self.values)
-
-    def __repr__(self):
-	""" string representation for printing to screen
-	""" 
-	return "{} ({}): {} to {}".format(self.name, self.size, self.values[0], self.values[-1])
-
-    def __str__(self):
-	""" simple string representation
-	"""
-	#return "{}={}:{}".format(self.name, self.values[0], self.values[-1])
-	return "{}({})={}:{}".format(self.name, self.size, self.values[0], self.values[-1])
-
-#    @property
-#    def loc(self):
-#	""" Access the slicer to locate axis elements
-#	"""
-#	return Locator_axis(self.values)
-
-    def copy(self):
-	return copy.copy(self)
-
-    # a few array-like properties
-    @property
-    def size(self): 
-	return self.values.size
-
-    @property
-    def dtype(self): 
-	return _convert_dtype(np.array(self.values).dtype)
-
-    @property
-    def __array__(self): 
-	return self.values.__array__
-
-    @property
-    def __len__(self): 
-	return self.values.__len__
-
 
 class GroupedAxis(Axis):
-    """ an Axis that contains two axes flattened together
+    """ an Axis that contains several axes flattened together
     """
     _metadata_exclude = ("axes", "name")
 
@@ -183,7 +180,6 @@ class GroupedAxis(Axis):
 
 	self.axes = Axes(axes)
 	self.name = ",".join([ax.name for ax in self.axes])
-	self.regular = False
 
     @property
     def values(self):
@@ -251,7 +247,8 @@ class Axes(list):
 	"""
 	# if item is an Axis, just append it
 	assert isinstance(item, Axis), "can only append an Axis object !"
-	super(Axes, self).append(item)
+	#super(Axes, self).append(item)
+	list.append(self, item)
 
     @classmethod
     def from_tuples(cls, *tuples_name_values):
@@ -346,7 +343,7 @@ class Axes(list):
 	#if np.iterable(item):
 	#    return Axes([self[i] for i in item])
 
-	return super(Axes,self).__getitem__(item)
+	return list.__getitem__(self, item)
 	#return super(Axes,self)[item]
 
     def __repr__(self):
@@ -363,7 +360,7 @@ class Axes(list):
 	if type(dims[0]) is int:
 	    dims = [ax.name for ax in self]
 
-	super(Axes, self).sort(key=lambda x: dims.index(x.name))
+	list.sort(self, key=lambda x: dims.index(x.name))
 
     def copy(self):
 	return copy.copy(self)
@@ -378,6 +375,399 @@ class Axes(list):
 	dims = [ax.name for ax in self]
 
 	return dims.index(axis)
+
+    @property
+    def loc(self):
+	return LocatorAxes(self)
+
+#
+# Locate values on an axis
+#
+
+## indexing errors
+#class OutBoundError(KeyError):
+#    pass
+
+class LocatorAxis(object):
+    """ This class is the core of indexing in dimarray. 
+
+	loc = LocatorAxis(values, **opt)  
+
+    where `values` represent the axis values
+
+
+    A locator instance is generated from within the Axis object, via 
+    its properties loc (valued-based indexing) and iloc (integer-based)
+
+	axis.loc  ==> LocatorAxis(values)  
+
+    A locator is hashable is a similar way to a numpy array, but also 
+    callable to update parameters on-the-fly.
+
+    It returns an integer index or `list` of `int` or `slice` of `int` which 
+    is understood by numpy's arrays. In particular we have:
+
+	loc[ix] == np.index_exp[loc[ix]][0]
+
+    The "set" method can also be useful for chained calls. We have the general 
+    equivalence:
+
+	loc(idx, **kwargs) :: loc.set(**kwargs)[idx]
+
+    Examples:
+    ---------
+    >>> values = np.arange(1950.,2000.)
+    >>> values  # doctest: +ELLIPSIS
+    array([ 1950., ... 1999.])
+    >>> loc = LocatorAxis(values)   
+    >>> loc(1951) 
+    1
+    >>> loc([1960, 1980, 1999])		# a list if also fine 
+    [10, 30, 49]
+    >>> loc(slice(1960,1970))		# or a tuple/slice (latest index included)
+    slice(10, 21, None)
+    >>> loc[1960:1970] == _		# identical, as any of the commands above
+    True
+    >>> loc([1960, -99, 1999], raise_error=False)  # handles missing values
+    [10, None, 49]
+
+    Test equivalence with np.index_exp
+    >>> ix = 1951
+    >>> loc[ix] == np.index_exp[loc[ix]][0]
+    True
+    >>> ix = [1960, 1980, 1999]
+    >>> loc[ix] == np.index_exp[loc[ix]][0]
+    True
+    >>> ix = slice(1960,1970)
+    >>> loc[ix] == np.index_exp[loc[ix]][0]
+    True
+    >>> ix = 1951
+    >>> loc[ix] == np.index_exp[loc[ix]][0]
+    True
+    """
+    _check_params = False
+
+    def __init__(self, values, raise_error=True, position_index = False, keepdims = False, **opt):
+	"""
+	values	: string list or numpy array
+
+	raise_error = True # raise an error if value not found?
+	"""
+	self.values = values
+	self.raise_error = raise_error
+	self.position_index = position_index
+	self.keepdims = keepdims 
+
+	# check parameter values (default to False)
+	if self._check_params:
+	    for k in opt: 
+		if k not in self.__dict__:
+		    raise ValueError("unknown parameter: {} (allowed for {}: {}".format(k, self, self._params))
+
+	self.__dict__.update(opt) # update default options
+
+    #
+    # wrapper mode: __getitem__ and __call__
+    #
+    def __getitem__(self, ix):
+	""" 
+	"""
+	#
+	# check special cases
+	#
+	assert ix is not None, "index is None!"
+
+	if self.position_index:
+	    return ix
+
+	# ...nor with boolean indexing
+	elif type(ix) is np.ndarray and ix.dtype is np.dtype(bool):
+	    return ix
+
+	# make sure (1,) is understood as 1 just as numpy would
+	elif type(ix) is tuple:
+	    if len(ix) == 1:
+		ix = ix[0]
+	    else:
+		raise TypeError("index not understood: did you mean a `slice`?")
+
+	#
+	# look up corresponding numpy indices
+	#
+	# e.g. 45:56
+	if type(ix) is slice:
+	    res = self.slice(ix)
+
+	elif self._islist(ix):
+	    res = map(self.locate, ix)
+
+	else:
+	    res = self.locate(ix)
+
+	return res
+
+    def _islist(self, ix):
+	""" check if value is a list index (in the sense it will collapse an axis)
+	"""
+	return type(ix) in (list, np.ndarray)
+
+    def __call__(self, idx, **kwargs):
+	""" general wrapper method
+	
+	input:
+	    idx: int, list, slice, tuple (on integer index or axis values)
+	    **kwargs: see help on LocatorAxis
+
+	return:
+	    `int`, list of `int` or slice of `int`
+	
+	"""
+	#if method is None: method = self.method
+	if len(kwargs) > 0:
+	    self = self.set(**kwargs)
+
+	if self.keepdims and not self._islist(idx):
+	    idx = [idx]
+
+	return self[idx]
+
+    def set(self, **kwargs):
+	""" convenience function for chained call: update methods and return itself 
+	"""
+	#self.method = method
+	dict_ = self.__dict__.copy()
+	dict_.update(kwargs)
+	return self.__class__(**dict_)
+
+    #
+    # locate single values
+    #
+    def locate(self, val):
+	""" locate with try/except checks
+	"""
+	try:
+	    res = self._locate(val)
+
+	except KeyError, msg:
+	    if self.raise_error:
+		raise
+	    else:
+		res = None
+
+	return res
+
+    def _locate(self, val):
+	""" locate without try/except check
+	"""
+	raise NotImplementedError("to be subclassed")
+
+    #
+    # Access a slice
+    #
+    def slice(self, slice_, include_last=True):
+	""" Return a slice_ object
+
+	slice_	    : slice or tuple 
+	include_last: include last element 
+
+	Note bound checking is automatically done via "locate" mode
+	This is in contrast with slicing in numpy arrays.
+	"""
+	# Check type
+	if type(slice_) is not slice:
+	    raise TypeError("should be slice !")
+
+	start, stop, step = slice_.start, slice_.stop, slice_.step
+
+	if start is not None:
+	    start = self.locate(start)
+	    if start is None: raise ValueError("{} not found in: \n {}:\n ==> invalid slice".format(start, self.values))
+
+	if stop is not None:
+	    stop = self.locate(stop)
+	    if stop is None: raise ValueError("{} not found in: \n {}:\n ==> invalid slice".format(stop, self.values))
+	    
+	    #at this stage stop is an integer index on the axis, 
+	    # so make sure it is included in the slice if required
+	    if include_last:
+		stop += 1
+
+	# leave the step unchanged: it always means subsampling
+	return slice(start, stop, step)
+
+class ObjLocator(LocatorAxis):
+    """ locator axis for strings
+    """
+    def _locate(self, val):
+	""" find a string
+	"""
+	try:
+	    return self.values.tolist().index(val)
+	except ValueError, msg:
+	    raise KeyError(msg)
+
+class NumLocator(LocatorAxis):
+    """ Locator for axis of integers or floats to be treated as numbers (with tolerance parameters)
+    """
+    tol = 1e-8  # tolerance
+    modulo = None
+
+    def _locate(self, val):
+	""" 
+	"""
+	values = self.values
+
+	# modulo calculation, val = val +/- modulo*n, where n is an integer
+	# e.g. longitudes has modulo = 360
+	if self.modulo is not None:
+	    mi, ma = values.min(), values.max() # min, max
+
+	    if self.modulo and (val < mi or val > ma):
+		val = _adjust_modulo(val, self.modulo, mi)
+
+	# locate value in axis
+	loc = np.argmin(np.abs(val-values))
+
+	if np.abs(values[loc]-val) > self.tol:
+	    print "%f not found within tol %f (closest match %i:%f)" % (val, self.tol, loc, values[loc])
+	    raise KeyError("%f not found within tol %f (closest match %i:%f)" % (val, self.tol, loc, values[loc]))
+
+	return loc
+
+def _adjust_modulo(val, modulo, min=0):
+    oldval = val
+    mval = np.mod(val, modulo)
+    mmin = np.mod(min, modulo)
+    if mval < mmin:
+	mval += modulo
+    val = min + (mval - mmin)
+    assert np.mod(val-oldval, modulo) == 0, "pb modulo"
+    return val
+
+
+class RegularAxisLoc(NumLocator):
+    """ Locator for numerical axis with monotonically increasing, regularly spaced values
+    """
+    # TODO: implement specific methods 
+    pass
+    
+#    mode: different modes to handle out-of-mode situations
+#	"raise": raise error
+#	"clip" : returns 0 or -1 (first or last element)
+#	"wrap" : equivalent to modulo=values.ptp()
+#    tol: tolerance to find data 
+#    modulo: val = val +/- modulo*n, where n is an integer (default None)
+#
+#    output:
+#    -------
+#    loc: integer position of val on values
+#
+#    Examples:
+#    ---------
+#
+#    >>> values = [-4.,-2.,0.,2.,4.]
+#    >>> locate_num(values, 2.)
+#    3
+#    >>> locate_num(values, 6, modulo=8)
+#    1
+#    >>> locate_num(values, 6, mode="wrap")
+#    1
+#    >>> locate_num(values, 6, mode="clip")
+#    -1
+#    """
+#if mode != "raise":
+#    if regular is None:
+#	regular = is_regular(values)
+#    if not regular:
+#	warnings.warning("%s mode only valid for regular axes" % (mode))
+#	mode = "raise"
+#
+#if mode == "raise":
+#    raise OutBoundError("%f out of bounds ! (min: %f, max: %f)" % (val, mi, ma))
+#
+#elif mode == "clip":
+#    if val < mi: return 0
+#    else: return -1
+#
+#elif mode == "wrap":
+#    span = values[-1] - values[0]
+#    val = _adjust_modulo(val, modulo=span, min=mi)
+#    assert val >= mi and val <= ma, "pb wrap"
+#
+#else:
+#    raise ValueError("invalid parameter: mode="+repr(mode))
+
+def make_multiindex(ix, n):
+    # Just add slice(None) if some indices are missing
+    ix = np.index_exp[ix] # make it a tuple
+
+    for i in range(n-len(ix)):
+	ix += slice(None),
+
+    return ix
+
+#
+# Return a slice for an axis
+#
+class LocatorAxes(object):
+    """ return indices over multiple axes
+    """
+    def __init__(self, axes, **opt):
+	"""
+	"""
+	assert isinstance(axes, list) and isinstance(axes[0], Axis), "must be list of axes objects"
+	self.axes = axes
+	self.opt = opt
+
+    def set(self, **kwargs):
+	""" convenience function for chained call: update methods and return itself 
+	"""
+	return LocatorAxes(self.axes, **kwargs)
+
+    def __getitem__(self, indices):
+	"""
+	"""
+	# Construct the indices
+	indices = make_multiindex(indices, len(self.axes))  # make it the right size
+
+	numpy_indices = ()
+	for i, ix in enumerate(indices):
+	    loc = self.axes[i].loc(ix, **self.opt)
+	    assert np.isscalar(loc) \
+		    or type(loc) is slice \
+		    or type(loc) in (np.ndarray, list) and np.asarray(loc).dtype != np.dtype('O'), \
+		    "pb with LocatorAxis {} => {}".format(ix,loc)
+	    numpy_indices += loc,
+
+	return numpy_indices
+
+    def __call__(self, indices, axis=0, **opt):
+	"""
+	"""
+	# convert to nd tuple
+	if type(indices) is tuple or isinstance(indices, dict):
+	    assert axis in (None, 0), "cannot have axis > 0 for tuple (multi-dimensional) indexing"
+
+	if type(indices) is not tuple:
+	    if not isinstance(indices, dict):
+		kw = {self.axes[axis].name:indices}
+
+	    else:
+		assert axis in (None, 0), "cannot have axis > 0 for tuple (multi-dimensional) indexing"
+		kw = indices
+
+	    # dict: just convert to appropriately ordered tuple
+	    indices = ()
+	    for ax in self.axes:
+		if ax.name in kw:
+		    ix = kw[ax.name]
+		else:
+		    ix = slice(None)
+		indices += ix,
+
+	return LocatorAxes(self.axes, **self.opt)[indices]
+
+
 
 
 def test():

@@ -117,15 +117,9 @@ class DimArray(Metadata):
     # NOW MAIN BODY OF THE CLASS
     #
 
-    def __init__(self, values=None, axes=None, dims=None, copy=False, dtype=None, _indexing="exact", **kwargs):
+    def __init__(self, values=None, axes=None, dims=None, copy=False, dtype=None, _indexing_mode=None, **kwargs):
 	""" Initialization. See help on DimArray.
 	"""
-	#    _indexing	: str. This describes how array values
-	#		 are accessed, either based on integer index ("numpy") or 
-	#		 axis values ("exact"). "nearest" and "interp" are additional
-	#		 methods for float-values axes. Default is "exact". This parameter 
-	#		 is intended for internal purpose only
-
 	#
 	# array values
 	#
@@ -180,7 +174,7 @@ class DimArray(Metadata):
 	    axes = Axes.from_arrays(axes, dims=dims)
 
 	else:
-	    raise TypeError("axes, if provided, must be a list of: `Axis` or `tuple` or arrays")
+	    raise TypeError("axes, if provided, must be a list of: `Axis` or `tuple` or arrays. Got: {}".format(axes))
 
 	# if values not provided, create empty data (filled with NaNs if dtype is float, -999999 for int)
 	if values is None:
@@ -201,11 +195,8 @@ class DimArray(Metadata):
 	self.values = values
 	self.axes = axes
 
-	# options
-	methods = ("numpy", "exact","nearest","interp")
-	if _indexing not in methods: 
-	    raise ValueError("_indexing can only be {}, got ".format(methods)+repr(_indexing))
-	self._indexing = _indexing
+	## options
+	self._indexing_mode = _indexing_mode
 
 	#
 	# metadata (see Metadata type in metadata.py)
@@ -501,10 +492,12 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     #
     # Standard indexing takes axis values
     #
-    def __getitem__(self, item): 
+    def __getitem__(self, indices): 
 	""" get a slice (use take method)
 	"""
-	return self.take(item, mode=self._indexing)
+	#indexing_mode = self.axes.loc[indices]
+	#return self.take(indexing_mode, position_index=True)
+	return self.take(indices)
 
     def __setitem__(self, ix, val):
 	"""
@@ -518,15 +511,11 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     def ix(self):
 	""" integer index-access (toogle between integer-based and values-based indexing)
 	"""
-	# special case where user set self._indexing to "index"
-	if self._indexing == "numpy":
-	    _indexing = "exact"
-
-	# standard case:
+	if self._indexing_mode is None: 
+	    _indexing_mode = "numpy"
 	else:
-	    _indexing = "numpy"
-
-	return self._constructor(self.values, self.axes, _indexing=_indexing, **self._metadata)
+	    _indexing_mode = None
+	return self._constructor(self.values, self.axes, _indexing_mode=_indexing_mode , **self._metadata)
 
     #
     # TRANSFORMS
@@ -594,8 +583,8 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     #
     # REINDEXING 
     #
-    reindex_axis = _indexing.reindex_axis
-    reindex_like = _indexing.reindex_like
+    #reindex_axis = _indexing.reindex_axis
+    #reindex_like = _indexing.reindex_like
 
     #
     # BASIC OPERATTIONS

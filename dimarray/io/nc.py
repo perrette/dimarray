@@ -6,7 +6,7 @@ import numpy as np
 #from geo.data.index import to_slice, _slice3D
 
 from ..dataset import Dataset
-from ..da import DimArray, Axis, Axes, LocatorAxes
+from ..da import DimArray, Axis, Axes
 
 __all__ = ['read',"summary"]
 
@@ -119,14 +119,13 @@ def read_attributes(f, name=None):
     return attr
 
 
-def read_variable(f, v, indices=slice(None), axis=0, numpy_indexing=False, tol=1e-8):
+def read_variable(f, v, *args, **kwargs):
     """ read one variable from netCDF4 file
     Input:
 
 	f    	    : file name or file handle
 	v         : netCDF variable name to extract
-	indices	  : indices, as `int` or `list` or `slice` or `tuple` or `dict` 
-	numpy_indexing : indexing on integer axis instead of dimensions? (default False)
+	*args, **kwargs: passed to Axes.loc
 
 	Please see help on `Dimarray.take` for more information.
 
@@ -140,21 +139,11 @@ def read_variable(f, v, indices=slice(None), axis=0, numpy_indexing=False, tol=1
     f, close = check_file(f, mode='r')
 
     # Construct the indices
-    if numpy_indexing:
-	mode = "numpy"
-    else:
-	mode = "exact"
-
-    # no need to read full axes?
-    if 0: #mode == "numpy" and (type(indices) in (list, np.ndarray, tuple) or np.isscalar(indices)):
-	ix = np.index_exp[indices]
-	axes = read_dimensions(f, v, ix)
-    else:
-	axes = read_dimensions(f, v)
-	ix = LocatorAxes(axes, mode=mode, tol=tol)(indices, axis=axis)
-	newaxes = [ax[ix[i]] for i, ax in enumerate(axes)] # also get the appropriate axes
+    axes = read_dimensions(f, v)
+    ix = axes.loc(mode=mode, tol=tol)(indices, axis=axis)
 
     # slice the data and dimensions
+    newaxes = [ax[ix[i]] for i, ax in enumerate(axes)] # also get the appropriate axes
     newdata = f.variables[v][ix]
 
     # initialize a dimarray
@@ -163,7 +152,7 @@ def read_variable(f, v, indices=slice(None), axis=0, numpy_indexing=False, tol=1
 
     # Read attributes
     attr = read_attributes(f, v)
-    obj.__dict__.update(attr)
+    obj._metadata.update(attr)
 
     # close netCDF if file was given as file name
     if close:
