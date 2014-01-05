@@ -9,11 +9,15 @@ from axes import Axis, Axes, GroupedAxis, is_regular
 __all__ = ["take", "put", "LocatorAxis", "LocatorAxes", "reindex_axis", "reindex_like"]
 
 
+# indexing errors
+class OutBoundError(KeyError):
+    pass
+
 #
 # Locate elements on an axis of values, for different modes
 #
 def locate_num(values, val, tol=1e-8, mode="raise", modulo=None, regular=None):
-    """ locate values in a numeric ndarray
+    """ locate one value in a numeric ndarray
 
     parameters:
     -----------
@@ -42,7 +46,9 @@ def locate_num(values, val, tol=1e-8, mode="raise", modulo=None, regular=None):
     >>> locate_num(values, 6, modulo=8)
     1
     >>> locate_num(values, 6, mode="wrap")
-    4
+    1
+    >>> locate_num(values, 6, mode="clip")
+    -1
     """
     values = np.asarray(values)
     #assert values.dtype in (np.dtype(int), np.ndtype(float)), "numeric array only"
@@ -64,7 +70,7 @@ def locate_num(values, val, tol=1e-8, mode="raise", modulo=None, regular=None):
 		    mode = "raise"
 
 	    if mode == "raise":
-		raise ValueError("%f out of bounds ! (min: %f, max: %f)" % (val, mi, ma))
+		raise OutBoundError("%f out of bounds ! (min: %f, max: %f)" % (val, mi, ma))
 
 	    elif mode == "clip":
 		if val < mi: return 0
@@ -80,7 +86,8 @@ def locate_num(values, val, tol=1e-8, mode="raise", modulo=None, regular=None):
 
     loc = np.argmin(np.abs(val-values))
     if np.abs(values[loc]-val) > tol:
-	raise ValueError("%f not found within tol %f (closest match %i:%f)" % (val, tol, loc, values[loc]))
+	print "%f not found within tol %f (closest match %i:%f)" % (val, tol, loc, values[loc])
+	raise KeyError("%f not found within tol %f (closest match %i:%f)" % (val, tol, loc, values[loc]))
 
     return loc
 
@@ -185,6 +192,7 @@ class LocatorAxis(object):
 	# check special cases
 	#
 	assert ix is not None, "index is None!"
+
 	# do not do anything in numpy mode
 	if self.mode == "numpy":
 	    return ix
@@ -218,7 +226,6 @@ class LocatorAxis(object):
 	else:
 	    raise TypeError("unknown type: "+repr(ix))
 
-	assert res is not None
 	return res
 
     def __call__(self, idx, **kwargs):
@@ -233,10 +240,11 @@ class LocatorAxis(object):
 	
 	"""
 	#if method is None: method = self.method
-	loc = self.set(**kwargs)
+	if len(kwargs) > 0:
+	    self = self.set(**kwargs)
 	if self.keepdims and np.isscalar(idx):
 	    idx = [idx]
-	return loc[idx]
+	return self[idx]
 
     def set(self, **kwargs):
 	""" convenience function for chained call: update methods and return itself 
@@ -260,7 +268,7 @@ class LocatorAxis(object):
 	    else:
 		res = self._locate(val, mode)
 
-	except ValueError, msg:
+	except KeyError, msg:
 	    if self.repna:
 		res = self.na
 	    else:
@@ -382,7 +390,7 @@ class LocatorAxes(object):
 	indices = np.index_exp[indices]
 	numpy_indices = ()
 	for i, ix in enumerate(indices):
-	    loc = LocatorAxis(self.axes[i].values, **self.opt)[ix]
+	    loc = LocatorAxis(self.axes[i].values, **self.opt)(ix)
 	    assert np.isscalar(loc) \
 		    or type(loc) is slice \
 		    or type(loc) in (np.ndarray, list) and np.asarray(loc).dtype != np.dtype('O'), \
@@ -422,7 +430,7 @@ class LocatorAxes(object):
 	return LocatorAxes(self.axes, **self.opt)[indices]
 
 
-def take(self, ix=None, axis=0, mode=None, bounds="raise", repna=True, tol=1e-8, keepdims=False):
+def take(self, ix=None, axis=0, mode=None, repna=False, tol=1e-8, keepdims=False):
     """ Retrieve values from a DimArray
 
     input:
@@ -432,9 +440,6 @@ def take(self, ix=None, axis=0, mode=None, bounds="raise", repna=True, tol=1e-8,
 		     or `dict` (`axis name` : `indices`)
 	- axis     : int or str
 	- mode     : "numpy", "exact", "nearest", "interp" 
-	- bounds   : "raise", "clip", "wrap"
-		     "clip" and "wrap" only valid for regular axes
-		     analogous to numpy, see help on np.take
 	- repna    : replace missing values with NaNs?
 	- tol	   : tolerance when looking for floats, default 1e-8
 	- keepdims : keep singleton dimensions
@@ -478,7 +483,7 @@ def take(self, ix=None, axis=0, mode=None, bounds="raise", repna=True, tol=1e-8,
     1.0
     >>> v.take(('a',10))  # multi-dimensional, tuple
     1.0
-    >>> v.take({'x0':'a', 'x1':10})  # dict-like arguments
+    >>> v.take({'d0':'a', 'd1':10})  # dict-like arguments
     1.0
 
     Take a list of indices
@@ -520,7 +525,7 @@ def take(self, ix=None, axis=0, mode=None, bounds="raise", repna=True, tol=1e-8,
     >>> np.all(a == b)
     True
 
-    Increase tolerance for floats
+    tolerance parameter to achieve "nearest neighbour" search
     >>> v.take(12, axis="d1", tol=5)
     dimarray: 2 non-null elements (0 null)
     dimensions: 'd0'
@@ -528,7 +533,7 @@ def take(self, ix=None, axis=0, mode=None, bounds="raise", repna=True, tol=1e-8,
     array([ 1.,  4.])
 
     Replace missing values with NaNs
-    >>> v.take(([12,20], axis="d1", repna=True)
+    >>> v.take([12,20], axis="d1", repna=True)
     dimarray: 2 non-null elements (0 null)
     dimensions: 'd0'
     0 / d0 (2): a to b
@@ -788,103 +793,103 @@ def _take_interp_axis(obj, indices, axis):
 # Reindex axis
 #
 
-def reindex_axis(self, values, axis=0, method='exact', repna=True):
-    """ reindex an array along an axis
-
-    Input:
-	- values : array-like or Axis: new axis values
-	- axis   : axis number or name
-	- method : "exact" (default), "nearest", "interp" (see take)
-	- repna: if False, raise error when an axis value is not present 
-	               otherwise just replace with NaN. Defaulf is True
-
-    Output:
-	- DimArray
-
-    Examples:
-    ---------
-
-    Basic reindexing: fill missing values with NaN
-    >>> a = da.DimArray([1,2,3],('x0', [1,2,3]))
-    >>> b = da.DimArray([3,4],('x0',[1,3]))
-    >>> b.reindex_axis([1,2,3])
-    dimarray: 2 non-null elements (1 null)
-    dimensions: 'x0'
-    0 / x0 (3): 1 to 3
-    array([  3.,  nan,   4.])
-
-    "nearest" mode
-    >>> b.reindex_axis([0,1,2,3], method='nearest') # out-of-bound to NaN
-    dimarray: 3 non-null elements (1 null)
-    dimensions: 'x0'
-    0 / x0 (4): 0 to 3
-    array([ nan,   3.,   3.,   4.])
-
-    "interp" mode
-    >>> b.reindex_axis([0,1,2,3], method='interp') # out-of-bound to NaN
-    dimarray: 3 non-null elements (1 null)
-    dimensions: 'x0'
-    0 / x0 (4): 0 to 3
-    array([ nan,  3. ,  3.5,  4. ])
-    """
-    if isinstance(values, Axis):
-	newaxis = values
-	values = newaxis.values
-	axis = newaxis.name
-
-    axis_id = self.axes.get_idx(axis)
-    axis_nm = self.axes.get_idx(axis)
-    ax = self.axes[axis_id] # Axis object
-
-    # do nothing if axis is same or only None element
-    if ax.values[0] is None or np.all(values==ax.values):
-	return self
-
-    # indices along which to sample
-    if method in ("nearest","exact","interp", None):
-	newobj = self.take(values, axis=axis, mode=method, repna=repna)
-
-    else:
-	raise ValueError("invalid reindex_axis method: "+repr(method))
-
-    # new DimArray
-    # ...replace the axis
-    ax0 = Axis(values, ax.name)
-    ax1 = newobj.axes[axis_id]
-    
-    #assert np.all((np.isnan(ax0.values) | (ax0.values == ax1.values))), "pb when reindexing"
-
-    return newobj
-
-
-def _reindex_axes(self, axes, method=None, **kwargs):
-    """ reindex according to a list of axes
-    """
-    obj = self
-    newdims = [ax2.name for ax2 in axes]
-    for ax in self.axes:
-	if ax.name in newdims:
-	    newaxis = axes[ax.name].values
-	    obj = obj.reindex_axis(newaxis, axis=ax.name, method=method, **kwargs)
-
-    return obj
-
-def reindex_like(self, other, method=None, **kwargs):
-    """ reindex like another axis
-
-    note: only reindex axes which are present in other
-
-    Example:
-    --------
-
-    >>> b = da.DimArray([3,4],('x0',[1,3]))
-    >>> c = da.DimArray([[1,2,3], [1,2,3]],[('x1',["a","b"]),('x0',[1, 2, 3])])
-    >>> b.reindex_like(c, method='interp')
-    dimarray: 3 non-null elements (0 null)
-    dimensions: 'x0'
-    0 / x0 (3): 1 to 3
-    array([ 3. ,  3.5,  4. ])
-    """
-    return _reindex_axes(self, other.axes, method=method, **kwargs)
-
-
+## def reindex_axis(self, values, axis=0, method='exact', repna=True):
+##     """ reindex an array along an axis
+## 
+##     Input:
+## 	- values : array-like or Axis: new axis values
+## 	- axis   : axis number or name
+## 	- method : "exact" (default), "nearest", "interp" (see take)
+## 	- repna: if False, raise error when an axis value is not present 
+## 	               otherwise just replace with NaN. Defaulf is True
+## 
+##     Output:
+## 	- DimArray
+## 
+##     Examples:
+##     ---------
+## 
+##     Basic reindexing: fill missing values with NaN
+##     >>> a = da.DimArray([1,2,3],('x0', [1,2,3]))
+##     >>> b = da.DimArray([3,4],('x0',[1,3]))
+##     >>> b.reindex_axis([1,2,3])
+##     dimarray: 2 non-null elements (1 null)
+##     dimensions: 'x0'
+##     0 / x0 (3): 1 to 3
+##     array([  3.,  nan,   4.])
+## 
+##     "nearest" mode
+##     >>> b.reindex_axis([0,1,2,3], method='nearest') # out-of-bound to NaN
+##     dimarray: 3 non-null elements (1 null)
+##     dimensions: 'x0'
+##     0 / x0 (4): 0 to 3
+##     array([ nan,   3.,   3.,   4.])
+## 
+##     "interp" mode
+##     >>> b.reindex_axis([0,1,2,3], method='interp') # out-of-bound to NaN
+##     dimarray: 3 non-null elements (1 null)
+##     dimensions: 'x0'
+##     0 / x0 (4): 0 to 3
+##     array([ nan,  3. ,  3.5,  4. ])
+##     """
+##     if isinstance(values, Axis):
+## 	newaxis = values
+## 	values = newaxis.values
+## 	axis = newaxis.name
+## 
+##     axis_id = self.axes.get_idx(axis)
+##     axis_nm = self.axes.get_idx(axis)
+##     ax = self.axes[axis_id] # Axis object
+## 
+##     # do nothing if axis is same or only None element
+##     if ax.values[0] is None or np.all(values==ax.values):
+## 	return self
+## 
+##     # indices along which to sample
+##     if method in ("nearest","exact","interp", None):
+## 	newobj = self.take(values, axis=axis, mode=method, repna=repna)
+## 
+##     else:
+## 	raise ValueError("invalid reindex_axis method: "+repr(method))
+## 
+##     # new DimArray
+##     # ...replace the axis
+##     ax0 = Axis(values, ax.name)
+##     ax1 = newobj.axes[axis_id]
+##     
+##     #assert np.all((np.isnan(ax0.values) | (ax0.values == ax1.values))), "pb when reindexing"
+## 
+##     return newobj
+## 
+## 
+## def _reindex_axes(self, axes, method=None, **kwargs):
+##     """ reindex according to a list of axes
+##     """
+##     obj = self
+##     newdims = [ax2.name for ax2 in axes]
+##     for ax in self.axes:
+## 	if ax.name in newdims:
+## 	    newaxis = axes[ax.name].values
+## 	    obj = obj.reindex_axis(newaxis, axis=ax.name, method=method, **kwargs)
+## 
+##     return obj
+## 
+## def reindex_like(self, other, method=None, **kwargs):
+##     """ reindex like another axis
+## 
+##     note: only reindex axes which are present in other
+## 
+##     Example:
+##     --------
+## 
+##     >>> b = da.DimArray([3,4],('x0',[1,3]))
+##     >>> c = da.DimArray([[1,2,3], [1,2,3]],[('x1',["a","b"]),('x0',[1, 2, 3])])
+##     >>> b.reindex_like(c, method='interp')
+##     dimarray: 3 non-null elements (0 null)
+##     dimensions: 'x0'
+##     0 / x0 (3): 1 to 3
+##     array([ 3. ,  3.5,  4. ])
+##     """
+##     return _reindex_axes(self, other.axes, method=method, **kwargs)
+## 
+## 
