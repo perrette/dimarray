@@ -3,8 +3,8 @@ Operation and axis aligmnent
 """
 import numpy as np
 
-from ..lib.align import align_dims, align_axes
-from ..lib.tools import is_DimArray
+from align import align_dims, align_axes
+from tools import is_DimArray
 
 def operation(func, o1, o2, reindex=True, broadcast=True, constructor=None):
     """ operation on LaxArray objects

@@ -6,7 +6,7 @@ import numpy as np
 #from geo.data.index import to_slice, _slice3D
 
 from ..dataset import Dataset
-from ..core import DimArray, Axis, Axes
+from ..da import DimArray, Axis, Axes, LocatorAxes
 
 __all__ = ['read',"summary"]
 
@@ -41,7 +41,7 @@ def read(f, nms=None, *args, **kwargs):
 
     >>> data = read('test.nc')  # load full file
     >>> data = read('test.nc','dynsealevel') # only one variable
-    >>> data = read('test.nc','dynsealevel', time=(2000,2100), lon=(50,70), lat=42)  # load only a chunck of the data
+    >>> data = read('test.nc','dynsealevel', {"time":slice(2000,2100), "lon":slice(50,70), "lat":42})  # load only a chunck of the data
     """
     if nms is not None and type(nms) is str:
 	obj = read_variable(f, nms, *args, **kwargs)
@@ -79,7 +79,7 @@ def read(f, nms=None, *args, **kwargs):
 # 
 
 
-def read_dimensions(f, name=None, verbose=False):
+def read_dimensions(f, name=None, ix=slice(None), verbose=False):
     """ return an Axes object
 
     name, optional: variable name
@@ -97,7 +97,7 @@ def read_dimensions(f, name=None, verbose=False):
     # load axes
     axes = Axes()
     for k in dims:
-	axes.append(Axis(f.variables[k], k))
+	axes.append(Axis(f.variables[k][ix], k))
 
     if close: f.close()
 
@@ -119,14 +119,14 @@ def read_attributes(f, name=None):
     return attr
 
 
-def read_variable(f, v, ix=None, axis=None, method='exact'):
+def read_variable(f, v, indices=slice(None), axis=0, numpy_indexing=False, tol=1e-8):
     """ read one variable from netCDF4 file
     Input:
 
 	f    	    : file name or file handle
 	v         : netCDF variable name to extract
-	ix	  : indices, as `int` or `list` or `slice` or `tuple` or `dict` 
-	method    : "numpy", "exact" (default), "nearest" 
+	indices	  : indices, as `int` or `list` or `slice` or `tuple` or `dict` 
+	numpy_indexing : indexing on integer axis instead of dimensions? (default False)
 
 	Please see help on `Dimarray.take` for more information.
 
@@ -138,19 +138,24 @@ def read_variable(f, v, ix=None, axis=None, method='exact'):
     >>> data = read_variable('myfile.nc','dynsealevel', {"time":2100, "lon":slice(70,None)})  # load only a chunck of the data
     """
     f, close = check_file(f, mode='r')
-    axes = read_dimensions(f, v)
 
     # Construct the indices
-    ix = ()
-    for ax in axes:
-	if ax.name in kwaxes:
-	    ix += np.index_exp[ax.loc(kwaxes[ax.name], method=method)]
-	else:
-	    ix += np.index_exp[:] # slice(None),
+    if numpy_indexing:
+	mode = "numpy"
+    else:
+	mode = "exact"
+
+    # no need to read full axes?
+    if 0: #mode == "numpy" and (type(indices) in (list, np.ndarray, tuple) or np.isscalar(indices)):
+	ix = np.index_exp[indices]
+	axes = read_dimensions(f, v, ix)
+    else:
+	axes = read_dimensions(f, v)
+	ix = LocatorAxes(axes, mode=mode, tol=tol)(indices, axis=axis)
+	newaxes = [ax[ix[i]] for i, ax in enumerate(axes)] # also get the appropriate axes
 
     # slice the data and dimensions
     newdata = f.variables[v][ix]
-    newaxes = [ax[ix[i]] for i, ax in enumerate(axes)] # also get the appropriate axes
 
     # initialize a dimarray
     obj = DimArray(newdata, newaxes)
@@ -206,7 +211,7 @@ def write_obj(f, obj, *args, **kwargs):
     else:
 	write_dataset(f, obj, *args, **kwargs)
 
-def write_dataset(f, obj, mode='w'):
+def write_dataset(f, obj, mode='a'):
     """ write object to file
     """
     f, close = check_file(f, mode)
@@ -215,7 +220,7 @@ def write_dataset(f, obj, mode='w'):
 	write_variable(f, obj[nm], nm)
 
 
-def write_variable(f, obj, name=None, mode='w'):
+def write_variable(f, obj, name=None, mode='a'):
     """ save DimArray instance to file
 
     f	: file name or netCDF file handle
@@ -243,10 +248,13 @@ def write_variable(f, obj, name=None, mode='w'):
 
     # Create Variable
     if name not in f.variables:
-	f.createVariable(name, obj.dtype, obj.dims)
+	v = f.createVariable(name, obj.dtype, obj.dims)
+    else:
+	v = f.variables[name]
+	assert obj.dims == tuple(v.dimensions), "Dimension name do not correspond {}: {} attempted to write: {}".format(name, tuple(v.dimensions), obj.dims)
 
     # Write Variable
-    f.variables[name][:] = obj.values
+    v[:] = obj.values
 
     # add attributes if any
     for k in obj.ncattrs():

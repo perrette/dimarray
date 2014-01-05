@@ -219,7 +219,7 @@ class DimArray(Metadata):
 	    msg = """\
 shape inferred from axes: {}
 shape inferred from data: {}
-mismatch between values and axes""".format(inferred, self.values,shape)
+mismatch between values and axes""".format(inferred, self.values.shape)
 	    raise Exception(msg)
 
 	# If a general ordering relationship of the class is assumed,
@@ -464,11 +464,11 @@ mismatch between values and axes""".format(inferred, self.values,shape)
 	# Now create a dimarray and make it full size
 	# ...already full-size
 	if weights.shape == self.shape:
-	    weights = DimArray(weights, *self.axes)
+	    weights = DimArray(weights, self.axes)
 
 	# ...need to be expanded
 	elif weights.shape == tuple(ax.size for ax in axes):
-	    weights = DimArray(weights, *axes).expand(self.dims)
+	    weights = DimArray(weights, axes).expand(self.dims)
 
 	else:
 	    try:
@@ -476,7 +476,7 @@ mismatch between values and axes""".format(inferred, self.values,shape)
 
 	    except:
 		raise ValueError("weight dimensions are not conform")
-	    weights = DimArray(weights, *self.axes)
+	    weights = DimArray(weights, self.axes)
 
 	#else:
 	#    raise ValueError("weight dimensions not conform")

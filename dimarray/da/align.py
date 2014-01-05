@@ -2,7 +2,7 @@
 """
 import numpy as np
 import itertools
-from ..core.axes import Axes, Axis
+from axes import Axes, Axis
 
 def broadcast_arrays(*objects):
     """ Analogous to numpy.broadcast_arrays

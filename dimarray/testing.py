@@ -65,20 +65,20 @@ def test_all(**kwargs):
     """
     """
     if 1:
-	import dimarray.core.metadata as m
+	import dimarray.da.metadata as m
 	testmod(m, **kwargs)
 
-	import dimarray.core.core as m
+	import dimarray.da.core as m
 	testmod(m, **kwargs)
 
-	import dimarray.core.axes as m
+	import dimarray.da.axes as m
 	testmod(m, **kwargs)
 
-	import dimarray.core._indexing as m
+	import dimarray.da._indexing as m
 	testmod(m, **kwargs)
 
-	import dimarray.core._transform as m
+	import dimarray.da._transform as m
 	testmod(m, **kwargs)
 
-    import dimarray.core._reshape as m
+    import dimarray.da._reshape as m
     testmod(m, **kwargs)

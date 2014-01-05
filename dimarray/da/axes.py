@@ -2,7 +2,6 @@ import numpy as np
 from collections import OrderedDict
 import string
 import copy
-import functools
 
 from metadata import Metadata
 

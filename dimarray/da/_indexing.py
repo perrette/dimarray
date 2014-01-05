@@ -1,11 +1,12 @@
 """ Module to deal with indexing
 """
 import numpy as np
+import functools
 import copy 
 
 from axes import Axis, Axes, GroupedAxis, is_regular
 
-__all__ = ["take", "put", "Locator_axis", "Locator_axes", "reindex_axis", "reindex_like"]
+__all__ = ["take", "put", "LocatorAxis", "LocatorAxes", "reindex_axis", "reindex_like"]
 
 
 #
@@ -45,10 +46,10 @@ def locate_num(values, val, tol=1e-8, mode="raise", modulo=None, regular=None):
     """
     values = np.asarray(values)
     #assert values.dtype in (np.dtype(int), np.ndtype(float)), "numeric array only"
-    mi, ma = values.ptp() # min, max
+    mi, ma = values.min(), values.max() # min, max
 
     # modulo calculation, val = val +/- modulo*n, where n is an integer
-    if modulo and val < mi or val > ma:
+    if modulo and (val < mi or val > ma):
 	val = _adjust_modulo(val, modulo, mi)
 
     if mode:
@@ -62,7 +63,7 @@ def locate_num(values, val, tol=1e-8, mode="raise", modulo=None, regular=None):
 		    warnings.warning("%s mode only valid for regular axes" % (mode))
 		    mode = "raise"
 
-	    if mode == "raise"
+	    if mode == "raise":
 		raise ValueError("%f out of bounds ! (min: %f, max: %f)" % (val, mi, ma))
 
 	    elif mode == "clip":
@@ -90,7 +91,7 @@ def _adjust_modulo(val, modulo, min=0):
     mmin = np.mod(min, modulo)
     if mval < mmin:
 	mval += modulo
-    val = min + (mval - mmi)
+    val = min + (mval - mmin)
     assert np.mod(val-oldval, modulo) == 0, "pb modulo"
     return val
 
@@ -98,10 +99,10 @@ def _adjust_modulo(val, modulo, min=0):
 #
 # Return a slice for an axis
 #
-class Locator_axis(Config):
+class LocatorAxis(object):
     """ This class is the core of indexing in dimarray. 
 
-	loc = Locator_axis(values, **opt)  
+	loc = LocatorAxis(values, **opt)  
 
     where `values` represent the axis values
 
@@ -109,7 +110,7 @@ class Locator_axis(Config):
     A locator instance is generated from within the Axis object, via 
     its properties loc (valued-based indexing) and iloc (integer-based)
 
-	axis.loc  ==> Locator_axis(values)  
+	axis.loc  ==> LocatorAxis(values)  
 
     A locator is hashable is a similar way to a numpy array, but also 
     callable to update parameters on-the-fly.
@@ -129,14 +130,14 @@ class Locator_axis(Config):
     >>> values = np.arange(1950.,2000.)
     >>> values  # doctest: +ELLIPSIS
     array([ 1950., ... 1999.])
-    >>> loc = Locator_axis(values)   
+    >>> loc = LocatorAxis(values)   
     >>> loc(1951) 
     1
     >>> loc(1951.4, mode="nearest")   # also works in nearest approx
     1
     >>> loc([1960, 1980, 1999])		# a list if also fine 
     [10, 30, 49]
-    >>> loc((1960,1970))		# or a tuple/slice (latest index included)
+    >>> loc(slice(1960,1970))		# or a tuple/slice (latest index included)
     slice(10, 21, None)
     >>> loc[1960:1970] == _		# identical, as any of the commands above
     True
@@ -159,7 +160,7 @@ class Locator_axis(Config):
     tol = 1e-8	     # tolerance to find float
     bounds = "raise" # out-of-bound errors
     repna = False # replace by NaN instead of raising an Error ?
-    nan = np.nan # replacement value if not raise_error
+    na = np.nan # replacement value if repna
     modulo = None # cyclic axis with period `modulo`
     keepdims = False # if True, always return an array (and no scalar)
     def __init__(self, values, **opt):
@@ -170,7 +171,8 @@ class Locator_axis(Config):
 	see help on locate_num
 	"""
 	self.values = values
-	for o in opt: if o not in self: raise ValueError("unknown option {}".format(o))
+	for o in opt: 
+	    if not hasattr(self, o): raise ValueError("unknown option {}".format(o))
 	self.__dict__.update(opt) # update default options
 
     #
@@ -182,8 +184,9 @@ class Locator_axis(Config):
 	#
 	# check special cases
 	#
+	assert ix is not None, "index is None!"
 	# do not do anything in numpy mode
-	if self.numpy:
+	if self.mode == "numpy":
 	    return ix
 
 	# ...nor with boolean indexing
@@ -195,32 +198,35 @@ class Locator_axis(Config):
 	    if len(ix) == 1:
 		ix = ix[0]
 	    else:
-		raise ValueError("dimension mismatch")
+		raise ValueError("dimension mismatch: (or did you mean a `slice`?)")
 
 	#
 	# look up corresponding numpy indices
 	#
 	# e.g. 45:56
 	if type(ix) is slice:
-	    return self.slice(ix)
+	    res = self.slice(ix)
 
 	# int, float, string
 	elif np.isscalar(ix):
-	    return self.locate(ix)
+	    res = self.locate(ix)
 
 	# list, array
 	elif np.iterable(ix):
-	    return self.take(ix)
+	    res = self.locate_list(ix)
 
 	else:
 	    raise TypeError("unknown type: "+repr(ix))
+
+	assert res is not None
+	return res
 
     def __call__(self, idx, **kwargs):
 	""" general wrapper method
 	
 	input:
 	    idx: int, list, slice, tuple (on integer index or axis values)
-	    **kwargs: see help on Locator_axis
+	    **kwargs: see help on LocatorAxis
 
 	return:
 	    `int`, list of `int` or slice of `int`
@@ -236,7 +242,7 @@ class Locator_axis(Config):
 	""" convenience function for chained call: update methods and return itself 
 	"""
 	#self.method = method
-	return Locator_axis(self.values, **kwargs)
+	return LocatorAxis(self.values, **kwargs)
 
     #
     # wrapper for single value
@@ -245,6 +251,7 @@ class Locator_axis(Config):
 	""" locate with try/except checks
 	"""
 	if mode is None: mode = self.mode
+	assert type(val) is not slice, "pb somewhere !"
 
 	try:
 	    # interp mode, return fractional index
@@ -255,7 +262,7 @@ class Locator_axis(Config):
 
 	except ValueError, msg:
 	    if self.repna:
-		res = self.nan
+		res = self.na
 	    else:
 		raise
 
@@ -331,13 +338,18 @@ class Locator_axis(Config):
 	""" return fractional index for interpolation
 	"""
 	assert is_regular(self.values), "interp mode only makes sense for regular axes !"
-	# index of nearest neighbour
+
+	# to handle nan data, otherwise pb with values[i]
 	if np.iterable(val):
-	    i = self.locate_list(val, mode="nearest")
-	else:
-	    i = self.locate(val, mode="nearest")
-	# and corresponding value
+	    return [self.interp(v) for v in val]
+
+	# index of nearest neighbour
+	i = self.locate(val, mode="nearest")
+
+	if np.isnan(i): return np.nan
+
 	xi = self.values[i]
+
 	# axis step
 	dx = float(self.values[1] - self.values[0])
 	return i + (val-xi)/dx
@@ -348,20 +360,20 @@ class Locator_axis(Config):
 	return np.size(self.values)
 
 
-class Locator_axes(object):
+class LocatorAxes(object):
     """ return indices over multiple axes
     """
     def __init__(self, axes, **opt):
 	"""
 	"""
-	assert type(axes) is list and isinstance(axes[0], Axis), "must be list of axes objects"
+	assert isinstance(axes, list) and isinstance(axes[0], Axis), "must be list of axes objects"
 	self.axes = axes
 	self.opt = opt
 
     def set(self, **kwargs):
 	""" convenience function for chained call: update methods and return itself 
 	"""
-	return Locator_axes(self.axes, **kwargs)
+	return LocatorAxes(self.axes, **kwargs)
 
     def __getitem__(self, indices):
 	"""
@@ -370,22 +382,35 @@ class Locator_axes(object):
 	indices = np.index_exp[indices]
 	numpy_indices = ()
 	for i, ix in enumerate(indices):
-	    numpy_indices += Locator_axis(self.axes[i].values, **self.opt)[ix]
+	    loc = LocatorAxis(self.axes[i].values, **self.opt)[ix]
+	    assert np.isscalar(loc) \
+		    or type(loc) is slice \
+		    or type(loc) in (np.ndarray, list) and np.asarray(loc).dtype != np.dtype('O'), \
+		    "pb with LocatorAxis {} => {}".format(ix,loc)
+	    numpy_indices += loc,
 
 	# Just add slice(None) if some indices are missing
-	for i in range(len(axes) - len(numpy_indices)):
-	    numpy_indices += slice(None)
+	for i in range(len(self.axes) - len(numpy_indices)):
+	    numpy_indices += slice(None),
 
 	return numpy_indices
 
-    def __call__(self, indices=None, axis=0, **opt):
+    def __call__(self, indices, axis=0, **opt):
 	"""
 	"""
-	self = self.set(**opt)
+	# convert to nd tuple
+	if type(indices) is tuple or isinstance(indices, dict):
+	    assert axis in (None, 0), "cannot have axis > 0 for tuple (multi-dimensional) indexing"
 
-	# dict: just convert to appropriately ordered tuple
-	if isinstance(indices, dict):
-	    kw = indices
+	if type(indices) is not tuple:
+	    if not isinstance(indices, dict):
+		kw = {self.axes[axis].name:indices}
+
+	    else:
+		assert axis in (None, 0), "cannot have axis > 0 for tuple (multi-dimensional) indexing"
+		kw = indices
+
+	    # dict: just convert to appropriately ordered tuple
 	    indices = ()
 	    for ax in self.axes:
 		if ax.name in kw:
@@ -394,12 +419,7 @@ class Locator_axes(object):
 		    ix = slice(None)
 		indices += ix,
 
-	if type(indices) is tuple:
-	    assert axis in (None, 0), "cannot have axis > 0 for tuple (multi-dimensional) indexing"
-	    return self[indices]
-
-	# along-axis slicing
-	return Locator_axis(self.axes[axis].values, **self.opt)[indices]
+	return LocatorAxes(self.axes, **self.opt)[indices]
 
 
 def take(self, ix=None, axis=0, mode=None, bounds="raise", repna=True, tol=1e-8, keepdims=False):
@@ -506,19 +526,21 @@ def take(self, ix=None, axis=0, mode=None, bounds="raise", repna=True, tol=1e-8,
     dimensions: 'd0'
     0 / d0 (2): a to b
     array([ 1.,  4.])
+
+    Replace missing values with NaNs
+    >>> v.take(([12,20], axis="d1", repna=True)
+    dimarray: 2 non-null elements (0 null)
+    dimensions: 'd0'
+    0 / d0 (2): a to b
+    array([[nan,  2.],
+	   [nan,  5.]])
     """
-#
-#    Replace missing values with NaNs
-#    >>> v.take(([12,20], axis="d1", mode="flag")
-#    dimarray: 2 non-null elements (0 null)
-#    dimensions: 'd0'
-#    0 / d0 (2): a to b
-#    array([[nan,  2.],
-#	   [nan,  5.]])
     if mode is None:
 	mode = self._indexing
 
-    return _take_check(self, ix=ix, axis=axis, mode=mode, keepdims=keepdims, raise_error=raise_error, flag=flag)
+    result = _take_check(self, indices=ix, axis=axis, mode=mode, keepdims=keepdims, repna=repna)
+    assert result is not None
+    return result
 
 def put(obj, val, ix, axis=0, mode=None):
     """ Put new values into DimArray (inplace)
@@ -542,14 +564,14 @@ def put(obj, val, ix, axis=0, mode=None):
 	mode = obj._indexing
 
     # locate indices
-    multi_index = Locator_axes(obj.axes, mode=mode)(ix, axis=axis)
+    multi_index = LocatorAxes(obj.axes, mode=mode)(ix, axis=axis)
     obj.values[multi_index] = val 
 
-def _take(obj, indices, **kwargs):
+def _take_numpy_nd(obj, indices_numpy, **kwargs):
     """ take indices from one of the standard modes ("numpy", "exact", "nearest")
     """
     # Convert to a tuple numpy indices matching the shape of the DimArray
-    indices_numpy = Locator_axes(indices, **kwargs)
+    #indices_numpy = LocatorAxes(obj.axes, **kwargs)(indices, axis=axis)
 
     # New values
     newval = obj.values[indices_numpy] # new numpy values
@@ -557,7 +579,7 @@ def _take(obj, indices, **kwargs):
     # New axes
     newaxes = Axes()
     stamps = []
-    for i, ix in enumerate(indices_numpy)
+    for i, ix in enumerate(indices_numpy):
 	ax = obj.axes[i]
 	newaxis = ax[ix]
 	if np.isscalar(newaxis):
@@ -568,7 +590,7 @@ def _take(obj, indices, **kwargs):
 
     # If result is a numpy array, make it a DimArray
     if isinstance(newval, np.ndarray):
-	result = obj._constructor(newval, axes, **obj._metadata)
+	result = obj._constructor(newval, newaxes, **obj._metadata)
 
 	# append stamp
 	if stamp: result._metadata_stamp(stamp)
@@ -580,32 +602,33 @@ def _take(obj, indices, **kwargs):
     return result
 
 
-def _take_check(obj, indices, mode="exact", **kwargs):
+def _take_check(obj, indices, axis=0, mode="exact", **kwargs):
     """ same as take but also nans indices
     """
     # Convert to a tuple numpy indices matching the shape of the DimArray
-    indices_numpy = Locator_axes(obj.axes, **kwargs)(indices)
+    indices_numpy = LocatorAxes(obj.axes, mode=mode, **kwargs)(indices, axis=axis)
 
-    # Filter bad from good indices: this would happen only for raise_error == False
-    indices_numpy, bad_ix = _get_bad_indices(indices_numpy)
+    # Filter bad from good indices: this would happen only for repna=True
+    indices_numpy, bad_ix = _get_bad_indices(indices_numpy, obj.dims, mode)
 
     # Pick-up values 
     if mode == "interp":
 	result = _take_interp(obj, indices_numpy)
-	#    # fix type
-	#    ix = np.asarray(ix) # make sure ix is an array
-	#    if not np.isscalar(result):
-	#	result.axes[axis].values = np.array(result.axes[axis].values, dtype=ix.dtype)
 
     else:
-	result = _take(obj, indices_numpy, mode="numpy")
+	result = _take_numpy_nd(obj, indices_numpy, mode="numpy")
 
     if bad_ix is not None:
 	result = _fill_bad_indices(result, bad_ix, indices)
 
+#    # fix type in interp mode
+#    ix = np.asarray(ix) # make sure ix is an array
+#    if not np.isscalar(result):
+#	result.axes[axis].values = np.array(result.axes[axis].values, dtype=ix.dtype)
+
     return result
 
-def _get_bad_indices(indices_numpy, mode):
+def _get_bad_indices(indices_numpy, dims, mode):
     """ replace NaN indices by zeros
 
     input:
@@ -615,48 +638,117 @@ def _get_bad_indices(indices_numpy, mode):
 	bad_ix: `dict` of `bool` 1-D arrays to indicate the locations of bad indices
     """
     bads = {}
-    indices_nanfree = copy.copy(indices_numpy)
+    indices_nanfree = list(indices_numpy)
     for i, ind in enumerate(indices_numpy):
 	if type(ind) is slice: 
 	    continue
 	bad = np.isnan(ind)
-	if np.size(bad) > 0:
+	if np.any(bad) and np.size(bad) > 0:
 	    ind = np.where(bad,0,ind)
 	    if not mode == "interp":
 		ind = np.array(ind, dtype=int) # NaNs produced conversion to float
-	    bads[i] = bad # record bad indices
+	    bads[dims[i]] = bad # record bad indices
 	indices_nanfree[i] = ind
 
-    return indices_nanfree, bads
+    return tuple(indices_nanfree), bads
 
-def _fill_bad_indices(result, bad_ix, indices, flag=np.nan):
+def _fill_bad_indices(result, bad_ix, indices_nd, na=np.nan):
     """ fill NaN back in
 
     input: 
 	result: DimArray
 	bad_ix: `dict` of `bool` 1-D arrays to indicate the locations of bad indices
 	indices: originally required indices (n-d)
-	flag: replacement values for bad indices (default NaNs)
+	na: replacement values for bad indices (default NaNs)
 
     output:
-	result: corrected DimArray with bad values replaced with `flag` 
+	result: corrected DimArray with bad values replaced with `na` 
     """
-    for k in bad_ix:
-	bad = bad_ix[k] # `bool` indices of bad numbers
+    indices_nd = np.index_exp[indices_nd]
+    for nm in bad_ix:
+	bad = bad_ix[nm] # `bool` indices of bad numbers
+	pos = result.dims.index(nm) # index of the new axis position
+	indices = np.asarray(indices_nd[pos]) # 1-D index along that axis
 
 	# replace with originally asked-for values
-	result.axes[k].values[bad] = indices[bad] 
+	result.axes[nm].values[bad] = indices[bad] 
+	result.axes[nm].values = np.asarray(result.axes[nm].values, dtype=indices.dtype)
 
 	# replace array values with NaNs 
-	pos = result.dims.index(k) # index of the new axis position
-	ix = pos*(slice(None),) + bad, # multi-index of bad positions
+	ix = pos*(slice(None),) + (bad,) # multi-index of bad positions
 
 	# convert to float 
-	if result.dtype is not np.dtype(flag):
-	    result.values = np.asarray(result.values, dtype=np.dtype(flag))
-	result.values[ix] = flag
-	#result.put(flag, bad_ix[k], axis=k)
+	dtype = np.asarray(na).dtype
+	if result.dtype is not dtype:
+	    result.values = np.asarray(result.values, dtype=dtype)
+	result.values[ix] = na
+	#result.put(na, bad_ix[k], axis=k)
 
+    return result
+
+
+def _take_interp(obj, indices):
+    indices = np.index_exp[indices]
+    kw = {obj.axes[i].name:ix for i, ix in enumerate(indices)}
+    for k in kw:
+	if type(kw[k]) is slice:
+	    obj = take(obj, kw[k], k, mode="numpy")
+	else:
+	    obj = _take_interp_axis(obj, kw[k], k)
+    return obj
+
+def _take_interp_axis(obj, indices, axis):
+    """ Take a number or an integer as from an axis
+    """
+    assert type(indices) is not slice, "interp only work with integer and list indexing"
+
+    # return a "fractional" index
+    ax = obj.axes[axis]
+
+    # position indices of nearest neighbors
+    # ...last element, 
+    i0 = np.array(indices, dtype=int)
+    i1 = i0+1
+
+    # make sure we are not beyond 
+    over = i1 == ax.size
+    if i1.size == 1:
+	if over:
+	    i0 -= 1
+	    i1 -= 1
+    else:
+	i0[over] = ax.size-2
+	i1[over] = ax.size-1
+
+    # weight for interpolation
+    w1 = indices-i0 
+
+    # sample nearest neighbors
+    v0 = take(obj, i0, axis=axis, mode="numpy")
+    v1 = take(obj, i1, axis=axis, mode="numpy")
+
+    # result as weighted sum
+    if not hasattr(v0, 'values'): # scalar
+	return v0*(1-w1) + v1*w1
+
+#    values = 0
+#    for i, w in enumerate(w1):
+#	i_nd = (slice(None),)*axis + (i,)
+#	values += v0.values[i_nd]*(1-w) + v1.values[i_nd]*w
+    values = v0.values*(1-w1) + v1.values*w1
+
+    axes = []
+    for d in v0.dims:
+
+	# only for list indexing or if keepdims is True
+	if d == ax.name:
+	    axis = Axis(v0.axes[d].values*(1-w1) + v1.axes[d].values*w1, d)
+
+	# other dimensions not affected by slicing
+	else:
+	    axis = obj.axes[d]
+	axes.append(axis)
+    return obj._constructor(values, axes, **obj._metadata)
 
 
 #    #
@@ -795,60 +887,4 @@ def reindex_like(self, other, method=None, **kwargs):
     """
     return _reindex_axes(self, other.axes, method=method, **kwargs)
 
-
-#
-# 1-D interpolation
-#
-def _take_interp_axis(obj, indices, axis):
-    """ Take a number or an integer as from an axis
-    """
-    assert type(indices) is not slice, "interp only work with integer and list indexing"
-
-    # return a "fractional" index
-    ax = obj.axes[axis]
-
-    # position indices of nearest neighbors
-    # ...last element, 
-    i0 = np.array(indices, dtype=int)
-    i1 = i0+1
-
-    # make sure we are not beyond 
-    over = i1 == ax.size
-    if i1.size == 1:
-	if over:
-	    i0 -= 1
-	    i1 -= 1
-    else:
-	i0[over] = ax.size-2
-	i1[over] = ax.size-1
-
-    # weight for interpolation
-    w1 = indices-i0 
-
-    # sample nearest neighbors
-    v0 = take(obj, i0, axis=axis, mode="numpy")
-    v1 = take(obj, i1, axis=axis, mode="numpy")
-
-    # result as weighted sum
-    if not hasattr(v0, 'values'): # scalar
-	return v0*(1-w1) + v1*w1
-
-#    values = 0
-#    for i, w in enumerate(w1):
-#	i_nd = (slice(None),)*axis + (i,)
-#	values += v0.values[i_nd]*(1-w) + v1.values[i_nd]*w
-    values = v0.values*(1-w1) + v1.values*w1
-
-    axes = []
-    for d in v0.dims:
-
-	# only for list indexing or if keepdims is True
-	if d == ax.name:
-	    axis = Axis(v0.axes[d].values*(1-w1) + v1.axes[d].values*w1, d)
-
-	# other dimensions not affected by slicing
-	else:
-	    axis = obj.axes[d]
-	axes.append(axis)
-    return obj._constructor(values, axes, **obj._metadata)
 
