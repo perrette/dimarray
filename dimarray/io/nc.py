@@ -5,8 +5,8 @@ import netCDF4 as nc
 import numpy as np
 #from geo.data.index import to_slice, _slice3D
 
-from ..dataset import Dataset
-from ..da import DimArray, Axis, Axes
+from dimarray.dataset import Dataset
+from dimarray.core import DimArray, Axis, Axes
 
 __all__ = ['read',"summary"]
 

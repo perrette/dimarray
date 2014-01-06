@@ -1,7 +1,7 @@
 """ Additional transformations
 """
 import numpy as np
-from ..da import Axes, Axis
+from dimarray.core import Axes, Axis
 
 #
 # recursively apply a DimArray ==> DimArray transform
