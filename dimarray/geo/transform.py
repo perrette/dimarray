@@ -9,98 +9,47 @@ Requirements for a transformation:
 
 """
 # used in the spatial transforms
-from geotools import region
-from geotools import grid
+from dimarray import apply_recursive, DimArray
+from geoarray import GeoArray
+
+from decorators import dimarray_recursive
+
+import region
+import grid
 import numpy as np
 
 # import descriptors to add methods to Dimarray
-from descriptors import MethodDesc, NumpyDesc, RecDesc, search_fun
-
-from lazyapi import predef, dimarray
+#from descriptors import MethodDesc, NumpyDesc, RecDesc, search_fun
 
 #
 #   Numpy transformation
 #
-
-def numpy_transforms(cls, nan=True):
-    """ Class decorator: add numpy transformations as a descriptor
-
-    Transformations below are included (with automatic search):
-
-    numpy_transforms = [ "all", "alltrue", "amax", "amin", "any", "compress",
-     "cumprod", "cumproduct", "cumsum", "max", "mean", "median", "min",
-     "percentile", "prod", "product", "ptp", "sometrue", "std", "sum", "take", "var"]
-    """
-    exclude = ["take","amin","amax"]
-    numpy_transforms = [f.__name__ for f in search_fun(has=['a','axis','out'], glob=vars(np)) if f.__name__ not in exclude]
-    for nm in numpy_transforms:
-
-	# replace with nan-form if applicable
-	nm2 = nm
-	if nan and hasattr(np, "nan"+nm):
-	    nm2 = "nan"+nm
-
-	# Do not overwrite an existing method !!
-	if hasattr(cls, nm):
-	    print "method already defined, skip:", nm
-	    continue
-
-	setattr(cls, nm, NumpyDesc(nm2))
-    return cls
-
-#def pandas_transforms(cls):
-#    """ add pandas transformation (optional)
-#    """
-#    import pandas as pd
-#    numpy_transforms = search_fun(has=['a','axis','out'], glob=vars(pd))
-#    for 
-
-def regional_transforms(cls):
-    """ Class decorator: add regional transformations
-    """ 
-    # get regional transformations
-    transforms = search_fun(has=['values'], glob=globals())
-
-    # Now add them to the main Dimarray class
-    for f in transforms:
-	#print "Add",f.__name__
-	#cls.__dict__[f.__name__] = RecDesc(f)
-	setattr(cls, f.__name__, RecDesc(f))
-
-    return cls
-
-def extra_transforms(cls):
-    """ Class decorator: add a few additional transform method to the class (wrt, between, etc...)
-    """
-    # other transformation whose first argument is object
-    transforms = search_fun(has=['obj'], glob=globals())
-    #transforms = ["wrt","between","time_mean"]
-
-    # Now add them to the main Dimarray class
-    for f in transforms:
-	#print "Add",f.__name__
-	#cls.__dict__[f.__name__] = MethodDesc(f)
-	setattr(cls, f.__name__, MethodDesc(f))
-
-    return cls
-
 #
 # Regional transforms
 #
-
+@dimarray_recursive
 def regional_mean(lon, lat, values, myreg=None):
     """ Make a regional mean and get a time series
+
+    Examples:
+    ---------
+    >>> lon = [0, 50., 100.]
+    >>> lat = [0, 50.]
+    >>> obj = GeoArray([[1, 2, 4],[ 4, 5, 6]], lon=lon, lat=lat)
+    >>> regional_mean(obj)
     """
     myreg = region.check(myreg)
-    val = myreg.mean(lon, lat, values)
-    return predef('Scalar',val)
+    val = myreg.mean(lon,lat, values)
+    return GeoArray(val)
 
+@dimarray_recursive
 def interpolate1x1(lon, lat, values, lon0=0.):
     """ Make a regional mean and get a time series
     """
     newlon, newlat, newvalues = grid.interpolate_1x1(lon, lat, values, lon0=lon0)
-    return predef('Map',newvalues, newlat, newlon)
+    return GeoArray(newvalues, lat=newlat, lon=newlon)
 
+@dimarray_recursive
 def sample_line(lon, lat, values):
     """ regional sample along a region
     """
@@ -111,8 +60,9 @@ def sample_line(lon, lat, values):
 	data[k] = values[i, j]
 
     data = np.array(data) # make it an array
-    return predef('Line',data, path)
+    return GeoArray(newvalues, ('x',path))
 
+@dimarray_recursive
 def extract_box(lon, lat, values, myreg=None):
     """ extract a subregion
     """
@@ -126,35 +76,45 @@ def extract_box(lon, lat, values, myreg=None):
     i, j = myreg.box_idx(lon, lat)
     data = values[i,j]
     lo, la = lon[j], lat[i]
-    return predef('Map',data, la, lo)
+    return GeoArray(data, [('lat',la),('lon',lo)])
 
+@dimarray_recursive
 def rectify_longitude(lon, values, lon0):
     """ fix the longitude 
     """
     lon, values = grid.rectify_longitude_data(lon, values, lon0)
-    return dimarray(values, [Axis(lon, 'lon')])
+    return GeoArray(values, [('lon',lon)])
 
 #
 # time transforms
 #
+@dimarray_recursive
 def time_mean(obj, period=None):
     """ temporal mean or just slice
     """
-    if period is None:
-	return obj.mean('time')
+    if type(period) is tuple:
+	period = slice(*period)
 
-    elif type(period) is not list:
-	return obj.xs(time=period)
+    if period is not None:
+	obj = obj.take(period, axis='time', keepdims=True)
 
-    else:
-	return obj.xs(time=period).mean('time')
+    return obj.mean('time')
 
-def wrt(obj, refperiod):
+
+@dimarray_recursive(add_as_method=True)
+def since(obj, refperiod):
     """ express w.r.t. a ref period
     """
-    return obj - obj.time_mean(refperiod)
+    return obj - time_mean(obj, refperiod)
 
+@dimarray_recursive(add_as_method=True)
 def between(obj, refperiod, endperiod):
     """ Make a projection from a refperiod (2 dates) to a refperiod (2 dates)
     """
-    return obj.wrt(refperiod).time_mean(endperiod)
+    obj = obj.since(refperiod)
+    return time_mean(obj, endperiod)
+
+
+#
+# ADD TO GEOARRAY
+#
