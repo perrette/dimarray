@@ -291,16 +291,16 @@ class Axes(list):
 	return cls.from_tuples(*zip(dims, arrays))
 
     @classmethod
-    def from_kw(cls, dims=None, shape=None, **kwargs):
+    def from_kw(cls, dims=None, shape=None, kwaxes={}):
 	""" infer dimensions from key-word arguments
 	"""
 	# if no key-word argument is given, just return default axis
-	if len(kwargs) == 0:
+	if len(kwaxes) == 0:
 	    return cls.from_shape(shape, dims)
 
 	axes = cls()
-	for k in kwargs:
-	    axes.append(Axis(kwargs[k], k))
+	for k in kwaxes:
+	    axes.append(Axis(kwaxes[k], k))
 
 	# Make sure the order is right (since it is lost via dict-passing)
 
@@ -310,7 +310,7 @@ class Axes(list):
 
 	# alternative option: only the shape is given
 	elif shape is not None:
-	    assert len(shape) == len(kwargs), "shape does not match kwargs !"
+	    assert len(shape) == len(kwaxes), "shape does not match kwaxes !"
 	    current_shape = [ax.size for ax in axes]
 	    assert set(shape) == set(current_shape), "mismatch between array shape and axes"
 	    assert len(set(shape)) == len(set(current_shape)) == len(set([ax.name for ax in axes])), \
@@ -320,7 +320,7 @@ class Axes(list):
 	    argsort = [current_shape.index(k) for k in shape]
 
 	    assert len(argsort) == len(axes), "keyword arguments do not match shape !"
-	    axes = [axes[i] for i in argsort]
+	    axes = Axes([axes[i] for i in argsort])
 
 	    current_shape = tuple([ax.size for ax in axes])
 	    assert current_shape == shape, "dimensions mismatch (axes shape: {} != values shape: {}".format(current_shape, shape)
@@ -360,7 +360,8 @@ class Axes(list):
 	if type(dims[0]) is int:
 	    dims = [ax.name for ax in self]
 
-	list.sort(self, key=lambda x: dims.index(x.name))
+	#list.sort(self, key=lambda x: dims.index(x.name))
+	super(Axes, self).sort(key=lambda x: dims.index(x.name))
 
     def copy(self):
 	return copy.copy(self)
@@ -773,8 +774,6 @@ class LocatorAxes(object):
 	kwargs = self.opt.copy()
 	kwargs.update(opt)
 	return LocatorAxes(self.axes, **kwargs)[indices]
-
-
 
 
 def test():

@@ -91,7 +91,7 @@ class DimArray(Metadata):
 
     >>> a = DimArray([[1,2,3],[4,5,6]], axes=[list("ab"), np.arange(1950,1953)], dims=['items','time']) 
     >>> b = DimArray([[1,2,3],[4,5,6]], axes=[('items',list("ab")), ('time',np.arange(1950,1953))])
-    >>> c = DimArray.from_kw([[1,2,3],[4,5,6]], items=list("ab"), time=np.arange(1950,1953)) # here dims can be omitted because shape = (2, 3)
+    >>> c = DimArray([[1,2,3],[4,5,6]], {'items':list("ab"), 'time':np.arange(1950,1953)}) # here dims can be omitted because shape = (2, 3)
     >>> np.all(a == b == c)
     True
     >>> a
@@ -144,6 +144,7 @@ class DimArray(Metadata):
 	# Initialize the axes
 	# 
 	# Can be one of
+	# - dict
 	# - list of Axis objects
 	# - list of tuples `dim, array`
 	# - list of arrays, to be complemented by "dims="
@@ -160,6 +161,15 @@ class DimArray(Metadata):
 	    # define a default set of axes if not provided
 	    axes = Axes.from_shape(values.shape, dims=dims)
 
+	elif isinstance(axes, dict):
+	    kwaxes = axes
+	    if values is None: shape = None
+	    else: shape = values.shape
+	    if isinstance(kwaxes, OrderedDict):
+		dims = kwaxes.keys()
+	    axes = Axes.from_kw(dims=dims, shape=shape, kwaxes=kwaxes)
+	    assert type(axes) is Axes
+
 	# list of Axis objects
 	elif isinstance(axes[0], Axis):
 	    axes = Axes(axes)
@@ -175,6 +185,8 @@ class DimArray(Metadata):
 
 	else:
 	    raise TypeError("axes, if provided, must be a list of: `Axis` or `tuple` or arrays. Got: {}".format(axes))
+
+	assert type(axes) is Axes
 
 	# if values not provided, create empty data (filled with NaNs if dtype is float, -999999 for int)
 	if values is None:
@@ -222,12 +234,11 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 	    self.transpose(order, inplace=True)
 
     @classmethod
-    def from_kw(cls, values=None, axes=None, dims=None, copy=False, dtype=None, **kwargs):
+    def from_kw(cls, *args, **kwargs):
 	""" Alternative definition of a Dimarray which allow keyword arguments 
-	in addition to other methods, but at the expense of metadata.
+	in addition to other methods, but at the expense of metadata and other parameters
 
-	Same parameters as DimArray, except for kwargs:
-
+	*args : [values, [dims,]]
 	**kwargs	: axes as keyword arguments
 
 	Notes:
@@ -236,7 +247,7 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 	The key-word functionality comes at the expense of metadata, which needs to be 
 	added after creation of the DimArray object.
 
-        If axes as passed as kwargs, `dims=` also needs to be provided
+        If axes as passed as kwargs, also needs to be provided
         or an error will be raised, unless values's shape is 
         sufficient to determine ordering (when all axes have different 
         sizes).  This is a consequence of the fact 
@@ -249,22 +260,27 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 	Examples: 
 	---------
 	(da.array is an alias for DimArray.from_kw)
-	>>> a = da.array([[1,2,3],[4,5,6]], axes=[list("ab"), np.arange(1950,1953)], dims=['items','time']) 
-	>>> b = da.array([[1,2,3],[4,5,6]], axes=[('items',list("ab")), ('time',np.arange(1950,1953))])
-	>>> c = da.array([[1,2,3],[4,5,6]], items=list("ab"), time=np.arange(1950,1953)) # here dims can be omitted because shape = (2, 3)
+	>>> a = da.DimArray.from_kw([[1,2,3],[4,5,6]], items=list("ab"), time=np.arange(1950,1953)) # here dims can be omitted because shape = (2, 3)
+	>>> b = da.DimArray.from_kw([[1,2,3],[4,5,6]], ['items','time'], items=list("ab"), time=np.arange(1950,1953)) # here dims can be omitted because shape = (2, 3)
+	>>> c = da.DimArray([[1,2,3],[4,5,6]], {'items':list("ab"), 'time':np.arange(1950,1953)}) # here dims can be omitted because shape = (2, 3)
 	>>> np.all(a == b == c)
 	True
 
 	See also DimArray's doc for more examples
 	"""
-	if values is not None:
-	    values = np.array(values, copy=copy, dtype=dtype)
+	if len(args) == 0:
+	    values = None
+	else:
+	    values = args[0]
 
-	# define axes from keyword arguments, if applicable
-	assert not (len(kwargs) > 0 and axes is not None), "cannot provide both list and keywords arguments"
-	if len(kwargs) > 0:
-	    shape = values.shape if values is not None else None
-	    axes = Axes.from_kw(shape=shape, dims=dims, **kwargs)
+	if len(args) > 1:
+	    dims = args[1]
+	else:
+	    dims = None
+
+	axes = {k:kwargs[k] for k in kwargs}
+
+	assert len(args) <= 2, "[values, [dims]]"
 
 	return cls(values, axes, dims)
 

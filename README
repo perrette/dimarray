@@ -9,8 +9,8 @@ Inspired by (but does not rely on) pandas:
 
     * behave like a numpy array (operations, transformations)
     * labelled axes, NaN handling
-    * automatic axis aligment for +-/* between two Dimarray objects
-    * similar api (`values`, `axes`, `xs`, etc...) 
+    * automatic axis aligment for +-/* between two DimArray objects
+    * similar api (`values`, `axes`) 
     * group/ungroup methods to flatten any subset of dimensions into a 
       GroupedAxis object, in some ways similar to pandas' MultiIndex.
     * groupby method (planned)
@@ -31,9 +31,9 @@ Yet simpler with more control left to user (most attributes are non-protected,
 e.g. `values` can be overwritten), and organized around a small number of 
 classes and methods:
 
-    * Dimarray			: main data structure (see alias `array`)
-    * Dataset		    	: ordered dictionary of Dimarray objects
-    * read_nc, write_nc, summary_nc: netCDF I/O (Dimarray and Dataset methods)
+    * DimArray			: main data structure (see alias `array`)
+    * Dataset		    	: ordered dictionary of DimArray objects
+    * read_nc, write_nc, summary_nc: netCDF I/O (DimArray and Dataset methods)
     * Axis, Axes, GroupedAxis   : axis and indexing (under the hood)
 
 And for things pandas does better (low-dimensional data analysis, `groupby`, 
@@ -45,7 +45,7 @@ Get started
 -----------
 
 >>> import numpy as np
->>> from dimarray import Dimarray
+>>> from dimarray import DimArray
 >>> import dimarray as da
 
 Define some dummy data representing 3 items "a", "b" and "c" over 5 years:
@@ -53,12 +53,12 @@ Define some dummy data representing 3 items "a", "b" and "c" over 5 years:
 >>> np.random.seed(0) # just for the reproductivity of the examples below
 >>> values = np.random.randn(3,5)
 
-Defining a Dimarray from there is pretty straightforward
+Defining a DimArray from there is pretty straightforward
 
->>> a = Dimarray(values)   # fully automatic labelling
->>> a = Dimarray(values, 'items', 'time')  # axis values assumed [0, 1, 2,...]
->>> a = Dimarray(values, list("abc"), np.arange(1950,1955)) # "x0","x1" 
->>> a = Dimarray(values, ('items',list("abc")), ('time',np.arange(1950,1955)))  # all labels
+>>> a = DimArray(values)   # fully automatic labelling
+>>> a = DimArray(values, dims=['items', 'time'])  # axis values assumed [0, 1, 2,...]
+>>> a = DimArray(values, axes=[list("abc"), np.arange(1950,1955)]) # "x0","x1" 
+>>> a = DimArray(values, [('items',list("abc")), ('time',np.arange(1950,1955))])  # all labels
 >>> a    
 dimarray: 15 non-null elements (0 null)
 dimensions: 'items', 'time'
@@ -71,7 +71,8 @@ array([[ 1.76405235,  0.40015721,  0.97873798,  2.2408932 ,  1.86755799],
 For convenience, it is also possible to define an array via keyword arguments
 (but note this is unambiguous only when axes have different size, see tutorial)
 
->>> b = Dimarray.from_kw(values, items=list("abc"), time=np.arange(1950,1955))
+>>> b = DimArray.from_kw(values, items=list("abc"), time=np.arange(1950,1955))
+>>> c = da.array(values, items=list("abc"), time=np.arange(1950,1955)) # alias
 >>> np.all(a == b)
 True
 
@@ -89,17 +90,16 @@ array(['a', 'b', 'c'], dtype=object)
 >>> np.all( a.time == a.axes["time"].values )
 True
 
-Easy slicing (xs for cross-section):
+Easy slicing (take)
 
->>> a.xs(time=1952)
+>>> a.take(1952, axis='time')  #  classical numpy-like form
 dimarray: 3 non-null elements (0 null)
-stamp: ["time=1952"]
 dimensions: 'items'
 0 / items (3): a to c
 array([ 0.97873798, -0.15135721,  0.76103773])
->>> a.xs(time=1952, items="b")
+>>> a.take({'time':1952, 'items':"b"})  # dict-like
 -0.15135720829769789
->>> a.xs(time=(1952,1954))
+>>> a.take({'time':slice(1952,1954)})
 dimarray: 9 non-null elements (0 null)
 dimensions: 'items', 'time'
 0 / items (3): a to c
@@ -107,7 +107,7 @@ dimensions: 'items', 'time'
 array([[ 0.97873798,  2.2408932 ,  1.86755799],
        [-0.15135721, -0.10321885,  0.4105985 ],
        [ 0.76103773,  0.12167502,  0.44386323]])
->>> np.all(a[:, 1952:1954] == a.xs(time=(1952,1954)))
+>>> np.all(a[:, 1952:1954] == a.take(slice(1952,1954),axis='time'))
 True
 >>> a.ix[:, 2:5] # integer access
 dimarray: 9 non-null elements (0 null)
@@ -121,14 +121,14 @@ array([[ 0.97873798,  2.2408932 ,  1.86755799],
 
 Arithmetics with reshaping and axis alignment
 
->>> ts = da.Dimarray(np.random.randn(5), time=np.arange(1950, 1955))
+>>> ts = da.array(np.random.randn(5), time=np.arange(1950, 1955))
 >>> a * ts   # not commutative !  # doctest: +ELLIPSIS
 dimarray: 15 non-null elements (0 null)
 dimensions: 'items', 'time'
 0 / items (3): a to c
 1 / time (5): 1950 to 1954
 array(...)
->>> mymap = Dimarray(np.random.randn(5,10), lon=np.linspace(0,360,10), lat=np.linspace(-90,90,5))
+>>> mymap = da.array(np.random.randn(5,10), lon=np.linspace(0,360,10), lat=np.linspace(-90,90,5))
 >>> mycube = mymap * ts   # doctest: +ELLIPSIS
 >>> mycube
 dimarray: 250 non-null elements (0 null)
@@ -142,7 +142,6 @@ All numpy transforms work (with NaN checking)
 
 >>> mycube.mean(axis="time") 
 dimarray: 50 non-null elements (0 null)
-stamp: ["mean(time(5)=1950:1954)"]
 dimensions: 'lat', 'lon'
 0 / lat (5): -90.0 to 90.0
 1 / lon (10): 0.0 to 360.0
@@ -163,7 +162,6 @@ Can also provide a subset of several dimensions as argument to operate on flatte
 
 >>> mycube.mean(axis=("lat","lon"))
 dimarray: 5 non-null elements (0 null)
-stamp: ["mean(lat(5)=-90.0:90.0,lon(10)=0.0:360.0)"]
 dimensions: 'time'
 0 / time (5): 1950 to 1954
 array([-0.08412077, -0.37666392,  0.0517213 , -0.07892575,  0.2153213 ])
@@ -171,7 +169,7 @@ array([-0.08412077, -0.37666392,  0.0517213 , -0.07892575,  0.2153213 ])
 
 NetCDF I/O
 
->>> a.write_nc("test.nc","myvar") # write to netCDF4
+>>> a.write("test.nc","myvar", mode='w') # write to netCDF4
 write to test.nc
 >>> da.summary_nc("test.nc") # check the content
 test.nc:
