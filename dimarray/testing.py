@@ -85,3 +85,6 @@ def test_all(**kwargs):
     testmod(transform, **kwargs)
 
     testmod(reshape, **kwargs)
+
+if __name__ == "__main__":
+    test_all()
