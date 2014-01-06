@@ -6,8 +6,7 @@ import numpy as np
 from collections import OrderedDict
 
 from axes import Axis, Axes, GroupedAxis
-from dimarray.lib.tools import is_DimArray
-from dimarray.lib.decorators import axes_as_keywords
+from tools import is_DimArray
 
 #
 # Broadcast

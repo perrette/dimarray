@@ -49,7 +49,7 @@ class Metadata(object):
     def __init__(self):
 	"""
 	"""
-	super(Metadata, self).__setattr__("_metadata", odict()) # ordered dictionary of metadata
+	object.__setattr__(self, "_metadata", odict()) # ordered dictionary of metadata
 
     def __getattr__(self, att):
 	""" set attributes: distinguish between metadata and other 
@@ -75,14 +75,14 @@ class Metadata(object):
 	    self._metadata[att] = val
 
 	else:
-	    super(Metadata, self).__setattr__(att, val)
+	    object.__setattr__(self, att, val)
 
     def __detattr__(self, att):
 	""" delete an attribute
 	"""
 	# default behaviour
 	if att in self.__dict__:
-	    super(Metadata, self).__delattr__(att) # standard method
+	    object.__delattr__(self, att) # standard method
 
 	# delete metadata if it applicable
 	elif att in self._metadata:
@@ -90,7 +90,7 @@ class Metadata(object):
 
 	# again here, to raise a typical error message
 	else:
-	    super(Metadata, self).__delattr__(att) # standard method
+	    object.__delattr__(self, att) # standard method
 
 
     def _ismetadata(self, att, val=None):

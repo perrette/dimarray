@@ -15,7 +15,7 @@ import _reshape	   # change array shape and dimensions
 import _indexing   # perform slicing and indexing operations
 import _operation  # operation between DimArrays
 
-from dimarray.lib.tools import pandas_obj, is_array1d_equiv
+from tools import pandas_obj, is_array1d_equiv
 
 __all__ = ["DimArray", "array"]
 
@@ -109,6 +109,56 @@ class DimArray(Metadata):
     Metadata
 
     >>> a = DimArray([[1,2,3],[4,5,6]], name='test', units='none') 
+    
+    Operations
+
+    >>> a = da.DimArray([[1,2,3],[3,4,5]],dims=('x0','x1'))
+    >>> a == a
+    dimarray: 6 non-null elements (0 null)
+    dimensions: 'x0', 'x1'
+    0 / x0 (2): 0 to 1
+    1 / x1 (3): 0 to 2
+    array([[ True,  True,  True],
+           [ True,  True,  True]], dtype=bool)
+    >>> np.all(a == a)
+    True
+    >>> np.all(a+2 == a + np.ones(a.shape)*2)
+    True
+    >>> np.all(a+a == a*2)
+    True
+    >>> np.all(a*a == a**2)
+    True
+    >>> np.all((a - a.values) == a - a)
+    True
+
+    Broadcasting (dimension alignment)
+    >>> x = da.DimArray(np.arange(2), dims=('x0',))
+    >>> y = da.DimArray(np.arange(3), dims=('x1',))
+    >>> x+y
+    dimarray: 6 non-null elements (0 null)
+    dimensions: 'x0', 'x1'
+    0 / x0 (2): 0 to 1
+    1 / x1 (3): 0 to 2
+    array([[0, 1, 2],
+           [1, 2, 3]])
+    
+    Reindexing (axis values alignment)
+    >>> z = da.DimArray([0,1,2],('x0',[0,1,2]))
+    >>> x+z
+    dimarray: 2 non-null elements (1 null)
+    dimensions: 'x0'
+    0 / x0 (3): 0 to 2
+    array([  0.,   2.,  nan])
+    
+    Broadcasting + Reindexing
+    >>> (x+y)+(x+z)
+    dimarray: 6 non-null elements (3 null)
+    dimensions: 'x0', 'x1'
+    0 / x0 (3): 0 to 2
+    1 / x1 (3): 0 to 2
+    array([[  0.,   1.,   2.],
+           [  3.,   4.,   5.],
+           [ nan,  nan,  nan]])
     """
     _order = None  # set a general ordering relationship for dimensions
     _metadata_exclude = ("values","axes") # is NOT a metadata
@@ -300,6 +350,10 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 	This makes the sub-classing process easier since only this method needs to be 
 	overloaded to make the sub-class a "closed" class.
 	"""
+	#if '_indexing' in metadata:
+	#    kwargs['_indexing'] = metadata.pop('_indexing')
+	#obj = cls(values, axes)
+	#for k in metadata: obj.setncattr(k, metadata[k])
 	return cls(values, axes, **metadata)
 
     #
@@ -684,14 +738,14 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 	output:
 	    - new DimArray object
 	"""
-	from dataset import Dataset
+	from dimarray.dataset import Dataset
 	data = Dataset(data, keys=keys)
 	return data.to_array(axis=axis)
 
     def to_dataset(self, axis=0):
 	""" split a DimArray into a Dataset object (collection of DimArrays)
 	"""
-	from dataset import Dataset
+	from dimarray.dataset import Dataset
 	# iterate over elements of one axis
 	data = [val for k, val in self.iter(axis)]
 	return Dataset(data)

@@ -1,7 +1,7 @@
 """ User-interface, should be relatively stable
 """
 from config import set_option, get_option, Config
-from da import *
+from core import *
 from dataset import Dataset
 from lib.transform import interp1d, interp2d, apply_recursive
 

@@ -4,6 +4,9 @@ import doctest
 import os.path, pkgutil
 from importlib import import_module
 
+import core
+#from dimarray.core import metadata, core, axes, _indexing as indexing, _transform as transform, _reshape as reshape
+
 def get_globals(m):
     """ 
     """
@@ -57,28 +60,28 @@ def testmod(m, globs=None, **kwargs):
 #		testmod(m, globs=globs, **kwargs)
 
 
-def test_rec(**kwargs):
-    import dimarray 
-    return testpkg(dimarray, **kwargs)
+#def test_rec(**kwargs):
+#    import dimarray 
+#    return testpkg(dimarray, **kwargs)
 
 def test_all(**kwargs):
     """
     """
-    if 1:
-	import dimarray.da.metadata as m
-	testmod(m, **kwargs)
+    import core.metadata as metadata
+    import core.core as core
+    import core.axes as axes
+    import core._indexing as indexing
+    import core._reshape as reshape
+    import core._transform as transform
 
-	import dimarray.da.core as m
-	testmod(m, **kwargs)
+    testmod(metadata, **kwargs)
 
-	import dimarray.da.axes as m
-	testmod(m, **kwargs)
+    testmod(core, **kwargs)
 
-	import dimarray.da._indexing as m
-	testmod(m, **kwargs)
+    testmod(axes, **kwargs)
 
-	import dimarray.da._transform as m
-	testmod(m, **kwargs)
+    testmod(indexing, **kwargs)
 
-    import dimarray.da._reshape as m
-    testmod(m, **kwargs)
+    testmod(transform, **kwargs)
+
+    testmod(reshape, **kwargs)

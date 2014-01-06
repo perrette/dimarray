@@ -3,9 +3,9 @@
 from collections import OrderedDict as odict
 import numpy as np
 
-from da import DimArray, array, Axis, Axes
-from da import align_axes 
-from da import pandas_obj
+from core import DimArray, array, Axis, Axes
+from core import align_axes 
+from core import pandas_obj
 
 class Dataset(object):
     """ Container for a set of aligned objects
