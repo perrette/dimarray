@@ -15,7 +15,7 @@ import _reshape	   # change array shape and dimensions
 import _indexing   # perform slicing and indexing operations
 import _operation  # operation between DimArrays
 
-from dimarray.lib.tools import pandas_obj, is_array1d_equiv
+from tools import pandas_obj, is_array1d_equiv
 
 __all__ = ["DimArray", "array"]
 
