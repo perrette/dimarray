@@ -3,7 +3,7 @@
 import numpy as np
 from functools import partial
 
-from dimarray.lib.decorators import format_doc
+from decorators import format_doc
 from axes import Axis, Axes, GroupedAxis
 
 #

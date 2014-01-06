@@ -48,3 +48,4 @@ def is_array1d_equiv(a):
 	except:
 	    res = False
     return res
+
