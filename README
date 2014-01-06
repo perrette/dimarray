@@ -41,6 +41,10 @@ I/O formats, etc...), just export via to_pandas() method (up to 4-D) (only
 if pandas is installed of course - otherwise dimarray does not rely on pandas)
 
 
+Download the notebook: http://nbviewer.ipython.org/gist/perrette/8166666/Turorial.ipynb 
+----------------------
+
+
 Get started
 -----------
 
