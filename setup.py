@@ -12,5 +12,5 @@ setup(name='dimarray',
       packages = ['dimarray'],
       long_description=long_description,
       url='https://github.com/perrette/dimarray',
-      license = "BSD 2-Clause",
+      license = "BSD 3-Clause",
       )

@@ -10,7 +10,7 @@ Inspired by (but does not rely on) pandas:
     * behave like a numpy array (operations, transformations)
     * labelled axes, NaN handling
     * automatic axis aligment for +-/* between two DimArray objects
-    * similar api (`values`, `axes`) 
+    * similar api (`values`, `axes`,`reindex_axis`) 
     * group/ungroup methods to flatten any subset of dimensions into a 
       GroupedAxis object, in some ways similar to pandas' MultiIndex.
     * groupby method (planned)
@@ -24,7 +24,7 @@ But generalized to any dimension and augmented with new features:
     * in combination to `group`, can achieve area- or volumne- weighting
     * natural netCDF I/O  via netCDF4 python module (requires HDF5, netCDF4)
     * stick to numpy's api when possible (but with enhanced capabilities):
-      `reshape`, `repeat`, `repeat_like`, `transpose`, `newaxis`, `squeeze`
+      `reshape`, `repeat`, `transpose`, `newaxis`, `squeeze`
       
 
 Yet simpler with more control left to user (most attributes are non-protected, 
@@ -41,9 +41,8 @@ I/O formats, etc...), just export via to_pandas() method (up to 4-D) (only
 if pandas is installed of course - otherwise dimarray does not rely on pandas)
 
 
-Download the notebook: http://nbviewer.ipython.org/gist/perrette/8166666/Turorial.ipynb 
-----------------------
-
+Download the notebook: 
+http://nbviewer.ipython.org/gist/perrette/8166666/Tutorial.ipynb
 
 Get started
 -----------

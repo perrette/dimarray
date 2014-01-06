@@ -3,10 +3,6 @@ README
 setup.py
 dimarray/__init__.py
 dimarray/api.py
-dimarray/axes.py
-dimarray/collect.py
-dimarray/core.py
-dimarray/metadata.py
-dimarray/ncio.py
-dimarray/tools.py
-dimarray/transform.py
+dimarray/config.py
+dimarray/dataset.py
+dimarray/testing.py
