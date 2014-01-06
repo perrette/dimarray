@@ -334,7 +334,9 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 	This makes the sub-classing process easier since only this method needs to be 
 	overloaded to make the sub-class a "closed" class.
 	"""
-	return cls(values, axes, **metadata)
+	obj = cls(values, axes)
+	for k in metadata: obj.setncattr(k, metadata[k])
+	return obj
 
     #
     # Attributes access
