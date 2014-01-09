@@ -63,28 +63,3 @@ def testmod(m, globs=None, **kwargs):
 #def test_rec(**kwargs):
 #    import dimarray 
 #    return testpkg(dimarray, **kwargs)
-
-def test_all(**kwargs):
-    """
-    """
-    import core.metadata as metadata
-    import core.core as core
-    import core.axes as axes
-    import core._indexing as indexing
-    import core._reshape as reshape
-    import core._transform as transform
-
-    testmod(metadata, **kwargs)
-
-    testmod(core, **kwargs)
-
-    testmod(axes, **kwargs)
-
-    testmod(indexing, **kwargs)
-
-    testmod(transform, **kwargs)
-
-    testmod(reshape, **kwargs)
-
-if __name__ == "__main__":
-    test_all()
