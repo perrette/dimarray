@@ -277,11 +277,14 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 
 	# If a general ordering relationship of the class is assumed,
 	# always sort the class
-	if self._order is not None:
+	if self._order is not None and self.dims != tuple(dim for dim in self._order if dim in self.dims):
 	    present = filter(lambda x: x in self.dims, self._order)  # prescribed
 	    missing = filter(lambda x: x not in self._order, self.dims)  # not
 	    order = missing + present # prepend dimensions not found in ordering relationship
-	    self.transpose(order, inplace=True)
+	    obj = self.transpose(order)
+	    self.values = obj.values
+	    self.axes = obj.axes
+
 
     @classmethod
     def from_kw(cls, *args, **kwargs):
