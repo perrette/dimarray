@@ -82,10 +82,6 @@ class Region(object):
 	contour : return the region contour as a polygone (lons, lats)
 	extract : return all data from the region, as an array (1-D or 2-D)
     """
-    def __init__(self, *coords):
-	self.coords = coords
-	self.lon0 = get_lon0(lon)
-
     def plot(self, *args, **kwargs):
 	""" plot a region
 
@@ -111,7 +107,8 @@ class Region(object):
 	if np.ndim(lon) == 2:
 	    raise Exception('must be a regular grid !')
 
-	lon = rectify_longitude(lon, lon0 = self.lon0)
+	if hasattr(self, 'lon0'):
+	    lon = rectify_longitude(lon, lon0 = self.lon0)
 	lonr, latr, datar = self.extract(lon, lat, data) # extract regional data
 	LO, LA = np.meshgrid(lonr, latr)
 	w = np.cos(LA) # weights
@@ -123,7 +120,8 @@ class Region(object):
     def extract(self, lon, lat, data):
 	""" extract data from the region
 	"""
-	lon = rectify_longitude(lon, lon0 = self.lon0)
+	if hasattr(self, 'lon0'):
+	    lon = rectify_longitude(lon, lon0 = self.lon0)
 	ii, jj = self.box_idx(lon, lat) # for a rectangular box, box_idx exactly contains the region
 	return lon[jj], lat[ii], data[ii, jj]
 

@@ -372,6 +372,9 @@ def group(self, dims, keep=False, insert=None):
     if type(dims) not in (tuple, list, set):
 	raise TypeError("dimensions to group must be a list or a tuple  or a set")
 
+    if len(dims) < 2:
+	raise ValueError("cannot group less than 2 dimensions")
+
     # make sure we have a tuple of strings
     dims = [self.axes[d].name for d in dims]
 

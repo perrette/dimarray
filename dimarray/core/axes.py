@@ -179,6 +179,7 @@ class GroupedAxis(Axis):
     """ an Axis that contains several axes flattened together
     """
     _metadata_exclude = ("axes", "name")
+    modulo = None
 
     def __init__(self, *axes):
 	"""
@@ -232,8 +233,10 @@ class GroupedAxis(Axis):
 
 
 def _flatten(*list_of_arrays):
-    """ flatten a list of arrays ax1, ax2, ... to  a list of tuples [(ax1[0], ax2[0], ax3[]..), (ax1[0], ax2[0], ax3[1]..), ...]
+    """ flatten a list of arrays ax1, ax2, ... to  a list of tuples [(ax1[0], ax2[0], ax3[0]..), (ax1[0], ax2[0], ax3[1]..), ...]
     """
+    assert len(list_of_arrays) > 1, "only one axis!"
+
     kwargs = dict(indexing="ij")
     grd = np.meshgrid(*list_of_arrays, **kwargs)
     array_of_tuples = np.array(zip(*[g.ravel() for g in grd]))

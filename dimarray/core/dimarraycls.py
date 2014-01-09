@@ -170,6 +170,10 @@ class DimArray(Metadata):
     def __init__(self, values=None, axes=None, dims=None, copy=False, dtype=None, _indexing="values", **kwargs):
 	""" Initialization. See help on DimArray.
 	"""
+	# check if attached to values (e.g. DimArray object)
+	if hasattr(values, "axes") and axes is None:
+	    axes = values.axes
+
 	#
 	# array values
 	#
