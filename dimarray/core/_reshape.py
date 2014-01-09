@@ -347,7 +347,7 @@ def group(self, dims, keep=False, insert=None):
     """ group (or flatten) a subset of dimensions
 
     Input:
-	- *dims: variable list of axis names
+	- dims: list or tuple of axis names
 	- keep [False]: if True, dims are interpreted as the dimensions to keep (mirror)
 	- insert: position where to insert the grouped axis 
 		  (by default, just reshape in the numpy sense if possible, 
@@ -369,19 +369,33 @@ def group(self, dims, keep=False, insert=None):
 
     a.mean(axis=('lon','lat')) 
     """
-    assert type(keep) is bool, "keep must be a boolean !"
-    assert type(dims[0]) is str, "dims must be strings"
+    if type(dims) not in (tuple, list, set):
+	raise TypeError("dimensions to group must be a list or a tuple  or a set")
+
+    # make sure we have a tuple of strings
+    dims = [self.axes[d].name for d in dims]
 
     # keep? mirror call
+    assert type(keep) is bool, "keep must be a boolean !"
     if keep:
-	dims = tuple(d for d in self.dims if d not in dims)
+	dims = [d for d in self.dims if d not in dims]
+
+    # check the 
+    if not set(dims).issubset(self.dims):
+	raise ValueError("dimensions to group must be a subset of existing dimensions")
+
+    # reorder dimensions to group and convert to tuple
+    dims = [d for d in self.dims if d in dims]
+    dims = tuple(dims)
 
     n = len(dims) # number of dimensions to group
     ii = self.dims.index(dims[0]) # start
-    if insert is None: 
-	insert = ii
 
-    # If dimensions do not follow each other, have all dimensions as first axis
+    # dimension to insert the new axis at
+    if insert is None: 
+	insert = ii  # by default, do not reshape
+
+    # If dimensions do not follow each other, transpose first
     if dims != self.dims[insert:insert+len(dims)]:
 
 	# new array shape, assuming dimensions are properly aligned
@@ -389,6 +403,7 @@ def group(self, dims, keep=False, insert=None):
 	newdims = newdims[:insert] + list(dims) + newdims[insert:]
     
 	b = self.transpose(newdims) # dimensions to factorize in the front
+
 	return b.group(dims, insert=insert)
 
     # Create a new grouped axis

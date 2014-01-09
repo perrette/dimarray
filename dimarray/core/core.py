@@ -561,6 +561,9 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     take = _indexing.take
     put = _indexing.put  
 
+    # get the kw index equivalent {dimname:indices}
+    _get_keyword_indices = _indexing._get_keyword_indices 
+
     #
     # Standard indexing takes axis values
     #
@@ -698,33 +701,84 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     def __float__(self):  return float(self.values)
     def __int__(self):  return int(self.values)
 
+    def _to_array_equiv(self, other):
+	""" convert to equivalent numpy array
+	raise Exception is other is a DimArray with different axes
+	"""
+	if isinstance(other, DimArray):
+	    # check if axes are equal
+	    if self.axes != other.axes:
+		raise ValueError("axes differ !")
+
+	return np.asarray(other)
+
     def __eq__(self, other): 
-	if isinstance(other, np.ndarray):
-	    res = self.values == other
+	""" equality in numpy sense
 
-	elif not isinstance(other, DimArray):
-	    res = False
+	>>> test = DimArray([1, 2]) == 1
+	>>> test
+	dimarray: 2 non-null elements (0 null)
+	dimensions: 'x0'
+	0 / x0 (2): 0 to 1
+	array([ True, False], dtype=bool)
+	>>> test2 = DimArray([1, 2]) == DimArray([1, 2])
+	>>> test3 = DimArray([1, 2]) == np.array([1, 2])
+	>>> np.all(test == test2 == test3)
+	True
+	>>> DimArray([1, 2]) == DimArray([1, 2],dims=('x1',))
+	False
+	"""
+	# check axes and convert to arrays
+	try: 
+	    other = self._to_array_equiv(other)
+	except ValueError:
+	    return False
 
-	elif not self.axes == other.axes:
-	    res = False
-
-	else:
-	    res = self.values == other.values
+	res = self.values == other
 
 	if isinstance(res, np.ndarray):
 	    return self._constructor(res, self.axes)
+
+	# boolean False
 	else:
 	    return res
 
-    def __lt__(self, other): 
-	return self._constructor(self.values < other.values, self.axes)
-    def __gt__(self, other): 
-	return self._constructor(self.values > other.values, self.axes)
-    def __le__(self, other): 
-	return self._constructor(self.values <= other.values, self.axes)
-    def __ge__(self, other): 
-	return self._constructor(self.values >= other.values, self.axes)
+    def __invert__(self): 
+	"""
+	Examples:
+	>>> a = DimArray([True, False])
+	>>> ~a
+	dimarray: 2 non-null elements (0 null)
+	dimensions: 'x0'
+	0 / x0 (2): 0 to 1
+	array([False,  True], dtype=bool)
+	"""
+	return self._constructor(np.invert(self.values), self.axes)
 
+    def _cmp(self, op, other):
+	""" Element-wise comparison operator
+
+	>>> a = DimArray([1, 2]) < 2
+	>>> a < 2
+	dimarray: 2 non-null elements (0 null)
+	dimensions: 'x0'
+	0 / x0 (2): 0 to 1
+	array([ True, False], dtype=bool)
+
+	>>> b = DimArray([1, 2], dims=('x1',))
+	>>> a > b # doctest: +ELLIPSIS
+	...
+	ValueError
+	...
+	"""
+	other = self._to_array_equiv(other)
+	fop = getattr(self.values, op)
+	return self._constructor(fop(other), self.axes)
+
+    def __lt__(self, other): return self._cmp('__lt__', other)
+    def __le__(self, other): return self._cmp('__le__', other)
+    def __gt__(self, other): return self._cmp('__gt__', other)
+    def __ge__(self, other): return self._cmp('__ge__', other)
 
     @classmethod
     def from_dataset(cls, data, keys=None, axis="items"):

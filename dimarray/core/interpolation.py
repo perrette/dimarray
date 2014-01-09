@@ -3,7 +3,6 @@
 import numpy as np
 
 from axes import Axes, Axis
-from _indexing import _get_keyword_indices
 
 #
 # linear interpolation
@@ -17,7 +16,7 @@ def interp(obj, indices, axis=0, method="linear", repna=False):
     method: "nearest", "linear"
     repna: if True, replace out-of-bound values by NaN instead of raising an error
     """
-    kw = _get_keyword_indices(obj.axes, indices, axis)
+    kw = obj._get_keyword_indices(indices, axis)
     for k in kw:
 	if method == "nearest":
 	    obj = _interp_nearest(obj, kw[k], k, repna=repna)

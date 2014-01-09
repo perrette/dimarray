@@ -11,10 +11,13 @@ __all__ = ["take", "put"]
 
 TOLERANCE=1e-8
 
-def _get_keyword_indices(axes, indices, axis=0):
+def _get_keyword_indices(obj, indices, axis=0):
     """ get dictionary of indices
     """
-    assert isinstance(axes, Axes)
+    try:
+	axes = obj.axes
+    except:
+	raise TypeError(" must be a DimArray instance !")
 
     # convert to dictionary
     if type(indices) is tuple or isinstance(indices, dict) or isinstance(indices, Axis):
