@@ -4,6 +4,7 @@ import string
 import copy
 
 from metadata import Metadata
+from tools import is_DimArray
 
 __all__ = ["Axis","Axes", "is_regular"]
 
@@ -57,13 +58,12 @@ class Axis(Metadata):
 	    assert hasattr(values, "name"), "unnamed dimension !"
 	    name = values.name # e.g pandas axis
 
-	# if string, make it an object-typed array
-	if type(values[0]) in (str, unicode, np.str_, np.unicode_) :
-	    values = np.array(values, dtype=object) # make sure data is stored with object type
+	#if np.size(values) == 0:
+	#    raise ValueError("cannot define an empty axis")
+	values = np.array(values)
 
-	# otherwise, just a normal array
-	else:
-	    values = np.array(values, copy=False)
+	if values.dtype not in (np.dtype(float), np.dtype(int)):
+	    values = np.asarray(values, dtype=object)
 
 	Metadata.__init__(self)
 
@@ -110,13 +110,20 @@ class Axis(Metadata):
     def __repr__(self):
 	""" string representation for printing to screen
 	""" 
-	return "{} ({}): {} to {}".format(self.name, self.size, self.values[0], self.values[-1])
+	return "{} ({}): {} to {}".format(self.name, self.size, *self._bounds())
+
+    def _bounds(self):
+	if self.values.size == 0:
+	    start, stop = None, None
+	else:
+	    start, stop = self.values[0], self.values[-1]
+	return start, stop
 
     def __str__(self):
 	""" simple string representation
 	"""
 	#return "{}={}:{}".format(self.name, self.values[0], self.values[-1])
-	return "{}({})={}:{}".format(self.name, self.size, self.values[0], self.values[-1])
+	return "{}({})={}:{}".format(self.name, self.size, *self._bounds())
 
     def copy(self):
 	return copy.copy(self)
@@ -217,8 +224,7 @@ class GroupedAxis(Axis):
     def __repr__(self):
 	""" string representation
 	""" 
-	first = tuple(ax.values[0] for ax in self.axes)
-	last = tuple(ax.values[-1] for ax in self.axes)
+	first, last = zip(*[ax._bounds() for ax in self.axes])
 	return "{} ({}): {} to {}".format(self.name, self.size, first, last)
 
     def __str__(self):
@@ -454,8 +460,11 @@ class LocatorAxis(object):
 	if self.position_index:
 	    return ix
 
-	# ...nor with boolean indexing
-	elif type(ix) is np.ndarray and ix.dtype is np.dtype(bool):
+	# boolean indexing ?
+	if is_DimArray(ix):
+	    ix = ix.values
+
+	if type(ix) in (np.ndarray,) and ix.dtype is np.dtype(bool):
 	    return ix
 
 	# make sure (1,) is understood as 1 just as numpy would
@@ -619,6 +628,7 @@ class NumLocator(LocatorAxis):
 	"""
 	try:
 	    val+1
+	    if val == 1: pass # only scalar allowed
 	except TypeError, msg:
 	    raise TypeError("locate: wrong type: {}".format(val))
 

@@ -758,7 +758,7 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     def _cmp(self, op, other):
 	""" Element-wise comparison operator
 
-	>>> a = DimArray([1, 2]) < 2
+	>>> a = DimArray([1, 2])
 	>>> a < 2
 	dimarray: 2 non-null elements (0 null)
 	dimensions: 'x0'
@@ -766,10 +766,11 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 	array([ True, False], dtype=bool)
 
 	>>> b = DimArray([1, 2], dims=('x1',))
-	>>> a > b # doctest: +ELLIPSIS
-	...
-	ValueError
-	...
+	>>> try: 
+	...	a > b 
+	... except ValueError, msg:
+	...	print msg	
+	axes differ !
 	"""
 	other = self._to_array_equiv(other)
 	fop = getattr(self.values, op)
