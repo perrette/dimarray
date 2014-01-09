@@ -88,7 +88,6 @@ def rectify_longitude(lon, values, lon0):
 #
 # time transforms
 #
-@dimarray_recursive
 def time_mean(obj, period=None):
     """ temporal mean or just slice
     """
@@ -101,13 +100,11 @@ def time_mean(obj, period=None):
     return obj.mean('time')
 
 
-@dimarray_recursive(add_as_method=True)
 def since(obj, refperiod):
     """ express w.r.t. a ref period
     """
     return obj - time_mean(obj, refperiod)
 
-@dimarray_recursive(add_as_method=True)
 def between(obj, refperiod, endperiod):
     """ Make a projection from a refperiod (2 dates) to a refperiod (2 dates)
     """

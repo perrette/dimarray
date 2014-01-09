@@ -69,7 +69,7 @@ def dimarray_recursive(fun):
     def fun_rec(obj, *args, **kwargs):
 	apply_recursive(obj, dims, fun1, *args, **kwargs)
 
-    fun_rec.__name__ += fun1.__name__
-    fun_rec.__doc__ += fun1.__doc__
+    fun_rec.__name__ = fun1.__name__
+    fun_rec.__doc__ = fun1.__doc__
 
     return fun_rec
