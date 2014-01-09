@@ -285,7 +285,6 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 	    self.values = obj.values
 	    self.axes = obj.axes
 
-
     @classmethod
     def from_kw(cls, *args, **kwargs):
 	""" Alternative definition of a Dimarray which allow keyword arguments 

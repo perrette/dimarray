@@ -41,6 +41,10 @@ class GeoArray(DimArray):
 	    if is_latitude(ax.name):
 		ax.weight = lambda x: np.cos(np.radians(x))
 
+    def __repr__(self): return super(GeoArray, self).__repr__().replace("dimarray","geoarray")
+    def __print__(self): return super(GeoArray, self).__print__().replace("dimarray","geoarray")
+    def __str__(self): return super(GeoArray, self).__str__().replace("dimarray","geoarray")
+
 #def _get_geoarray_cls(dims, globs=None):
 #    """ look whether a particular pre-defined array matches the dimensions
 #    """

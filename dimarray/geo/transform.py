@@ -90,6 +90,10 @@ def rectify_longitude(lon, values, lon0):
 #
 def time_mean(obj, period=None):
     """ temporal mean or just slice
+
+    >>> a = GeoArray([1,2,3],time=[1950, 1955, 1960])
+    >>> time_mean(a)
+    >>> time_mean(a, period=(1955,1960))
     """
     if type(period) is tuple:
 	period = slice(*period)
@@ -108,10 +112,5 @@ def since(obj, refperiod):
 def between(obj, refperiod, endperiod):
     """ Make a projection from a refperiod (2 dates) to a refperiod (2 dates)
     """
-    obj = obj.since(refperiod)
+    obj = since(obj, refperiod)
     return time_mean(obj, endperiod)
-
-
-#
-# ADD TO GEOARRAY
-#
