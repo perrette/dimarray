@@ -62,6 +62,9 @@ class Axis(Metadata):
 	#    raise ValueError("cannot define an empty axis")
 	values = np.array(values)
 
+	#if values.ndim > 2:
+	#    raise ValueError("an Axis object can only be 1-D, use GroupedAxis instead")
+
 	if values.dtype not in (np.dtype(float), np.dtype(int)):
 	    values = np.asarray(values, dtype=object)
 
@@ -97,6 +100,8 @@ class Axis(Metadata):
     def loc(self):
 	""" Access the slicer to locate axis elements
 	"""
+	if self.values.ndim == 2:
+	    raise NotImplementedError("cannot slice grouped Axes yet")
 	if self.values.dtype is np.dtype('O'):
 	    return ObjLocator(self.values)
 	else:

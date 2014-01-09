@@ -3,6 +3,7 @@
 ==> dimensions always remain sorted: ('items','time','lat','lon','height','sample')
 ==> subset of methods with specific plotting behaviour: e.g. TimeSeries, Map
 """
+import numpy as np
 from dimarray import DimArray, Axes, Axis
 
 def is_longitude(nm):
@@ -38,7 +39,7 @@ class GeoArray(DimArray):
 	# add weight on latitude
 	for ax in self.axes:
 	    if is_latitude(ax.name):
-		ax.weight = lambda x: np.cos(np.radians(x))
+		ax.weights = lambda x: np.cos(np.radians(x))
 
     def __repr__(self): return super(GeoArray, self).__repr__().replace("dimarray","geoarray")
     def __print__(self): return super(GeoArray, self).__print__().replace("dimarray","geoarray")

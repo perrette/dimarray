@@ -49,8 +49,33 @@ def regional_mean(a, region=None):
     ---------
     >>> lon = [0, 50., 100.]
     >>> lat = [0, 50.]
-    >>> a = GeoArray([[1, 2, 4],[ 4, 5, 6]], lon=lon, lat=lat)
+    >>> a = GeoArray([[1, 2, 4],[4, 5, 6]], lon=lon, lat=lat)
+    >>> rm = regional_mean(a)
+    >>> rm
+    3.6428942648372251
+
+    This is similar but more presise that just cos(lat):
+    >>> lon2, lat2 = np.meshgrid(lon, lat)
+    >>> w = np.cos(np.radians(lat2))
+    >>> rm2 = np.sum(a.values*w)/np.sum(w)  
+    >>> round(rm2, 4)
+    3.3767
+
+    GeoArray detects the weights automatically with name "lat"
+    >>> rm3 = a.mean() 
+    >>> round(rm3,4)
+    3.3767
+    >>> a.mean(weights=None)
+    3.6666666666666665
+
+    Also works for multi-dimensional data shaped in any kind of order
+    >>> a = a.newaxis('z',[0,1,2])
+    >>> a = a.transpose(('lon','z','lat'))
     >>> regional_mean(a)
+    geoarray: 3 non-null elements (0 null)
+    dimensions: 'z'
+    0 / z (3): 0 to 2
+    array([ 3.64289426,  3.64289426,  3.64289426])
     """
     regobj = regmod.check(region)
 
@@ -72,26 +97,19 @@ def regional_mean(a, region=None):
 	return regobj.mean(a.lon,a.lat, a.values)
 
     # flatten all except lat, lon, and make it the first axis
-    loopdim = 2
-    if len(flatdims) > 1:
-	a = a.group(flatdims, insert=loopdim)
-	grouped = True
-    else:
-	grouped = False
-    grpaxis = a.axes[loopdim] # grouped axis
+    agrp = a.group(flatdims, insert=0) 
+    grpaxis = agrp.axes[0] # grouped axis
     
     # iterate over the first, grouped axis
     results = []
-    for k, val in a.iter(loopdim):
-	o = val.transpose(('lat','lon'))
-	res = regobj.mean(o.lon,o.lat, o.values)
+    for i in range(grpaxis.size):
+	res = regobj.mean(a.lon,a.lat, agrp.values[i])
 	results.append(res)
 	
     # flat object
-    average = a._constructor(results, [grpaxis])
+    grp_ave = a._constructor(results, [grpaxis])
 
-    if grouped:
-	average = average.ungroup() # now ungroup
+    average = grp_ave.ungroup() # now ungroup
 
     return average
 

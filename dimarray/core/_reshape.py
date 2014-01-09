@@ -343,15 +343,15 @@ def reshape(self, newdims):
 # Group/ungroup subsets of axes to perform operations on partly flattened array
 #
 
-def group(self, dims, keep=False, insert=None):
+def group(self, dims, exclude=False, insert=0):
     """ group (or flatten) a subset of dimensions
 
     Input:
 	- dims: list or tuple of axis names
-	- keep [False]: if True, dims are interpreted as the dimensions to keep (mirror)
+	- exclude [False]: if True, dims are interpreted as the dimensions to exclude
+	    and all the other dimensions are grouped
 	- insert: position where to insert the grouped axis 
-		  (by default, just reshape in the numpy sense if possible, 
-		  otherwise insert at the position of the first dimension to group)
+		  (by default, any grouped dimensions is placed as first axis)
 
     Output:
 	- DimArray appropriately reshaped, with collapsed dimensions as first axis (tuples)
@@ -372,20 +372,26 @@ def group(self, dims, keep=False, insert=None):
     if type(dims) not in (tuple, list, set):
 	raise TypeError("dimensions to group must be a list or a tuple  or a set")
 
-    if len(dims) < 2:
-	raise ValueError("cannot group less than 2 dimensions")
-
-    # make sure we have a tuple of strings
-    dims = [self.axes[d].name for d in dims]
-
-    # keep? mirror call
-    assert type(keep) is bool, "keep must be a boolean !"
-    if keep:
+    # exclude? mirror call
+    assert type(exclude) is bool, "exclude must be a boolean !"
+    if exclude:
 	dims = [d for d in self.dims if d not in dims]
 
     # check the 
     if not set(dims).issubset(self.dims):
 	raise ValueError("dimensions to group must be a subset of existing dimensions")
+
+    # if 
+    if len(dims) == 1:
+	if self.dims[insert] != dims[0]:
+	    newdims = [d for d in self.dims if d != dims[0]]
+	    newdims = newdims[:insert] + list(dims) + newdims[insert:]
+	    self = self.transpose(newdims)
+	return self
+	#raise ValueError("cannot group less than 2 dimensions")
+
+    # make sure we have a tuple of strings
+    dims = [self.axes[d].name for d in dims]
 
     # reorder dimensions to group and convert to tuple
     dims = [d for d in self.dims if d in dims]

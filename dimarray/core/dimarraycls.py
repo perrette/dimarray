@@ -523,7 +523,7 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 		if ax.weights is None: continue
 		weights = ax.get_weights().reshape(dims) * weights
 
-	    if weights == 1:
+	    if weights is 1:
 		return None
 	    else:
 		weights = weights.values
@@ -552,6 +552,7 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 	if fill_nans:
 	    weights.values[np.isnan(self.values)] = np.nan
 	
+	assert weights is not None
 	return weights
 
 

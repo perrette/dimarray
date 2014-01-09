@@ -189,9 +189,10 @@ def _deal_with_axis(obj, axis):
     """
     # before applying the function on the collapsed array
     if type(axis) in (tuple, list):
-	newobj = obj.group(axis)
-	idx = obj.dims.index(axis[0])  # position where the new axis has been inserted
-	ax = newobj.axes[idx] 
+	newobj = obj.group(axis, insert=0)
+	#idx = obj.dims.index(axis[0])  # position where the new axis has been inserted
+	#ax = newobj.axes[idx] 
+	ax = newobj.axes[0]
 	name = ax.name
 
 	# checking
