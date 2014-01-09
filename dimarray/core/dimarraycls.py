@@ -924,11 +924,4 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 def array(*args, **kwargs):
     return DimArray.from_kw(*args, **kwargs)
 
-def test():
-    from dimarray.testing import testmod
-    import dimarray.core.core
-    testmod(dimarray.core.core)
-
-# test docstrings
-if __name__ == "__main__":
-    test()
+array.__doc__ = DimArray.from_kw.__doc__

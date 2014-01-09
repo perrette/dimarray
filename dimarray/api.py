@@ -1,5 +1,10 @@
 """ User-interface, should be relatively stable
 """
+import core
+import config
+import dataset
+import lib.transform
+
 from config import set_option, get_option, Config
 from core import *
 from dataset import Dataset

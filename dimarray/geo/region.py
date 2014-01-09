@@ -21,8 +21,7 @@ def extract(lon, lat, data, region):
 	- Rectangular region	    : lon_ll, lat_ll, lon_ur, lat_ur
 	- Region object	
 
-    >>> from geo import region
-    >>> lonr, latr, datar = extract(lon, lat, data, [31.5, 42.]) 
+    >>> lonr, latr, datar = extract(lon, lat, data, [31.5, 42.])  # doctest: +SKIP
     """
     if not isinstance(region, Region):
 

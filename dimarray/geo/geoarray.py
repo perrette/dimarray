@@ -18,7 +18,7 @@ class GeoArray(DimArray):
     - time, lat, lon order always maintained
     - can input time, lat, lon as keyword arguments
     """
-    _order = ('time','lat','lon')
+    #_order = ('time','lat','lon')
 
     def __init__(self, values=None, axes=None, time=None, lat=None, lon=None, **kwargs):
 	""" 
@@ -29,10 +29,9 @@ class GeoArray(DimArray):
 	# construct the axes
 	if keyword:
 	    axes = Axes()
-	    for k in self._order:
-		val = locals()[k]
-		if val is None: continue
-		axes.append(Axis(val, k))
+	    if time is not None: axes.append(Axis(time, 'time'))
+	    if lat is not None: axes.append(Axis(lat, 'lat'))
+	    if lon is not None: axes.append(Axis(lon, 'lon'))
 
 	super(GeoArray, self).__init__(values, axes, **kwargs) # order dimensions
 

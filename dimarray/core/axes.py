@@ -148,7 +148,7 @@ class Axis(Metadata):
     def get_weights(self, weights=None):
 	""" return axis weights as a DimArray
 	"""
-	from core import DimArray
+	from dimarraycls import DimArray
 
 	if weights is None:
 	    weights = self.weights

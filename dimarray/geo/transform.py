@@ -93,7 +93,9 @@ def time_mean(obj, period=None):
 
     >>> a = GeoArray([1,2,3],time=[1950, 1955, 1960])
     >>> time_mean(a)
+    2.0
     >>> time_mean(a, period=(1955,1960))
+    2.5
     """
     if type(period) is tuple:
 	period = slice(*period)

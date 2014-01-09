@@ -3,7 +3,7 @@ from dimarray.testing import testmod
 def main(**kwargs):
 
     import metadata as metadata
-    import core as core
+    import dimarraycls
     import axes as axes
     import _indexing as indexing
     import _reshape as reshape
@@ -11,7 +11,7 @@ def main(**kwargs):
 
     testmod(metadata, **kwargs)
 
-    testmod(core, **kwargs)
+    testmod(dimarraycls, **kwargs)
 
     testmod(axes, **kwargs)
 
