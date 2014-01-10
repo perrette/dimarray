@@ -4,6 +4,7 @@ Note: functions with self as first arguments are used as DimArray methods
 """
 import numpy as np
 from collections import OrderedDict
+import functools
 
 from axes import Axis, Axes, GroupedAxis
 from tools import is_DimArray
@@ -342,7 +343,6 @@ def reshape(self, newdims):
 #
 # Group/ungroup subsets of axes to perform operations on partly flattened array
 #
-
 def group(self, dims, exclude=False, insert=0):
     """ group (or flatten) a subset of dimensions
 
@@ -381,14 +381,14 @@ def group(self, dims, exclude=False, insert=0):
     if not set(dims).issubset(self.dims):
 	raise ValueError("dimensions to group must be a subset of existing dimensions")
 
-    # if 
-    if len(dims) == 1:
-	if self.dims[insert] != dims[0]:
-	    newdims = [d for d in self.dims if d != dims[0]]
-	    newdims = newdims[:insert] + list(dims) + newdims[insert:]
-	    self = self.transpose(newdims)
-	return self
-	#raise ValueError("cannot group less than 2 dimensions")
+#    # if 
+#    if len(dims) == 1:
+#	if self.dims[insert] != dims[0]:
+#	    newdims = [d for d in self.dims if d != dims[0]]
+#	    newdims = newdims[:insert] + list(dims) + newdims[insert:]
+#	    self = self.transpose(newdims)
+#	return self
+#	#raise ValueError("cannot group less than 2 dimensions")
 
     # make sure we have a tuple of strings
     dims = [self.axes[d].name for d in dims]
@@ -457,3 +457,81 @@ def ungroup(self, axis=None):
 
     return self._constructor(newvalues, newaxes, **self._metadata)
 
+#
+# groupby method
+#
+
+class Desc(object):
+    """ descriptor to add methods with pre-selected axis
+    """
+    def __init__(self, nm, *args, **kwargs):
+	self.nm = nm
+	self.args = args
+	self.kwargs = kwargs
+
+    def __get__(self, obj, cls=None):
+	"""
+	"""
+	method = getattr(obj.a, self.nm)
+
+	if callable(method):
+	    method = functools.partial(method, *self.args, **self.kwargs)
+	#if self.axis is not None:
+	#    method functools.partial(method, axis=self.axis)
+
+	return method
+
+class GroupBy(object):
+    """ Make it easy to display stats for one variable
+    """
+    def __init__(self, a, dims):
+	"""
+	"""
+	self.a = a
+	self.dims = dims
+
+
+    values = Desc('values')
+
+    __getitem__ = Desc('__getitem__')
+    ix = Desc('ix')
+
+    take = Desc('take', axis=0)
+
+    mean = Desc('mean', axis=-1)
+    std = Desc('std', axis=-1)
+    var = Desc('var', axis=-1)
+    median = Desc('median', axis=-1)
+    sum = Desc('sum', axis=-1)
+    prod = Desc('prod', axis=-1)
+    all = Desc('all', axis=-1)
+    any = Desc('any', axis=-1)
+    min = Desc('min', axis=-1)
+    max = Desc('max', axis=-1)
+    ptp = Desc('ptp', axis=-1)
+
+#_trans = 'mean','std','var','median','sum','prod', 'all','any','min','max','ptp'
+#for op in _trans:
+#    GroupBy.__dict__[op] = Desc(op, axis=-1)
+
+def groupby(self, *dims):
+    """ group by one or several variables along which stat functions can be applied
+
+    parameters:
+	*dims: variable list of dims to keep, all others are flattened
+
+    returns:
+	GroupBy object
+
+    Examples:
+    ---------
+    >>> a = DimArray([[1,2,3],[4,5,6]], [('x',[1,2]), ('items',['a','b','c'])])
+    >>> a = a.newaxis('y',4) # add an axis of length 4
+    >>> a.groupby('items').mean()
+    dimarray: 3 non-null elements (0 null)
+    dimensions: 'items'
+    0 / items (3): a to c
+    array([ 2.5,  3.5,  4.5])
+    """
+    obj = group(self, dims, exclude=True, insert=0).T
+    return GroupBy(obj, dims)

@@ -78,6 +78,7 @@ def apply_along_axis(obj, func, axis=None, skipna=True, args=(), **kwargs):
     --------
     - DimArray, or scalar 
     """
+
     # Deal with `axis` parameter, whether `int`, `str` or `tuple`
     obj, idx, name = _deal_with_axis(obj, axis)
 
@@ -189,7 +190,8 @@ def _deal_with_axis(obj, axis):
     """
     # before applying the function on the collapsed array
     if type(axis) in (tuple, list):
-	newobj = obj.group(axis, insert=0)
+	idx = 0
+	newobj = obj.group(axis, insert=idx)
 	#idx = obj.dims.index(axis[0])  # position where the new axis has been inserted
 	#ax = newobj.axes[idx] 
 	ax = newobj.axes[0]

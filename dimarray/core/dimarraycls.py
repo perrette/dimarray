@@ -654,6 +654,7 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     broadcast = _reshape.broadcast
     group = _reshape.group
     ungroup = _reshape.ungroup
+    groupby = _reshape.groupby
     
     @property
     def T(self):
@@ -919,12 +920,25 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 
     #
     # Plotting
-    #
-    def plot(self, *args, **kwargs):
-	""" by default, use pandas for plotting
-	"""
-	assert self.ndim <= 2, "only support plotting for 1- and 2-D objects"
-	return self.to_pandas().plot(*args, **kwargs)
+#    #
+#    def scatter_vs(self, axis=0, **kwargs):
+#	""" make a plot along the first dim
+#	"""
+#	if len(self.dims) > 1:
+#	    raise NotImplementedError("plot only valid grouped by 1 variable")
+#	import matplotlib.pyplot as plt
+#	if 'ax' in kwargs:
+#	    ax = kwargs.pop('ax')
+#	else:
+#	    ax = plt.gca()
+#
+#	return ax.plot(self.a.axes[0].values, *args, **kwargs)
+
+#    def plot(self, *args, **kwargs):
+#	""" by default, use pandas for plotting
+#	"""
+#	assert self.ndim <= 2, "only support plotting for 1- and 2-D objects"
+#	return self.to_pandas().plot(*args, **kwargs)
 
 def array(*args, **kwargs):
     return DimArray.from_kw(*args, **kwargs)

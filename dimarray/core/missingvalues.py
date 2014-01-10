@@ -7,8 +7,12 @@ def isnan(a):
     """
     return a._constructor(np.isnan(a.values), a.axes, **a._metadata)
 
-def dropna(a, axis=None, how='any', thresh=None):
-    """ analogous to pandas' dropna
+def dropna(a, axis=None, minval=None):
+    """ drop nans along an axis
+
+    axis: axis position or name or list of names
+    minval, optional: min number of valid point in each slice along axis values
+	by default all the points
 
     Examples:
     ---------
@@ -31,20 +35,26 @@ def dropna(a, axis=None, how='any', thresh=None):
     >>> a = GeoArray(np.arange(3*2)).reshape((3,2))
 
     """
-    # special case: flatten array
+    # if None, all axes
     if axis is None:
-	valid = ~np.isnan(a.values)
-	return a[valid]
+	for dim in a.dims:
+	    a = dropna(a, axis=dim, minval=minval)
+	return a
 
     idx, name = a._get_axis_info(axis)
 
-    nans = ~isnan(a) # keep dims
-    count_nans_axis = nans.sum(axis=[dim for dim in a.dims if dim != name]) # number of points valid along that axis
+    nans = isnan(a) 
+    #nans = nans.group([dim for dim in a.dims if dim != name]) # in first position
+    nans = nans.group([dim for dim in a.dims if dim != name]) # in first position
+    count_nans_axis = nans.sum(axis=0) # number of points valid along that axis
+    count_vals_axis = (~nans).sum(axis=0) # number of points valid along that axis
+    #count_nans_axis = nans.sum(axis=[dim for dim in a.dims if dim != name]) # number of points valid along that axis
+    #count_vals_axis = nans.sum(axis=[dim for dim in a.dims if dim != name]) # number of points valid along that axis
 
     # pick up only points whose number of nans is below the threshold
-    if thresh is None: 
-	thresh = 1
+    if minval is None: 
+	maxna = 1
 
-    indices = count_nans_axis < thresh
+    indices = count_nans_axis < maxna
 
     return a.take(indices, axis=idx)
