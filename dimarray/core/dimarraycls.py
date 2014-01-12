@@ -3,7 +3,7 @@
 import numpy as np
 import copy
 import warnings
-from collections import OrderedDict
+from collections import OrderedDict as odict
 
 from dimarray.config import Config
 
@@ -219,7 +219,7 @@ class DimArray(Metadata):
 	    kwaxes = axes
 	    if values is None: shape = None
 	    else: shape = values.shape
-	    if isinstance(kwaxes, OrderedDict):
+	    if isinstance(kwaxes, odict):
 		dims = kwaxes.keys()
 	    axes = Axes.from_kw(dims=dims, shape=shape, kwaxes=kwaxes)
 	    assert type(axes) is Axes
@@ -788,22 +788,48 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     def __ge__(self, other): return self._cmp('__ge__', other)
 
     @classmethod
-    def from_dataset(cls, data, keys=None, axis="items"):
-	""" aggregate a collection of N-D DimArrays into a N+1 D dimarray
+    def from_dict(cls, data, keys=None, axis="items"):
+	""" initialize a DimArray from a dictionary of smaller dimensional DimArray
 
 	Convenience method for: collect.Dataset(data, keys).to_array(axis)
 
 	input:
 	    - data : list or dict of DimArrays
 	    - keys, optional : ordering of data (for dict)
-	    - axis, optional : axis along which to aggregate data (default "items")
+	    - dim, optional : dimension name along which to aggregate data (default "items")
 
 	output:
-	    - new DimArray object
+	    - new DimArray object, with axis alignment (reindexing)
+
+	Examples:
+	---------
+
+	>>> d = {'a':DimArray([10,20,30.],[0,1,2]), 'b':DimArray([1,2,3.],[1.,2.,3])}
+	>>> a = DimArray.from_dict(d, keys=['a','b']) # keys= just needed to enforce ordering
+	>>> a
+	dimarray: 6 non-null elements (2 null)
+	dimensions: 'items', 'x0'
+	0 / items (2): a to b
+	1 / x0 (4): 0 to 3
+	array([[ 10.,  20.,  30.,  nan],
+	       [ nan,   1.,   2.,   3.]])
 	"""
 	from dimarray.dataset import Dataset
 	data = Dataset(data, keys=keys)
 	return data.to_array(axis=axis)
+
+    #
+    # export to other data types
+    #
+
+    # Split along an axis
+    def to_odict(self, axis=0):
+	"""
+	"""
+	d = odict()
+	for k, val in self.iter(axis):
+	    d[k] = val
+	return d
 
     def to_dataset(self, axis=0):
 	""" split a DimArray into a Dataset object (collection of DimArrays)
@@ -813,27 +839,13 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 	data = [val for k, val in self.iter(axis)]
 	return Dataset(data)
 
-
-
-    #
-    # export to other data types
-    #
     def to_MaskedArray(self):
 	""" transform to MaskedArray, with NaNs as missing values
 	"""
 	return _transform.to_MaskedArray(self.values)
 
-    def to_list(self):
-	return [self[k] for k in self]
-
-    def to_dict(self, axis=0):
-	""" return an ordered dictionary of sets
-	"""
-	from ..dataset import Dataset
-	d = dict()
-	for k, v in self.iter(axis):
-	    d[k] = v
-	return Dataset(d, keys=self.axes[axis].values)
+    def to_list(self, axis=0):
+	return [val for  k, val in self.iter(axis)]
 
     def to_pandas(self):
 	""" return the equivalent pandas object
