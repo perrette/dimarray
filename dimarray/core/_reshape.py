@@ -343,13 +343,13 @@ def reshape(self, newdims):
 #
 # Group/ungroup subsets of axes to perform operations on partly flattened array
 #
-def group(self, dims, exclude=False, insert=0):
+def group(self, dims, reverse=False, insert=0):
     """ group (or flatten) a subset of dimensions
 
     Input:
 	- dims: list or tuple of axis names
-	- exclude [False]: if True, dims are interpreted as the dimensions to exclude
-	    and all the other dimensions are grouped
+	- reverse [False]: if True, reverse behaviour: dims are interpreted as 
+	    the dimensions to keep, and all the other dimensions are grouped
 	- insert: position where to insert the grouped axis 
 		  (by default, any grouped dimensions is placed as first axis)
 
@@ -372,9 +372,9 @@ def group(self, dims, exclude=False, insert=0):
     if type(dims) not in (tuple, list, set):
 	raise TypeError("dimensions to group must be a list or a tuple  or a set")
 
-    # exclude? mirror call
-    assert type(exclude) is bool, "exclude must be a boolean !"
-    if exclude:
+    # reverse? mirror call
+    assert type(reverse) is bool, "reverse must be a boolean !"
+    if reverse:
 	dims = [d for d in self.dims if d not in dims]
 
     # check the 
@@ -533,5 +533,5 @@ def groupby(self, *dims):
     0 / items (3): a to c
     array([ 2.5,  3.5,  4.5])
     """
-    obj = group(self, dims, exclude=True, insert=0).T
+    obj = group(self, dims, reverse=True, insert=0).T
     return GroupBy(obj, dims)

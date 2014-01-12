@@ -14,6 +14,7 @@ def get_globals(m):
     from dimarray import DimArray
     import dimarray as da
     import numpy as np
+
     #if hasattr(m, '__all__'):
     #    all_ = m.__all__
     #else:

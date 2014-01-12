@@ -822,6 +822,63 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 	data = Dataset(data, keys=keys)
 	return data.to_array(axis=axis)
 
+    @classmethod
+    def from_pandas(cls, data, dims=None):
+	""" Initialize a DimArray from pandas
+	data: pandas object (Series, DataFrame, Panel, Panel4D)
+	dims, optional: dimension (axis) names, otherwise look at ax.name for ax in data.axes
+
+	>>> import pandas as pd
+	>>> s = pd.Series([3,5,6], index=['a','b','c'])
+	>>> s.index.name = 'dim0'
+	>>> DimArray.from_pandas(s)
+	dimarray: 3 non-null elements (0 null)
+	dimensions: 'dim0'
+	0 / dim0 (3): a to c
+	array([3, 5, 6], dtype=int64)
+
+	Also work with Multi-Index
+	>>> panel = pd.Panel(np.arange(2*3*4).reshape(2,3,4))
+	>>> b = panel.to_frame() # pandas' method to convert Panel to DataFrame via MultiIndex
+	>>> DimArray.from_pandas(b)  # re-import DataFrame back to DimArray
+	dimarray: 24 non-null elements (0 null)
+	dimensions: 'major,minor', 'x1'
+	0 / major,minor (12): (0, 0) to (2, 3)
+	1 / x1 (2): 0 to 1
+	...  # doctest: +SKIP
+	"""
+	import pandas as pd
+	axisnames = []
+	axes = []
+	for i, ax in enumerate(data.axes):
+	    
+	    # axis name
+	    name = ax.name
+	    if dims is not None: name = dims[i]
+	    if name is None: name = 'x%i'% (i)
+
+	    # Multi-Index: make a Grouped Axis object
+	    if isinstance(ax, pd.MultiIndex):
+
+		# level names
+		names = ax.names
+		for j, nm in enumerate(names): 
+		    if nm is None:
+			names[j] = '%s_%i'%(name,j)
+
+		miaxes = Axes.from_arrays(ax.levels, dims=names)
+		axis = GroupedAxis(*miaxes)
+
+	    # Index: Make a simple Axis
+	    else:
+		axis = Axis(ax.values, name)
+
+	    axes.append(axis)
+
+	#axisnames, axes = zip(*[(ax.name, ax.values) for ax in data.axes])
+
+	return cls(data.values, axes=axes)
+
     #
     # export to other data types
     #
@@ -861,6 +918,29 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 	    obj.axes[i].name = ax.name
 
 	return obj
+
+    def to_frame(self, col=0):
+	""" to pandas dataFrame
+
+	col, optional: axis to use as columns, default is 0 
+	    All other dimensions are collapsed into a MultiIndex as index
+
+	Examples:
+	--------
+	>>> a = DimArray(np.arange(2*3*4).reshape(2,3,4))
+	>>> b = a.to_frame()
+	>>> c = a.to_frame(col='x1') # choose another axis to use as column
+	"""
+	from pandas import MultiIndex, DataFrame, Index
+	pos, name = self._get_axis_info(col)
+	dims = [ax.name for ax in self.axes if ax.name != name] # all but the one designated for columns
+	a = self.group(dims) # group all dimensions instead of col
+	ga = a.axes[0] # grouped axis, inserted as firt dimension
+	#index = MultiIndex.from_arrays(ga.values.T, names=[ax.name for ax in ga.axes])
+	index = MultiIndex.from_tuples(ga.values, names=[ax.name for ax in ga.axes])
+	columns = Index(a.axes[1].values, name=a.axes[1].name)
+
+	return DataFrame(a.values, index=index, columns=columns)
 
     def to_larry(self):
 	""" return the equivalent pandas object

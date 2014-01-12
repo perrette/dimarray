@@ -100,8 +100,7 @@ class Axis(Metadata):
     def loc(self):
 	""" Access the slicer to locate axis elements
 	"""
-	if self.values.ndim == 2:
-	    raise NotImplementedError("cannot slice grouped Axes yet")
+	assert self.values.ndim == 1, "!!! 2-dimensional axis !!!"
 	if self.values.dtype is np.dtype('O'):
 	    return ObjLocator(self.values)
 	else:
@@ -200,7 +199,12 @@ class GroupedAxis(Axis):
 	""" values as 2-D numpy array, to keep things consistent with Axis
 	"""
 	# Each element of the new axis is a tuple, which makes a 2-D numpy array
-	return _flatten(*[ax.values for ax in self.axes])
+	aval = _flatten(*[ax.values for ax in self.axes])
+	#list_of_tuples = zip(*val.T.tolist())
+	val = np.empty(aval.shape[0], dtype=object)
+	val[:] = zip(*aval.T.tolist()) # pass a list of tuples
+	return val 
+	#return _flatten(*[ax.values for ax in self.axes])
 
     @property
     def weights(self):
@@ -296,7 +300,7 @@ class Axes(list):
     def from_arrays(cls, arrays, dims=None):
 	"""  list of np.ndarrays and dims
 	"""
-	assert np.iterable(arrays) and (dims is None or len(dims) == np.size(arrays)), "invalid input arrays={}, dims={}".format(arrays, dims)
+	assert np.iterable(arrays) and (dims is None or len(dims) == len(arrays)), "invalid input arrays={}, dims={}".format(arrays, dims)
 
 	# default names
 	if dims is None: 
@@ -479,8 +483,8 @@ class LocatorAxis(object):
 	elif type(ix) is tuple:
 	    if len(ix) == 1:
 		ix = ix[0]
-	    else:
-		raise TypeError("index not understood: did you mean a `slice`?")
+	#    else:
+	#	raise TypeError("index not understood: did you mean a `slice`?")
 
 	#
 	# look up corresponding numpy indices
