@@ -65,7 +65,7 @@ class Axis(Metadata):
 	#if values.ndim > 2:
 	#    raise ValueError("an Axis object can only be 1-D, use GroupedAxis instead")
 
-	if values.dtype not in (np.dtype(float), np.dtype(int)):
+	if values.dtype not in (np.dtype(float), np.dtype(int), np.dtype(long)):
 	    values = np.asarray(values, dtype=object)
 
 	Metadata.__init__(self)

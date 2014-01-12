@@ -14,6 +14,7 @@ import _transform  # numpy along-axis transformations, interpolation
 import _reshape	   # change array shape and dimensions
 import _indexing   # perform slicing and indexing operations
 import _operation  # operation between DimArrays
+import missingvalues # operation between DimArrays
 
 from tools import pandas_obj, is_array1d_equiv
 
@@ -666,6 +667,9 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     #
     reindex_axis = _indexing.reindex_axis
     reindex_like = _indexing.reindex_like
+
+    # Drop missing values
+    dropna = missingvalues.dropna
 
     #
     # BASIC OPERATTIONS
