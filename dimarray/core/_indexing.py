@@ -169,6 +169,15 @@ def take(obj, indices, axis=0, indexing="values", tol=TOLERANCE, keepdims=False,
     dimensions: 'd0'
     0 / d0 (2): a to b
     array([ 1.,  4.])
+
+    # Matlab like multi-indexing
+    >>> v = DimArray(np.arange(2*3*4).reshape(2,3,4))
+    >>> v[[0,1],:,[0,0,0]].shape
+    (2,3,3)
+    >>> v[[0,1],:,[0,0]].shape # here no broadcasting, matlab-like
+    (2,3,2)
+    >>> v.values[[0,1],:,[0,0]].shape # that is traditional numpy, with broadcasting on same shape
+    (2,3)
     """
     assert indexing in ("position", "values"), "invalid mode: "+repr(indexing)
 
@@ -183,8 +192,8 @@ def take(obj, indices, axis=0, indexing="values", tol=TOLERANCE, keepdims=False,
 
     # matlab-like
     if isinstance(indices, tuple) or isinstance(indices, dict):
-	n_int_indices = sum(type(ix) is int for ix in np.indices_exp[indices])
-	n_array_indices = sum(type(ix) in (list, np.ndarray) for ix in np.indices_exp[indices])
+	n_int_indices = sum(type(ix) is int for ix in np.index_exp[indices])
+	n_array_indices = sum(type(ix) in (list, np.ndarray) for ix in np.index_exp[indices])
 	chained_call = n_array_indices > 1 or (n_array_indices == 1 and n_int_indices >=1)
     else:
 	chained_call = False
