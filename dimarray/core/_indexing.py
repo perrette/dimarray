@@ -171,53 +171,40 @@ def take(obj, indices, axis=0, indexing="values", tol=TOLERANCE, keepdims=False,
     array([ 1.,  4.])
     """
     assert indexing in ("position", "values"), "invalid mode: "+repr(indexing)
+
+    # 
+    # MATLAB-LIKE OR NUMPY-LIKE?
+    #
     if matlab_like is None:
 	matlab_like = MATLAB_LIKE_INDEXING
+
     if keepdims is True:
 	matlab_like = True
+
+    # matlab-like
+    if isinstance(indices, tuple) or isinstance(indices, dict):
+	n_int_indices = sum(type(ix) is int for ix in np.indices_exp[indices])
+	n_array_indices = sum(type(ix) in (list, np.ndarray) for ix in np.indices_exp[indices])
+	chained_call = n_array_indices > 1 or (n_array_indices == 1 and n_int_indices >=1)
+    else:
+	chained_call = False
+
+    if chained_call and not matlab_like:
+	raise NotImplementedError("advanced indexing only works in matlab mode: no change in dimension")
+
+    # proceed to chained call to avoid weird situations like a[0,:,[0,0]]
+    if chained_call:
+	if isinstance(indices, tuple):
+	    indices = {obj.axes[k].name:ix for k, ix in enumerate(indices)}
+	assert isinstance(indices, dict), "pb in chained call"
+	for k in indices:
+	    obj = take(obj, indices[k], axis=k, keepdims=keepdims, indexing=indexing, tol=tol)
+	return obj
 
     try:
 	indices_numpy = obj.axes.loc(indices, axis=axis, position_index=(indexing == "position"), keepdims=keepdims, tol=tol)
     except IndexError, msg:
 	raise IndexError(msg)
-
-    #
-    # Deal with ambiguous case: a[[0,0,0],[0,0,0]] ==> shape is (3,3) (Matlab) or (3,) (Python) ?
-    #
-    
-    # convert to list to update elements
-    assert type(indices_numpy) is tuple, "bug !! (index_exp?)"
-    indices_numpy = list(indices_numpy) 
-
-    # list to ndarray
-    for i, ix in enumerate(indices_numpy):
-	if isinstance(ix, list): indices_numpy[i] = np.array(ix)
-
-    is_int_array_index = [isinstance(ix, np.ndarray) and ix.dtype is not np.dtype(bool) for ix in indices_numpy]
-    is_ambiguous = sum(is_int_array_index) > 0 # even with one elements, weird behaviour occurs (a: (3,3,3), a[0,:,[0,0]]: (2,3) !)
-
-    if is_ambiguous:
-
-	# In that mode, replace any list or integer arrays by boolean array for Matlab-like behaviour of along-axis indexing
-	if matlab_like:
-	    for i in np.where(is_int_array_index)[0]:
-		ix = indices_numpy[i]
-		assert isinstance(ix, np.ndarray) and ix.dtype is not np.dtype(bool), "pb above"
-		newix = np.zeros_like(ix, dtype=bool)
-		newix[ix] = True
-		indices_numpy[i] = newix # update
-
-	# Otherwise, need to buid a grouped axis if several of them are used!
-	else:
-	    raise NotImplementedError("not yet implemented: please set matlab_like to True, or use axes.loc to retrieve the indices and operate on .values attribute (return values will be numpy)")
-	# NOTE another problem is that is matlab_like is False, the new axis is sometimes inserted as first axis !!
-	# e.g. a[0,:,[0,0]] : the third dimension goes at the first position, but not in that case a[:,:,[0,0]]
-	# This complicate the task of finding the right dimension!
-
-    # convert back to tuple for multi-indexing
-    indices_numpy = tuple(indices_numpy) 
-
-    # Done.
 
     # New values
     newval = obj.values[indices_numpy] # new numpy values
