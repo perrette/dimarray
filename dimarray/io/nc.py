@@ -200,7 +200,7 @@ def write_obj(f, obj, *args, **kwargs):
     else:
 	write_dataset(f, obj, *args, **kwargs)
 
-def write_dataset(f, obj, mode='a+'):
+def write_dataset(f, obj, mode='a'):
     """ write object to file
     """
     f, close = check_file(f, mode)
@@ -209,13 +209,13 @@ def write_dataset(f, obj, mode='a+'):
 	write_variable(f, obj[nm], nm)
 
 
-def write_variable(f, obj, name=None, mode='a+'):
+def write_variable(f, obj, name=None, mode='a'):
     """ save DimArray instance to file
 
     f	: file name or netCDF file handle
     obj : DimArray object
     name: variable name
-    mode: 'w' or 'a' or 'a+'
+    mode: 'w' or 'a' 
     """
     if not name and hasattr(obj, "name"): name = obj.name
     assert name, "invalid variable name !"
