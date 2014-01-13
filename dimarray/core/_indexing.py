@@ -191,9 +191,13 @@ def take(obj, indices, axis=0, indexing="values", tol=TOLERANCE, keepdims=False,
 	matlab_like = True
 
     # matlab-like
-    if isinstance(indices, tuple) or isinstance(indices, dict):
-	n_int_indices = sum(type(ix) is int for ix in np.index_exp[indices])
-	n_array_indices = sum(type(ix) in (list, np.ndarray) for ix in np.index_exp[indices])
+    if isinstance(indices, tuple):
+	n_int_indices = sum(type(ix) is int for ix in indices)
+	n_array_indices = sum(type(ix) in (list, np.ndarray) for ix in indices)
+	chained_call = n_array_indices > 1 or (n_array_indices == 1 and n_int_indices >=1)
+    elif isinstance(indices, dict):
+	n_int_indices = sum(type(ix) is int for k, ix in indices.iteritems())
+	n_array_indices = sum(type(ix) in (list, np.ndarray) for k, ix in indices.iteritems())
 	chained_call = n_array_indices > 1 or (n_array_indices == 1 and n_int_indices >=1)
     else:
 	chained_call = False
