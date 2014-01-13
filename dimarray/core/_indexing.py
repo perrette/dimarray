@@ -10,6 +10,7 @@ from axes import Axis, Axes, GroupedAxis, is_regular, make_multiindex
 __all__ = ["take", "put"]
 
 TOLERANCE=1e-8
+MATLAB_LIKE_INDEXING = True
 
 def _get_keyword_indices(obj, indices, axis=0):
     """ get dictionary of indices
@@ -46,7 +47,7 @@ def size(self):
     return np.size(self.values)
 
 
-def take(obj, indices, axis=0, indexing="values", tol=TOLERANCE, keepdims=False):
+def take(obj, indices, axis=0, indexing="values", tol=TOLERANCE, keepdims=False, matlab_like=None):
     """ Retrieve values from a DimArray
 
     input:
@@ -61,6 +62,25 @@ def take(obj, indices, axis=0, indexing="values", tol=TOLERANCE, keepdims=False)
 		     "values": indexing on axis values 
 	- tol	   : tolerance when looking for floats
 	- keepdims : keep singleton dimensions
+	- matlab_like: if True, indexing with list or array of indices will behave like
+	    Matlab TM does, which means that it will index on each individual dimensions.
+	    (internally, any list or array of indices will be converted to a boolean index
+	    of values before slicing)
+
+	    If False, numpy rules are followed. Consider the following case:
+
+	    a = DimArray(np.zeros((4,4,4)))
+	    a[[0,0],[0,0],[0,0]]
+	    
+	    if matlab_like is True, the result will be a 3-D array of shape 2 x 2 x 2
+	    if matlab_like is False, the result will be a 1-D array of size 2. This case 
+	    is more complicated to implement because the axes need to be grouped, and it 
+	    is ***not yet implemented***. See examples.
+	    
+	    Note if the "keepdims" options is True, matlab_like is set to True automatically.
+	    The default is set at the module level by MATLAB_LIKE_INDEXING, at present
+	    default to True, may be set to False (for consistency with numpy) when the feature 
+	    with GroupedAxis is implemented.
 
     output:
 	- DimArray object or python built-in type, consistently with numpy slicing
@@ -149,24 +169,55 @@ def take(obj, indices, axis=0, indexing="values", tol=TOLERANCE, keepdims=False)
     dimensions: 'd0'
     0 / d0 (2): a to b
     array([ 1.,  4.])
-
     """
     assert indexing in ("position", "values"), "invalid mode: "+repr(indexing)
+    if matlab_like is None:
+	matlab_like = MATLAB_LIKE_INDEXING
+    if keepdims is True:
+	matlab_like = True
 
     try:
 	indices_numpy = obj.axes.loc(indices, axis=axis, position_index=(indexing == "position"), keepdims=keepdims, tol=tol)
     except IndexError, msg:
 	raise IndexError(msg)
 
+    #
+    # Deal with ambiguous case: a[[0,0,0],[0,0,0]] ==> shape is (3,3) (Matlab) or (3,) (Python) ?
+    #
+    
+    # convert to list to update elements
+    assert type(indices_numpy) is tuple, "bug !! (index_exp?)"
+    indices_numpy = list(indices_numpy) 
 
-#    if indexing == "interp":
-#	return interp(obj, indices, axis=axis, tol=tol, keepdims=keepdims)
-#
-#    elif indexing == "nearest":
-#	return take_nearest(obj, indices, axis=axis, tol=tol, keepdims=keepdims)
+    # list to ndarray
+    for i, ix in enumerate(indices_numpy):
+	if isinstance(ix, list): indices_numpy[i] = np.array(ix)
 
-    # Convert to a tuple numpy indices matching the shape of the DimArray
-#    assert indexing in ("position", "values"), "invalid indexing: "+repr(indexing)
+    is_int_array_index = [isinstance(ix, np.ndarray) and ix.dtype is not np.dtype(bool) for ix in indices_numpy]
+    is_ambiguous = sum(is_int_array_index) > 0 # even with one elements, weird behaviour occurs (a: (3,3,3), a[0,:,[0,0]]: (2,3) !)
+
+    if is_ambiguous:
+
+	# In that mode, replace any list or integer arrays by boolean array for Matlab-like behaviour of along-axis indexing
+	if matlab_like:
+	    for i in np.where(is_int_array_index)[0]:
+		ix = indices_numpy[i]
+		assert isinstance(ix, np.ndarray) and ix.dtype is not np.dtype(bool), "pb above"
+		newix = np.zeros_like(ix, dtype=bool)
+		newix[ix] = True
+		indices_numpy[i] = newix # update
+
+	# Otherwise, need to buid a grouped axis if several of them are used!
+	else:
+	    raise NotImplementedError("not yet implemented: please set matlab_like to True, or use axes.loc to retrieve the indices and operate on .values attribute (return values will be numpy)")
+	# NOTE another problem is that is matlab_like is False, the new axis is sometimes inserted as first axis !!
+	# e.g. a[0,:,[0,0]] : the third dimension goes at the first position, but not in that case a[:,:,[0,0]]
+	# This complicate the task of finding the right dimension!
+
+    # convert back to tuple for multi-indexing
+    indices_numpy = tuple(indices_numpy) 
+
+    # Done.
 
     # New values
     newval = obj.values[indices_numpy] # new numpy values
