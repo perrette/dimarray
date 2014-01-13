@@ -43,7 +43,7 @@ def read(f, nms=None, *args, **kwargs):
     >>> data = read('test.nc','dynsealevel') # only one variable
     >>> data = read('test.nc','dynsealevel', {"time":slice(2000,2100), "lon":slice(50,70), "lat":42})  # load only a chunck of the data
     """
-    if nms is not None and type(nms) is str:
+    if nms is not None and isinstance(nms, str):
 	obj = read_variable(f, nms, *args, **kwargs)
     else:
 	obj = read_dataset(f, nms, *args, **kwargs)
@@ -284,7 +284,7 @@ def check_file(f, mode='r', verbose=True):
     """
     close = False
 
-    if type(f) is str:
+    if isinstance(f, str):
 	fname = f
 	if verbose: 
 	    if 'r' in mode:
