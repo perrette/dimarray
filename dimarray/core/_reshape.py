@@ -369,6 +369,9 @@ def group(self, dims, reverse=False, insert=0):
 
     a.mean(axis=('lon','lat')) 
     """
+    if len(dims) == 0: 
+	raise ValueError("dims must have length > 0")
+
     if type(dims) not in (tuple, list, set):
 	raise TypeError("dimensions to group must be a list or a tuple  or a set")
 
