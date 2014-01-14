@@ -4,7 +4,7 @@ with open('README') as file:
         long_description = file.read()
 
 setup(name='dimarray',
-      version='0.0',
+      version='0.1',
       author='Mahe Perrette',
       author_email='mahe.perrette@pik-potsdam.de',
       description='array with labelled dimensions and axes, metadata and NaN handling',

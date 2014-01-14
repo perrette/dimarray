@@ -309,7 +309,7 @@ class Axes(list):
 	return cls.from_tuples(*zip(dims, arrays))
 
     @classmethod
-    def from_kw(cls, dims=None, shape=None, kwaxes={}):
+    def from_dict(cls, kwaxes, dims=None, shape=None):
 	""" infer dimensions from key-word arguments
 	"""
 	# if no key-word argument is given, just return default axis
@@ -354,7 +354,7 @@ class Axes(list):
     def __getitem__(self, item):
 	""" get an axis by integer or name
 	"""
-	if type(item) in [str, unicode, tuple]:
+	if type(item) in [str, unicode, tuple, np.string_]:
 	    item = self.get_idx(item)
 
 	# confusing

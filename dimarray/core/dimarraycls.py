@@ -222,7 +222,7 @@ class DimArray(Metadata):
 	    else: shape = values.shape
 	    if isinstance(kwaxes, odict):
 		dims = kwaxes.keys()
-	    axes = Axes.from_kw(dims=dims, shape=shape, kwaxes=kwaxes)
+	    axes = Axes.from_dict(kwaxes, dims=dims, shape=shape)
 	    assert type(axes) is Axes
 
 	# list of Axis objects
@@ -698,12 +698,16 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 	return result
 
     def __add__(self, other): return self._operation(np.add, other)
+    __radd__ = __add__
 
     def __sub__(self, other): return self._operation(np.subtract, other)
+    __rsub__ = __sub__
 
     def __mul__(self, other): return self._operation(np.multiply, other)
+    __rmul__ = __mul__
 
     def __div__(self, other): return self._operation(np.divide, other)
+    __rdiv__ = __div__
 
     def __pow__(self, other): return self._operation(np.power, other)
     def __sqrt__(self, other): return self**0.5
@@ -792,7 +796,7 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     def __ge__(self, other): return self._cmp('__ge__', other)
 
     @classmethod
-    def from_dict(cls, data, keys=None, axis="items"):
+    def from_arrays(cls, data, keys=None, axis="items"):
 	""" initialize a DimArray from a dictionary of smaller dimensional DimArray
 
 	Convenience method for: collect.Dataset(data, keys).to_array(axis)
@@ -800,16 +804,15 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 	input:
 	    - data : list or dict of DimArrays
 	    - keys, optional : ordering of data (for dict)
-	    - dim, optional : dimension name along which to aggregate data (default "items")
+	    - axis, optional : dimension name along which to aggregate data (default "items")
 
 	output:
 	    - new DimArray object, with axis alignment (reindexing)
 
 	Examples:
 	---------
-
 	>>> d = {'a':DimArray([10,20,30.],[0,1,2]), 'b':DimArray([1,2,3.],[1.,2.,3])}
-	>>> a = DimArray.from_dict(d, keys=['a','b']) # keys= just needed to enforce ordering
+	>>> a = DimArray.from_arrays(d, keys=['a','b']) # keys= just needed to enforce ordering
 	>>> a
 	dimarray: 6 non-null elements (2 null)
 	dimensions: 'items', 'x0'
@@ -828,24 +831,24 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 	data: pandas object (Series, DataFrame, Panel, Panel4D)
 	dims, optional: dimension (axis) names, otherwise look at ax.name for ax in data.axes
 
-	>>> import pandas as pd
-	>>> s = pd.Series([3,5,6], index=['a','b','c'])
-	>>> s.index.name = 'dim0'
-	>>> DimArray.from_pandas(s)
-	dimarray: 3 non-null elements (0 null)
-	dimensions: 'dim0'
-	0 / dim0 (3): a to c
-	array([3, 5, 6], dtype=int64)
+	## >>> import pandas as pd
+	## >>> s = pd.Series([3,5,6], index=['a','b','c'])
+	## >>> s.index.name = 'dim0'
+	## >>> DimArray.from_pandas(s)
+	## dimarray: 3 non-null elements (0 null)
+	## dimensions: 'dim0'
+	## 0 / dim0 (3): a to c
+	## array([3, 5, 6], dtype=int64)
 
-	Also work with Multi-Index
-	>>> panel = pd.Panel(np.arange(2*3*4).reshape(2,3,4))
-	>>> b = panel.to_frame() # pandas' method to convert Panel to DataFrame via MultiIndex
-	>>> DimArray.from_pandas(b)  # re-import DataFrame back to DimArray
-	dimarray: 24 non-null elements (0 null)
-	dimensions: 'major,minor', 'x1'
-	0 / major,minor (12): (0, 0) to (2, 3)
-	1 / x1 (2): 0 to 1
-	...  # doctest: +SKIP
+	## Also work with Multi-Index
+	## >>> panel = pd.Panel(np.arange(2*3*4).reshape(2,3,4))
+	## >>> b = panel.to_frame() # pandas' method to convert Panel to DataFrame via MultiIndex
+	## >>> DimArray.from_pandas(b)  # re-import DataFrame back to DimArray
+	## dimarray: 24 non-null elements (0 null)
+	## dimensions: 'major,minor', 'x1'
+	## 0 / major,minor (12): (0, 0) to (2, 3)
+	## 1 / x1 (2): 0 to 1
+	## ...  # doctest: +SKIP
 	"""
 	import pandas as pd
 	axisnames = []
@@ -927,9 +930,9 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 
 	Examples:
 	--------
-	>>> a = DimArray(np.arange(2*3*4).reshape(2,3,4))
-	>>> b = a.to_frame()
-	>>> c = a.to_frame(col='x1') # choose another axis to use as column
+	## >>> a = DimArray(np.arange(2*3*4).reshape(2,3,4))
+	## >>> b = a.to_frame()
+	## >>> c = a.to_frame(col='x1') # choose another axis to use as column
 	"""
 	from pandas import MultiIndex, DataFrame, Index
 	pos, name = self._get_axis_info(col)
@@ -1006,9 +1009,11 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     @classmethod
     def read_nc(cls, f, *args, **kwargs):
 	""" Read from netCDF
+
+	Usage: a.DimArray(file, vname)
 	"""
 	import dimarray.io.nc as ncio
-	return ncio.read_base(f, *args, **kwargs)
+	return ncio.read_variable(f, *args, **kwargs)
 
     # Aliases
     write = write_nc
