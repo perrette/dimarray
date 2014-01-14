@@ -60,6 +60,9 @@ class Axis(Metadata):
 
 	#if np.size(values) == 0:
 	#    raise ValueError("cannot define an empty axis")
+	if np.isscalar(values):
+	    raise TypeError("an axis cannot be a scalar value !")
+
 	values = np.array(values)
 
 	#if values.ndim > 2:
@@ -99,13 +102,29 @@ class Axis(Metadata):
     @property
     def loc(self):
 	""" Access the slicer to locate axis elements
+
+	>>> ax = Axis([1,2,3],'x0')
+	>>> ax.isnumeric()
+	True
+	>>> ax = Axis(['a','b','c'],'x0')
+	>>> ax.isnumeric()
+	False
 	"""
 	assert self.values.ndim == 1, "!!! 2-dimensional axis !!!"
-	if self.values.dtype is np.dtype('O'):
-	    return ObjLocator(self.values)
-	else:
+	if self.isnumeric():
 	    return NumLocator(self.values, modulo=self.modulo)
+	else:
+	    return ObjLocator(self.values)
 
+    def isnumeric(self):
+	""" numeric type?
+	"""
+	return self.values.dtype in (np.dtype(int), np.dtype(long), np.dtype(float))
+	#try:
+	#    self.values[0] + 1
+	#    return True
+	#except:
+	#    return False
 
     def __eq__(self, other):
 	#return hasattr(other, "name") and hasattr(other, "values") and np.all(other.values == self.values) and self.name == other.name
@@ -260,6 +279,13 @@ def _flatten(*list_of_arrays):
 class Axes(list):
     """ Axes class: inheritates from a list but dict-like access methods for convenience
     """
+    def __init__(self, *args, **kwargs):
+
+	list.__init__(self, *args, **kwargs)
+	for v in self:
+	    if not isinstance(v, Axis):
+		raise TypeError("an Axes object can only be initialized with a list of Axes objects, got: {} (instance:{}) !".format(type(v), v))
+
     def append(self, item):
 	""" add a check on axis
 	"""
@@ -596,7 +622,11 @@ class ObjLocator(LocatorAxis):
     def _locate(self, val):
 	""" find a string
 	"""
-	return self.values.tolist().index(val)
+	try:
+	    return self.values.tolist().index(val)
+	except ValueError, msg:
+	    raise IndexError(msg)
+
 
 class NumLocator(LocatorAxis):
     """ Locator for axis of integers or floats to be treated as numbers (with tolerance parameters)

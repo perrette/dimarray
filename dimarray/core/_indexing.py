@@ -62,7 +62,9 @@ def take(obj, indices, axis=0, indexing="values", tol=TOLERANCE, keepdims=False,
 		     "values": indexing on axis values 
 	- tol	   : tolerance when looking for floats
 	- keepdims : keep singleton dimensions
-	- matlab_like: if True, indexing with list or array of indices will behave like
+	- matlab_like: True by default, False not implemented !!
+	
+	    if True, indexing with list or array of indices will behave like
 	    Matlab TM does, which means that it will index on each individual dimensions.
 	    (internally, any list or array of indices will be converted to a boolean index
 	    of values before slicing)
@@ -181,35 +183,39 @@ def take(obj, indices, axis=0, indexing="values", tol=TOLERANCE, keepdims=False,
     """
     assert indexing in ("position", "values"), "invalid mode: "+repr(indexing)
 
-    # 
-    # MATLAB-LIKE OR NUMPY-LIKE?
-    #
-    if matlab_like is None:
-	matlab_like = MATLAB_LIKE_INDEXING
+#    # 
+#    # MATLAB-LIKE OR NUMPY-LIKE?
+#    #
+#    if matlab_like is None:
+#	matlab_like = MATLAB_LIKE_INDEXING
+#
+#    if keepdims is True:
+#	matlab_like = True
+#
+#    # matlab-like
+#    if isinstance(indices, tuple):
+#	n_int_indices = sum(type(ix) is int for ix in indices)
+#	n_array_indices = sum(type(ix) in (list, np.ndarray) for ix in indices)
+#	chained_call = n_array_indices > 1 or (n_array_indices == 1 and n_int_indices >=1)
+#
+#    elif isinstance(indices, dict):
+#	n_int_indices = sum(type(ix) is int for k, ix in indices.iteritems())
+#	n_array_indices = sum(type(ix) in (list, np.ndarray) for k, ix in indices.iteritems())
+#	chained_call = n_array_indices > 1 or (n_array_indices == 1 and n_int_indices >=1)
+#    else:
+#	chained_call = False
 
-    if keepdims is True:
-	matlab_like = True
-
-    # matlab-like
-    if isinstance(indices, tuple):
-	n_int_indices = sum(type(ix) is int for ix in indices)
-	n_array_indices = sum(type(ix) in (list, np.ndarray) for ix in indices)
-	chained_call = n_array_indices > 1 or (n_array_indices == 1 and n_int_indices >=1)
-    elif isinstance(indices, dict):
-	n_int_indices = sum(type(ix) is int for k, ix in indices.iteritems())
-	n_array_indices = sum(type(ix) in (list, np.ndarray) for k, ix in indices.iteritems())
-	chained_call = n_array_indices > 1 or (n_array_indices == 1 and n_int_indices >=1)
-    else:
-	chained_call = False
-
-    if chained_call and not matlab_like:
-	raise NotImplementedError("advanced indexing only works in matlab mode: no change in dimension")
+#    if chained_call and not matlab_like:
+#	raise NotImplementedError("advanced indexing only works in matlab mode: no change in dimension")
 
     # proceed to chained call to avoid weird situations like a[0,:,[0,0]]
-    if chained_call:
-	if isinstance(indices, tuple):
-	    indices = {obj.axes[k].name:ix for k, ix in enumerate(indices)}
-	assert isinstance(indices, dict), "pb in chained call"
+#    if chained_call:
+
+    # convert tuple to dictionary for chained call
+    if isinstance(indices, tuple):
+	indices = {obj.axes[k].name:ix for k, ix in enumerate(indices)}
+
+    if isinstance(indices, dict):
 	for k in indices:
 	    obj = take(obj, indices[k], axis=k, keepdims=keepdims, indexing=indexing, tol=tol)
 	return obj

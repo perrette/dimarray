@@ -99,7 +99,16 @@ def read_dimensions(f, name=None, ix=slice(None), verbose=False):
     # load axes
     axes = Axes()
     for k in dims:
-	axes.append(Axis(f.variables[k][ix], k))
+
+	values = f.variables[k][ix]
+
+	# replace unicode by str as a temporary bug fix (any string seems otherwise to be treated as unicode in netCDF4)
+	if values.size > 0 and type(values[0]) is unicode:
+	    for i, val in enumerate(values):
+		if type(val) is unicode:
+		    values[i] = str(val)
+
+	axes.append(Axis(axvalues, k))
 
     if close: f.close()
 
@@ -145,7 +154,8 @@ def read_variable(f, v, indices=slice(None), axis=0, *args, **kwargs):
     ix = axes.loc(indices, axis=axis, *args, **kwargs)
 
     # slice the data and dimensions
-    newaxes = [ax[ix[i]] for i, ax in enumerate(axes)] # also get the appropriate axes
+    newaxes_raw = [ax[ix[i]] for i, ax in enumerate(axes)] # also get the appropriate axes
+    newaxes = [ax for ax in newaxes_raw if isinstance(ax, Axis)] # remove singleton values
     newdata = f.variables[v][ix]
 
     # initialize a dimarray

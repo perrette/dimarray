@@ -32,8 +32,10 @@ def dropna(a, axis=0, minval=None):
     array([ 1.,  3.])
 
     Multi-dimensional
-    >>> a = DimArray(np.arange(3*2).reshape((3,2)))
-
+    TODO
+  ##  >>> a = DimArray(np.arange(3*2).reshape((3,2)))
+  ##  >>> a.ix[0, 1] = np.nan
+  ##  >>> a
     """
     assert axis is not None, "axis cannot be None for dropna"
 #    # if None, all axes
@@ -59,6 +61,8 @@ def dropna(a, axis=0, minval=None):
     # pick up only points whose number of nans is below the threshold
     if minval is None: 
 	maxna = 1
+    else:
+	maxna = nans.axes[0].size - minval
 
     indices = count_nans_axis < maxna
 

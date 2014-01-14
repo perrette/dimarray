@@ -239,7 +239,7 @@ class DimArray(Metadata):
 	    axes = Axes.from_arrays(axes, dims=dims)
 
 	else:
-	    raise TypeError("axes, if provided, must be a list of: `Axis` or `tuple` or arrays. Got: {}".format(axes))
+	    raise TypeError("axes, if provided, must be a list of: `Axis` or `tuple` or arrays. Got: {} (instance:{})".format(axes.__class__, axes))
 
 	assert type(axes) is Axes
 
