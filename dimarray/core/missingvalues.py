@@ -7,7 +7,7 @@ def isnan(a):
     """
     return a._constructor(np.isnan(a.values), a.axes, **a._metadata)
 
-def dropna(a, axis=None, minval=None):
+def dropna(a, axis=0, minval=None):
     """ drop nans along an axis
 
     axis: axis position or name or list of names
