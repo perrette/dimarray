@@ -94,6 +94,8 @@ def read_dimensions(f, name=None, ix=slice(None), verbose=False):
     else:
 	dims = f.variables[name].dimensions
 
+    dims = [str(d) for d in dims] # conversion to string
+
     # load axes
     axes = Axes()
     for k in dims:
@@ -240,6 +242,7 @@ def write_variable(f, obj, name=None, mode='a'):
 	v = f.createVariable(name, obj.dtype, obj.dims)
     else:
 	v = f.variables[name]
+	#assert tuple(unicode(d) for d in obj.dims) == tuple(v.dimensions), "Dimension name do not correspond {}: {} attempted to write: {}".format(name, tuple(v.dimensions), obj.dims)
 	assert obj.dims == tuple(v.dimensions), "Dimension name do not correspond {}: {} attempted to write: {}".format(name, tuple(v.dimensions), obj.dims)
 
     # Write Variable
@@ -284,7 +287,7 @@ def check_file(f, mode='r', verbose=True):
     """
     close = False
 
-    if isinstance(f, str):
+    if not isinstance(f, nc.Dataset):
 	fname = f
 	if verbose: 
 	    if 'r' in mode:
