@@ -423,7 +423,6 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     def __array__(self): 
 	return self.values.__array__
 
-    @property
     def __iter__(self): 
 	""" iterates on values, consistently with a ndarray
 	"""
