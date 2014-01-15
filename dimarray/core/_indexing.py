@@ -574,7 +574,7 @@ def reindex_axis(self, values, axis=0, method='exact', repna=True, fill_value=np
     return newobj
 
 
-def _reindex_axes(self, axes, method=None, **kwargs):
+def _reindex_axes(self, axes, **kwargs):
     """ reindex according to a list of axes
     """
     obj = self
@@ -582,11 +582,11 @@ def _reindex_axes(self, axes, method=None, **kwargs):
     for ax in self.axes:
 	if ax.name in newdims:
 	    newaxis = axes[ax.name].values
-	    obj = obj.reindex_axis(newaxis, axis=ax.name, method=method, **kwargs)
+	    obj = obj.reindex_axis(newaxis, axis=ax.name, **kwargs)
 
     return obj
 
-def reindex_like(self, other, method=None, **kwargs):
+def reindex_like(self, other, method='exact', **kwargs):
     """ reindex like another axis
 
     note: only reindex axes which are present in other
@@ -602,7 +602,13 @@ def reindex_like(self, other, method=None, **kwargs):
     0 / x0 (3): 1 to 3
     array([ 3. ,  3.5,  4. ])
     """
-    return _reindex_axes(self, other.axes, method=method, **kwargs)
+    if hasattr(other, 'axes'):
+	axes = other.axes
+    elif isinstance(other, Axes):
+	axes = other
+    else:
+	raise TypeError('expected DimArray or Axes, got {}: {}'.format(type(other), other))
+    return _reindex_axes(self, axes, method=method, **kwargs)
 
 
 

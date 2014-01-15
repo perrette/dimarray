@@ -75,11 +75,12 @@ class Dataset(object):
 	    dims[ax.name] = ax.size
 	return dims
 
-    def update(self, odict):
+    def update(self, dict_):
 	""" update from another dataset or dictionary
+
 	"""
-	for k in enumerate(odict):
-	    self[k] = odict[k]
+	for k in dict_:
+	    self[k] = dict_[k]
 	
     def __getattr__(self, att):
 	"""
@@ -115,6 +116,26 @@ class Dataset(object):
 
     def __setitem__(self, item, val):
 	""" Make sure the object is a DimArray with appropriate axes
+
+	Tests:
+	-----
+	>>> axes = da.Axes.from_tuples(('time',[1, 2, 3]))
+	>>> ds = Dataset(axes=axes)
+	>>> ds
+	Dataset of 0 variables
+	dimensions: 'time'
+	0 / time (3): 1 to 3
+	>>> a = DimArray([0, 1, 2], dims=('time',))
+	>>> ds['yo'] = a # doctest: +SKIP
+	ValueError: axes values do not match, align data first.			    
+	Dataset: time(3)=1:3, 
+	Got: time(3)=0:2
+	>>> ds['yo'] = a.reindex_like(ds)
+	>>> ds['yo']
+	dimarray: 2 non-null elements (1 null)
+	dimensions: 'time'
+	0 / time (3): 1 to 3
+	array([  1.,   2.,  nan])
 	"""
 	if not isinstance(val, DimArray):
 	    raise TypeError("can only append DimArray instances")
