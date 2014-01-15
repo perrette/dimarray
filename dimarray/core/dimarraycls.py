@@ -707,6 +707,19 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 	1 / x1 (2): 0 to 1
 	array([[-0., -1.],
 	       [-1., -2.]])
+
+	True divide by default
+	>>> a = DimArray([1,2,3])
+	>>> a/2
+	dimarray: 3 non-null elements (0 null)
+	dimensions: 'x0'
+	0 / x0 (3): 0 to 2
+	array([ 0.5,  1. ,  1.5])
+	>>> a//2
+	dimarray: 3 non-null elements (0 null)
+	dimensions: 'x0'
+	0 / x0 (3): 0 to 2
+	array([0, 1, 1])
 	"""
 	result = _operation.operation(func, self, other, broadcast=Config.op_broadcast, reindex=Config.op_reindex, constructor=self._constructor)
 	return result
@@ -723,7 +736,9 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     def __mul__(self, other): return self._operation(np.multiply, other)
     __rmul__ = __mul__
 
-    def __div__(self, other): return self._operation(np.divide, other)
+    def __truediv__(self, other): return self._operation(np.true_divide, other)
+    def __floordiv__(self, other): return self._operation(np.floor_divide, other)
+    __div__ = __truediv__ # by default use true divide
     __rdiv__ = __div__
 
     def __pow__(self, other): return self._operation(np.power, other)
