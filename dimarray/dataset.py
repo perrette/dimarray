@@ -35,11 +35,12 @@ class Dataset(object):
 
 	# Check names
 	for i, v in enumerate(data):
-	    if keys is not None:
-		v.name = keys[i]
-
-	    if not v.name:
-		raise ValueError("DimArray must have a name if provided as list, provide `keys=` parameter")
+	    if not hasattr(v,'name') or not v.name:
+	#	raise ValueError("DimArray must have a name if provided as list, provide `keys=` parameter")
+		if keys is not None:
+		    v.name = keys[i]
+		else:
+		    v.name = "v%i"%(i)
 
 	# Align objects
 	data = align_axes(*data)

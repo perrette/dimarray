@@ -818,6 +818,18 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 
 	Examples:
 	---------
+
+	From a list:
+	>>> a = DimArray([1,2,3])
+	>>> DimArray.from_arrays([a, 2*a]) # if keys not provided, name is 'v0', 'v1'
+	dimarray: 6 non-null elements (0 null)
+	dimensions: 'items', 'x0'
+	0 / items (2): v0 to v1
+	1 / x0 (3): 0 to 2
+	array([[1, 2, 3],
+	       [2, 4, 6]])
+
+	From a dict, here also with axis alignment
 	>>> d = {'a':DimArray([10,20,30.],[0,1,2]), 'b':DimArray([1,2,3.],[1.,2.,3])}
 	>>> a = DimArray.from_arrays(d, keys=['a','b']) # keys= just needed to enforce ordering
 	>>> a
