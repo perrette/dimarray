@@ -872,12 +872,21 @@ class LocatorAxes(object):
 	    assert axis in (None, 0), "cannot have axis > 0 for tuple (multi-dimensional) indexing"
 
 	if type(indices) is not tuple:
+	    
+	    # format (indices=..., axis=...)
 	    if not isinstance(indices, dict):
 		kw = {self.axes[axis].name:indices}
 
+	    # dictionary
 	    else:
 		assert axis in (None, 0), "cannot have axis > 0 for tuple (multi-dimensional) indexing"
 		kw = indices
+
+	    # make sure the fields match
+	    for k in kw:
+		dims = [ax.name for ax in self.axes]
+		if k not in dims:
+		    raise ValueError("invalid axis name, present:{}, got:{}".format(dims, k))
 
 	    # dict: just convert to appropriately ordered tuple
 	    indices = ()
