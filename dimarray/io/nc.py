@@ -151,7 +151,10 @@ def read_variable(f, v, indices=slice(None), axis=0, *args, **kwargs):
 
     # Construct the indices
     axes = read_dimensions(f, v)
-    ix = axes.loc(indices, axis=axis, *args, **kwargs)
+    try:
+	ix = axes.loc(indices, axis=axis, *args, **kwargs)
+    except IndexError, msg:
+	raise IndexError(msg)
 
     # slice the data and dimensions
     newaxes_raw = [ax[ix[i]] for i, ax in enumerate(axes)] # also get the appropriate axes
