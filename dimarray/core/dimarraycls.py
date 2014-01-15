@@ -1034,11 +1034,11 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 #
 #	return ax.plot(self.a.axes[0].values, *args, **kwargs)
 
-#    def plot(self, *args, **kwargs):
-#	""" by default, use pandas for plotting
-#	"""
-#	assert self.ndim <= 2, "only support plotting for 1- and 2-D objects"
-#	return self.to_pandas().plot(*args, **kwargs)
+    def plot(self, *args, **kwargs):
+	""" by default, use pandas for plotting (for now at least)
+	"""
+	assert self.ndim <= 2, "only support plotting for 1- and 2-D objects"
+	return self.to_pandas().plot(*args, **kwargs)
 
 def array(*args, **kwargs):
     return DimArray.from_kw(*args, **kwargs)
