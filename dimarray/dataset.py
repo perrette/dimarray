@@ -20,6 +20,8 @@ class Dataset(object):
 	self.axes = Axes()
 	self.variables = odict()
 
+	assert keys is None or len(keys) = len(data), "key does not match with model length !"
+
 	# Transform data to a list
 	if isinstance(data, dict): 
 	    if keys is None:

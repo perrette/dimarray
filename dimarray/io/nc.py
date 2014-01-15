@@ -220,6 +220,7 @@ def write_dataset(f, obj, mode='a'):
     for nm in obj:
 	write_variable(f, obj[nm], nm)
 
+    if close: f.close()
 
 def write_variable(f, obj, name=None, mode='a'):
     """ save DimArray instance to file
@@ -306,9 +307,10 @@ def check_file(f, mode='r', verbose=True):
 
 	try:
 	    f = nc.Dataset(fname, mode)
+
 	except Exception, msg: # raise a weird RuntimeError
 	    #print "read from",fname
-	    raise IOError(msg+" => failed to opend {} in mode {}".format(fname, mode)) # easier to handle
+	    raise IOError("{} => failed to opend {} in mode {}".format(msg, fname, mode)) # easier to handle
 
 	if verbose: 
 	    if 'r' in mode:
