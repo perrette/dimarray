@@ -297,7 +297,7 @@ class Axes(list):
 
     @staticmethod
     def _init(*args, **kwargs):
-	return _init(*args, **kwargs)
+	return _init_axes(*args, **kwargs)
 
     @classmethod
     def from_tuples(cls, *tuples_name_values):
@@ -431,7 +431,7 @@ class Axes(list):
 	return LocatorAxes(self)
 
 
-def _init(axes=None, dims=None, shape=None, raise_warning=True):
+def _init_axes(axes=None, dims=None, shape=None, raise_warning=True):
     """ initialize axis instance with many different ways
 
     axes:
