@@ -16,7 +16,7 @@ import _indexing   # perform slicing and indexing operations
 import _operation  # operation between DimArrays
 import missingvalues # operation between DimArrays
 
-from tools import pandas_obj, is_array1d_equiv
+from tools import pandas_obj
 
 __all__ = ["DimArray", "array"]
 
@@ -181,66 +181,13 @@ class DimArray(Metadata):
 	if values is not None:
 	    values = np.array(values, copy=copy, dtype=dtype)
 
-	# special case: 1D object: accept single axis instead of list of axes/dimensions
-	if values is not None and values.ndim == 1:
-	    
-	    # accept a tuple ('dim', axis values) instead of [(...)]
-	    if type(axes) is tuple:
-		if len(axes) == 2 and type(axes[0]) is str and is_array1d_equiv(axes[1]):
-		    axes = [axes]
-
-	    # accept axes=axis, dims='dim' (instead of list)
-	    elif (axes is None or is_array1d_equiv(axes)) and (type(dims) in (str, type(None))):
-		#if axes is not None: assert np.size(axes) == values.size, "invalid argument: bad size"
-		axes = [axes] if axes is not None else None
-		dims = [dims] if dims is not None else None
-
 	#
 	# Initialize the axes
 	# 
-	# Can be one of
-	# - dict
-	# - list of Axis objects
-	# - list of tuples `dim, array`
-	# - list of arrays, to be complemented by "dims="
-	# - nothing
-
-	# axis not provided: check whether values has an axes field
 	if axes is None:
 	    assert values is not None, "values= or/and axes= required"
 
-	    # check if attached to values (e.g. DimArray or pandas object)
-	    if hasattr(values, "axes"):
-		axes = values.axes
-
-	    # define a default set of axes if not provided
-	    axes = Axes.from_shape(values.shape, dims=dims)
-
-	elif isinstance(axes, dict):
-	    kwaxes = axes
-	    if values is None: shape = None
-	    else: shape = values.shape
-	    if isinstance(kwaxes, odict):
-		dims = kwaxes.keys()
-	    axes = Axes.from_dict(kwaxes, dims=dims, shape=shape)
-	    assert type(axes) is Axes
-
-	# list of Axis objects
-	elif isinstance(axes[0], Axis):
-	    axes = Axes(axes)
-
-	# (name, values) tuples
-	elif isinstance(axes[0], tuple):
-	    axes = Axes.from_tuples(*axes)
-
-	# axes contains only axis values, with names possibly provided in `dims=`
-	#elif is_array_equiv(axes[0]): 
-	elif type(axes[0]) in (list, np.ndarray): 
-	    axes = Axes.from_arrays(axes, dims=dims)
-
-	else:
-	    raise TypeError("axes, if provided, must be a list of: `Axis` or `tuple` or arrays. Got: {} (instance:{})".format(axes.__class__, axes))
-
+	axes = Axes._init(axes, dims=dims, shape=values.shape if values is not None else None)
 	assert type(axes) is Axes
 
 	# if values not provided, create empty data (filled with NaNs if dtype is float, -999999 for int)

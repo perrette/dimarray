@@ -1,10 +1,11 @@
 import numpy as np
-from collections import OrderedDict
+from collections import OrderedDict as odict
 import string
 import copy
 
 from metadata import Metadata
 from tools import is_DimArray
+from tools import is_array1d_equiv
 
 __all__ = ["Axis","Axes", "is_regular"]
 
@@ -294,6 +295,10 @@ class Axes(list):
 	#super(Axes, self).append(item)
 	list.append(self, item)
 
+    @staticmethod
+    def _init(*args, **kwargs):
+	return _init(*args, **kwargs)
+
     @classmethod
     def from_tuples(cls, *tuples_name_values):
 	""" initialize axes from tuples
@@ -335,7 +340,7 @@ class Axes(list):
 	return cls.from_tuples(*zip(dims, arrays))
 
     @classmethod
-    def from_dict(cls, kwaxes, dims=None, shape=None):
+    def from_dict(cls, kwaxes, dims=None, shape=None, raise_warning=True):
 	""" infer dimensions from key-word arguments
 	"""
 	# if no key-word argument is given, just return default axis
@@ -369,7 +374,7 @@ class Axes(list):
 	    current_shape = tuple([ax.size for ax in axes])
 	    assert current_shape == shape, "dimensions mismatch (axes shape: {} != values shape: {}".format(current_shape, shape)
 
-	else:
+	elif raise_warning:
 	    raise Warning("no shape information: random order")
 
 	dims = [ax.name for ax in axes]
@@ -424,6 +429,66 @@ class Axes(list):
     @property
     def loc(self):
 	return LocatorAxes(self)
+
+
+def _init(axes=None, dims=None, shape=None, raise_warning=True):
+    """ initialize axis instance with many different ways
+
+    axes:
+	- dict
+	- list of Axis objects
+	- list of tuples `dim, array`
+	- list of arrays, to be complemented by "dims="
+	- nothing
+
+    dims: tuple or list of dimension names
+    shape
+    """
+    # special case: 1D object: accept single axis instead of list of axes/dimensions
+    is_1d = lambda x : x is not None and len(x) == 1
+    if is_1d(shape) or is_1d(dims):
+	
+	# accept a tuple ('dim', axis values) instead of [(...)]
+	if type(axes) is tuple:
+	    if len(axes) == 2 and type(axes[0]) is str and is_array1d_equiv(axes[1]):
+		axes = [axes]
+
+	# accept axes=axis, dims='dim' (instead of list)
+	elif (axes is None or is_array1d_equiv(axes)) and (type(dims) in (str, type(None))):
+	    #if axes is not None: assert np.size(axes) == values.size, "invalid argument: bad size"
+	    axes = [axes] if axes is not None else None
+	    dims = [dims] if dims is not None else None
+
+    # axis not provided: check whether values has an axes field
+    if axes is None:
+	assert shape is not None, "at least shape must be provided (if axes are not)"
+
+	# define a default set of axes if not provided
+	axes = Axes.from_shape(shape, dims=dims)
+
+    elif isinstance(axes, dict):
+	kwaxes = axes
+	if isinstance(kwaxes, odict) and dims is None:
+	    dims = kwaxes.keys()
+	axes = Axes.from_dict(kwaxes, dims=dims, shape=shape, raise_warning=raise_warning)
+
+    # list of Axis objects
+    elif isinstance(axes[0], Axis):
+	axes = Axes(axes)
+
+    # (name, values) tuples
+    elif isinstance(axes[0], tuple):
+	axes = Axes.from_tuples(*axes)
+
+    # axes contains only axis values, with names possibly provided in `dims=`
+    #elif is_array_equiv(axes[0]): 
+    elif type(axes[0]) in (list, np.ndarray): 
+	axes = Axes.from_arrays(axes, dims=dims)
+
+    else:
+	raise TypeError("axes, if provided, must be a list of: `Axis` or `tuple` or arrays. Got: {} (instance:{})".format(axes.__class__, axes))
+
+    return axes
 
 #
 # Locate values on an axis

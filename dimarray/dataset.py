@@ -50,6 +50,8 @@ class Dataset(object):
 	# Basic initialization
 	if axes is None:
 	    axes = Axes()
+	else:
+	    axes = Axes._init(axes)
 	self.axes = axes
 	self.variables = odict()
 
