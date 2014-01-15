@@ -108,7 +108,7 @@ def read_dimensions(f, name=None, ix=slice(None), verbose=False):
 		if type(val) is unicode:
 		    values[i] = str(val)
 
-	axes.append(Axis(axvalues, k))
+	axes.append(Axis(values, k))
 
     if close: f.close()
 
