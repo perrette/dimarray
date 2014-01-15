@@ -12,6 +12,29 @@ __all__ = ["take", "put"]
 TOLERANCE=1e-8
 MATLAB_LIKE_INDEXING = True
 
+def ix_(indices_numpy):
+    """ convert numpy-like to matlab-like indices
+    """
+    # replace anything not iterable by [0]
+    dummy_ix = []
+    for ix in indices_numpy:
+	if not np.iterable(ix):
+	    ix = [0] # just to fill up
+	dummy_ix.append(ix)
+
+    # convert to matlab-like compatible indices
+    dummy_ix_ = list(np.ix_(*dummy_ix))
+
+    # fill non-iterables back in
+    for i, ix in enumerate(indices_numpy):
+	if not np.iterable(ix):
+	    dummy_ix_[i] = ix
+
+    indices_numpy_ = tuple(dummy_ix_)
+
+    return indices_numpy_
+
+
 def _get_keyword_indices(obj, indices, axis=0):
     """ get dictionary of indices
     """
@@ -335,13 +358,17 @@ def put(obj, val, indices, axis=0, indexing="values", tol=TOLERANCE, convert=Fal
     >>> a.put(6, indices={'d0':'b', 'd1':[10.]}, inplace=True)
     """
     assert indexing in ("position", "values"), "invalid mode: "+repr(indexing)
+
     indices_numpy = obj.axes.loc(indices, axis=axis, position_index=(indexing == "position"), tol=tol)
+
+    # Convert to matlab-like indexing
+    indices_numpy_ = ix_(indices_numpy)
 
     if not inplace:
 	obj = obj.copy()
 
     try:
-	obj.values[indices_numpy] = val 
+	obj.values[indices_numpy_] = val 
 
     # convert to val.dtype if needed
     except ValueError, msg:
@@ -349,7 +376,7 @@ def put(obj, val, indices, axis=0, indexing="values", tol=TOLERANCE, convert=Fal
 	dtype = np.asarray(val).dtype
 	if obj.dtype is not dtype:
 	    obj.values = np.asarray(obj.values, dtype=dtype)
-	obj.values[indices_numpy] = val 
+	obj.values[indices_numpy_] = val 
 
     if not inplace:
 	return obj
