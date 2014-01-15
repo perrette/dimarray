@@ -24,10 +24,17 @@ def operation(func, o1, o2, reindex=True, broadcast=True, constructor=None):
 
     # second operand is not a DimArray: let numpy do the job 
     if not is_DimArray(o2): # isinstance
-	if np.ndim(o2) > o1.ndim:
+	if np.ndim(o2) > np.ndim(o1):
 	    raise ValueError("bad input: second operand's dimensions not documented")
 	res = func(o1.values, np.array(o2))
 	return constructor(res, o1.axes)
+
+    # check for first operand (reverse operations)
+    elif not is_DimArray(o1): # isinstance
+	if np.ndim(o1) > np.ndim(o2):
+	    raise ValueError("bad input: second operand's dimensions not documented")
+	res = func(np.array(o1), o2.values)
+	return constructor(res, o2.axes)
 
     # both objects are dimarrays
 

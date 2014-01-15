@@ -707,6 +707,8 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 	1 / x1 (2): 0 to 1
 	array([[-0., -1.],
 	       [-1., -2.]])
+	>>> np.all(-b == 0. - b)
+	True
 
 	True divide by default
 	>>> a = DimArray([1,2,3])
@@ -724,25 +726,29 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 	result = _operation.operation(func, self, other, broadcast=Config.op_broadcast, reindex=Config.op_reindex, constructor=self._constructor)
 	return result
 
+    def _roperation(self, func, other):
+	return _operation.operation(func, other, self, broadcast=Config.op_broadcast, reindex=Config.op_reindex, constructor=self._constructor)
+
     def __neg__(self): return self._constructor(-self.values, self.axes)
     def __pos__(self): return self._constructor(+self.values, self.axes)
 
     def __add__(self, other): return self._operation(np.add, other)
-    __radd__ = __add__
-
     def __sub__(self, other): return self._operation(np.subtract, other)
-    __rsub__ = __sub__
-
     def __mul__(self, other): return self._operation(np.multiply, other)
-    __rmul__ = __mul__
 
+    def __div__(self, other): return self._operation(np.true_divide, other) # TRUE DIVIDE
     def __truediv__(self, other): return self._operation(np.true_divide, other)
     def __floordiv__(self, other): return self._operation(np.floor_divide, other)
-    __div__ = __truediv__ # by default use true divide
-    __rdiv__ = __div__
 
     def __pow__(self, other): return self._operation(np.power, other)
     def __sqrt__(self, other): return self**0.5
+
+    def __radd__(self, other): return self + other
+    def __rmul__(self, other): return self * other
+    def __rsub__(self, other): return self._roperation(np.subtract, other)
+    def __rdiv__(self, other): return self._roperation(np.true_divide, other)
+    def __rpow__(self, other): return self._roperation(np.power, other)
+
 
     def __float__(self):  return float(self.values)
     def __int__(self):  return int(self.values)
