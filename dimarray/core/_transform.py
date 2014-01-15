@@ -197,9 +197,6 @@ def _deal_with_axis(obj, axis):
 	ax = newobj.axes[0]
 	name = ax.name
 
-	# checking
-	assert isinstance(ax, GroupedAxis) and ax.axes[0].name == axis[0], "problem when grouping axes"
-
     else:
 	newobj = obj
 	idx, name = obj._get_axis_info(axis) 
