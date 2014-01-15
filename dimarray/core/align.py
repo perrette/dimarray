@@ -131,7 +131,7 @@ def align_dims(*objects):
 
 
 def align_axes(*objects):
-    """ align axes of a list of objects by reindexing
+    """ align axes of a list of DimArray objects by reindexing
     """
     # find the dimensiosn
     dims = get_dims(*objects)
@@ -140,14 +140,14 @@ def align_axes(*objects):
     for d in dims:
 
 	# objects which have that dimension
-	objs = filter(lambda o: d in o.dims, objects)
+	ii = filter(lambda i: d in objects[i].dims, range(len(objects)))
 
 	# common axis to reindex on
-	ax_values = common_axis(*[o.axes[d] for o in objs])
+	ax_values = common_axis(*[objects[i].axes[d] for i in ii])
 
 	# update objects
 	for i, o in enumerate(objects):
-	    if o not in objs:
+	    if i not in ii:
 		continue
 	    if o.axes[d] == ax_values:
 		continue

@@ -93,7 +93,7 @@ class DimArray(Metadata):
     >>> a = DimArray([[1,2,3],[4,5,6]], axes=[list("ab"), np.arange(1950,1953)], dims=['items','time']) 
     >>> b = DimArray([[1,2,3],[4,5,6]], axes=[('items',list("ab")), ('time',np.arange(1950,1953))])
     >>> c = DimArray([[1,2,3],[4,5,6]], {'items':list("ab"), 'time':np.arange(1950,1953)}) # here dims can be omitted because shape = (2, 3)
-    >>> np.all(a == b == c)
+    >>> np.all(a == b) and np.all(a == c)
     True
     >>> a
     dimarray: 6 non-null elements (0 null)
@@ -320,7 +320,7 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 	>>> a = da.DimArray.from_kw([[1,2,3],[4,5,6]], items=list("ab"), time=np.arange(1950,1953)) # here dims can be omitted because shape = (2, 3)
 	>>> b = da.DimArray.from_kw([[1,2,3],[4,5,6]], ['items','time'], items=list("ab"), time=np.arange(1950,1953)) # here dims can be omitted because shape = (2, 3)
 	>>> c = da.DimArray([[1,2,3],[4,5,6]], {'items':list("ab"), 'time':np.arange(1950,1953)}) # here dims can be omitted because shape = (2, 3)
-	>>> np.all(a == b == c)
+	>>> np.all(a == b) and np.all(a == c)
 	True
 
 	See also DimArray's doc for more examples
@@ -700,9 +700,19 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 	True
 	>>> np.all((b - b.values) == b - b)
 	True
+	>>> -b
+	dimarray: 4 non-null elements (0 null)
+	dimensions: 'x0', 'x1'
+	0 / x0 (2): 0 to 1
+	1 / x1 (2): 0 to 1
+	array([[-0., -1.],
+	       [-1., -2.]])
 	"""
 	result = _operation.operation(func, self, other, broadcast=Config.op_broadcast, reindex=Config.op_reindex, constructor=self._constructor)
 	return result
+
+    def __neg__(self): return self._constructor(-self.values, self.axes)
+    def __pos__(self): return self._constructor(+self.values, self.axes)
 
     def __add__(self, other): return self._operation(np.add, other)
     __radd__ = __add__
@@ -742,9 +752,9 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 	dimensions: 'x0'
 	0 / x0 (2): 0 to 1
 	array([ True, False], dtype=bool)
-	>>> test2 = DimArray([1, 2]) == DimArray([1, 2])
-	>>> test3 = DimArray([1, 2]) == np.array([1, 2])
-	>>> np.all(test == test2 == test3)
+	>>> test2 = DimArray([1, 2]) == DimArray([1, 1])
+	>>> test3 = DimArray([1, 2]) == np.array([1, 1])
+	>>> np.all(test2 == test3) and np.all(test == test3)
 	True
 	>>> DimArray([1, 2]) == DimArray([1, 2],dims=('x1',))
 	False
@@ -801,6 +811,28 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     def __le__(self, other): return self._cmp('__le__', other)
     def __gt__(self, other): return self._cmp('__gt__', other)
     def __ge__(self, other): return self._cmp('__ge__', other)
+
+    def __nonzero__(self):
+	""" Boolean value of the object
+
+	Examples:
+	>>> a = DimArray([1, 2])
+	>>> try:
+	...	if DimArray([1, 2]):
+	...	    print 'this does not make sense'
+	... except Exception, msg:
+	...	print msg
+	The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+	"""
+	return self.values.__nonzero__()
+
+    __bool__ = __nonzero__
+
+    def __contains__(self, value):
+	""" Membership tests using in (needed with __nonzero__)
+	"""
+	#return np.all(self == other)
+	return self.values.__contains__(value)
 
     @classmethod
     def from_arrays(cls, data, keys=None, axis="items"):

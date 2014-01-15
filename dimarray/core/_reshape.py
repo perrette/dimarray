@@ -103,7 +103,7 @@ def transpose(self, axes=None):
     array([[ 0.,  0.],
            [ 0.,  0.],
            [ 0.,  0.]])
-    >>> np.all(a.transpose([1,0]) == a.T == a.transpose(['x1','x0']))
+    >>> (a.T == a.transpose([1,0])).all() and (a.T == a.transpose(['x1','x0'])).all()
     True
     """
     if axes is None:

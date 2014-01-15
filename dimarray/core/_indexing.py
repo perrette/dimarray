@@ -109,7 +109,7 @@ def take(obj, indices, axis=0, indexing="values", tol=TOLERANCE, keepdims=False,
     >>> b = v.take(10, axis=1)  # take, by axis position
     >>> c = v.take(10, axis='d1')  # take, by axis name
     >>> d = v.take({'d1':10})  # take, by dict {axis name : axis values}
-    >>> np.all(a == b == c == d)
+    >>> (a==b).all() and (a==c).all() and (a==d).all()
     True
 
     Indexing via integer index (indexing="position" or `ix` property)

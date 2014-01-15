@@ -460,7 +460,7 @@ def weighted_mean(obj, axis=None, skipna=True, weights='axis'):
 	weights = obj.get_weights(weights, axis=axis, fill_nans=skipna)
 
     # if no weights, just apply numpy's mean
-    if not weights:
+    if weights is None or weights is False:
 	return apply_along_axis(obj, "mean", axis=axis, skipna=skipna)
 
     # weighted mean
