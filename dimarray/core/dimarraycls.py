@@ -604,8 +604,16 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     #
     # ELEMENT-WISE TRANSFORMS
     #
-    def apply(self, func, args=(), **kwargs):
+    def apply(self, func, *args, **kwargs):
 	""" Apply element-wise function to DimArray
+
+	Examples:
+	---------
+	>>> DimArray([1.29, 3.11]).apply(np.round, 1)
+	dimarray: 2 non-null elements (0 null)
+	dimensions: 'x0'
+	0 / x0 (2): 0 to 1
+	array([ 1.3,  3.1])
 	"""
 	return self._constructor(func(self.values, *args, **kwargs), self.axes.copy())
 
