@@ -357,7 +357,7 @@ def put(obj, val, indices, axis=0, indexing="values", tol=TOLERANCE, convert=Fal
 #
 # Variants 
 #
-def take_na(obj, indices, axis=0, indexing="values", tol=TOLERANCE, keepdims=False, na=np.nan, repna=True):
+def take_na(obj, indices, axis=0, indexing="values", tol=TOLERANCE, keepdims=False, fill_value=np.nan, repna=True):
     """ like take but replace any missing value with NaNs
 
     additional parameters:
@@ -372,7 +372,7 @@ def take_na(obj, indices, axis=0, indexing="values", tol=TOLERANCE, keepdims=Fal
     result = take(obj, indices_numpy, indexing="position")
 #    if np.isscalar(result):
 #	return result if indices_mask is None else na
-    put(result, na, indices_mask, convert=True, inplace=True, tol=tol, indexing="position")
+    put(result, fill_value, indices_mask, convert=True, inplace=True, tol=tol, indexing="position")
 
     # correct axis values
     if indices_mask is not None:
@@ -499,7 +499,7 @@ def _filter_bad_indices(multi_index, dims):
 #    if not np.isscalar(result):
 #	result.axes[axis].values = np.array(result.axes[axis].values, dtype=ix.dtype)
 
-def reindex_axis(self, values, axis=0, method='exact', repna=True, tol=TOLERANCE):
+def reindex_axis(self, values, axis=0, method='exact', repna=True, fill_value=np.nan, tol=TOLERANCE):
     """ reindex an array along an axis
 
     Input:
@@ -508,6 +508,7 @@ def reindex_axis(self, values, axis=0, method='exact', repna=True, tol=TOLERANCE
 	- method : "exact" (default), "nearest", "interp" 
 	- repna: if False, raise error when an axis value is not present 
 	               otherwise just replace with NaN. Defaulf is True
+	- fill_value: value to use instead of missing data
 
     Output:
 	- DimArray
@@ -523,6 +524,13 @@ def reindex_axis(self, values, axis=0, method='exact', repna=True, tol=TOLERANCE
     dimensions: 'x0'
     0 / x0 (3): 1 to 3
     array([  3.,  nan,   4.])
+
+    Or replace with anything else, like -9999
+    >>> b.reindex_axis([1,2,3], fill_value=-9999)
+    dimarray: 3 non-null elements (0 null)
+    dimensions: 'x0'
+    0 / x0 (3): 1 to 3
+    array([    3, -9999,     4])
 
     "nearest" mode
     >>> b.reindex_axis([0,1,2,3], method='nearest') # out-of-bound to NaN
@@ -553,7 +561,7 @@ def reindex_axis(self, values, axis=0, method='exact', repna=True, tol=TOLERANCE
 
     # indices along which to sample
     if method == "exact":
-	newobj = take_na(self, values, axis=axis, repna=repna)
+	newobj = take_na(self, values, axis=axis, repna=repna, fill_value=fill_value)
 
     elif method in ("nearest", "interp"):
 	from interpolation import interp
