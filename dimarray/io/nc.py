@@ -299,17 +299,24 @@ def check_file(f, mode='r', verbose=True):
 
     if not isinstance(f, nc.Dataset):
 	fname = f
-	if verbose: 
-	    if 'r' in mode:
-		print "read from",fname
-	    else:
-		print "write to",fname
 
 	# make sure the file does not exist if mode == "w"
 	if mode=="w" and os.path.exists(fname):
 	    os.remove(fname)
 
-	f = nc.Dataset(fname, mode)
+	try:
+	    f = nc.Dataset(fname, mode)
+	except Exception, msg: # raise a weird RuntimeError
+	    #print "read from",fname
+	    raise IOError(msg+" => failed to opend {} in mode {}".format(fname, mode)) # easier to handle
+
+	if verbose: 
+	    if 'r' in mode:
+		print "read from",fname
+	    elif 'a' in mode:
+		print "append to",fname
+	    else:
+		print "write to",fname
 	close = True
 
     return f, close
