@@ -124,6 +124,8 @@ def read_attributes(f, name=None):
     else:
 	var = f.variables[name]
     for k in var.ncattrs():
+	if k.startswith('_'): 
+	    continue # do not read "hidden" attributes
 	attr[k] = var.getncattr(k)
 
     if close: f.close()

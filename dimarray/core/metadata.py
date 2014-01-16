@@ -56,12 +56,14 @@ class Metadata(object):
 	"""
 	# Searching first in __dict__ is the default behaviour, 
 	# included here for clarity
-	if att in self.__dict__ or att.startswith('_'):
+	if att in self.__dict__:
 	    return self.__getattribute__(att) # no __getattr__ in object
 
 	# check if att is a metadata
 	elif att in self._metadata:
 	    return self._metadata[att]
+
+	#elif: or att.startswith('_'):
 
 	# again here, to raise a typical error message
 	else:
