@@ -215,7 +215,7 @@ def write_obj(f, obj, *args, **kwargs):
     else:
 	write_dataset(f, obj, *args, **kwargs)
 
-def write_dataset(f, obj, mode='a'):
+def write_dataset(f, obj, mode='w-'):
     """ write object to file
     """
     f, close = check_file(f, mode)
@@ -225,7 +225,7 @@ def write_dataset(f, obj, mode='a'):
 
     if close: f.close()
 
-def write_variable(f, obj, name=None, mode='a'):
+def write_variable(f, obj, name=None, mode='w-'):
     """ save DimArray instance to file
 
     f	: file name or netCDF file handle
@@ -301,15 +301,23 @@ def check_file(f, mode='r', verbose=True):
     """
     close = False
 
+    clobber = False
+
+    if mode == 'w-':
+	mode = 'w'
+
+    elif mode == 'w':
+	clobber = True
+
     if not isinstance(f, nc.Dataset):
 	fname = f
 
 	# make sure the file does not exist if mode == "w"
-	if mode=="w" and os.path.exists(fname):
+	if os.path.exists(fname) and clobber and mode == "w":
 	    os.remove(fname)
 
 	try:
-	    f = nc.Dataset(fname, mode)
+	    f = nc.Dataset(fname, mode, clobber=clobber)
 
 	except Exception, msg: # raise a weird RuntimeError
 	    #print "read from",fname
