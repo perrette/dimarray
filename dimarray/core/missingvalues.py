@@ -27,6 +27,13 @@ def setna(a, value, na=np.nan, inplace=False):
     dimensions: 'x0'
     0 / x0 (3): 0 to 2
     array([  1.,   2.,  nan])
+    >>> a = DimArray([[1,2,-99]])
+    >>> a.setna(-99) 
+    dimarray: 2 non-null elements (1 null)
+    dimensions: 'x0', 'x1'
+    0 / x0 (1): 0 to 0
+    0 / x1 (3): 0 to 2
+    array([[  1.,   2.,  nan]])
     """
     return a.put(na, a.values==value, convert=True, inplace=inplace)
 

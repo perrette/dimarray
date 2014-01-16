@@ -336,6 +336,25 @@ def take(obj, indices, axis=0, indexing="values", tol=TOLERANCE, keepdims=False,
 
     return result
 
+def _put(obj, val_, indices_numpy_, inplace=False, convert=False):
+    """ put values in a DimArray using numpy integers, in the numpy way
+    """
+    if not inplace:
+	obj = obj.copy()
+
+    try:
+	obj.values[indices_numpy_] = val_
+
+    # convert to val.dtype if needed
+    except ValueError, msg:
+	if not convert: raise
+	dtype = np.asarray(val_).dtype
+	if obj.dtype is not dtype:
+	    obj.values = np.asarray(obj.values, dtype=dtype)
+	obj.values[indices_numpy_] = val_
+
+    if not inplace:
+	return obj
 
 def put(obj, val, indices, axis=0, indexing="values", tol=TOLERANCE, convert=False, inplace=False, matlab_like=True):
     """ Put new values into DimArray (inplace)
@@ -432,13 +451,9 @@ def put(obj, val, indices, axis=0, indexing="values", tol=TOLERANCE, convert=Fal
     """
     assert indexing in ("position", "values"), "invalid mode: "+repr(indexing)
 
-    if not inplace:
-	obj = obj.copy()
-
     # SPECIAL CASE: full scale boolean array
     if is_full_boolean_index(indices, obj.shape):
-	obj.values[np.asarray(indices)] = val
-	return
+	return _put(obj, val, np.asarray(indices), inplace=inplace, convert=convert)
 
     if matlab_like is None:
 	matlab_like = MATLAB_LIKE_INDEXING
@@ -473,19 +488,7 @@ def put(obj, val, indices, axis=0, indexing="values", tol=TOLERANCE, convert=Fal
 	val_ = val
 	indices_numpy_ = indices_numpy
 
-    try:
-	obj.values[indices_numpy_] = val_
-
-    # convert to val.dtype if needed
-    except ValueError, msg:
-	if not convert: raise
-	dtype = np.asarray(val).dtype
-	if obj.dtype is not dtype:
-	    obj.values = np.asarray(obj.values, dtype=dtype)
-	obj.values[indices_numpy_] = val_
-
-    if not inplace:
-	return obj
+    return _put(obj, val_, indices_numpy_, inplace=inplace, convert=convert)
 
 #
 # Variants 
