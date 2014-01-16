@@ -5,15 +5,29 @@ import functools
 import copy 
 
 from axes import Axis, Axes, GroupedAxis, is_regular, make_multiindex
+from tools import is_DimArray
 
-#__all__ = ["take", "put", "reindex_axis", "reindex_like"]
-__all__ = ["take", "put"]
+__all__ = ["take", "put", "reindex_axis", "reindex_like"]
 
 TOLERANCE=1e-8
 MATLAB_LIKE_INDEXING = True
 
-def expand_ix(indices_numpy, shape):
+def is_full_boolean_index(indices, shape):
+    """ check if something like a[a>2] is performed for ndim > 1
+    """
+    indices2 = np.index_exp[indices]
+    return len(shape) > 1 \
+	    and len(indices2) == 1 \
+	    and \
+	    (isinstance(indices2[0], np.ndarray) or is_DimArray(indices2[0]))\
+	    and indices2[0].shape == shape \
+	    and indices2[0].dtype == np.dtype(bool)
+
+def array_indices(indices_numpy, shape):
     """ Replace non-iterable (incl. slices) with arrays
+
+    indices_numpy: multi-index
+    shape: shape of array to index
     """
     dummy_ix = []
     for i,ix in enumerate(indices_numpy):
@@ -22,6 +36,13 @@ def expand_ix(indices_numpy, shape):
 		ix = np.arange(shape[i])[ix]
 	    else:
 		ix = np.array([ix])
+	
+	# else make sure we have an array, and if book, evaluate to arrays
+	else:
+	    ix = np.asarray(ix)
+	    if ix.dtype is np.dtype(bool):
+		ix = np.where(ix)[0]
+
 	dummy_ix.append(ix)
     return dummy_ix
 
@@ -32,9 +53,13 @@ def ix_(indices_numpy, shape):
     indices_numpy: indices to convert
     shape: shape of the array, to convert slices
     """
-    dummy_ix = expand_ix(indices_numpy, shape)
+    dummy_ix = array_indices(indices_numpy, shape)
     return np.ix_(*dummy_ix)
 
+#def _remove_trailing_slice(indices_numpy):
+#    """ remove trailing slice(None) from a tuple index
+#    """
+    # matching array size is useful 
 
 def _get_keyword_indices(obj, indices, axis=0):
     """ get dictionary of indices
@@ -204,8 +229,38 @@ def take(obj, indices, axis=0, indexing="values", tol=TOLERANCE, keepdims=False,
     (2, 3, 2)
     >>> v.values[[0,1],:,[0,0]].shape # that is traditional numpy, with broadcasting on same shape
     (2, 3)
+
+    # Logical indexing
+    >>> a = DimArray(np.arange(2*3).reshape(2,3))
+    >>> a[a > 3] # FULL ARRAY: return a numpy array in n-d case (at least for now)
+    array([4, 5])
+    >>> a[a.x0 > 0] # SINGLE AXIS: only first axis
+    dimarray: 3 non-null elements (0 null)
+    dimensions: 'x0', 'x1'
+    0 / x0 (1): 1 to 1
+    1 / x1 (3): 0 to 2
+    array([[3, 4, 5]])
+    >>> a[:, a.x1 > 0] # only second axis 
+    dimarray: 4 non-null elements (0 null)
+    dimensions: 'x0', 'x1'
+    0 / x0 (2): 0 to 1
+    1 / x1 (2): 1 to 2
+    array([[1, 2],
+	   [4, 5]])
+    >>> a[a.x0 > 0, a.x1 > 0]  # AXIS-BASED
+    dimarray: 2 non-null elements (0 null)
+    dimensions: 'x0', 'x1'
+    0 / x0 (1): 1 to 1
+    1 / x1 (2): 1 to 2
+    array([[4, 5]])
     """
     assert indexing in ("position", "values"), "invalid mode: "+repr(indexing)
+
+    # SPECIAL CASE: full scale boolean array
+    # for now, just return the (numpy) flattened array as numpy would do
+    # TODO: return a 1-D DimArray with tupled axis values
+    if is_full_boolean_index(indices, obj.shape):
+	return obj.values[np.asarray(indices)]
 
     # 
     # MATLAB-LIKE OR NUMPY-LIKE?
@@ -282,7 +337,7 @@ def take(obj, indices, axis=0, indexing="values", tol=TOLERANCE, keepdims=False,
     return result
 
 
-def put(obj, val, indices, axis=0, indexing="values", tol=TOLERANCE, convert=False, inplace=False):
+def put(obj, val, indices, axis=0, indexing="values", tol=TOLERANCE, convert=False, inplace=False, matlab_like=True):
     """ Put new values into DimArray (inplace)
 
     parameters:
@@ -377,31 +432,46 @@ def put(obj, val, indices, axis=0, indexing="values", tol=TOLERANCE, convert=Fal
     """
     assert indexing in ("position", "values"), "invalid mode: "+repr(indexing)
 
-    indices_numpy = obj.axes.loc(indices, axis=axis, position_index=(indexing == "position"), tol=tol)
-
-    # Convert to matlab-like indexing
-    #indices_numpy_ = ix_(indices_numpy, obj.shape)
-    indices_array = expand_ix(indices_numpy, obj.shape)
-    indices_numpy_ = np.ix_(*indices_array)
-    shp = [len(ix) for ix in indices_array] # get an idea of the shape
-
-    # ...first check that val's shape is consistent with originally required indices
-    if not np.isscalar(val) and np.any(np.array(shp) > 1):
-	shp1 = [d for d in shp if d > 1]
-	shp2 = [d for d in val.shape if d > 1]
-	if shp1 != shp2:
-	    raise ValueError('array is not broadcastable to correct shape (got values: {} but inferred from indices {})'.format(shp1, shp2))
-#
-#    # ...then reshape to new matlab-like form
-    if not np.isscalar(val):
-	val = np.asarray(val)
-	val_ = np.reshape(val, shp)
-    else:
-	val_ = val
-
-
     if not inplace:
 	obj = obj.copy()
+
+    # SPECIAL CASE: full scale boolean array
+    if is_full_boolean_index(indices, obj.shape):
+	obj.values[np.asarray(indices)] = val
+	return
+
+    if matlab_like is None:
+	matlab_like = MATLAB_LIKE_INDEXING
+
+    indices_numpy = obj.axes.loc(indices, axis=axis, position_index=(indexing == "position"), tol=tol)
+
+    # do nothing for full-array, boolean indexing
+    #if len(indices_numpy) == 1 and isinstance
+
+    # Convert to matlab-like indexing
+    if matlab_like:
+
+	indices_array = array_indices(indices_numpy, obj.shape)
+	indices_numpy_ = np.ix_(*indices_array)
+	shp = [len(ix) for ix in indices_array] # get an idea of the shape
+
+	# ...first check that val's shape is consistent with originally required indices
+	if not np.isscalar(val) and np.any(np.array(shp) > 1):
+	    shp1 = [d for d in shp if d > 1]
+	    shp2 = [d for d in val.shape if d > 1]
+	    if shp1 != shp2:
+		raise ValueError('array is not broadcastable to correct shape (got values: {} but inferred from indices {})'.format(shp1, shp2))
+    #
+    #    # ...then reshape to new matlab-like form
+	if not np.isscalar(val):
+	    val = np.asarray(val)
+	    val_ = np.reshape(val, shp)
+	else:
+	    val_ = val
+
+    else:
+	val_ = val
+	indices_numpy_ = indices_numpy
 
     try:
 	obj.values[indices_numpy_] = val_

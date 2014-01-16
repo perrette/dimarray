@@ -48,8 +48,7 @@ def apply_recursive(obj, dims, fun, *args, **kwargs):
     for axisval in axis.values: # first axis
 
 	# take a slice of the data (exact matching)
-	slice_ = obj.take(axisval, axis=axis.name, method="index")
-	#slice_ = obj.take(**{ax.name:axisval, "method":"index"})
+	slice_ = obj.take(axisval, axis=axis.name)
 
 	# apply the transform recursively
 	res = apply_recursive(slice_, dims, fun, *args, **kwargs)

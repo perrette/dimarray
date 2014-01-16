@@ -104,7 +104,7 @@ class Metadata(object):
 	# otherwise, check if it is a valid metadata
 	else: 
 	    test = not att.startswith('_') and att not in self._metadata_exclude \
-		    and type(val) in self._metadata_types # also check type (to avoid limit errors)
+		    and (type(val) in self._metadata_types or np.isscalar(val))# also check type (to avoid limit errors)
 
 	return test
 
@@ -120,7 +120,7 @@ class Metadata(object):
     def setncattr(self, att, val):
 	""" force setting attribute to metadata
 	"""
-	if not type(val) in self._metadata_types:
+	if not np.isscalar(val) and not type(val) in self._metadata_types:
 	    raise TypeError("Found type {}. Only authorized metadata types: {}".format(type(val), self._metadata_types))
 
 	self._metadata[att] = val

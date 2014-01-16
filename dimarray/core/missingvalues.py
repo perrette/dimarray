@@ -32,10 +32,31 @@ def dropna(a, axis=0, minval=None):
     array([ 1.,  3.])
 
     Multi-dimensional
-    TODO
-  ##  >>> a = DimArray(np.arange(3*2).reshape((3,2)))
-  ##  >>> a.ix[0, 1] = np.nan
-  ##  >>> a
+    >>> a = DimArray(np.arange(3*2).reshape((3,2)))+0.
+    >>> a.ix[0, 1] = np.nan
+    >>> a 
+    dimarray: 5 non-null elements (1 null)
+    dimensions: 'x0', 'x1'
+    0 / x0 (3): 0 to 2
+    1 / x1 (2): 0 to 1
+    array([[  0.,  nan],
+           [  2.,   3.],
+           [  4.,   5.]])
+    >>> a.dropna() # default axis=0
+    dimarray: 4 non-null elements (0 null)
+    dimensions: 'x0', 'x1'
+    0 / x0 (2): 1 to 2
+    1 / x1 (2): 0 to 1
+    array([[ 2.,  3.],
+           [ 4.,  5.]])
+    >>> a.dropna(axis=1)
+    dimarray: 3 non-null elements (0 null)
+    dimensions: 'x0', 'x1'
+    0 / x0 (3): 0 to 2
+    1 / x1 (1): 0 to 0
+    array([[ 0.],
+           [ 2.],
+           [ 4.]])
     """
     assert axis is not None, "axis cannot be None for dropna"
 #    # if None, all axes
@@ -47,7 +68,7 @@ def dropna(a, axis=0, minval=None):
     idx, name = a._get_axis_info(axis)
 
     if a.ndim == 1:
-	return  a[~isnan(a)]
+	return  a[~np.isnan(a.values)]
 
     else:
 	nans = isnan(a) 
