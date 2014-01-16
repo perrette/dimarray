@@ -465,12 +465,24 @@ def _init_axes(axes=None, dims=None, shape=None, raise_warning=True):
 
 	# define a default set of axes if not provided
 	axes = Axes.from_shape(shape, dims=dims)
+	return axes
 
     elif isinstance(axes, dict):
 	kwaxes = axes
 	if isinstance(kwaxes, odict) and dims is None:
 	    dims = kwaxes.keys()
 	axes = Axes.from_dict(kwaxes, dims=dims, shape=shape, raise_warning=raise_warning)
+	return axes
+
+    else:
+	if not isinstance(axes, list) and not isinstance(axes, tuple):
+	    raise TypeError("axes, if provided, must be a list of: `Axis` or `tuple` or arrays. Got: {} (instance:{})".format(axes.__class__, axes))
+
+    # FROM HERE list or tuple
+
+    # empty axis
+    if len(axes) == 0:
+	return Axes()
 
     # list of Axis objects
     elif isinstance(axes[0], Axis):
