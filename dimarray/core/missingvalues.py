@@ -1,6 +1,7 @@
 """ methods to deal with missing values
 """
 import numpy as np
+from tools import is_DimArray
 
 def _isnan(a, na=np.nan):
     """ analogous to numpy's isnan
@@ -9,6 +10,31 @@ def _isnan(a, na=np.nan):
 	return np.isnan(a)
     else:
 	return a== na
+
+def is_boolean_array(value):
+    """ 
+
+    >>> a = DimArray([1,2,3])
+    >>> is_boolean_array(a)
+    False
+    >>> is_boolean_array(a>1)
+    True
+    """
+    return (isinstance(value, np.ndarray) or is_DimArray(value)) \
+	    and value.dtype is np.dtype('bool')
+
+def _matches(a, value):
+
+    if is_boolean_array(value):
+	# boolean array accepted
+	test = np.asarray(value)
+
+    elif np.iterable(value):
+	test = np.any([_matches(a, val) for val in value], axis=0)
+
+    else:
+	test = a == value
+    return test
 
 def isnan(a, na=np.nan):
     """ analogous to numpy's isnan
@@ -27,15 +53,25 @@ def setna(a, value, na=np.nan, inplace=False):
     dimensions: 'x0'
     0 / x0 (3): 0 to 2
     array([  1.,   2.,  nan])
-    >>> a = DimArray([[1,2,-99]])
-    >>> a.setna(-99) 
+    >>> a.setna([-99, 2]) # sequence
+    dimarray: 1 non-null elements (2 null)
+    dimensions: 'x0'
+    0 / x0 (3): 0 to 2
+    array([  1.,  nan,  nan])
+    >>> a.setna(a > 1) # boolean
     dimarray: 2 non-null elements (1 null)
+    dimensions: 'x0'
+    0 / x0 (3): 0 to 2
+    array([  1.,  nan, -99.])
+    >>> a = DimArray([[1,2,-99]])  # multi-dim
+    >>> a.setna([-99, a>1])  # boolean
+    dimarray: 1 non-null elements (2 null)
     dimensions: 'x0', 'x1'
     0 / x0 (1): 0 to 0
-    0 / x1 (3): 0 to 2
-    array([[  1.,   2.,  nan]])
+    1 / x1 (3): 0 to 2
+    array([[  1.,  nan,  nan]])
     """
-    return a.put(na, a.values==value, convert=True, inplace=inplace)
+    return a.put(na, _matches(a.values, value), convert=True, inplace=inplace)
 
 def fillna(a, value, inplace=False, na=np.nan):
     """
