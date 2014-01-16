@@ -12,24 +12,27 @@ __all__ = ["take", "put"]
 TOLERANCE=1e-8
 MATLAB_LIKE_INDEXING = True
 
-def ix_(indices_numpy, shape):
-    """ convert numpy-like to matlab-like indices
-
-    indices_numpy: indices to convert
-    shape: shape of the array, to convert slices
+def expand_ix(indices_numpy, shape):
+    """ Replace non-iterable (incl. slices) with arrays
     """
-    # replace anything not iterable by [0]
     dummy_ix = []
     for i,ix in enumerate(indices_numpy):
 	if not np.iterable(ix):
 	    if type(ix) is slice:
 		ix = np.arange(shape[i])[ix]
 	    else:
-		ix = [ix]
-
+		ix = np.array([ix])
 	dummy_ix.append(ix)
+    return dummy_ix
 
+def ix_(indices_numpy, shape):
     # convert to matlab-like compatible indices
+    """ convert numpy-like to matlab-like indices
+
+    indices_numpy: indices to convert
+    shape: shape of the array, to convert slices
+    """
+    dummy_ix = expand_ix(indices_numpy, shape)
     return np.ix_(*dummy_ix)
 
 
@@ -377,13 +380,31 @@ def put(obj, val, indices, axis=0, indexing="values", tol=TOLERANCE, convert=Fal
     indices_numpy = obj.axes.loc(indices, axis=axis, position_index=(indexing == "position"), tol=tol)
 
     # Convert to matlab-like indexing
-    indices_numpy_ = ix_(indices_numpy, obj.shape)
+    #indices_numpy_ = ix_(indices_numpy, obj.shape)
+    indices_array = expand_ix(indices_numpy, obj.shape)
+    indices_numpy_ = np.ix_(*indices_array)
+    shp = [len(ix) for ix in indices_array] # get an idea of the shape
+
+    # ...first check that val's shape is consistent with originally required indices
+    if not np.isscalar(val) and np.any(np.array(shp) > 1):
+	shp1 = [d for d in shp if d > 1]
+	shp2 = [d for d in val.shape if d > 1]
+	if shp1 != shp2:
+	    raise ValueError('array is not broadcastable to correct shape (got values: {} but inferred from indices {})'.format(shp1, shp2))
+#
+#    # ...then reshape to new matlab-like form
+    if not np.isscalar(val):
+	val = np.asarray(val)
+	val_ = np.reshape(val, shp)
+    else:
+	val_ = val
+
 
     if not inplace:
 	obj = obj.copy()
 
     try:
-	obj.values[indices_numpy_] = val 
+	obj.values[indices_numpy_] = val_
 
     # convert to val.dtype if needed
     except ValueError, msg:
@@ -391,7 +412,7 @@ def put(obj, val, indices, axis=0, indexing="values", tol=TOLERANCE, convert=Fal
 	dtype = np.asarray(val).dtype
 	if obj.dtype is not dtype:
 	    obj.values = np.asarray(obj.values, dtype=dtype)
-	obj.values[indices_numpy_] = val 
+	obj.values[indices_numpy_] = val_
 
     if not inplace:
 	return obj
