@@ -528,7 +528,9 @@ class LocatorAxis(object):
 	loc(idx, **kwargs) :: loc.set(**kwargs)[idx]
 
     """
-    _check_params = False # false  for multi indexing
+    _check_params = True # false  for multi indexing
+    _params = ('tol','modulo') # extra parameter which work for subclasses too 
+    # (to pass via Axes which has a mixture of different axes)
 
     def __init__(self, values, raise_error=True, position_index = False, keepdims = False, **opt):
 	"""
@@ -544,7 +546,7 @@ class LocatorAxis(object):
 	# check parameter values (default to False)
 	if self._check_params:
 	    for k in opt: 
-		if k not in self.__dict__:
+		if k not in self.__dict__ and k not in self._params:
 		    raise ValueError("unknown parameter: {} (allowed for {}: {}".format(k, self, self._params))
 
 	self.__dict__.update(opt) # update default options
