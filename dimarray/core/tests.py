@@ -10,6 +10,8 @@ def main(**kwargs):
     import _reshape as reshape
     import _transform as transform
     import missingvalues as missingvalues 
+    import _operation as operation
+    import align as align
 
     testmod(metadata, **kwargs)
     testmod(dimarraycls, **kwargs)
@@ -18,6 +20,8 @@ def main(**kwargs):
     testmod(transform, **kwargs)
     testmod(reshape, **kwargs)
     testmod(missingvalues, **kwargs)
+    testmod(operation, **kwargs)
+    testmod(align, **kwargs)
 
 if __name__ == "__main__":
     main()

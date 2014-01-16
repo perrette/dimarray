@@ -18,19 +18,19 @@ def broadcast_arrays(*objects):
     >>> x = da.array([[1,2,3]])
     >>> y = da.array([[1],[2],[3]])
     >>> da.broadcast_arrays(x, y)
+    [dimarray: 9 non-null elements (0 null)
     dimensions: 'x0', 'x1'
     0 / x0 (3): 0 to 2
     1 / x1 (3): 0 to 2
     array([[1, 2, 3],
-	   [1, 2, 3],
-	   [1, 2, 3]]),
-     dimarray: 9 non-null elements (0 null)
+           [1, 2, 3],
+           [1, 2, 3]]), dimarray: 9 non-null elements (0 null)
     dimensions: 'x0', 'x1'
     0 / x0 (3): 0 to 2
     1 / x1 (3): 0 to 2
     array([[1, 1, 1],
-	   [2, 2, 2],
-	   [3, 3, 3]])]
+           [2, 2, 2],
+           [3, 3, 3]])]
     """
     # give all objects the same dimension (without changing the size)
     objects = align_dims(*objects)
@@ -98,16 +98,15 @@ def get_axes(*objects):
 def align_dims(*objects):
     """ Align dimensions of a list of objects, ready to broadcast
 
-    >>> x = da.DimArray(np.arange(2), 'x0')
-    >>> y = da.DimArray(np.arange(3), 'x1')
+    >>> x = da.DimArray(np.arange(2), dims=('x0',))
+    >>> y = da.DimArray(np.arange(3), dims=('x1',))
     >>> da.align_dims(x, y)
     [dimarray: 2 non-null elements (0 null)
     dimensions: 'x0', 'x1'
     0 / x0 (2): 0 to 1
     1 / x1 (1): None to None
     array([[0],
-	   [1]]),
-     dimarray: 3 non-null elements (0 null)
+           [1]]), dimarray: 3 non-null elements (0 null)
     dimensions: 'x0', 'x1'
     0 / x0 (1): None to None
     1 / x1 (3): 0 to 2
@@ -170,6 +169,60 @@ def common_axis(*axes):
 
     return Axis(newaxis_val, axes[0].name)
 
+
+def concatenate(arrays, axis=0):
+    """ concatenate several DimArrays
+
+    arrays: list of DimArrays
+    axis  : axis along which to concatenate
+
+    1-D
+    >>> a = DimArray([1,2,3],['a','b','c'])
+    >>> b = DimArray([4,5,6],['d','e','f'])
+    >>> concatenate((a, b))
+    dimarray: 6 non-null elements (0 null)
+    dimensions: 'x0'
+    0 / x0 (6): a to f
+    array([1, 2, 3, 4, 5, 6])
+
+    2-D
+    >>> a = DimArray([[1,2,3],[11,22,33]])
+    >>> b = DimArray([[4,5,6],[44,55,66]])
+    >>> concatenate((a, b), axis=0)
+    dimarray: 12 non-null elements (0 null)
+    dimensions: 'x0', 'x1'
+    0 / x0 (4): 0 to 1
+    1 / x1 (3): 0 to 2
+    array([[ 1,  2,  3],
+	   [11, 22, 33],
+	   [ 4,  5,  6],
+	   [44, 55, 66]])
+    >>> concatenate((a, b), axis='x1')
+    dimarray: 12 non-null elements (0 null)
+    dimensions: 'x0', 'x1'
+    0 / x0 (2): 0 to 1
+    1 / x1 (6): 0 to 2
+    array([[ 1,  2,  3,  4,  5,  6],
+	   [11, 22, 33, 44, 55, 66]])
+    """
+    assert type(arrays) in (list, tuple), "arrays must be list or tuple, got {}:{}".format(type(arrays), arrays)
+
+    if type(axis) is not int:
+	axis = arrays[0].dims.index(axis)
+
+    values = np.concatenate([a.values for a in arrays], axis=axis)
+
+    _get_subaxes = lambda x: [ax for i, ax in enumerate(a.axes) if i != axis]
+    subaxes = _get_subaxes(arrays[0])
+    #assert np.all(_get_subaxes(a) == subaxes for a in arrays),"some axes do not match"
+
+    # concatenate axis values
+    newaxisvalues = np.concatenate([a.axes[axis].values for a in arrays])
+
+    newaxis = Axis(newaxisvalues, name=arrays[0].dims[axis])
+    newaxes = subaxes[:axis] + [newaxis] + subaxes[axis:]
+
+    return arrays[0]._constructor(values, newaxes)
 
 #def aligned(objects, skip_missing=True, skip_singleton=True):
 #    """ test whether common non-singleton axes are equal
