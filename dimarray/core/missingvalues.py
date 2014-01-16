@@ -2,12 +2,46 @@
 """
 import numpy as np
 
-def isnan(a):
+def _isnan(a, na=np.nan):
     """ analogous to numpy's isnan
     """
-    return a._constructor(np.isnan(a.values), a.axes, **a._metadata)
+    if np.isnan(na):
+	return np.isnan(a)
+    else:
+	return a== na
 
-def dropna(a, axis=0, minval=None):
+def isnan(a, na=np.nan):
+    """ analogous to numpy's isnan
+    """
+    return a._constructor(_isnan(a, na=na), a.axes, **a._metadata)
+
+def setna(a, value, na=np.nan, inplace=False):
+    """ set a value as missing
+
+    value: the values to set to na
+    na: the replacement value (default np.nan)
+
+    >>> a = DimArray([1,2,-99])
+    >>> a.setna(-99)
+    dimarray: 2 non-null elements (1 null)
+    dimensions: 'x0'
+    0 / x0 (3): 0 to 2
+    array([  1.,   2.,  nan])
+    """
+    return a.put(na, a.values==value, convert=True, inplace=inplace)
+
+def fillna(a, value, inplace=False, na=np.nan):
+    """
+    >>> a = DimArray([1,2,np.nan])
+    >>> a.fillna(-99)
+    dimarray: 3 non-null elements (0 null)
+    dimensions: 'x0'
+    0 / x0 (3): 0 to 2
+    array([  1.,   2., -99.])
+    """
+    return a.put(value, _isnan(a.values, na=na), convert=True, inplace=inplace)
+
+def dropna(a, axis=0, minval=None, na=np.nan):
     """ drop nans along an axis
 
     axis: axis position or name or list of names
@@ -68,10 +102,10 @@ def dropna(a, axis=0, minval=None):
     idx, name = a._get_axis_info(axis)
 
     if a.ndim == 1:
-	return  a[~np.isnan(a.values)]
+	return  a[~_isnan(a.values, na=na)]
 
     else:
-	nans = isnan(a) 
+	nans = isnan(a, na=na) 
 	#nans = nans.group([dim for dim in a.dims if dim != name]) # in first position
 	nans = nans.group([dim for dim in a.dims if dim != name]) # in first position
 	count_nans_axis = nans.sum(axis=0) # number of points valid along that axis

@@ -624,6 +624,8 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 
     # Drop missing values
     dropna = missingvalues.dropna
+    fillna = missingvalues.fillna
+    setna = missingvalues.setna
 
     #
     # BASIC OPERATTIONS
