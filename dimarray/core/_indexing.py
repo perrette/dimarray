@@ -12,27 +12,25 @@ __all__ = ["take", "put"]
 TOLERANCE=1e-8
 MATLAB_LIKE_INDEXING = True
 
-def ix_(indices_numpy):
+def ix_(indices_numpy, shape):
     """ convert numpy-like to matlab-like indices
+
+    indices_numpy: indices to convert
+    shape: shape of the array, to convert slices
     """
     # replace anything not iterable by [0]
     dummy_ix = []
-    for ix in indices_numpy:
+    for i,ix in enumerate(indices_numpy):
 	if not np.iterable(ix):
-	    ix = [0] # just to fill up
+	    if type(ix) is slice:
+		ix = np.arange(shape[i])[ix]
+	    else:
+		ix = [ix]
+
 	dummy_ix.append(ix)
 
     # convert to matlab-like compatible indices
-    dummy_ix_ = list(np.ix_(*dummy_ix))
-
-    # fill non-iterables back in
-    for i, ix in enumerate(indices_numpy):
-	if not np.iterable(ix):
-	    dummy_ix_[i] = ix
-
-    indices_numpy_ = tuple(dummy_ix_)
-
-    return indices_numpy_
+    return np.ix_(*dummy_ix)
 
 
 def _get_keyword_indices(obj, indices, axis=0):
@@ -206,33 +204,11 @@ def take(obj, indices, axis=0, indexing="values", tol=TOLERANCE, keepdims=False,
     """
     assert indexing in ("position", "values"), "invalid mode: "+repr(indexing)
 
-#    # 
-#    # MATLAB-LIKE OR NUMPY-LIKE?
-#    #
+    # 
+    # MATLAB-LIKE OR NUMPY-LIKE?
+    #
 #    if matlab_like is None:
 #	matlab_like = MATLAB_LIKE_INDEXING
-#
-#    if keepdims is True:
-#	matlab_like = True
-#
-#    # matlab-like
-#    if isinstance(indices, tuple):
-#	n_int_indices = sum(type(ix) is int for ix in indices)
-#	n_array_indices = sum(type(ix) in (list, np.ndarray) for ix in indices)
-#	chained_call = n_array_indices > 1 or (n_array_indices == 1 and n_int_indices >=1)
-#
-#    elif isinstance(indices, dict):
-#	n_int_indices = sum(type(ix) is int for k, ix in indices.iteritems())
-#	n_array_indices = sum(type(ix) in (list, np.ndarray) for k, ix in indices.iteritems())
-#	chained_call = n_array_indices > 1 or (n_array_indices == 1 and n_int_indices >=1)
-#    else:
-#	chained_call = False
-
-#    if chained_call and not matlab_like:
-#	raise NotImplementedError("advanced indexing only works in matlab mode: no change in dimension")
-
-    # proceed to chained call to avoid weird situations like a[0,:,[0,0]]
-#    if chained_call:
 
     # convert tuple to dictionary for chained call
     if isinstance(indices, tuple):
@@ -356,13 +332,26 @@ def put(obj, val, indices, axis=0, indexing="values", tol=TOLERANCE, convert=Fal
 
     Inplace
     >>> a.put(6, indices={'d0':'b', 'd1':[10.]}, inplace=True)
+
+    Multi-Index tests (not straightforward to get matlab-like behaviour)
+    >>> big = DimArray(np.zeros((2,3,4,5)))
+    >>> indices = {'x0':0 ,'x1':[2,1],'x3':[1,4]}
+    >>> sub = big.take(indices)*0
+    >>> sub.dims == ('x1','x2','x3')
+    True
+    >>> sub.shape == (2,4,2)
+    True
+    >>> big.put(sub+1, indices, inplace=True)
+    >>> sub2 = big.take(indices)
+    >>> np.all(sub+1 == sub2)
+    True
     """
     assert indexing in ("position", "values"), "invalid mode: "+repr(indexing)
 
     indices_numpy = obj.axes.loc(indices, axis=axis, position_index=(indexing == "position"), tol=tol)
 
     # Convert to matlab-like indexing
-    indices_numpy_ = ix_(indices_numpy)
+    indices_numpy_ = ix_(indices_numpy, obj.shape)
 
     if not inplace:
 	obj = obj.copy()
