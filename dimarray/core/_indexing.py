@@ -83,7 +83,7 @@ def take(obj, indices, axis=0, indexing="values", tol=TOLERANCE, keepdims=False,
 		     "values": indexing on axis values 
 	- tol	   : tolerance when looking for floats
 	- keepdims : keep singleton dimensions
-	- matlab_like: True by default, False not implemented !!
+	- matlab_like: True by default, False not implemented (causes pb with axis)
 	
 	    if True, indexing with list or array of indices will behave like
 	    Matlab TM does, which means that it will index on each individual dimensions.
@@ -207,25 +207,38 @@ def take(obj, indices, axis=0, indexing="values", tol=TOLERANCE, keepdims=False,
     # 
     # MATLAB-LIKE OR NUMPY-LIKE?
     #
-#    if matlab_like is None:
-#	matlab_like = MATLAB_LIKE_INDEXING
+    if matlab_like is None:
+	matlab_like = MATLAB_LIKE_INDEXING
 
-    # convert tuple to dictionary for chained call
-    if isinstance(indices, tuple):
-	indices = {obj.axes[k].name:ix for k, ix in enumerate(indices)}
-
-    if isinstance(indices, dict):
-	for k in indices:
-	    obj = take(obj, indices[k], axis=k, keepdims=keepdims, indexing=indexing, tol=tol)
-	return obj
+#    # convert tuple to dictionary for chained call
+#    if isinstance(indices, tuple):
+#	indices = {obj.axes[k].name:ix for k, ix in enumerate(indices)}
+#
+#    if isinstance(indices, dict):
+#	for k in indices:
+#	    obj = take(obj, indices[k], axis=k, keepdims=keepdims, indexing=indexing, tol=tol)
+#	return obj
 
     try:
 	indices_numpy = obj.axes.loc(indices, axis=axis, position_index=(indexing == "position"), keepdims=keepdims, tol=tol)
     except IndexError, msg:
 	raise IndexError(msg)
 
-    # New values
-    newval = obj.values[indices_numpy] # new numpy values
+    # Index the array:
+    # convert to matlab-like indexing first?
+    # only useful if at list one list
+    if matlab_like and not np.any([np.iterable(ix) for ix in indices_numpy]):
+	matlab_like = False
+
+    # convert each index to iterable
+    if matlab_like:
+	indices_numpy_ = ix_(indices_numpy, obj.shape)
+
+    # just keep the same
+    else:
+	indices_numpy_ = indices_numpy
+
+    newval = obj.values[indices_numpy_] # new numpy values
 
     # New axes
     newaxes = Axes()
@@ -233,10 +246,23 @@ def take(obj, indices, axis=0, indexing="values", tol=TOLERANCE, keepdims=False,
     for i, ix in enumerate(indices_numpy):
 	ax = obj.axes[i]
 	newaxis = ax[ix]
+
+	# collapsed axis:
 	if np.isscalar(newaxis):
+
+	    # stamp, could be useful at some point
 	    stamps += ["{}={}".format(ax.name, newaxis)]
+
+	    # in matlab like mode, where all dimensions have been converted
+	    # to iterables in order to use np._ix, it is necessary to remove
+	    # these dimensions which have collapsed
+	    if matlab_like:
+		newval = np.squeeze(newval, axis=i)
+
+	# otherwise just append the new axis
 	else:
 	    newaxes.append(newaxis)
+
     stamp = ",".join(stamps)
 
     # If result is a numpy array, make it a DimArray
