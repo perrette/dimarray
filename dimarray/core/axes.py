@@ -567,6 +567,8 @@ class LocatorAxis(object):
 		else:
 		    raise ValueError("unknown parameter {} for {}".format(k, self.__class__))
 
+	assert not hasattr(self, 'indexing')
+
 	#self.__dict__.update(opt) # update default options
 
     #
@@ -641,9 +643,9 @@ class LocatorAxis(object):
 	""" convenience function for chained call: update methods and return itself 
 	"""
 	#self.method = method
-	new = copy.copy(self)
-	new.__dict__.update(kwargs)
-	return new
+	dict_ = self.__dict__.copy()
+	dict_.update(kwargs)
+	return self.__class__(**dict_)
 
     #
     # locate single values
@@ -769,6 +771,7 @@ class NumLocator(LocatorAxis):
 	super(NumLocator, self).__init__(*args, **kwargs)
 
 	self.__dict__.update(opt)
+	#print self.indexing
 
     def _check_type(self, val):
 	return isnumber(val)

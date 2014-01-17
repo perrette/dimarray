@@ -54,7 +54,7 @@ class LonLatGrid(object):
 	#dist = dist[ix,jx]
 	if maxdist is not None and dist > maxdist:
 	    print self
-	    raise NoPointFound('{}N, {}E: {:.0f} km from next grid point ({}N, {}E) (max: {:.0f} km)'.format(lat1,lon1,dist,lat_s,lon_s, maxdist))
+	    raise ValueError('{}N, {}E: {:.0f} km from next grid point ({}N, {}E) (max: {:.0f} km)'.format(lat1,lon1,dist,lat_s,lon_s, maxdist))
 
 	if mask is not None and np.any(mask[ix,jx]):
 	    raise Exception('hey, some indices fall in the mask !')

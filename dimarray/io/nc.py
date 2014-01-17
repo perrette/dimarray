@@ -170,6 +170,7 @@ def read_variable(f, v, indices=slice(None), axis=0, *args, **kwargs):
     try:
 	ix = axes.loc(indices, axis=axis, *args, **kwargs)
     except IndexError, msg:
+	raise
 	raise IndexError(msg)
 
     # slice the data and dimensions

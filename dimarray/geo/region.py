@@ -199,7 +199,7 @@ class Point(Region):
 	""" Locate a point on a grid
 	"""
 	grd = LonLatGrid(lon, lat)
-	i, j = grd.locate_point(self.lon, self.lat, **kwargs)
+	i, j = grd.locate_point(*self.coords, **kwargs)
 	return i, j
 
     def box_idx(self, lon, lat):
@@ -213,5 +213,3 @@ class Point(Region):
 	if 'marker' not in kwargs:
 	    kwargs['marker'] = 'o'
 	plt.plot(lon, lat, *args, **kwargs)
-
-
