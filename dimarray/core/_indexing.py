@@ -471,18 +471,20 @@ def put(obj, val, indices, axis=0, indexing="values", tol=TOLERANCE, convert=Fal
 	shp = [len(ix) for ix in indices_array] # get an idea of the shape
 
 	# ...first check that val's shape is consistent with originally required indices
-	if not np.isscalar(val) and np.any(np.array(shp) > 1):
+	if np.size(val) > 1 and np.any(np.array(shp) > 1):
 	    shp1 = [d for d in shp if d > 1]
 	    shp2 = [d for d in val.shape if d > 1]
 	    if shp1 != shp2:
-		raise ValueError('array is not broadcastable to correct shape (got values: {} but inferred from indices {})'.format(shp1, shp2))
+		raise ValueError('array is not broadcastable to correct shape (got values: {} but inferred from indices {})'.format(shp2, shp1))
     #
     #    # ...then reshape to new matlab-like form
-	if not np.isscalar(val):
+	if np.isscalar(val):
+	    val_ = val
+	elif np.size(val) == 1:
+	    val_ = np.squeeze(val)
+	else:
 	    val = np.asarray(val)
 	    val_ = np.reshape(val, shp)
-	else:
-	    val_ = val
 
     else:
 	val_ = val

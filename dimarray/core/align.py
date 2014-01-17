@@ -3,14 +3,15 @@
 import numpy as np
 import itertools
 from axes import Axes, Axis
+import warnings
 
-def broadcast_arrays(*objects):
+def broadcast_arrays(*arrays):
     """ Analogous to numpy.broadcast_arrays
     
     but with looser requirements on input shape
     and returns copy instead of views
 
-    objects: variable list of DimArrays
+    arrays: variable list of DimArrays
 
     Examples:
     ---------
@@ -33,48 +34,49 @@ def broadcast_arrays(*objects):
            [3, 3, 3]])]
     """
     # give all objects the same dimension (without changing the size)
-    objects = align_dims(*objects)
+    arrays = align_dims(*arrays)
 
     # get axes object made of all non-singleton common axes
     try:
-	axes = get_axes(*objects)
+	axes = get_axes(*arrays)
 
     # fails if axes are not aligned
     except AssertionError, msg:
 	raise ValueError(msg)
 
     # now broadcast each DimArray along commmon axes
-    newobjects = []
-    for o in objects:
+    newarrays = []
+    for o in arrays:
 	o = o.broadcast(axes)
-	newobjects.append(o)
+	newarrays.append(o)
 
-    return newobjects
+    return newarrays
 
 
 
-def get_dims(*objects):
-    """ find all dimensions from a variable list of objects
+def get_dims(*arrays):
+    """ find all dimensions from a variable list of arrays
     """
     dims = []
-    for o in objects:
+    for o in arrays:
 	for dim in o.dims:
 	    if dim not in dims:
 		dims.append(dim)
 
     return dims
 
-def get_axes(*objects):
+
+def get_axes(*arrays):
     """ find list of axes from a list of axis-aligned DimArray objects
     """
-    dims = get_dims(*objects) # all dimensions present in objects
+    dims = get_dims(*arrays) # all dimensions present in objects
     axes = Axes()
 
     for dim in dims:
 
 	common_axis = None
 
-	for o in objects:
+	for o in arrays:
 
 	    # skip missing dimensions
 	    if dim not in o.dims: continue
@@ -95,8 +97,8 @@ def get_axes(*objects):
     return axes
 
 
-def align_dims(*objects):
-    """ Align dimensions of a list of objects, ready to broadcast
+def align_dims(*arrays):
+    """ Align dimensions of a list of arrays, ready to broadcast
 
     >>> x = da.DimArray(np.arange(2), dims=('x0',))
     >>> y = da.DimArray(np.arange(3), dims=('x1',))
@@ -113,50 +115,50 @@ def align_dims(*objects):
     array([[0, 1, 2]])]
     """
     # If dimensions are already equal, do nothing
-    lst = {o.dims for o in objects}
+    lst = {o.dims for o in arrays}
     if len(lst) == 1:
-	return objects
+	return arrays
 
     # Determine the dimensions of the result
-    newdims = get_dims(*objects) 
+    newdims = get_dims(*arrays) 
 
     # Reshape all DimArrays
-    newobjects = []
-    for o in objects:
+    newarrays = []
+    for o in arrays:
 	o = o.reshape(newdims)
-	newobjects.append(o)
+	newarrays.append(o)
 
-    return newobjects
+    return newarrays
 
 
-def align_axes(*objects):
-    """ align axes of a list of DimArray objects by reindexing
+def align_axes(*arrays):
+    """ align axes of a list of DimArray arrays by reindexing
     """
     # find the dimensiosn
-    dims = get_dims(*objects)
+    dims = get_dims(*arrays)
 
-    objects = list(objects)
+    arrays = list(arrays)
     for d in dims:
 
-	# objects which have that dimension
-	ii = filter(lambda i: d in objects[i].dims, range(len(objects)))
+	# arrays which have that dimension
+	ii = filter(lambda i: d in arrays[i].dims, range(len(arrays)))
 
 	# common axis to reindex on
-	ax_values = common_axis(*[objects[i].axes[d] for i in ii])
+	ax_values = _common_axis(*[arrays[i].axes[d] for i in ii])
 
-	# update objects
-	for i, o in enumerate(objects):
+	# update arrays
+	for i, o in enumerate(arrays):
 	    if i not in ii:
 		continue
 	    if o.axes[d] == ax_values:
 		continue
 
-	    objects[i] = o.reindex_axis(ax_values, axis=d)
+	    arrays[i] = o.reindex_axis(ax_values, axis=d)
 
-    return objects
+    return arrays
 
 
-def common_axis(*axes):
+def _common_axis(*axes):
     """ find the common axis between a list of axes
     """
 
@@ -170,11 +172,13 @@ def common_axis(*axes):
     return Axis(newaxis_val, axes[0].name)
 
 
-def concatenate(arrays, axis=0):
+def concatenate(arrays, axis=0, check_other_axes=True):
     """ concatenate several DimArrays
 
     arrays: list of DimArrays
     axis  : axis along which to concatenate
+
+    EXPERIMENTAL
 
     1-D
     >>> a = DimArray([1,2,3],['a','b','c'])
@@ -217,12 +221,120 @@ def concatenate(arrays, axis=0):
     #assert np.all(_get_subaxes(a) == subaxes for a in arrays),"some axes do not match"
 
     # concatenate axis values
-    newaxisvalues = np.concatenate([a.axes[axis].values for a in arrays])
+    #newaxisvalues = np.concatenate([a.axes[axis].values for a in arrays])
+    #newaxis = Axis(newaxisvalues, name=arrays[0].dims[axis])
+    newaxis = concatenate_axes([a.axes[axis] for a in arrays])
 
-    newaxis = Axis(newaxisvalues, name=arrays[0].dims[axis])
+    # check that other axes match
+    if check_other_axes:
+	for i,a in enumerate(arrays[1:]):
+	    if not _get_subaxes(a) == subaxes:
+		msg = "First array:\n{}\n".format(subaxes)
+		msg += "{}th array:\n{}\n".format(i,_get_subaxes(a))
+		raise ValueError("other axes to not match. Check out `aggregate` method")
+
     newaxes = subaxes[:axis] + [newaxis] + subaxes[axis:]
 
     return arrays[0]._constructor(values, newaxes)
+
+#def _aggregate_axes(arrays):
+#    """ build a common Axes object from a list of arrays
+#    """
+#    for ax
+def concatenate_axes(axes):
+    """ concatenate Axis objects
+
+    axes: list of Axis objects
+
+    >>> a = Axis([1,2,3],'x0')
+    >>> b = Axis([5,6,7],'x0')
+    >>> ax = concatenate_axes((a, b))
+    >>> ax.name
+    'x0'
+    >>> ax.values
+    array([1, 2, 3, 5, 6, 7])
+    """
+    #assert np.iterable(axes) and axes
+    #if not isinstance(axes[0], Axis): raise TypeError()
+    if len({ax.name for ax in axes}) != 1: 
+	print axes
+	raise ValueError("axis names differ!")
+    values = np.concatenate([ax.values for ax in axes])
+    return Axis(values, axes[0].name)
+
+def aggregate(arrays, check_overlap=True):
+    """ like a multi-dimensional concatenate
+
+    input:
+	arrays: sequence of DimArrays
+	check_overlap: if True, check that arrays do not overlap (to avoid data loss)
+	    This default to True to reduce the risk of errors, but this makes the operation
+	    less performant since every time a copy of the subarray is extracted 
+	    and tested for NaNs. Consider setting check_overlap to False for large
+	    arrays for a well-tested problems.
+    
+    Note:
+	Probably a bad idea to have duplicate axis values (not tested)
+
+    Examples:
+    ---------
+    >>> a = da.DimArray([[1.,2,3]],axes=[('line',[0]), ('col',['a','b','c'])])
+    >>> b = da.DimArray([[4],[5]], axes=[('line',[1,2]), ('col',['d'])])
+    >>> c = da.DimArray([[22]], axes=[('line',[2]), ('col',['b'])])
+    >>> d = da.DimArray([-99], axes=[('line',[4])])
+    >>> aggregate((a,b,c,d))
+    dimarray: 10 non-null elements (6 null)
+    dimensions: 'line', 'col'
+    0 / line (4): 0 to 4
+    1 / col (4): a to d
+    array([[  1.,   2.,   3.,  nan],
+           [ nan,  nan,  nan,   4.],
+           [ nan,  22.,  nan,   5.],
+           [-99., -99., -99., -99.]])
+
+    But beware of overlapping arrays. The following will raise an error:
+    >>> e = da.DimArray([[4],[5]], axes=[('line',[0,1]), ('col',['b'])])
+    >>> try:
+    ...	    aggregate((a,e))    
+    ... except ValueError, msg:
+    ...	    print msg
+    Overlapping arrays: set check_overlap to False to suppress this error.
+    
+    Can set check_overlap to False to let it happen anyway (the latter array wins)
+    >>> aggregate((a,e), check_overlap=False)  
+    dimarray: 4 non-null elements (2 null)
+    dimensions: 'line', 'col'
+    0 / line (2): 0 to 1
+    1 / col (3): a to c
+    array([[  1.,   4.,   3.],
+           [ nan,   5.,  nan]])
+    """
+    # list of common dimensions
+    dims = get_dims(*arrays)
+
+    # build a common Axes object 
+    axes = Axes()
+    for d in dims:
+	newaxis = concatenate_axes([a.axes[d] for a in arrays if d in a.dims])
+	newaxis.values = np.unique(newaxis.values) # unique values
+	axes.append(newaxis)
+
+    # Fill in an array
+    newarray = arrays[0]._constructor(None, axes=axes, dtype=arrays[0].dtype)
+    for a in arrays:
+	#if not set(dims).issubset(a.dims):
+	#   raise ValueError("dimension(s) missing! expected: {}, got: {} ".format(dims,a.dims))
+	indices = {ax.name:ax.values for ax in a.axes}
+	if check_overlap:
+	    if not np.all(np.isnan(newarray.take(indices).values)):
+		#warnings.warn("Overlapping arrays: set check_overlap to False to suppress this warning.")
+		raise ValueError("Overlapping arrays: set check_overlap to False to suppress this error.")
+
+	newarray.put(a.values, indices=indices, inplace=True, convert=True)
+
+    # That's it !
+
+    return newarray
 
 #def aligned(objects, skip_missing=True, skip_singleton=True):
 #    """ test whether common non-singleton axes are equal
