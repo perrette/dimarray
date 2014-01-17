@@ -12,16 +12,17 @@ __all__ = ["take", "put", "reindex_axis", "reindex_like"]
 TOLERANCE=1e-8
 MATLAB_LIKE_INDEXING = True
 
-def is_full_boolean_index(indices, shape):
+def is_boolean_index(indices, shape):
     """ check if something like a[a>2] is performed for ndim > 1
     """
-    indices2 = np.index_exp[indices]
-    return len(shape) > 1 \
-	    and len(indices2) == 1 \
-	    and \
-	    (isinstance(indices2[0], np.ndarray) or is_DimArray(indices2[0]))\
-	    and indices2[0].shape == shape \
-	    and indices2[0].dtype == np.dtype(bool)
+    #indices = np.index_exp[indices]
+    #if len(shape) > 1 and len(indices) == 1:
+    if isinstance(indices, np.ndarray) or is_DimArray(indices):
+	if indices.shape == shape:
+	    if indices.dtype == np.dtype(bool):
+		return True
+
+    return False # otherwise
 
 def array_indices(indices_numpy, shape):
     """ Replace non-iterable (incl. slices) with arrays
@@ -253,13 +254,22 @@ def take(obj, indices, axis=0, indexing="values", tol=TOLERANCE, keepdims=False,
     0 / x0 (1): 1 to 1
     1 / x1 (2): 1 to 2
     array([[4, 5]])
+
+    Ommit `indices` parameter when putting a DimArray
+    >>> a = DimArray([0,1,2,3,4], ['a','b','c','d','e'])
+    >>> b = DimArray([5,6], ['c','d'])
+    >>> a.put(b)
+    dimarray: 5 non-null elements (0 null)
+    dimensions: 'x0'
+    0 / x0 (5): a to e
+    array([0, 1, 5, 6, 4])
     """
     assert indexing in ("position", "values"), "invalid mode: "+repr(indexing)
 
     # SPECIAL CASE: full scale boolean array
     # for now, just return the (numpy) flattened array as numpy would do
     # TODO: return a 1-D DimArray with tupled axis values
-    if is_full_boolean_index(indices, obj.shape):
+    if obj.ndim > 1 and is_boolean_index(indices, obj.shape):
 	return obj.values[np.asarray(indices)]
 
     # 
@@ -356,15 +366,16 @@ def _put(obj, val_, indices_numpy_, inplace=False, convert=False):
     if not inplace:
 	return obj
 
-def put(obj, val, indices, axis=0, indexing="values", tol=TOLERANCE, convert=False, inplace=False, matlab_like=True):
+def put(obj, val, indices=None, axis=0, indexing="values", tol=TOLERANCE, convert=False, inplace=False, matlab_like=True):
     """ Put new values into DimArray (inplace)
 
     parameters:
     -----------
     obj: DimArray (do not provide if method bound to class instance)
-    val: value to put in: scalar or array-like with appropriate shape
-    indices: single- or multi- or `bool` index
-    axis: for single index (see help on `take` method and axes Locator)
+    val: value to put in: scalar or array-like with appropriate shape or DimArray
+    indices, optional: see `take` for indexing rules. indices may be omitted if 
+	val is a DimArray (will then deduce `indices` from its axes)
+    axis: for single index (see help on `take`)
     indexing : "position", "values"
     convert: convert array to val's type
     inplace: True
@@ -451,8 +462,20 @@ def put(obj, val, indices, axis=0, indexing="values", tol=TOLERANCE, convert=Fal
     """
     assert indexing in ("position", "values"), "invalid mode: "+repr(indexing)
 
+    if indices is None:
+
+	# DimArray as subarray: infer indices from its axes
+	if is_DimArray(val):
+	    indices = {ax.name:ax.values for ax in val.axes}
+
+	elif np.isscalar(val):
+	    raise ValueError("indices must be provided for non-DimArray or non-matching shape. See also `fill` method.")
+
+	else:
+	    raise ValueError("indices must be provided for non-DimArray or non-matching shape")
+
     # SPECIAL CASE: full scale boolean array
-    if is_full_boolean_index(indices, obj.shape):
+    if is_boolean_index(indices, obj.shape):
 	return _put(obj, val, np.asarray(indices), inplace=inplace, convert=convert)
 
     if matlab_like is None:
@@ -491,6 +514,11 @@ def put(obj, val, indices, axis=0, indexing="values", tol=TOLERANCE, convert=Fal
 	indices_numpy_ = indices_numpy
 
     return _put(obj, val_, indices_numpy_, inplace=inplace, convert=convert)
+
+def fill(obj, val):
+    """ anologous to numpy's fill (in-place operation)
+    """
+    obj.values.fill(val) 
 
 #
 # Variants 
