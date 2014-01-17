@@ -267,21 +267,28 @@ def aggregate(arrays, check_overlap=True):
 
     input:
 	arrays: sequence of DimArrays
-	check_overlap: if True, check that arrays do not overlap (to avoid data loss)
-	    This default to True to reduce the risk of errors, but this makes the operation
+
+	check_overlap, optional: if True, check that arrays do not overlap (to avoid data loss)
+	    If any two elements overlap, keep the one which is not NaN, if applicable
+	    or raise an error if two valid values overlap
+
+	    Default is True to reduce the risk of errors, but this makes the operation
 	    less performant since every time a copy of the subarray is extracted 
 	    and tested for NaNs. Consider setting check_overlap to False for large
-	    arrays for a well-tested problems.
-    
+	    arrays for a well-tested problems, if the valid-nan selection is not 
+	    required.
+
     Note:
 	Probably a bad idea to have duplicate axis values (not tested)
 
+    TODO: add support for missing values other than np.nan
+
     Examples:
     ---------
-    >>> a = da.DimArray([[1.,2,3]],axes=[('line',[0]), ('col',['a','b','c'])])
-    >>> b = da.DimArray([[4],[5]], axes=[('line',[1,2]), ('col',['d'])])
-    >>> c = da.DimArray([[22]], axes=[('line',[2]), ('col',['b'])])
-    >>> d = da.DimArray([-99], axes=[('line',[4])])
+    >>> a = DimArray([[1.,2,3]],axes=[('line',[0]), ('col',['a','b','c'])])
+    >>> b = DimArray([[4],[5]], axes=[('line',[1,2]), ('col',['d'])])
+    >>> c = DimArray([[22]], axes=[('line',[2]), ('col',['b'])])
+    >>> d = DimArray([-99], axes=[('line',[4])])
     >>> aggregate((a,b,c,d))
     dimarray: 10 non-null elements (6 null)
     dimensions: 'line', 'col'
@@ -293,21 +300,33 @@ def aggregate(arrays, check_overlap=True):
            [-99., -99., -99., -99.]])
 
     But beware of overlapping arrays. The following will raise an error:
-    >>> e = da.DimArray([[4],[5]], axes=[('line',[0,1]), ('col',['b'])])
+    >>> a = DimArray([[1.,2,3]],axes=[('line',[0]), ('col',['a','b','c'])])
+    >>> b = DimArray([[4],[5]], axes=[('line',[0,1]), ('col',['b'])])
     >>> try:
-    ...	    aggregate((a,e))    
+    ...	    aggregate((a,b))    
     ... except ValueError, msg:
     ...	    print msg
     Overlapping arrays: set check_overlap to False to suppress this error.
-    
+
     Can set check_overlap to False to let it happen anyway (the latter array wins)
-    >>> aggregate((a,e), check_overlap=False)  
+    >>> aggregate((a,b), check_overlap=False)  
     dimarray: 4 non-null elements (2 null)
     dimensions: 'line', 'col'
     0 / line (2): 0 to 1
     1 / col (3): a to c
     array([[  1.,   4.,   3.],
            [ nan,   5.,  nan]])
+
+    Note that if NaNs are present on overlapping, the valid data are kept
+    >>> a = DimArray([[1.,2,3]],axes=[('line',[1]), ('col',['a','b','c'])])
+    >>> b = DimArray([[np.nan],[5]], axes=[('line',[1,2]), ('col',['b'])])
+    >>> aggregate((a,b)) # does not overwrite `2` at location (1, 'b')
+    dimarray: 4 non-null elements (2 null)
+    dimensions: 'line', 'col'
+    0 / line (2): 1 to 2
+    1 / col (3): a to c
+    array([[  1.,   2.,   3.],
+	   [ nan,   5.,  nan]])
     """
     # list of common dimensions
     dims = get_dims(*arrays)
@@ -322,15 +341,29 @@ def aggregate(arrays, check_overlap=True):
     # Fill in an array
     newarray = arrays[0]._constructor(None, axes=axes, dtype=arrays[0].dtype)
     for a in arrays:
-	#if not set(dims).issubset(a.dims):
-	#   raise ValueError("dimension(s) missing! expected: {}, got: {} ".format(dims,a.dims))
+
 	indices = {ax.name:ax.values for ax in a.axes}
+
 	if check_overlap:
-	    if not np.all(np.isnan(newarray.take(indices).values)):
-		#warnings.warn("Overlapping arrays: set check_overlap to False to suppress this warning.")
+
+	    # look for nans in replaced and replacing arrays
+	    subarray = newarray.take(indices).values
+	    subarray_is_nan = np.isnan(subarray)
+	    newvalues_is_nan = np.isnan(a.values)
+
+	    # check overlapping
+	    overlap_values  = ~subarray_is_nan & ~newvalues_is_nan
+	    if np.any(overlap_values):
 		raise ValueError("Overlapping arrays: set check_overlap to False to suppress this error.")
 
-	newarray.put(a.values, indices=indices, inplace=True, convert=True)
+	    # only take new non-nan values
+	    newvalues = np.where(newvalues_is_nan, subarray, a.values) 
+
+	else:
+	    newvalues = a.values
+
+	# The actual operation is done by put
+	newarray.put(newvalues, indices=indices, inplace=True, convert=True)
 
     # That's it !
 

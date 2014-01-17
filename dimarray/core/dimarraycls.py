@@ -193,7 +193,7 @@ class DimArray(Metadata):
 	axes = Axes._init(axes, dims=dims, shape=values.shape if values is not None else None)
 	assert type(axes) is Axes
 
-	# if values not provided, create empty data (filled with NaNs if dtype is float, -999999 for int)
+	# if values not provided, create empty data, filled with NaNs if dtype is float
 	if values is None:
 	    values = np.empty([ax.size for ax in axes], dtype=dtype)
 	    if dtype in (float, None, np.dtype(float)):
