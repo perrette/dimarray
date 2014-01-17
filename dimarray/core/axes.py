@@ -50,7 +50,7 @@ class Axis(Metadata):
 
     + metadata
     """
-    _metadata_exclude = ("values", "name", "weights") # variables which are NOT metadata
+    _metadata_exclude = ("values", "name", "weights", "modulo") # variables which are NOT metadata
 
     def __init__(self, values, name="", weights=None, modulo=None, **kwargs):
 	""" 
@@ -540,10 +540,7 @@ class LocatorAxis(object):
 	loc(idx, **kwargs) :: loc.set(**kwargs)[idx]
 
     """
-    _check_params = True # false  for multi indexing
-    _params = ('tol','modulo') # extra parameter which work for subclasses too 
-    # (to pass via Axes which has a mixture of different axes)
-
+    _check_params = False # false  for multi indexing
     def __init__(self, values, raise_error=True, position_index = False, keepdims = False, **opt):
 	"""
 	values	: string list or numpy array
@@ -562,12 +559,15 @@ class LocatorAxis(object):
 	self.keepdims = keepdims 
 
 	# check parameter values (default to False)
-	if self._check_params:
-	    for k in opt: 
-		if k not in self.__dict__ and k not in self._params:
-		    raise ValueError("unknown parameter: {} (allowed for {}: {}".format(k, self, self._params))
+#	if self._check_params:
+	for k in opt: 
+	    if not hasattr(self, k):
+		if k in ('tol', 'modulo'): # need to clean that up in LocatorAxes
+		    pass
+		else:
+		    raise ValueError("unknown parameter {} for {}".format(k, self.__class__))
 
-	self.__dict__.update(opt) # update default options
+	#self.__dict__.update(opt) # update default options
 
     #
     # wrapper mode: __getitem__ and __call__
@@ -641,9 +641,9 @@ class LocatorAxis(object):
 	""" convenience function for chained call: update methods and return itself 
 	"""
 	#self.method = method
-	dict_ = self.__dict__.copy()
-	dict_.update(kwargs)
-	return self.__class__(**dict_)
+	new = copy.copy(self)
+	new.__dict__.update(kwargs)
+	return new
 
     #
     # locate single values
@@ -651,6 +651,9 @@ class LocatorAxis(object):
     def locate(self, val):
 	""" locate with try/except checks
 	"""
+	if not self._check_type(val):
+	    raise TypeError("{}: locate: wrong type {} --> {}".format(self.__class__, type(val), val))
+
 	try:
 	    res = self._locate(val)
 
@@ -661,6 +664,9 @@ class LocatorAxis(object):
 		res = None
 
 	return res
+
+    def _check_type(self, val): 
+	return True
 
     def _locate(self, val):
 	""" locate without try/except check
@@ -746,25 +752,41 @@ class NumLocator(LocatorAxis):
     >>> ix = 1951
     >>> loc[ix] == np.index_exp[loc[ix]][0]
     True
+
+    # Modulo
+    >>> loc = NumLocator(np.array([0, 180, 360]), modulo=360)
+    >>> loc[180] == loc[-180]
+    True
     """
-    tol = 1e-8  # tolerance
-    modulo = None
+    def __init__(self, *args, **kwargs):
+
+	# extract parameters specific to NumLocator
+	opt = {'tol':1e-8, 'modulo':None}
+	for k in kwargs.copy():
+	    if k in opt:
+		opt[k] = kwargs.pop(k)
+
+	super(NumLocator, self).__init__(*args, **kwargs)
+
+	self.__dict__.update(opt)
+
+    def _check_type(self, val):
+	return isnumber(val)
 
     def _locate(self, val):
 	""" 
 	"""
-	try:
-	    val+1
-	    if val == 1: pass # only scalar allowed
-	except TypeError, msg:
-	    raise TypeError("locate: wrong type: {}".format(val))
-
 	values = self.values
 
 	# modulo calculation, val = val +/- modulo*n, where n is an integer
 	# e.g. longitudes has modulo = 360
 	if self.modulo is not None:
-	    mi, ma = values.min(), values.max() # min, max
+
+	    if not isnumber(self.modulo):
+		raise TypeError("modulo parameter need to be a number, got {} --> {}".format(type(self.modulo), self.modulo))
+			
+	    #mi, ma = values.min(), values.max() # min, max
+	    mi, ma = self.min(), self.max() # min, max
 
 	    if self.modulo and (val < mi or val > ma):
 		val = _adjust_modulo(val, self.modulo, mi)
@@ -777,6 +799,34 @@ class NumLocator(LocatorAxis):
 
 	return loc
 
+    def min(self):
+	return self.values.min()
+    def max(self):
+	return self.values.max()
+
+def isnumber(val):
+    try:
+	val+1
+	if val == 1: pass # only scalar allowed
+	return True
+
+    except:
+	return type(val) != bool
+
+class RegularAxisLoc(NumLocator):
+    """ Locator for numerical axis with monotonically increasing, regularly spaced values
+    """
+    def min(self):
+	return self.values[0]
+
+    def max(self):
+	return self.values[-1]
+
+    @property
+    def step(self):
+	return self.values[1] - self.values[0]
+
+    
 def _adjust_modulo(val, modulo, min=0):
     oldval = val
     mval = np.mod(val, modulo)
@@ -787,13 +837,6 @@ def _adjust_modulo(val, modulo, min=0):
     assert np.mod(val-oldval, modulo) == 0, "pb modulo"
     return val
 
-
-class RegularAxisLoc(NumLocator):
-    """ Locator for numerical axis with monotonically increasing, regularly spaced values
-    """
-    # TODO: implement specific methods 
-    pass
-    
 #    mode: different modes to handle out-of-mode situations
 #	"raise": raise error
 #	"clip" : returns 0 or -1 (first or last element)

@@ -15,10 +15,13 @@ def is_latitude(nm):
 class GeoArray(DimArray):
     """ array for geophysical application
     
-    - automatically assign a weight to lon/lat
-    - time, lat, lon order always maintained
-    - can input time, lat, lon as keyword arguments
+    recognize longitude / latitude:
+    - automatically assign a weight to lon varying with cos of lat, so that mean() 
+    returns a good approximation to a calculation in spherical coordinates.
+    - lon recognized as 360-modulo-axis: indexing -180 is the same as +180
+    - can input time, lat, lon as keyword arguments in addition to the standard way
     """
+    ###- time, lat, lon order always maintained
     #_order = ('time','lat','lon')
 
     def __init__(self, values=None, axes=None, time=None, lat=None, lon=None, **kwargs):
@@ -40,6 +43,8 @@ class GeoArray(DimArray):
 	for ax in self.axes:
 	    if is_latitude(ax.name):
 		ax.weights = lambda x: np.cos(np.radians(x))
+	    if is_longitude(ax.name):
+		ax.modulo = 360
 
     def __repr__(self): return super(GeoArray, self).__repr__().replace("dimarray","geoarray")
     def __print__(self): return super(GeoArray, self).__print__().replace("dimarray","geoarray")

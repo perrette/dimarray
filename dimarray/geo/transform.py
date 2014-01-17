@@ -162,11 +162,13 @@ def extract_box(a, region=None):
     #return GeoArray(data, [('lat',la),('lon',lo)])
 
 @dimarray_recursive
-def rectify_longitude(lon, values, lon0):
-    """ fix the longitude 
+def shift_longitude(lon, values, lon0):
+    """ Shift longitude axis, making it start at lon0
     """
     lon, values = grid.rectify_longitude_data(lon, values, lon0)
     return GeoArray(values, [('lon',lon)])
+
+rectify_longitude = shift_longitude # back-compat
 
 #
 # time transforms
