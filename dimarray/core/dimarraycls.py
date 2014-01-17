@@ -515,6 +515,7 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     #
     take = _indexing.take
     put = _indexing.put  
+    fill = _indexing.fill  
 
     # get the kw index equivalent {dimname:indices}
     _get_keyword_indices = _indexing._get_keyword_indices 
@@ -1065,7 +1066,128 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 	assert self.ndim <= 2, "only support plotting for 1- and 2-D objects"
 	return self.to_pandas().plot(*args, **kwargs)
 
-def array(*args, **kwargs):
+def array_kw(*args, **kwargs):
+    """ alias for DimArray.from_kw
+    """
     return DimArray.from_kw(*args, **kwargs)
+
+def array(*args, **kwargs):
+    """ alias for DimArray
+    """
+    return DimArray(*args, **kwargs)
+
+def empty(axes=None, dims=None, shape=None, dtype=float):
+    """ Initialize an empty array
+
+    axes and dims have the same meaning as DimArray's initializer
+    shape, optional: can be provided in combination with `dims`
+	if `axes=` is omitted.
+
+    >>> a = empty([('time',[2000,2001]),('items',['a','b','c'])])
+    >>> a.fill(3)
+    >>> a
+    dimarray: 6 non-null elements (0 null)
+    dimensions: 'time', 'items'
+    0 / time (2): 2000 to 2001
+    1 / items (3): a to c
+    array([[ 3.,  3.,  3.],
+           [ 3.,  3.,  3.]])
+    >>> b = empty(dims=('time','items'), shape=(2, 3))
+
+    See also:
+    ---------
+    empty_like, ones, zeros, nans
+    """
+    axes = Axes._init(axes, dims=dims, shape=shape)
+
+    if shape is None:
+	shape = [ax.size for ax in axes]
+
+    values = np.empty(shape, dtype=dtype)
+
+    return DimArray(values, axes=axes, dims=dims)
+
+def empty_like(a, dtype=None):
+    """ alias for empty(a.axes, dtype=a.dtype)
+
+    See also:
+    ---------
+    empty, ones_like, zeros_like, nans_like
+
+    >>> a = empty([('time',[2000,2001]),('items',['a','b','c'])])
+    >>> b = empty_like(a)
+    >>> b.fill(3)
+    >>> b
+    dimarray: 6 non-null elements (0 null)
+    dimensions: 'time', 'items'
+    0 / time (2): 2000 to 2001
+    1 / items (3): a to c
+    array([[ 3.,  3.,  3.],
+           [ 3.,  3.,  3.]])
+    """
+    if dtype is None: dtype = a.dtype
+    return empty(a.axes, dtype=dtype)
+
+def nans(axes=None, dims=None, shape=None):
+    """ Initialize an empty array filled with NaNs. See empty for doc.
+
+    >>> nans(dims=('time','items'), shape=(2, 3))
+    dimarray: 0 non-null elements (6 null)
+    dimensions: 'time', 'items'
+    0 / time (2): 0 to 1
+    1 / items (3): 0 to 2
+    array([[ nan,  nan,  nan],
+           [ nan,  nan,  nan]])
+    """
+    a = empty(axes, dims, shape, dtype=float)
+    a.fill(np.nan)
+    return a
+
+def nans_like(a):
+    """ alias for nans(a.axes, dtype=a.dtype)
+    """
+    return nans(a.axes)
+
+def ones(axes=None, dims=None, shape=None, dtype=float):
+    """ Initialize an empty array filled with ones. See empty for doc.
+
+    >>> ones(dims=('time','items'), shape=(2, 3))
+    dimarray: 6 non-null elements (0 null)
+    dimensions: 'time', 'items'
+    0 / time (2): 0 to 1
+    1 / items (3): 0 to 2
+    array([[ 1.,  1.,  1.],
+           [ 1.,  1.,  1.]])
+    """
+    a = empty(axes, dims, shape, dtype=dtype)
+    a.fill(1)
+    return a
+
+def ones_like(a, dtype=None):
+    """ alias for nans(a.axes, dtype=a.dtype)
+    """
+    if dtype is None: dtype = a.dtype
+    return ones(a.axes, dtype=dtype)
+
+def zeros(axes=None, dims=None, shape=None, dtype=float):
+    """ Initialize an array filled with zeros. See empty for doc.
+
+    >>> zeros(dims=('time','items'), shape=(2, 3))
+    dimarray: 6 non-null elements (0 null)
+    dimensions: 'time', 'items'
+    0 / time (2): 0 to 1
+    1 / items (3): 0 to 2
+    array([[ 0.,  0.,  0.],
+           [ 0.,  0.,  0.]])
+    """
+    a = empty(axes, dims, shape, dtype=dtype)
+    a.fill(0)
+    return a
+
+def zeros_like(a, dtype=None):
+    """ alias for zeros(a.axes, dtype=a.dtype)
+    """
+    if dtype is None: dtype = a.dtype
+    return zeros(a.axes, dtype=dtype)
 
 array.__doc__ = DimArray.from_kw.__doc__
