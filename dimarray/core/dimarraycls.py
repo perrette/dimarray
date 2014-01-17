@@ -178,6 +178,9 @@ class DimArray(Metadata):
 	#
 	# array values
 	#
+	if isinstance(values, np.ma.MaskedArray):
+	    values = values.filled(np.nan) # fill mask with nans
+
 	if values is not None:
 	    values = np.array(values, copy=copy, dtype=dtype)
 

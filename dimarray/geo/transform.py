@@ -9,6 +9,7 @@ Requirements for a transformation:
 
 """
 import numpy as np
+import warnings
 
 # used in the spatial transforms
 from dimarray import apply_recursive, DimArray
@@ -114,40 +115,51 @@ def regional_mean(a, region=None):
     return average
 
 @dimarray_recursive
-def interpolate1x1(lon, lat, values, lon0=0.):
+def interpolate_1x1(lon, lat, values, lon0=0.):
     """ Make a regional mean and get a time series
     """
     newlon, newlat, newvalues = grid.interpolate_1x1(lon, lat, values, lon0=lon0)
     return GeoArray(newvalues, lat=newlat, lon=newlon)
 
-@dimarray_recursive
-def sample_line(lon, lat, values):
-    """ regional sample along a region
-    """
-    path = zip(lon, lat)
-    data = np.zeros(len(path))
-    for k, pt in enumerate(path):
-	i, j = regmod.Point(*pt).locate(x, y) # lon, lat
-	data[k] = values[i, j]
+#def sample_line(a, path):
+#    """ regional sample along a region
+#
+#    path: list of lon/lat points to sample
+#
+#    >>> lon = np.linspace(0, 50., 100)
+#    >>> lat = np.linspace(30, 60., 100)
+#    >>> lon2, lat2 = np.meshgrid(lon, lat)
+#    >>> a = DimArray(lat2, [('lat',lat),('lon',lon)])
+#    >>> sample_line(a, path=[(5, 34), (10, 40), (12,50)])
+#    """
+#    #path = zip(lon, lat)
+#    # locate numpy indices first
+#    indices = []
+#    for k, pt in enumerate(path):
+#	i, j = regmod.Point(*pt).locate(a.lon, a.lat) # lon, lat
+#	indices.append((i,j)) # approximate location
+#
+#    ilat, ilon = zip(*indices)
+#
+#    return a.take({'lon':ilat, 'lat':ilon}, matlab_like=False, newaxis='x')
 
-    data = np.array(data) # make it an array
-    return GeoArray(newvalues, ('x',path))
-
-@dimarray_recursive
-def extract_box(lon, lat, values, region=None):
+def extract_box(a, region=None):
     """ extract a subregion
+
+    a	: DimArray instance
+    region: lon_ll, lat_ll, lon_ur, lat_ur 
+	or Region instance
     """
     # interactive drawing of a region
     if region is None:
 	region = regmod.drawbox()
 
-    # check the arguments: initialize a BoxRegion is not yet a region
+    # check the arguments: initialize a BoxRegion if not yet a region
     regobj = regmod.check(region)
 
-    i, j = regobj.box_idx(lon, lat)
-    data = values[i,j]
-    lo, la = lon[j], lat[i]
-    return GeoArray(data, [('lat',la),('lon',lo)])
+    i, j = regobj.box_idx(a.lon, a.lat)
+    return a.take({'lat':i, 'lon':j}, indexing='position')
+    #return GeoArray(data, [('lat',la),('lon',lo)])
 
 @dimarray_recursive
 def rectify_longitude(lon, values, lon0):
@@ -159,6 +171,18 @@ def rectify_longitude(lon, values, lon0):
 #
 # time transforms
 #
+def check_dim(obj, dim, msg=None, raise_error=False):
+    if not dim in obj.dims:
+	if msg is None: 
+	    msg = "{} dimension missing, cannot apply this transformation".format(msg)
+	if raise_error: 
+	    raise ValueError(msg)
+	else:
+	    warnings.warn(msg)
+	return False
+    else:
+	return True
+
 def time_mean(obj, period=None):
     """ temporal mean or just slice
 
@@ -168,6 +192,8 @@ def time_mean(obj, period=None):
     >>> time_mean(a, period=(1955,1960))
     2.5
     """
+    if not check_dim(obj, 'time'): return obj
+
     if type(period) is tuple:
 	period = slice(*period)
 
@@ -206,6 +232,7 @@ def since(obj, refperiod):
            [ 0.,  0.],
            [ 2.,  2.]])
     """
+    if not check_dim(obj, 'time'): return obj
     return obj - time_mean(obj, refperiod)
 
 def between(obj, refperiod, endperiod):
@@ -216,5 +243,6 @@ def between(obj, refperiod, endperiod):
     >>> between(a, 1950, 1960)
     2.0
     """
+    if not check_dim(obj, 'time'): return obj
     obj = since(obj, refperiod)
     return time_mean(obj, endperiod)

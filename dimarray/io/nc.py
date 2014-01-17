@@ -92,7 +92,11 @@ def read_dimensions(f, name=None, ix=slice(None), verbose=False):
     if name is None:
 	dims = f.dimensions.keys()
     else:
-	dims = f.variables[name].dimensions
+	try:
+	    dims = f.variables[name].dimensions
+	except KeyError:
+	    print "Available variable names:",f.variables.keys()
+	    raise
 
     dims = [str(d) for d in dims] # conversion to string
 
@@ -114,10 +118,10 @@ def read_dimensions(f, name=None, ix=slice(None), verbose=False):
 
     return axes
 
-def read_attributes(f, name=None):
+def read_attributes(f, name=None, verbose=False):
     """ Read netCDF attributes
     """
-    f, close = check_file(f, mode='r')
+    f, close = check_file(f, mode='r', verbose=verbose)
     attr = {}
     if name is None:
 	var = f
@@ -131,6 +135,15 @@ def read_attributes(f, name=None):
     if close: f.close()
     return attr
 
+def _extract_kw(kwargs, argnames, delete=True):
+    """ extract check 
+    """
+    kw = {}
+    for k in kwargs.copy():
+	if k in argnames:
+	    kw[k] = kwargs[k]
+	    if delete: del kwargs[k]
+    return kw
 
 def read_variable(f, v, indices=slice(None), axis=0, *args, **kwargs):
     """ read one variable from netCDF4 file
@@ -149,7 +162,8 @@ def read_variable(f, v, indices=slice(None), axis=0, *args, **kwargs):
     >>> data = read_variable('myfile.nc','dynsealevel')  # load full file
     >>> data = read_variable('myfile.nc','dynsealevel', {"time":2100, "lon":slice(70,None)})  # load only a chunck of the data
     """
-    f, close = check_file(f, mode='r')
+    kw = _extract_kw(kwargs, ('verbose',))
+    f, close = check_file(f, mode='r', **kw)
 
     # Construct the indices
     axes = read_dimensions(f, v)
@@ -184,8 +198,8 @@ def read_dataset(f, nms=None, *args, **kwargs):
 
     nms : list of variables to read (default None for all variables)
     """
-
-    f, close = check_file(f, 'r')
+    kw = _extract_kw(kwargs, ('verbose',))
+    f, close = check_file(f, 'r', **kw)
 
     # automatically read all variables to load (except for the dimensions)
     if nms is None:
@@ -227,7 +241,7 @@ def write_dataset(f, obj, mode='w-'):
 
     if close: f.close()
 
-def write_variable(f, obj, name=None, mode='w-'):
+def write_variable(f, obj, name=None, mode='w-', **verb):
     """ save DimArray instance to file
 
     f	: file name or netCDF file handle
@@ -239,7 +253,7 @@ def write_variable(f, obj, name=None, mode='w-'):
     assert name, "invalid variable name !"
 
     # control wether file name or netCDF handle
-    f, close = check_file(f, mode=mode)
+    f, close = check_file(f, mode=mode, **verb)
 
     # Create dimensions
     for dim in obj.dims:
@@ -320,6 +334,9 @@ def check_file(f, mode='r', verbose=True):
 
 	try:
 	    f = nc.Dataset(fname, mode, clobber=clobber)
+
+	except UserWarning, msg:
+	    print msg
 
 	except Exception, msg: # raise a weird RuntimeError
 	    #print "read from",fname

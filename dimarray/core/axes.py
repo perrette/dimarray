@@ -550,6 +550,12 @@ class LocatorAxis(object):
 
 	raise_error = True # raise an error if value not found?
 	"""
+	# compatibility wiht other methods:
+	if 'indexing' in opt:
+	    indexing = opt.pop('indexing')
+	    assert indexing in ('values', 'position')
+	    position_index = indexing == 'position'
+
 	self.values = values
 	self.raise_error = raise_error
 	self.position_index = position_index
