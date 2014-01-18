@@ -46,6 +46,7 @@ class Dataset(object):
 	keys  : keys to order data if provided as dict, or to name data if list
 	"""
 	assert data is None or axes is None, "can't provide both data and axes"
+	assert keys is None or type(keys) in (list, np.ndarray) and np.isscalar(keys[0]), "pb with keys"
 
 	# Basic initialization
 	if axes is None:
@@ -116,7 +117,7 @@ class Dataset(object):
     def __iter__(self):
 	return iter(self.variables)
 
-    def __setitem__(self, item, val):
+    def __setitem__(self, key, val):
 	""" Make sure the object is a DimArray with appropriate axes
 
 	Tests:
@@ -142,6 +143,9 @@ class Dataset(object):
 	if not isinstance(val, DimArray):
 	    raise TypeError("can only append DimArray instances")
 
+	if not np.isscalar(key):
+	    raise TypeError("only scalar keys allowed")
+
 	# Check dimensions
 	for axis in val.axes:
 
@@ -156,8 +160,8 @@ class Dataset(object):
 		self.axes.append(axis)
 
 	# update name
-	val.name = item
-	self.variables[item] = val
+	val.name = key
+	self.variables[key] = val
 
     def write(self, f, *args, **kwargs):
 	import io.nc as ncio

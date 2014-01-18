@@ -343,7 +343,7 @@ def reshape(self, newdims):
 #
 # Group/ungroup subsets of axes to perform operations on partly flattened array
 #
-def group(self, dims, reverse=False, insert=0):
+def group(self, dims, **kwargs):
     """ group (or flatten) a subset of dimensions
 
     Input:
@@ -369,6 +369,17 @@ def group(self, dims, reverse=False, insert=0):
 
     a.mean(axis=('lon','lat')) 
     """
+    reverse= kwargs.pop('reverse',False)
+    insert = kwargs.pop('insert', 0)
+    assert len(kwargs) == 0, "invalid arguments: "+repr(kwargs.keys())
+
+    # from variable list to tuple
+    if len(dims) == 1 and type(dims[0]) in (list, tuple, set):
+	dims = dims[0]
+
+    # from integer to str names
+    dims = [self.axes[d].name for d in dims]
+
     if len(dims) == 0: 
 	raise ValueError("dims must have length > 0")
 
