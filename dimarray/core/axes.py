@@ -198,6 +198,15 @@ class Axis(Metadata):
 
 	return DimArray(weights, ax)
 
+    def to_pandas(self):
+	""" convert to pandas Index
+	"""
+	import pandas as pd
+	return pd.Index(self.values, name=self.name)
+
+    @classmethod
+    def from_pandas(cls, index):
+	return cls(index.values, name=index.name)
 
 class GroupedAxis(Axis):
     """ an Axis that contains several axes flattened together
@@ -260,6 +269,32 @@ class GroupedAxis(Axis):
     def __str__(self):
 	return ",".join([str(ax) for ax in self.axes])
 
+    def to_MultiIndex(self):
+	""" convert to pandas MultiIndex
+	"""
+	import pandas as pd
+	index = pd.MultiIndex.from_tuples(self.values, names=[ax.name for ax in self.axes])
+	index.name = self.name
+	return index
+
+    to_pandas = to_MultiIndex # over load Axis method
+
+    @classmethod
+    def from_MultiIndex(cls, mi):
+	""" from a pandas MultiIndex
+	"""
+	axes = []
+	for i, lev in enumerate(mi.levels):
+	    nm = lev.name
+	    if nm is None: 
+		nm = "lev{}".format(i)
+	    axes.append(Axis(lev.values, nm))
+
+	ax = cls(*axes)
+	if mi.name is not None:
+	    ax.name = mi.name
+
+	return ax
 
 def _flatten(*list_of_arrays):
     """ flatten a list of arrays ax1, ax2, ... to  a list of tuples [(ax1[0], ax2[0], ax3[0]..), (ax1[0], ax2[0], ax3[1]..), ...]
