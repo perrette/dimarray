@@ -168,7 +168,7 @@ class DimArray(Metadata):
     # NOW MAIN BODY OF THE CLASS
     #
 
-    def __init__(self, values=None, axes=None, dims=None, copy=False, dtype=None, _indexing="values", **kwargs):
+    def __init__(self, values=None, axes=None, dims=None, labels=None, copy=False, dtype=None, _indexing="values", **kwargs):
 	""" Initialization. See help on DimArray.
 	"""
 	# check if attached to values (e.g. DimArray object)
@@ -187,10 +187,10 @@ class DimArray(Metadata):
 	#
 	# Initialize the axes
 	# 
-	if axes is None:
-	    assert values is not None, "values= or/and axes= required"
+	if axes is None and labels is None:
+	    assert values is not None, "values= or/and axes=, labels= required to determine dimensions"
 
-	axes = Axes._init(axes, dims=dims, shape=values.shape if values is not None else None)
+	axes = Axes._init(axes, dims=dims, labels=labels, shape=values.shape if values is not None else None)
 	assert type(axes) is Axes
 
 	# if values not provided, create empty data, filled with NaNs if dtype is float
@@ -365,20 +365,6 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     def ndim(self): 
 	return self.values.ndim
 
-    @property
-    def dtype(self): 
-	return self.values.dtype
-
-    @property
-    def __array__(self): 
-	return self.values.__array__
-
-    def __iter__(self): 
-	""" iterates on values, consistently with a ndarray
-	"""
-	for k, val in self.iter():
-	    yield val
-
     #
     # Some additional properties
     #
@@ -388,11 +374,36 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 	"""
 	return tuple([ax.name for ax in self.axes])
 
+    @property
+    def labels(self):
+	""" axis values 
+	"""
+	return tuple([ax.values for ax in self.axes])
+
     #
-    # iteration over any dimension: key, value
+    # misc
     #
+
+    @property
+    def dtype(self): 
+	return self.values.dtype
+
+    @property
+    def __array__(self): 
+	return self.values.__array__
+
+    #
+    # iteration
+    #
+
+    def __iter__(self): 
+	""" iterates on values along the first axis, consistently with a ndarray
+	"""
+	for k, val in self.iter():
+	    yield val
+
     def iter(self, axis=0):
-	""" Iterate over axis value and slice along an axis
+	""" Iterate over axis value and cross-section, along any axis (by default the first)
 
 	for time, time_slice in myarray.iter('time'):
 	    do stuff
@@ -576,6 +587,9 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     prod = _transform.prod
 
     # use weighted mean/std/var by default
+    _mean = _transform._mean
+    _std = _transform._std
+    _var = _transform._var
     mean = _transform.weighted_mean
     std = _transform.weighted_std
     var = _transform.weighted_var

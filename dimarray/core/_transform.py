@@ -235,6 +235,11 @@ median = _NumpyDesc("median")
 prod = _NumpyDesc("prod")
 sum  = _NumpyDesc("sum")
 
+# here just for checking
+_mean = _NumpyDesc("mean")
+_std = _NumpyDesc("std")
+_var = _NumpyDesc("var")
+
 min = _NumpyDesc("min")
 max = _NumpyDesc("max")
 

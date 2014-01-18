@@ -431,7 +431,7 @@ class Axes(list):
 	return LocatorAxes(self)
 
 
-def _init_axes(axes=None, dims=None, shape=None, raise_warning=True):
+def _init_axes(axes=None, dims=None, labels=None, shape=None, raise_warning=True):
     """ initialize axis instance with many different ways
 
     axes:
@@ -444,9 +444,12 @@ def _init_axes(axes=None, dims=None, shape=None, raise_warning=True):
     dims: tuple or list of dimension names
     shape
     """
+    #back compat
+    if axes is None:
+	axes = labels 
+
     # special case: 1D object: accept single axis instead of list of axes/dimensions
-    is_1d = lambda x : x is not None and len(x) == 1
-    if is_1d(shape) or is_1d(dims):
+    if shape is not None and len(shape) == 1:
 	
 	# accept a tuple ('dim', axis values) instead of [(...)]
 	if type(axes) is tuple:
@@ -496,6 +499,10 @@ def _init_axes(axes=None, dims=None, shape=None, raise_warning=True):
     #elif is_array_equiv(axes[0]): 
     elif type(axes[0]) in (list, np.ndarray): 
 	axes = Axes.from_arrays(axes, dims=dims)
+
+    # axes only cointain axis labels
+    elif type(axes[0]) in (str, unicode):
+	axes = Axes.from_shape(shape, dims=axes)
 
     else:
 	raise TypeError("axes, if provided, must be a list of: `Axis` or `tuple` or arrays. Got: {} (instance:{})".format(axes.__class__, axes))
