@@ -55,7 +55,7 @@ def broadcast(self, other):
 
     # Or as DimArray
     elif is_DimArray(other):
-	newaxes = other.axes
+ 	newaxes = other.axes
 
     # Or as OrderedDict of axis names, axis values
     elif isinstance(other, OrderedDict):
@@ -83,11 +83,11 @@ def broadcast(self, other):
 #
 # Transpose: permute dimensions
 #
-def transpose(self, axes=None):
+def transpose(self, *dims):
     """ Permute dimensions
     
     Analogous to numpy, but also allows axis names
-    >>> a = da.DimArray(np.zeros((2,3)), dims=['x0','x1'])
+    >>> a = da.DimArray(np.zeros((2,3)), ['x0','x1'])
     >>> a          
     dimarray: 6 non-null elements (0 null)
     dimensions: 'x0', 'x1'
@@ -103,24 +103,26 @@ def transpose(self, axes=None):
     array([[ 0.,  0.],
            [ 0.,  0.],
            [ 0.,  0.]])
-    >>> (a.T == a.transpose([1,0])).all() and (a.T == a.transpose(['x1','x0'])).all()
+    >>> (a.T == a.transpose(1,0)).all() and (a.T == a.transpose('x1','x0')).all()
     True
     """
-    if axes is None:
+    if len(dims) == 1 and type(dims[0]) in (list, tuple, set):
+	dims = dims[0]
+
+    if len(dims) == 0:
 	if self.ndim == 2:
-	    axes = [1,0] # numpy, 2-D case
+	    dims = [1,0] # numpy, 2-D case
 	elif self.ndim == 1:
-	    axes = [0]
+	    dims = [0]
 
 	else:
-	    raise ValueError("indicate axes value to transpose")
+	    raise ValueError("indicate dimensions to transpose")
 
     # get equivalent indices 
-    if type(axes[0]) is str:
-	axes = [self.dims.index(nm) for nm in axes]
+    newshape = self._to_shape(dims)
 
-    result = self.values.transpose(axes)
-    newaxes = [self.axes[i] for i in axes]
+    result = self.values.transpose(newshape)
+    newaxes = [self.axes[i] for i in newshape]
     return self._constructor(result, newaxes)
 
 #
@@ -291,11 +293,11 @@ def squeeze(self, axis=None):
 #
 # Reshape by adding/removing as many singleton axes as needed to match prescribed dimensions
 #
-def reshape(self, newdims):
+def reshape(self, *newdims):
     """ Conform array to new dimensions
     
     input:
-	newdims: tuple or list of dimensions (`str`)
+	*newdims: tuple or list of dimensions (`str`)
 
     output:
 	reshape: DimArray with reshape.dims == tuple(newdims)
@@ -318,6 +320,9 @@ def reshape(self, newdims):
     array([[7],
            [8]])
     """
+    if len(newdims) == 1 and type(newdims[0]) in (list, tuple, set):
+	newdims = newdims[0]
+
     # Do nothing if dimensions already match
     if tuple(newdims) == self.dims:
 	return self
@@ -343,7 +348,7 @@ def reshape(self, newdims):
 #
 # Group/ungroup subsets of axes to perform operations on partly flattened array
 #
-def group(self, dims, **kwargs):
+def group(self, *dims, **kwargs):
     """ group (or flatten) a subset of dimensions
 
     Input:
@@ -373,12 +378,13 @@ def group(self, dims, **kwargs):
     insert = kwargs.pop('insert', 0)
     assert len(kwargs) == 0, "invalid arguments: "+repr(kwargs.keys())
 
+    re_order = False
+
     # from variable list to tuple
     if len(dims) == 1 and type(dims[0]) in (list, tuple, set):
 	dims = dims[0]
-
-    # from integer to str names
-    dims = [self.axes[d].name for d in dims]
+	if type(dims) is set:
+	    re_order = True
 
     if len(dims) == 0: 
 	raise ValueError("dims must have length > 0")
@@ -390,6 +396,9 @@ def group(self, dims, **kwargs):
     assert type(reverse) is bool, "reverse must be a boolean !"
     if reverse:
 	dims = [d for d in self.dims if d not in dims]
+
+    # from integer to str names
+    dims = self._to_dims(dims)
 
     # check the 
     if not set(dims).issubset(self.dims):
@@ -404,11 +413,9 @@ def group(self, dims, **kwargs):
 #	return self
 #	#raise ValueError("cannot group less than 2 dimensions")
 
-    # make sure we have a tuple of strings
-    dims = [self.axes[d].name for d in dims]
-
     # reorder dimensions to group and convert to tuple
-    dims = [d for d in self.dims if d in dims]
+    if re_order: # only if provided as set
+	dims = [d for d in self.dims if d in dims] # do not reorder, this may matter
     dims = tuple(dims)
 
     n = len(dims) # number of dimensions to group

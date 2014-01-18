@@ -441,6 +441,17 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 	name = self.axes[idx].name
 	return idx, name
 
+    def _to_shape(self, dims):
+	""" return shape from a sequence of axis names or position
+	"""
+	dims = self._to_dims(dims) # make sure everything is string
+	return [self.dims.index(nm) for nm in dims]
+
+    def _to_dims(self, shape):
+	""" return axis names from a sequence of axis names or position
+	"""
+	return [self.axes[d].name for d in shape] # make sure everything is string
+
     #
     # Return a weight for each array element, used for `mean`, `std` and `var`
     #
