@@ -53,9 +53,9 @@ def regional_mean(a, region=None):
     >>> a = GeoArray([[1, 2, 4],[4, 5, 6]], lon=lon, lat=lat)
     >>> rm = regional_mean(a)
     >>> rm
-    3.6428942648372251
+    3.3767428905946684
 
-    This is similar but more presise that just cos(lat):
+    Which just weights data with cos(lat), also accounting for missing data
     >>> lon2, lat2 = np.meshgrid(lon, lat)
     >>> w = np.cos(np.radians(lat2))
     >>> rm2 = np.sum(a.values*w)/np.sum(w)  
@@ -76,7 +76,7 @@ def regional_mean(a, region=None):
     geoarray: 3 non-null elements (0 null)
     dimensions: 'z'
     0 / z (3): 0 to 2
-    array([ 3.64289426,  3.64289426,  3.64289426])
+    array([ 3.37674289,  3.37674289,  3.37674289])
     """
     regobj = regmod.check(region)
 

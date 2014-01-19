@@ -111,10 +111,13 @@ class Region(object):
 	    lon = rectify_longitude(lon, lon0 = self.lon0)
 	lonr, latr, datar = self.extract(lon, lat, data) # extract regional data
 	LO, LA = np.meshgrid(lonr, latr)
-	w = np.cos(LA) # weights
+	w = np.cos(np.radians(LA)) # weights
 
-	if isinstance(datar, np.ndarray):
-	    datar = np.ma.array(datar, mask=np.isnan(datar))
+	if isinstance(datar, np.ma.MaskedArray):
+	    datar = datar.filled(np.nan)
+
+	w[np.isnan(datar)] = np.nan
+
 	return np.sum(datar*w)/np.sum(w)  # weighted mean
 
     def extract(self, lon, lat, data):
