@@ -111,6 +111,22 @@ class Dataset(object):
 	"""
 	return self.variables[item]
 
+    def __delitem__(self, item):
+	""" 
+	"""
+	axes = self.variables[item].axes
+	del self.variables[item]
+
+	# update axes
+	for ax in axes:
+	    found = False
+	    for k in self:
+		if ax.name in self[k].dims:
+		    found = True
+		    continue
+	    if not found:
+		self.axes.remove(ax)
+
     def __len__(self):
 	return len(self.variables)
 
