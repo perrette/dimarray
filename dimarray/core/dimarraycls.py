@@ -980,8 +980,12 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 	"""
 	from dimarray.dataset import Dataset
 	# iterate over elements of one axis
-	data = [val for k, val in self.iter(axis)]
-	return Dataset(data, keys=self.axes[axis].values)
+	#data = [val for k, val in self.iter(axis)]
+	# Dataset(data, keys=self.axes[axis].values)
+	ds =  Dataset()
+	for k, val in self.iter(axis):
+	    ds[k] = val
+	return ds
 
     def to_MaskedArray(self):
 	""" transform to MaskedArray, with NaNs as missing values
