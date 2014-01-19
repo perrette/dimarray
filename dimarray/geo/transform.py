@@ -55,7 +55,7 @@ def regional_mean(a, region=None):
     >>> rm
     3.3767428905946684
 
-    Which just weights data with cos(lat), also accounting for missing data
+    Which just weights data with cos(lat)
     >>> lon2, lat2 = np.meshgrid(lon, lat)
     >>> w = np.cos(np.radians(lat2))
     >>> rm2 = np.sum(a.values*w)/np.sum(w)  

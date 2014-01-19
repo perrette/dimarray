@@ -118,7 +118,7 @@ class Region(object):
 
 	w[np.isnan(datar)] = np.nan
 
-	return np.sum(datar*w)/np.sum(w)  # weighted mean
+	return np.nansum(datar*w)/np.nansum(w)  # weighted mean
 
     def extract(self, lon, lat, data):
 	""" extract data from the region
