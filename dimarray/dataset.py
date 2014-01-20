@@ -46,7 +46,7 @@ class Dataset(object):
 	keys  : keys to order data if provided as dict, or to name data if list
 	"""
 	assert data is None or axes is None, "can't provide both data and axes"
-	assert keys is None or type(keys) in (list, np.ndarray) and np.isscalar(keys[0]), "pb with keys"
+	assert keys is None or type(keys) in (list, np.ndarray, tuple) and np.isscalar(keys[0]), "pb with keys"
 
 	# Basic initialization
 	if axes is None:
