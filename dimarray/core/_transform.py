@@ -59,7 +59,7 @@ See Also:
 # Actual transforms
 #
 
-@format_doc(skipna=_doc_skipna, axis=_doc_axis.format(default_axis="None"))
+#@format_doc(skipna=_doc_skipna, axis=_doc_axis.format(default_axis="None"))
 def apply_along_axis(obj, func, axis=None, skipna=True, args=(), **kwargs):
     """ Apply along-axis numpy method to DimArray
 
@@ -77,6 +77,14 @@ def apply_along_axis(obj, func, axis=None, skipna=True, args=(), **kwargs):
     returns:
     --------
     - DimArray, or scalar 
+
+    Examples:
+#    >>> a = DimArray([[0,1],[2,3.]])
+#    >>> b = a.copy()
+#    >>> b[0,0] = np.nan
+#    >>> c = DimArray.from_arrays([a,b],keys=['a','b'],axis='items')
+#    >>> c = DimArray.from_arrays({'a':a,'b':b},axis='items')
+#    >>> c
     """
 
     # Deal with `axis` parameter, whether `int`, `str` or `tuple`
@@ -120,8 +128,8 @@ def apply_along_axis(obj, func, axis=None, skipna=True, args=(), **kwargs):
     newobj = obj._constructor(result, newaxes, **obj._metadata)
 
     # add stamp
-    stamp = "{transform}({axis})".format(transform=funcname, axis=str(obj.axes[idx]))
-    newobj._metadata_stamp(stamp)
+    #stamp = "{transform}({axis})".format(transform=funcname, axis=str(obj.axes[idx]))
+    #newobj._metadata_stamp(stamp)
 
     return newobj
 
@@ -209,28 +217,29 @@ def _deal_with_axis(obj, axis):
 class _NumpyDesc(object):
     """ to apply a numpy function which reduces an axis
     """
-    def __init__(self, numpy_method, axis=None, **kwargs):
+    def __init__(self, numpy_method):
 	"""
         numpy_method: as a string name of the numpy function to apply
-	**kwargs    : default values for keyword arguments to numpy_method
 	"""
 	assert type(numpy_method) is str, "can only provide method name as a string"
 	self.numpy_method = numpy_method
-	self.axis = axis
-	self.kwargs = kwargs
 
     def __get__(self, obj, cls=None):
 	"""
 	"""
 	# convert self.apply to an actual function
-	newmethod = partial(apply_along_axis, obj, self.numpy_method, axis=self.axis, **self.kwargs)
+	newmethod = partial(apply_along_axis, obj, self.numpy_method)
 
 	# Update doc string
-	newmethod.__doc__ = _doc_numpy.format(func=self.numpy_method, default_axis=self.axis)
+	newmethod.__doc__ = _doc_numpy.format(func=self.numpy_method, default_axis=None)
 
 	return newmethod
 
 # basic, unmodified transforms
+#def median(a, axis=None, skipna=True):
+#    #return _apply_along_axis(values, funcname, axis=None, skipna=True, args=(), **kwargs):
+#    return apply_along_axis(a, 'median', axis=axis, skipna=skipna)
+
 median = _NumpyDesc("median")
 prod = _NumpyDesc("prod")
 sum  = _NumpyDesc("sum")
@@ -247,8 +256,14 @@ ptp = _NumpyDesc("ptp")
 all = _NumpyDesc("all")
 any = _NumpyDesc("any")
 
-cumsum = _NumpyDesc("cumsum", axis=-1)
-cumprod = _NumpyDesc("cumprod", axis=-1)
+#cumsum = _NumpyDesc("cumsum", axis=-1)
+#cumprod = _NumpyDesc("cumprod", axis=-1)
+
+def cumsum(a, axis=-1, skipna=True):
+    return apply_along_axis(a, 'cumsum', axis=axis, skipna=skipna)
+
+def cumprod(a, axis=-1, skipna=True):
+    return apply_along_axis(a, 'cumprod', axis=axis, skipna=skipna)
 
 #
 # Special behaviour for argmin and argmax: return axis values instead of integer position

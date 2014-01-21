@@ -133,6 +133,24 @@ def align_dims(*arrays):
 
 def align_axes(*arrays):
     """ align axes of a list of DimArray arrays by reindexing
+
+    >>> a = DimArray([[0,1],[2,3.]])
+    >>> b = DimArray([[0,1],[2,3.],[4.,5.]])
+    >>> b.axes[0].values = np.array([1,2])
+    >>> align_axes(a, b)
+    [dimarray: 4 non-null elements (2 null)
+    dimensions: 'x0', 'x1'
+    0 / x0 (3): 0 to 2
+    1 / x1 (2): 0 to 1
+    array([[  0.,   1.],
+           [  2.,   3.],
+           [ nan,  nan]]), dimarray: 4 non-null elements (2 null)
+    dimensions: 'x0', 'x1'
+    0 / x0 (3): 0 to 2
+    1 / x1 (2): 0 to 1
+    array([[ nan,  nan],
+           [  0.,   1.],
+           [  2.,   3.]])]
     """
     # find the dimensiosn
     dims = get_dims(*arrays)

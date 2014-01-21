@@ -3,7 +3,7 @@ from collections import OrderedDict as odict
 import string
 import copy
 
-from metadata import Metadata
+from metadata import MetadataDesc
 from tools import is_DimArray
 from tools import is_array1d_equiv
 
@@ -38,7 +38,7 @@ def _convert_dtype(dtype):
 #
 # Axis class
 #
-class Axis(Metadata):
+class Axis(object):
     """ Axis
 
     values: numpy array (or list) 
@@ -50,7 +50,7 @@ class Axis(Metadata):
 
     + metadata
     """
-    _metadata_exclude = ("values", "name", "weights", "modulo") # variables which are NOT metadata
+    _metadata = MetadataDesc(exclude = ["values", "name", "weights", "modulo"]) # variables which are NOT metadata
 
     def __init__(self, values, name="", weights=None, modulo=None, **kwargs):
 	""" 
@@ -72,16 +72,12 @@ class Axis(Metadata):
 	if values.dtype not in (np.dtype(float), np.dtype(int), np.dtype(long)):
 	    values = np.asarray(values, dtype=object)
 
-	Metadata.__init__(self)
-
 	self.values = values 
 	self.name = name 
 	self.weights = weights 
 	self.modulo = modulo
 
-	# set metadata
-	for k in kwargs:
-	    self.setncattr(k, kwargs[k])
+	self._metadata = kwargs
 
     def __getitem__(self, item):
 	""" access values elements & return an axis object
@@ -211,15 +207,11 @@ class Axis(Metadata):
 class GroupedAxis(Axis):
     """ an Axis that contains several axes flattened together
     """
-    _metadata_exclude = ("axes", "name")
     modulo = None
 
     def __init__(self, *axes):
 	"""
 	"""
-	#super(Axis, self).__init__() # init an ordered dict of metadata
-	Metadata.__init__(self)
-
 	self.axes = Axes(axes)
 	self.name = ",".join([ax.name for ax in self.axes])
 

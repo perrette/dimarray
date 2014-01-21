@@ -10,6 +10,48 @@ from collections import OrderedDict as odict
 # 
 # Attribute Descriptor
 #
+class MetadataDesc(object):
+    """ descriptor to set/get metadata
+
+    >>> class A(object):
+    ...	    _metadata = MetadataDesc(exclude=('b',))
+    ...	    c = 3
+    >>> a = A()
+    >>> a.b = 4
+    >>> a.c = 5
+    >>> a._metadata
+    {'c': 5}
+    """ 
+    def __init__(self, exclude=None, types=None):
+	if exclude is not None:
+	    if isinstance(exclude, str):
+		exclude = [exclude]
+	    else:
+		assert type(exclude) in (list, tuple)
+	else:
+	    exclude = []
+
+	if types is None:
+	    types = int, long, float, tuple, str, bool, unicode # autorized metadata types
+
+	self.types = types
+	self.exclude = exclude
+
+    def __get__(self, obj, cls=None):
+	""" just get 
+	""" 
+	return {k:getattr(obj, k) for k in obj.__dict__ if k not in self.exclude and not k.startswith('_')}
+
+    def __set__(self, obj, meta):
+	"""
+	"""
+	assert type( meta) is dict, "metadata can only be a dictionary"
+	for k in meta:
+	    val = meta[k]
+	    if not np.isscalar(val) and not type(val) in self.types:
+		raise TypeError("Got metadata type {}. Only authorized metadata types: {}".format(val.__class__.__name__, [t.__name__ for t in self.types]))
+	    setattr(obj, k, val)
+
 
 class Metadata(object):
     """ Variable with metadata

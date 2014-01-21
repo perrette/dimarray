@@ -19,6 +19,8 @@ def _get_list_arrays(data, keys):
     if isinstance(data, dict):
 	if keys is None:
 	    keys = data.keys()
+	else:
+	    assert set(keys) == set(data.keys()), "keys do not match dictionary keys"
 	data = [data[k] for k in keys]
     
     # Check everything is a DimArray
@@ -26,12 +28,14 @@ def _get_list_arrays(data, keys):
 	if not isinstance(v, DimArray):
 	    raise TypeError("A Dataset can only store DimArray instances")
 
-    # Check names
-    for i, v in enumerate(data):
-	if not hasattr(v,'name') or not v.name:
-	    if keys is not None:
-		v.name = keys[i]
-	    else:
+    # Assign names
+    if keys is not None:
+	for i, v in enumerate(data):
+	    v.name = keys[i]
+
+    else:
+	for i, v in enumerate(data):
+	    if not hasattr(v,'name') or not v.name:
 		v.name = "v%i"%(i)
 
     return data

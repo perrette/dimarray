@@ -338,7 +338,7 @@ def take(obj, indices, axis=0, indexing="values", tol=TOLERANCE, keepdims=False,
 	result = obj._constructor(newval, newaxes, **obj._metadata)
 
 	# append stamp
-	if stamp: result._metadata_stamp(stamp)
+	#if stamp: result._metadata_stamp(stamp)
 
     # otherwise, return scalar
     else:

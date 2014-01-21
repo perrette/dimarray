@@ -7,7 +7,7 @@ from collections import OrderedDict as odict
 
 from dimarray.config import Config
 
-from metadata import Metadata
+from metadata import MetadataDesc
 from axes import Axis, Axes, GroupedAxis
 
 import _transform  # numpy along-axis transformations, interpolation
@@ -20,7 +20,7 @@ from tools import pandas_obj
 
 __all__ = ["DimArray", "array"]
 
-class DimArray(Metadata):
+class DimArray(object):
     """ numpy's ndarray with physical dimensions (named and values axes)
 
     Parameters:
@@ -57,7 +57,6 @@ class DimArray(Metadata):
 
 		  NOTE: metadata passed this way cannot have name already taken by other 
 		  parameters such as "values", "axes", "dims", "dtype" or "copy".
-		  See setncattr for such special cases.
 
     Examples:
     ---------
@@ -162,7 +161,7 @@ class DimArray(Metadata):
            [ nan,  nan,  nan]])
     """
     _order = None  # set a general ordering relationship for dimensions
-    _metadata_exclude = ("values","axes") # is NOT a metadata
+    _metadata = MetadataDesc(exclude=('values','axes'))
 
     #
     # NOW MAIN BODY OF THE CLASS
@@ -204,11 +203,6 @@ class DimArray(Metadata):
 	#
 	# store all fields
 	#
-
-	# init an ordered dict self._metadata
-	Metadata.__init__(self)
-	#super(DimArray, self).__init__() 
-
 	self.values = values
 	self.axes = axes
 
@@ -218,8 +212,9 @@ class DimArray(Metadata):
 	#
 	# metadata (see Metadata type in metadata.py)
 	#
-	for k in kwargs:
-	    self.setncattr(k, kwargs[k]) # perform type-checking and store in self._metadata
+	#for k in kwargs:
+	#    setncattr(self, k, kwargs[k]) # perform type-checking and store in self._metadata
+	self._metadata = kwargs
 
 	# Check consistency between axes and values
 	inferred = tuple([ax.size for ax in self.axes])
@@ -325,14 +320,15 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 	    return ax.values # return numpy array
 
 	else:
-	    try:
-		return super(DimArray, self).__getattr__(att) # call Metadata's method
+	    raise AttributeError("{} object has no attribute {}".format(self.__class__.__name__, att))
+	#    try:
+	#	return super(DimArray, self).__getattr__(att) # call Metadata's method
 
-	    except AttributeError, msg:
-		raise AttributeError(msg)
+	#    except AttributeError, msg:
+	#	raise AttributeError(msg)
 
-	    else:
-		raise
+	#    else:
+	#	raise
 
     def copy(self, shallow=False):
 	""" copy of the object and update arguments
@@ -870,6 +866,26 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 	1 / x0 (4): 0 to 3
 	array([[ 10.,  20.,  30.,  nan],
 	       [ nan,   1.,   2.,   3.]])
+
+	Concatenate 2-D data
+	>>> a = DimArray([[0,1],[2,3.]])
+	>>> b = a.copy()
+	>>> b[0,0] = np.nan
+	>>> c = DimArray.from_arrays([a,b],keys=['a','b'],axis='items')
+	>>> d = DimArray.from_arrays({'a':a,'b':b},axis='items')
+	>>> np.all(np.isnan(c) | (c == d) )
+	True
+	>>> c
+	dimarray: 7 non-null elements (1 null)
+	dimensions: 'items', 'x0', 'x1'
+	0 / items (2): a to b
+	1 / x0 (2): 0 to 1
+	2 / x1 (2): 0 to 1
+	array([[[  0.,   1.],
+		[  2.,   3.]],
+	<BLANKLINE>
+	       [[ nan,   1.],
+		[  2.,   3.]]])
 	"""
 	from dimarray.dataset import Dataset
 	data = Dataset(data, keys=keys)
