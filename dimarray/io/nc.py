@@ -184,7 +184,8 @@ def read_variable(f, v, indices=slice(None), axis=0, *args, **kwargs):
 
     # Read attributes
     attr = read_attributes(f, v)
-    obj._metadata.update(attr)
+    for k in attr:
+	setattr(obj, k, attr[k])
 
     # close netCDF if file was given as file name
     if close:
@@ -280,7 +281,7 @@ def write_variable(f, obj, name=None, mode='w-', **verb):
     v[:] = obj.values
 
     # add attributes if any
-    for k in obj.ncattrs():
+    for k in obj._metadata.keys():
 	if k == "name": continue # 
 	try:
 	    f.variables[name].setncattr(k, getattr(obj, k))
