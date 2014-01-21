@@ -30,7 +30,7 @@ _doc_numpy = """ Analogous to numpy's {func}
 Signature: 
 ----------
 
-{func}(..., axis=None, skipna=True, ...)
+{func}(..., axis=None, skipna=False, ...)
 
 Accepts the same parameters as the equivalent numpy function, 
 with modified behaviour of the `axis` parameter and an additional 
@@ -60,7 +60,7 @@ See Also:
 #
 
 #@format_doc(skipna=_doc_skipna, axis=_doc_axis.format(default_axis="None"))
-def apply_along_axis(obj, func, axis=None, skipna=True, args=(), **kwargs):
+def apply_along_axis(obj, func, axis=None, skipna=False, args=(), **kwargs):
     """ Apply along-axis numpy method to DimArray
 
     apply_along_axis(obj, ...)
@@ -79,12 +79,42 @@ def apply_along_axis(obj, func, axis=None, skipna=True, args=(), **kwargs):
     - DimArray, or scalar 
 
     Examples:
-#    >>> a = DimArray([[0,1],[2,3.]])
-#    >>> b = a.copy()
-#    >>> b[0,0] = np.nan
-#    >>> c = DimArray.from_arrays([a,b],keys=['a','b'],axis='items')
-#    >>> c = DimArray.from_arrays({'a':a,'b':b},axis='items')
-#    >>> c
+    >>> a = DimArray([[0,1],[2,3.]])
+    >>> b = a.copy()
+    >>> b[0,0] = np.nan
+    >>> c = DimArray.from_arrays([a,b],keys=['a','b'],axis='items')
+    >>> c
+    dimarray: 7 non-null elements (1 null)
+    dimensions: 'items', 'x0', 'x1'
+    0 / items (2): a to b
+    1 / x0 (2): 0 to 1
+    2 / x1 (2): 0 to 1
+    array([[[  0.,   1.],
+            [  2.,   3.]],
+    <BLANKLINE>
+           [[ nan,   1.],
+            [  2.,   3.]]])
+    >>> c.sum(axis=0)
+    dimarray: 4 non-null elements (0 null)
+    dimensions: 'x0', 'x1'
+    0 / x0 (2): 0 to 1
+    1 / x1 (2): 0 to 1
+    array([[ nan,  2.],
+           [  4.,  6.]])
+    >>> c.sum(0, skipna=True)
+    dimarray: 3 non-null elements (1 null)
+    dimensions: 'x0', 'x1'
+    0 / x0 (2): 0 to 1
+    1 / x1 (2): 0 to 1
+    array([[ 0.,  2.],
+           [ 4.,  6.]])
+    >>> c.median(0)
+    dimarray: 3 non-null elements (1 null)
+    dimensions: 'x0', 'x1'
+    0 / x0 (2): 0 to 1
+    1 / x1 (2): 0 to 1
+    array([[ nan,   1.],
+           [  2.,   3.]])
     """
 
     # Deal with `axis` parameter, whether `int`, `str` or `tuple`
@@ -133,7 +163,7 @@ def apply_along_axis(obj, func, axis=None, skipna=True, args=(), **kwargs):
 
     return newobj
 
-def _apply_along_axis(values, funcname, axis=None, skipna=True, args=(), **kwargs):
+def _apply_along_axis(values, funcname, axis=None, skipna=False, args=(), **kwargs):
     """ apply a numpy transform on numpy array but dealing with NaNs
     """
     # Deal with NaNs
@@ -236,8 +266,8 @@ class _NumpyDesc(object):
 	return newmethod
 
 # basic, unmodified transforms
-#def median(a, axis=None, skipna=True):
-#    #return _apply_along_axis(values, funcname, axis=None, skipna=True, args=(), **kwargs):
+#def median(a, axis=None, skipna=False):
+#    #return _apply_along_axis(values, funcname, axis=None, skipna=False, args=(), **kwargs):
 #    return apply_along_axis(a, 'median', axis=axis, skipna=skipna)
 
 median = _NumpyDesc("median")
@@ -259,10 +289,10 @@ any = _NumpyDesc("any")
 #cumsum = _NumpyDesc("cumsum", axis=-1)
 #cumprod = _NumpyDesc("cumprod", axis=-1)
 
-def cumsum(a, axis=-1, skipna=True):
+def cumsum(a, axis=-1, skipna=False):
     return apply_along_axis(a, 'cumsum', axis=axis, skipna=skipna)
 
-def cumprod(a, axis=-1, skipna=True):
+def cumprod(a, axis=-1, skipna=False):
     return apply_along_axis(a, 'cumprod', axis=axis, skipna=skipna)
 
 #
@@ -270,7 +300,7 @@ def cumprod(a, axis=-1, skipna=True):
 #
 @format_doc(default_axis="None")
 @format_doc(axis=_doc_axis, skipna=_doc_skipna)
-def locmin(obj, axis=None, skipna=True):
+def locmin(obj, axis=None, skipna=False):
     """ similar to numpy's argmin, but return axis values instead of integer position
 
     Parameters:
@@ -293,7 +323,7 @@ def locmin(obj, axis=None, skipna=True):
 
 @format_doc(default_axis="None")
 @format_doc(axis=_doc_axis, skipna=_doc_skipna)
-def locmax(obj, axis=None, skipna=True):
+def locmax(obj, axis=None, skipna=False):
     """ similar to numpy's argmax, but return axis values instead of integer position
 
     Parameters:
@@ -444,7 +474,7 @@ def _append_nans(result, axis, first=False):
 
     return result
 
-#def _apply_minmax(obj, funcname, axis=None, skipna=True, args=(), **kwargs):
+#def _apply_minmax(obj, funcname, axis=None, skipna=False, args=(), **kwargs):
 #    """ apply min/max/argmin/argmax
 #
 #    special behaviour for these functions, with `keepdims` parameter
@@ -460,7 +490,7 @@ def _append_nans(result, axis, first=False):
 # Define weighted mean/std/var
 #
 
-def weighted_mean(obj, axis=None, skipna=True, weights='axis'):
+def weighted_mean(obj, axis=None, skipna=False, weights='axis'):
     """ mean over an axis or group of axes, possibly weighted 
 
     parameters:
@@ -488,7 +518,7 @@ def weighted_mean(obj, axis=None, skipna=True, weights='axis'):
     sum_weights = apply_along_axis(weights, "sum", axis=axis, skipna=skipna)
     return sum_values / sum_weights
 
-def weighted_var(obj, axis=None, skipna=True, weights="axis", ddof=0):
+def weighted_var(obj, axis=None, skipna=False, weights="axis", ddof=0):
     """ standard deviation over an axis or group of axes, possibly weighted 
 
     parameters:
