@@ -1117,6 +1117,9 @@ def array(*args, **kwargs):
     """
     return DimArray(*args, **kwargs)
 
+# handy alias
+from_arrays = DimArray.from_arrays
+
 def empty(axes=None, dims=None, shape=None, dtype=float):
     """ Initialize an empty array
 
@@ -1232,3 +1235,4 @@ def zeros_like(a, dtype=None):
     return zeros(a.axes, dtype=dtype)
 
 array.__doc__ = DimArray.from_kw.__doc__
+

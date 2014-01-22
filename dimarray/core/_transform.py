@@ -95,14 +95,14 @@ def apply_along_axis(obj, func, axis=None, skipna=False, args=(), **kwargs):
            [[ nan,   1.],
             [  2.,   3.]]])
     >>> c.sum(axis=0)
-    dimarray: 4 non-null elements (0 null)
+    dimarray: 3 non-null elements (1 null)
     dimensions: 'x0', 'x1'
     0 / x0 (2): 0 to 1
     1 / x1 (2): 0 to 1
-    array([[ nan,  2.],
-           [  4.,  6.]])
+    array([[ nan,   2.],
+           [  4.,   6.]])
     >>> c.sum(0, skipna=True)
-    dimarray: 3 non-null elements (1 null)
+    dimarray: 4 non-null elements (0 null)
     dimensions: 'x0', 'x1'
     0 / x0 (2): 0 to 1
     1 / x1 (2): 0 to 1
