@@ -311,7 +311,9 @@ def take(obj, indices, axis=0, indexing="values", tol=TOLERANCE, keepdims=False,
     # New axes
     newaxes = Axes()
     stamps = []
-    for i, ix in enumerate(indices_numpy):
+    #for i, ix in enumerate(indices_numpy):
+    for i in reversed(range(len(indices_numpy))): # loop in reverse order to squeeze axes 
+	ix = indices_numpy[i]
 	ax = obj.axes[i]
 	newaxis = ax[ix]
 
@@ -330,6 +332,8 @@ def take(obj, indices, axis=0, indexing="values", tol=TOLERANCE, keepdims=False,
 	# otherwise just append the new axis
 	else:
 	    newaxes.append(newaxis)
+
+    newaxes = newaxes[::-1] # reverse back to right order
 
     stamp = ",".join(stamps)
 
@@ -493,10 +497,11 @@ def put(obj, val, indices=None, axis=0, indexing="values", tol=TOLERANCE, conver
 	indices_numpy_ = np.ix_(*indices_array)
 	shp = [len(ix) for ix in indices_array] # get an idea of the shape
 
-	# ...first check that val's shape is consistent with originally required indices
-	if np.size(val) > 1 and np.any(np.array(shp) > 1):
+	## ...first check that val's shape is consistent with originally required indices
+	# only check for n-d array of size and dimensions > 1
+	if np.size(val) > 1 and np.ndim(val) > 1 and np.any(np.array(shp) > 1):
 	    shp1 = [d for d in shp if d > 1]
-	    shp2 = [d for d in val.shape if d > 1]
+	    shp2 = [d for d in np.shape(val) if d > 1]
 	    if shp1 != shp2:
 		raise ValueError('array is not broadcastable to correct shape (got values: {} but inferred from indices {})'.format(shp2, shp1))
     #
