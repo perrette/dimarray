@@ -64,7 +64,7 @@ def broadcast(self, other):
     else:
 	raise TypeError("should be a DimArray, a list of Axis objects or an OrderedDict of Axis objects")
 
-    if not isinstance(newaxes[0], Axis):
+    if len(newaxes) > 0 and not isinstance(newaxes[0], Axis): # just check the first as basic test
 	raise TypeError("should be a DimArray, a list of Axis objects or an OrderedDict of Axis objects")
 
     newshape = [ax.name for ax in newaxes]

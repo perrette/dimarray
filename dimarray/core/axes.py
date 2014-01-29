@@ -938,7 +938,8 @@ class LocatorAxes(object):
     def __init__(self, axes, **opt):
 	"""
 	"""
-	assert isinstance(axes, list) and isinstance(axes[0], Axis), "must be list of axes objects"
+	assert isinstance(axes, list), "must be list of axes objects"
+	#assert isinstance(axes, list) and (len(axes)>0 or isinstance(axes[0], Axis)), "must be list of axes objects"
 	self.axes = axes
 	self.opt = opt
 

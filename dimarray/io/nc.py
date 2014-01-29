@@ -145,7 +145,7 @@ def _extract_kw(kwargs, argnames, delete=True):
 	    if delete: del kwargs[k]
     return kw
 
-def read_variable(f, v, indices=slice(None), axis=0, *args, **kwargs):
+def read_variable(f, v, indices=None, axis=0, *args, **kwargs):
     """ read one variable from netCDF4 file
     Input:
 
@@ -167,16 +167,29 @@ def read_variable(f, v, indices=slice(None), axis=0, *args, **kwargs):
 
     # Construct the indices
     axes = read_dimensions(f, v)
-    try:
-	ix = axes.loc(indices, axis=axis, *args, **kwargs)
-    except IndexError, msg:
-	raise
-	raise IndexError(msg)
 
-    # slice the data and dimensions
-    newaxes_raw = [ax[ix[i]] for i, ax in enumerate(axes)] # also get the appropriate axes
-    newaxes = [ax for ax in newaxes_raw if isinstance(ax, Axis)] # remove singleton values
-    newdata = f.variables[v][ix]
+    if indices is None:
+	newaxes = axes
+	newdata = f.variables[v][:]
+
+	# scalar variables come out as arrays ! Fix that.
+	if len(axes) == 0:
+	    assert np.size(newdata) == 1, "inconsistency betwwen axes and data"
+	    assert np.ndim(newdata) == 1, "netCDF seems to have fixed that bug, just remove this line !"
+	    newdata = newdata[0]
+
+    else:
+
+	try:
+	    ix = axes.loc(indices, axis=axis, *args, **kwargs)
+	except IndexError, msg:
+	    raise
+	    raise IndexError(msg)
+
+	# slice the data and dimensions
+	newaxes_raw = [ax[ix[i]] for i, ax in enumerate(axes)] # also get the appropriate axes
+	newaxes = [ax for ax in newaxes_raw if isinstance(ax, Axis)] # remove singleton values
+	newdata = f.variables[v][ix]
 
     # initialize a dimarray
     obj = DimArray(newdata, newaxes)

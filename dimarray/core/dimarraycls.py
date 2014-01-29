@@ -696,6 +696,32 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 	dimensions: 'x0'
 	0 / x0 (3): 0 to 2
 	array([0, 1, 1])
+
+	Test group/corps structure (result of operation remains DimArray)
+	>>> a = DimArray([[1.,2,3],[4,5,6]])
+	>>> isinstance(a + 2., DimArray)
+	True
+	>>> isinstance(2. + a, DimArray)
+	True
+	>>> isinstance(2 * a, DimArray)
+	True
+	>>> isinstance(a * 2, DimArray)
+	True
+	>>> isinstance(2 / a, DimArray)
+	True
+	>>> isinstance(a / 2, DimArray)
+	True
+	>>> isinstance(2 - a, DimArray)
+	True
+	>>> isinstance(a - 2, DimArray)
+	True
+	>>> s = 0.
+	>>> for i in range(5):
+	...	s = s + a
+	>>> isinstance(a, DimArray)
+	True
+	>>> np.all(s == 5*a)
+	True
 	"""
 	result = _operation.operation(func, self, other, broadcast=Config.op_broadcast, reindex=Config.op_reindex, constructor=self._constructor)
 	return result
@@ -1000,6 +1026,8 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 	# Dataset(data, keys=self.axes[axis].values)
 	ds =  Dataset()
 	for k, val in self.iter(axis):
+	    if not isinstance(val, DimArray): # scalar case
+		val = DimArray(val)
 	    ds[k] = val
 	return ds
 
