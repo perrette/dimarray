@@ -131,14 +131,18 @@ class Dataset(odict):
 	val.name = key
 	super(Dataset, self).__setitem__(key, val)
 
-    def write(self, f, *args, **kwargs):
+    def write_nc(self, f, *args, **kwargs):
 	import io.nc as ncio
 	ncio.write_dataset(f, self, *args, **kwargs)
 
+    write = write_nc
+
     @classmethod
-    def read(cls, f, *args, **kwargs):
+    def read_nc(cls, f, *args, **kwargs):
 	import io.nc as ncio
 	return ncio.read_dataset(f, *args, **kwargs)
+
+    read = read_nc
 
     def to_array(self, axis="items"):
 	""" Convert to DimArray
