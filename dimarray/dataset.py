@@ -8,44 +8,11 @@ from core import align_axes
 from core import pandas_obj
 from core.metadata import MetadataDesc
 
-def _get_list_arrays(data, keys):
-    """ initialize from DimArray objects (internal method)
-    """
-    if not isinstance(data, dict) and not isinstance(data, list):
-	raise TypeError("Type not understood. Expected list or dict, got {}: {}".format(type(data), data))
-
-    assert keys is None or len(keys) == len(data), "keys do not match with data length !"
-
-    # Transform data to a list
-    if isinstance(data, dict):
-	if keys is None:
-	    keys = data.keys()
-	else:
-	    assert set(keys) == set(data.keys()), "keys do not match dictionary keys"
-	data = [data[k] for k in keys]
-    
-    # Check everything is a DimArray
-    for v in data:
-	if not isinstance(v, DimArray):
-	    raise TypeError("A Dataset can only store DimArray instances")
-
-    # Assign names
-    if keys is not None:
-	for i, v in enumerate(data):
-	    v.name = keys[i]
-
-    else:
-	for i, v in enumerate(data):
-	    if not hasattr(v,'name') or not v.name:
-		v.name = "v%i"%(i)
-
-    return data
-
-class Dataset(object):
+class Dataset(odict):
     """ Container for a set of aligned objects
     """
 
-    _metadata = MetadataDesc(exclude=['axes','variables'])
+    _metadata = MetadataDesc(exclude=['axes'])
 
     def __init__(self, data=None, keys=None, axes=None):
 	""" initialize a dataset from a set of objects of varying dimensions
@@ -57,13 +24,15 @@ class Dataset(object):
 	#assert keys is None or type(keys) in (list, np.ndarray, tuple) and np.isscalar(keys[0]), "pb with keys"
 	assert keys is None or np.any([isinstance(keys, type_) for type_ in (list, np.ndarray, tuple)]) and np.isscalar(keys[0]), "pb with keys"
 
+	# initialize an ordered dictionary
+	super(Dataset, self).__init__()
+
 	# Basic initialization
 	if axes is None:
 	    axes = Axes()
 	else:
 	    axes = Axes._init(axes)
 	self.axes = axes
-	self.variables = odict()
 
 	# If initialized from data
 	if data is not None:
@@ -84,18 +53,6 @@ class Dataset(object):
 	"""
 	return [ax.name for ax in self.axes]
 
-    def update(self, dict_):
-	""" update from another dataset or dictionary
-
-	"""
-	for k in dict_:
-	    self[k] = dict_[k]
-	
-    def __getattr__(self, att):
-	"""
-	"""
-	return getattr(self.variables, att)
-
     def __repr__(self):
 	""" string representation
 	"""
@@ -105,23 +62,18 @@ class Dataset(object):
 	lines.append(header)
 	axes = repr(self.axes)
 	lines.append(axes)
-	for nm in self.variables:
-	    dims = self.variables[nm].dims
-	    shape = self.variables[nm].shape
+	for nm in self.keys():
+	    dims = self[nm].dims
+	    shape = self[nm].shape
 	    #print nm,":", ", ".join(dims)
 	    lines.append("{}: {}".format(nm,", ".join(dims)))
 	return "\n".join(lines)
 
-    def __getitem__(self, item):
-	""" 
-	"""
-	return self.variables[item]
-
     def __delitem__(self, item):
 	""" 
 	"""
-	axes = self.variables[item].axes
-	del self.variables[item]
+	axes = self[item].axes
+	super(Dataset, self).__delitem__(item)
 
 	# update axes
 	for ax in axes:
@@ -132,12 +84,6 @@ class Dataset(object):
 		    continue
 	    if not found:
 		self.axes.remove(ax)
-
-    def __len__(self):
-	return len(self.variables)
-
-    def __iter__(self):
-	return iter(self.variables)
 
     def __setitem__(self, key, val):
 	""" Make sure the object is a DimArray with appropriate axes
@@ -183,7 +129,7 @@ class Dataset(object):
 
 	# update name
 	val.name = key
-	self.variables[key] = val
+	super(Dataset, self).__setitem__(key, val)
 
     def write(self, f, *args, **kwargs):
 	import io.nc as ncio
@@ -245,3 +191,37 @@ class Dataset(object):
 #		nms.append(nm)
 #	return nms
 #
+
+def _get_list_arrays(data, keys):
+    """ initialize from DimArray objects (internal method)
+    """
+    if not isinstance(data, dict) and not isinstance(data, list):
+	raise TypeError("Type not understood. Expected list or dict, got {}: {}".format(type(data), data))
+
+    assert keys is None or len(keys) == len(data), "keys do not match with data length !"
+
+    # Transform data to a list
+    if isinstance(data, dict):
+	if keys is None:
+	    keys = data.keys()
+	else:
+	    assert set(keys) == set(data.keys()), "keys do not match dictionary keys"
+	data = [data[k] for k in keys]
+    
+    # Check everything is a DimArray
+    for v in data:
+	if not isinstance(v, DimArray):
+	    raise TypeError("A Dataset can only store DimArray instances")
+
+    # Assign names
+    if keys is not None:
+	for i, v in enumerate(data):
+	    v.name = keys[i]
+
+    else:
+	for i, v in enumerate(data):
+	    if not hasattr(v,'name') or not v.name:
+		v.name = "v%i"%(i)
+
+    return data
+
