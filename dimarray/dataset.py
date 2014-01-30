@@ -66,7 +66,7 @@ class Dataset(odict):
 	    dims = self[nm].dims
 	    shape = self[nm].shape
 	    #print nm,":", ", ".join(dims)
-	    lines.append("{}: {}".format(nm,", ".join(dims)))
+	    lines.append("{}: {}".format(nm,repr(dims)))
 	return "\n".join(lines)
 
     def __delitem__(self, item):
