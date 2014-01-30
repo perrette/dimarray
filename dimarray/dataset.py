@@ -6,6 +6,7 @@ import numpy as np
 from core import DimArray, array, Axis, Axes
 from core import align_axes 
 from core import pandas_obj
+from core.metadata import MetadataDesc
 
 def _get_list_arrays(data, keys):
     """ initialize from DimArray objects (internal method)
@@ -43,6 +44,9 @@ def _get_list_arrays(data, keys):
 class Dataset(object):
     """ Container for a set of aligned objects
     """
+
+    _metadata = MetadataDesc(exclude=['axes','variables'])
+
     def __init__(self, data=None, keys=None, axes=None):
 	""" initialize a dataset from a set of objects of varying dimensions
 
@@ -75,13 +79,10 @@ class Dataset(object):
 		self[v.name] = v
 
     @property
-    def dimensions(self):
-	""" dimensions present in the Dataset as a dictionary
+    def dims(self):
+	""" list of dimensions contained in the Dataset, consistently with DimArray's `dims`
 	"""
-	dims = odict()
-	for ax in self.axes:
-	    dims[ax.name] = ax.size
-	return dims
+	return [ax.name for ax in self.axes]
 
     def update(self, dict_):
 	""" update from another dataset or dictionary
@@ -203,14 +204,14 @@ class Dataset(object):
 	#if names is not None or dims is not None:
 	#    return self.subset(names=names, dims=dims).to_array()
 
-	if axis in self.dimensions.keys():
+	if axis in self.dims:
 	    raise ValueError("please provide an axis name which does not \
 		    already exist in Dataset")
 
 	# align all variables to the same dimensions
 	data = odict()
 	for k in self:
-	    data[k] = self[k].reshape(self.dimensions.keys()).broadcast(self.axes)
+	    data[k] = self[k].reshape(self.dims).broadcast(self.axes)
 
 	# make it a numpy array
 	data = [data[k].values for k in self]
@@ -221,26 +222,26 @@ class Dataset(object):
 
 	return DimArray(data, axes)
 
-    def subset(self, names=None, dims=None):
-	""" return a subset of the dictionary
-
-	names: variable names
-	dims : dimensions to conform too
-	"""
-	if names is None and dims is not None:
-	    names = self._filter_dims(dims)
-
-	d = self.__class__()
-	for nm in names:
-	    d[nm] = self[nm]
-	return d
-
-    def _filter_dims(self, dims):
-	""" return variables names matching given dimensions
-	"""
-	nms = []
-	for nm in self:
-	    if tuple(self[nm].dims) == tuple(dims):
-		nms.append(nm)
-	return nms
-
+#    def subset(self, names=None, dims=None):
+#	""" return a subset of the dictionary
+#
+#	names: variable names
+#	dims : dimensions to conform too
+#	"""
+#	if names is None and dims is not None:
+#	    names = self._filter_dims(dims)
+#
+#	d = self.__class__()
+#	for nm in names:
+#	    d[nm] = self[nm]
+#	return d
+#
+#    def _filter_dims(self, dims):
+#	""" return variables names matching given dimensions
+#	"""
+#	nms = []
+#	for nm in self:
+#	    if tuple(self[nm].dims) == tuple(dims):
+#		nms.append(nm)
+#	return nms
+#

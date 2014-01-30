@@ -223,14 +223,18 @@ def read_dataset(f, nms=None, *args, **kwargs):
 #    if nms is str:
 #	nms = [nms]
 
-    gen = dict()
+    data = dict()
     for nm in nms:
-	gen[nm] = read_variable(f, nm, *args, **kwargs)
-    gen = Dataset(gen, keys=nms)
+	data[nm] = read_variable(f, nm, *args, **kwargs)
+    data = Dataset(data, keys=nms)
+
+    # get dataset's metadata
+    for k in f.ncattrs():
+	setattr(data, k, f.getncattr(k))
 
     if close: f.close()
 
-    return gen
+    return data
 
 
 #
@@ -253,6 +257,11 @@ def write_dataset(f, obj, mode='w-'):
     nms = obj.keys()
     for nm in obj:
 	write_variable(f, obj[nm], nm)
+
+    # set metadata for the whole dataset
+    meta = obj._metadata
+    for k in meta.keys():
+	f.setncattr(k, meta[k])
 
     if close: f.close()
 
