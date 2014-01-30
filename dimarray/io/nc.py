@@ -1,6 +1,7 @@
 """ NetCDF I/O to access and save geospatial data
 """
 import os
+from collections import OrderedDict as odict
 import netCDF4 as nc
 import numpy as np
 #from geo.data.index import to_slice, _slice3D
@@ -15,20 +16,27 @@ __all__ = ['read',"summary"]
 #
 
 def summary(fname):
+    print(summary_repr(fname))
+
+def summary_repr(fname):
     """ print info about netCDF file
     
     input: 
 	fname: netCDF file name
     """
-    print fname+":\n"+"-"*len(fname)
+    lines = []
+    lines.append( fname+":\n"+"-"*len(fname))
     nms, _ = scan(fname, verbose=False)
     header = "Dataset of %s variables" % (len(nms))
     if len(nms) == 1: header = header.replace('variables','variable')
-    print header
-    print read_dimensions(fname, verbose=False)
+    lines.append(header)
+    lines.append(repr(read_dimensions(fname, verbose=False)))
     for nm in nms:
 	dims, shape = scan_var(fname, nm, verbose=False)
-	print nm,":", ", ".join(dims)
+	line = nm+": "+repr(dims)
+	lines.append(line)
+
+    return "\n".join(lines)
 
     #attr = read_attributes(f, name):
 
@@ -120,6 +128,8 @@ def read_dimensions(f, name=None, ix=slice(None), verbose=False):
 
 def read_attributes(f, name=None, verbose=False):
     """ Read netCDF attributes
+
+    name: variable name
     """
     f, close = check_file(f, mode='r', verbose=verbose)
     attr = {}
@@ -265,51 +275,95 @@ def write_dataset(f, obj, mode='w-'):
 
     if close: f.close()
 
-def write_variable(f, obj, name=None, mode='w-', **verb):
+def check_dimensions(f, axes, **verb):
+    """ create dimensions if not already existing
+
+    f : file handle or string
+    axes: list of Axis objects
+    """
+    f, close = check_file(f, mode='a+', **verb)
+    for ax in axes:
+	dim = ax.name
+	if not dim in f.dimensions:
+	    f.createDimension(dim, ax.size)
+
+	    # check type: so far object-type arrays are strings
+	    dtype = ax.dtype if ax.dtype is not np.dtype('O') else str  
+	    v = f.createVariable(dim, dtype, dim)
+	    v[:] = ax.values
+
+    if close: f.close()
+
+def createVariable(f, name, axes=None, dims=None, labels=None, dtype=float, **kwargs):
+    """ create variable like a DimArray
+
+    f: Dataset file handle
+    name : variable name
+    dtype : variable type
+    a: DimArray
+    name: variable name if a.name is not defined
+    """
+    # make sure axes is an Axes object, or initialize
+    axes = Axes._init(axes, dims=dims, labels=labels)
+
+    # Create dimensions if necessary
+    check_dimensions(f, axes)
+
+    # Create Variable
+    return f.createVariable(name, dtype, [ax.name for ax in axes], **kwargs)
+
+#def write_attributes(f, obj):
+
+def write_variable(f, obj, name=None, mode='a+', indices=None, axis=0, verbose=False, **kwargs):
     """ save DimArray instance to file
 
     f	: file name or netCDF file handle
     obj : DimArray object
     name: variable name
-    mode: 'w' or 'a' 
+    mode: 'a+' append if possible, otherwise write
     """
     if not name and hasattr(obj, "name"): name = obj.name
     assert name, "invalid variable name !"
 
     # control wether file name or netCDF handle
-    f, close = check_file(f, mode=mode, **verb)
+    f, close = check_file(f, mode=mode, verbose=verbose)
 
-    # Create dimensions
-    for dim in obj.dims:
-
-	if not dim in f.dimensions:
-	    val = obj.axes[dim].values
-	    f.createDimension(dim, len(val))
-
-	    # check type: so far object-type arrays are strings
-	    dtype = val.dtype if val.dtype is not np.dtype('O') else str  
-	    v = f.createVariable(dim, dtype, dim)
-	    v[:] = val
-
-    # Create Variable
+    # create variable if necessary
     if name not in f.variables:
-	v = f.createVariable(name, obj.dtype, obj.dims)
+	assert isinstance(obj, DimArray), "a must be a DimArray"
+	v = createVariable(f, name, obj.axes, dtype=obj.dtype)
+
+    # or just check dimensions
     else:
 	v = f.variables[name]
-	#assert tuple(unicode(d) for d in obj.dims) == tuple(v.dimensions), "Dimension name do not correspond {}: {} attempted to write: {}".format(name, tuple(v.dimensions), obj.dims)
-	assert obj.dims == tuple(v.dimensions), "Dimension name do not correspond {}: {} attempted to write: {}".format(name, tuple(v.dimensions), obj.dims)
+
+	if isinstance(obj, DimArray) and obj.dims != tuple(v.dimensions):
+	    raise ValueError("Dimension name do not correspond {}: {} attempted to write: {}".format(name, tuple(v.dimensions), obj.dims))
+    # determine indices
+    if indices is None:
+	ix = slice(None)
+
+    else:
+	axes = read_dimensions(f, name)
+	try:
+	    ix = axes.loc(indices, axis=axis, **kwargs)
+	except IndexError, msg:
+	    raise
+	    raise IndexError(msg)
 
     # Write Variable
-    v[:] = obj.values
+    v[ix] = np.asarray(obj)
 
     # add attributes if any
-    for k in obj._metadata.keys():
-	if k == "name": continue # 
-	try:
-	    f.variables[name].setncattr(k, getattr(obj, k))
+    if isinstance(obj, DimArray):
+	meta = obj._metadata
+	for k in meta.keys():
+	    if k == "name": continue # 
+	    try:
+		f.variables[name].setncattr(k, meta[k])
 
-	except TypeError, msg:
-	    raise Warning(msg)
+	    except TypeError, msg:
+		raise Warning(msg)
 
     if close:
 	f.close()
@@ -349,6 +403,11 @@ def check_file(f, mode='r', verbose=True):
     elif mode == 'w':
 	clobber = True
 
+    # mode 'a+' appends if file exists, otherwise create new variable
+    elif mode == 'a+' and not isinstance(f, nc.Dataset):
+	if os.path.exists(f): mode = 'a'
+	else: mode = 'w'
+
     if not isinstance(f, nc.Dataset):
 	fname = f
 
@@ -376,3 +435,166 @@ def check_file(f, mode='r', verbose=True):
 	close = True
 
     return f, close
+
+
+#
+# Create a wrapper which behaves similarly to a Dataset and DimArray object
+#
+class NCGeneric(object):
+    """ generic netCDF class dealing with attribute I/O
+    """
+    def _getnc(self):
+	"""
+	returns:
+	nc: Dataset or Variable handle
+	f : Dataset handle (same as nc for NCDataset)
+	close: bool, close Dataset after action?
+	"""
+	raise NotImplementedError()
+
+    def setncattr(self, nm, val):
+	nc, f, close = self._getnc(mode='w-')
+	nc.setncattr(nm, val)
+	if close: f.close()
+
+    def delncattr(self, nm, val):
+	nc, f, close = self._getnc(mode='w-')
+	nc.delncattr(nm, val)
+	if close: f.close()
+
+    def getncattr(self, nm):
+	nc, f, close = self._getnc(mode='r')
+	attr = nc.getncattr(nm)
+	if close: f.close()
+	return attr
+
+    def ncattrs(self):
+	nc, f, close = self._getnc(mode='r')
+	attr = nc.ncattrs()
+	if close: f.close()
+	return attr
+
+    def __getattr__(self, nm):
+	""" get attribute can also retrieve numpy-like properties
+	"""
+	nc, f, close = self._getnc(mode='r')
+	attr = getattr(nc, nm)
+	if close: f.close()
+	return attr
+
+    __delattr__ = delncattr
+    __setattr__ = setncattr
+
+class NCDataset(NCGeneric):
+    """
+    """
+    def __init__(self, f, keepopen=False):
+	""" register the filename
+	"""
+	if keepopen:
+	    f, close = check_file(f, mode='w-')
+
+	self.__dict__.update({'f':f, 'keepopen':keepopen}) # by pass setattr
+
+    def read(self, *args, **kwargs):
+	""" Read the netCDF file and convert to Dataset
+	"""
+	return read(self.f, *args, **kwargs)
+
+    def write(self, *args, **kwargs):
+	""" Read the netCDF file and convert to Dataset
+	"""
+	#f, close = check_file(self.f, mode='w-', verbose=False)
+	return write_obj(self.f, *args, **kwargs)
+
+    def __getitem__(self, nm):
+	return NCVariable(self.f, nm)
+
+    def __setitem__(self, nm, a):
+	""" Add a variable to netCDF file
+	"""
+	return write_variable(self.f, a, name=nm, verbose=False)
+
+    def __repr__(self):
+	""" string representation of the Dataset
+	"""
+	try:
+	    return summary_repr(self.f)
+	except IOError:
+	    return "empty dataset"
+
+    def _getnc(self, mode, verbose=False):
+	""" used for setting and getting attributes
+	"""
+	f, close = check_file(self.f, mode=mode, verbose=verbose)
+	return f, f, close
+
+    @property
+    def axes(self):
+	return read_dimensions(self.f, verbose=False)
+
+    #
+    # classical ordered dictionary attributes
+    #
+    def keys(self):
+	try:
+	    names, dims = scan(self.f)
+	except IOError:
+	    names = []
+
+	return names
+
+    @property
+    def dims(self):
+	try:
+	    names, dims = scan(self.f)
+	except IOError:
+	    dims = ()
+
+	return dims
+
+    def len(self):
+	return len(self.keys())
+
+class NCVariable(NCGeneric):
+    """
+    """
+    def __init__(self, f, name, indexing = 'values'):
+	"""
+	"""
+	# bypass __setattr__, reserved for metadata
+	self.__dict__.update({'f':f,'name':name,'indexing':indexing})
+
+    def __getitem__(self, indices):
+	return self.read(indices, verbose=False)
+
+    def __setitem__(self, indices, values):
+	return self.write(values, indices=indices)
+
+    def _getnc(self, mode, verbose=False):
+	""" get netCDF4 Variable handle 
+	"""
+	f, close = check_file(self.f, mode=mode, verbose=verbose)
+	return f.variables[f.name], f, close
+
+    def read(self, *args, **kwargs):
+	indexing = kwargs.pop('indexing', self.indexing)
+	kwargs['indexing'] = indexing
+	return read_variable(self.f, self.name, *args, **kwargs)
+
+    def write(self, values, *args, **kwargs):
+	assert 'name' not in kwargs, "'name' is not a valid parameter"
+	indexing = kwargs.pop('indexing', self.indexing)
+	kwargs['indexing'] = indexing
+	return write_variable(self.f, values, self.name, *args, **kwargs)
+
+    @property
+    def ix(self):
+	return NCVariable(self.f, self.name, indexing='position')
+
+    @property
+    def axes(self):
+	return read_dimensions(self.f, name=self.name)
+
+    def __repr__(self):
+	return "\n".join(["{}: {}".format(self.__class__.__name__, self.name),repr(self.axes)])
