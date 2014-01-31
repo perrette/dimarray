@@ -10,7 +10,6 @@ from tools import is_DimArray
 __all__ = ["take", "put", "reindex_axis", "reindex_like"]
 
 TOLERANCE=1e-8
-MATLAB_LIKE_INDEXING = True
 
 def is_boolean_index(indices, shape):
     """ check if something like a[a>2] is performed for ndim > 1
@@ -46,6 +45,38 @@ def array_indices(indices_numpy, shape):
 
 	dummy_ix.append(ix)
     return dummy_ix
+
+def broadcast_indices(indices):
+    """ if any array index is present, broadcast all arrays and integer indices on the same shape
+    """
+    aindices = []
+
+    # convert all booleans, and scan the indices to get the size
+    size = None
+    for i,ix in enumerate(indices):
+
+	if isinstance(ix, np.ndarray) and ix.dtype is np.dtype(bool):
+	    ix = np.where(ix)[0]
+
+	if np.iterable(ix):
+
+	    if size is None: 
+		size = np.size(ix)
+
+	    # consistency check
+	    elif size != np.size(ix):
+		print size, np.size(ix)
+		raise ValueError("array-indices could not be broadcast on the same shape (got {} and {}, try box[...] or take(..., broadcast_arrays=False) if you intend to sample values along several dimensions independently)".format(size, np.size(ix)))
+
+	aindices.append(ix)
+
+    # Now convert all integers to the same size, if applicable
+    if size is not None:
+	for i,ix in enumerate(aindices):
+	    if type(ix) is int:
+		aindices[i] = np.zeros(size) + ix
+
+    return aindices
 
 def ix_(indices_numpy, shape):
     # convert to matlab-like compatible indices
@@ -97,7 +128,7 @@ def size(self):
     return np.size(self.values)
 
 
-def take(obj, indices, axis=0, indexing="values", tol=TOLERANCE, keepdims=False, matlab_like=None):
+def take(obj, indices, axis=0, indexing="values", tol=TOLERANCE, keepdims=False, broadcast_arrays=True):
     """ Retrieve values from a DimArray
 
     input:
@@ -112,27 +143,20 @@ def take(obj, indices, axis=0, indexing="values", tol=TOLERANCE, keepdims=False,
 		     "values": indexing on axis values 
 	- tol	   : tolerance when looking for floats
 	- keepdims : keep singleton dimensions
-	- matlab_like: True by default, False not implemented (causes pb with axis)
+	- broadcast_arrays: True, by default, consistently with numpy
 	
-	    if True, indexing with list or array of indices will behave like
+	    if False, indexing with list or array of indices will behave like
 	    Matlab TM does, which means that it will index on each individual dimensions.
 	    (internally, any list or array of indices will be converted to a boolean index
 	    of values before slicing)
 
-	    If False, numpy rules are followed. Consider the following case:
+	    If True, numpy rules are followed. Consider the following case:
 
 	    a = DimArray(np.zeros((4,4,4)))
 	    a[[0,0],[0,0],[0,0]]
 	    
-	    if matlab_like is True, the result will be a 3-D array of shape 2 x 2 x 2
-	    if matlab_like is False, the result will be a 1-D array of size 2. This case 
-	    is more complicated to implement because the axes need to be grouped, and it 
-	    is ***not yet implemented***. See examples.
-	    
-	    Note if the "keepdims" options is True, matlab_like is set to True automatically.
-	    The default is set at the module level by MATLAB_LIKE_INDEXING, at present
-	    default to True, may be set to False (for consistency with numpy) when the feature 
-	    with GroupedAxis is implemented.
+	    if broadcast_arrays is False, the result will be a 3-D array of shape 2 x 2 x 2
+	    if broadcast_arrays is True, the result will be a 1-D array of size 2
 
     output:
 	- DimArray object or python built-in type, consistently with numpy slicing
@@ -224,11 +248,13 @@ def take(obj, indices, axis=0, indexing="values", tol=TOLERANCE, keepdims=False,
 
     # Matlab like multi-indexing
     >>> v = DimArray(np.arange(2*3*4).reshape(2,3,4))
-    >>> v[[0,1],:,[0,0,0]].shape
+    >>> v.box[[0,1],:,[0,0,0]].shape
     (2, 3, 3)
-    >>> v[[0,1],:,[0,0]].shape # here no broadcasting, matlab-like
+    >>> v.box[[0,1],:,[0,0]].shape # here broadcast_arrays = False
     (2, 3, 2)
-    >>> v.values[[0,1],:,[0,0]].shape # that is traditional numpy, with broadcasting on same shape
+    >>> v[[0,1],:,[0,0]].shape # that is traditional numpy, with broadcasting on same shape
+    (2, 3)
+    >>> v.values[[0,1],:,[0,0]].shape # a proof of it
     (2, 3)
 
     # Logical indexing
@@ -248,7 +274,7 @@ def take(obj, indices, axis=0, indexing="values", tol=TOLERANCE, keepdims=False,
     1 / x1 (2): 1 to 2
     array([[1, 2],
 	   [4, 5]])
-    >>> a[a.x0 > 0, a.x1 > 0]  # AXIS-BASED
+    >>> a.box[a.x0 > 0, a.x1 > 0]  # AXIS-BASED (need `box` to prevent broadcasting)
     dimarray: 2 non-null elements (0 null)
     dimensions: 'x0', 'x1'
     0 / x0 (1): 1 to 1
@@ -268,87 +294,103 @@ def take(obj, indices, axis=0, indexing="values", tol=TOLERANCE, keepdims=False,
 
     # SPECIAL CASE: full scale boolean array
     # for now, just return the (numpy) flattened array as numpy would do
-    # TODO: return a 1-D DimArray with tupled axis values
+    # TODO?: return a 1-D DimArray with tupled axis values
     if obj.ndim > 1 and is_boolean_index(indices, obj.shape):
 	return obj.values[np.asarray(indices)]
-
-    # 
-    # MATLAB-LIKE OR NUMPY-LIKE?
-    #
-    if matlab_like is None:
-	matlab_like = MATLAB_LIKE_INDEXING
-
-#    # convert tuple to dictionary for chained call
-#    if isinstance(indices, tuple):
-#	indices = {obj.axes[k].name:ix for k, ix in enumerate(indices)}
-#
-#    if isinstance(indices, dict):
-#	for k in indices:
-#	    obj = take(obj, indices[k], axis=k, keepdims=keepdims, indexing=indexing, tol=tol)
-#	return obj
 
     try:
 	indices_numpy = obj.axes.loc(indices, axis=axis, position_index=(indexing == "position"), keepdims=keepdims, tol=tol)
     except IndexError, msg:
 	raise IndexError(msg)
 
-    # Index the array:
-    # convert to matlab-like indexing first?
-    # only useful if at list one list
-    if matlab_like and not np.any([np.iterable(ix) for ix in indices_numpy]):
-	matlab_like = False
+    # broadcast array-indices & integers, numpy's classical
+    if broadcast_arrays:
+	return _take_broadcast(obj, indices_numpy)
 
-    # convert each index to iterable
-    if matlab_like:
-	indices_numpy_ = ix_(indices_numpy, obj.shape)
-
-    # just keep the same
+    # matlab-like, do not broadcast array-indices but simply sample values along each dimension independently
     else:
-	indices_numpy_ = indices_numpy
+	return _take_box(obj, indices_numpy)
 
-    newval = obj.values[indices_numpy_] # new numpy values
+def _take_broadcast(a, indices):
+    """ broadcast array-indices & integers, numpy's classical
+    """
+    # new values
+    newval = a.values[indices]  
 
-    # New axes
-    newaxes = Axes()
-    stamps = []
-    #for i, ix in enumerate(indices_numpy):
-    for i in reversed(range(len(indices_numpy))): # loop in reverse order to squeeze axes 
-	ix = indices_numpy[i]
-	ax = obj.axes[i]
-	newaxis = ax[ix]
+    # if the new values is a scalar, then just return it
+    if np.isscalar(newval):
+	return newval
 
-	# collapsed axis:
-	if np.isscalar(newaxis):
+    # new axes: broacast indices (should do the same as above, since integers are just broadcast)
+    indices2 = broadcast_indices(indices)
+    # assert np.all(newval == a.values[indices2])
 
-	    # stamp, could be useful at some point
-	    stamps += ["{}={}".format(ax.name, newaxis)]
+    # make a multi-axis with tuples
+    is_array = np.array([np.iterable(ix) for ix in indices2])
+    nb_array = is_array.sum()
 
-	    # in matlab like mode, where all dimensions have been converted
-	    # to iterables in order to use np._ix, it is necessary to remove
-	    # these dimensions which have collapsed
-	    if matlab_like:
-		newval = np.squeeze(newval, axis=i)
+    # If none or one array is present, easy
+    if nb_array <= 1:
+	newaxes = [a.axes[i][ix] for i, ix in enumerate(indices) if not np.isscalar(ix)] # indices or indices2, does not matter
 
-	# otherwise just append the new axis
-	else:
+    # More than two arrays: numpy puts sampled values at the position of the first iterable
+    else:
+	array_ix_pos = np.where(is_array)[0]
+	tuples = zip(*[a.axes[i].values[indices2[i]] for i in array_ix_pos])
+	# new name: join all names of original axis, except for broadcast integer
+	name = ",".join([a.axes[i].name for i in array_ix_pos if np.iterable(indices[i])])
+	broadcastaxis = Axis(tuples, name)
+	insert = array_ix_pos[0]
+
+	newaxes = Axes()
+	for i, ax in enumerate(a.axes):
+
+	    if is_array[i] and i != insert:
+		continue
+
+	    if i == insert:
+		newaxis = broadcastaxis
+
+	    else:
+		newaxis = ax[indices[i]]
+
 	    newaxes.append(newaxis)
 
-    newaxes = newaxes[::-1] # reverse back to right order
+    return a._constructor(newval, newaxes, **a._metadata)
 
-    stamp = ",".join(stamps)
+def _take_box(a, indices):
+    """ matlab-like, do not broadcast array-indices but simply sample values along each dimension independently
 
-    # If result is a numpy array, make it a DimArray
-    if isinstance(newval, np.ndarray):
-	result = obj._constructor(newval, newaxes, **obj._metadata)
+    a: DimArray
+    indices: numpy indices
+    """
+    # If there any array index?
+    any_array = np.any([np.iterable(ix) for ix in indices])
 
-	# append stamp
-	#if stamp: result._metadata_stamp(stamp)
+    # convert each index to iterable if broadast_arrays is False
+    if not any_array:
+	return _take_broadcast(a, indices)
 
-    # otherwise, return scalar
-    else:
-	result = newval
+    # case where at least one array is present
+    # e.g. np.zeros((2,2,2))[0,:,[0,0,0]] is of dimension 3 x 2, because the first dimension is broadcast to 3
+    indices_ = ix_(indices, a.shape)
 
-    return result
+    # new numpy values
+    newval = a.values[indices_] 
+
+    # need to squeeze these dimensions where original index is an integer
+    for i in reversed(range(len(indices))):
+	if np.isscalar(indices[i]):
+	    newval = np.squeeze(newval, axis=i)
+
+    # if scalar, just return it
+    if np.isscalar(newval):
+	return newval
+
+    # New axes
+    newaxes = [a.axes[i][ix] for i, ix in enumerate(indices) if not np.isscalar(ix)] # indices or indices2, does not matter
+
+    return a._constructor(newval, newaxes, **a._metadata)
 
 def _put(obj, val_, indices_numpy_, inplace=False, convert=False):
     """ put values in a DimArray using numpy integers, in the numpy way
@@ -370,7 +412,7 @@ def _put(obj, val_, indices_numpy_, inplace=False, convert=False):
     if not inplace:
 	return obj
 
-def put(obj, val, indices=None, axis=0, indexing="values", tol=TOLERANCE, convert=False, inplace=False, matlab_like=True):
+def put(obj, val, indices=None, axis=0, indexing="values", tol=TOLERANCE, convert=False, inplace=False, broadcast_arrays=True):
     """ Put new values into DimArray (inplace)
 
     parameters:
@@ -383,6 +425,7 @@ def put(obj, val, indices=None, axis=0, indexing="values", tol=TOLERANCE, conver
     indexing : "position", "values"
     convert: convert array to val's type
     inplace: True
+    broadcast_arrays: See documentation on `take`.
 
     returns:
     --------
@@ -454,13 +497,13 @@ def put(obj, val, indices=None, axis=0, indexing="values", tol=TOLERANCE, conver
     Multi-Index tests (not straightforward to get matlab-like behaviour)
     >>> big = DimArray(np.zeros((2,3,4,5)))
     >>> indices = {'x0':0 ,'x1':[2,1],'x3':[1,4]}
-    >>> sub = big.take(indices)*0
+    >>> sub = big.take(indices, broadcast_arrays=False)*0
     >>> sub.dims == ('x1','x2','x3')
     True
     >>> sub.shape == (2,4,2)
     True
-    >>> big.put(sub+1, indices, inplace=True)
-    >>> sub2 = big.take(indices)
+    >>> big.put(sub+1, indices, inplace=True, broadcast_arrays=False)
+    >>> sub2 = big.take(indices, broadcast_arrays=False)
     >>> np.all(sub+1 == sub2)
     True
     """
@@ -471,6 +514,7 @@ def put(obj, val, indices=None, axis=0, indexing="values", tol=TOLERANCE, conver
 	# DimArray as subarray: infer indices from its axes
 	if is_DimArray(val):
 	    indices = {ax.name:ax.values for ax in val.axes}
+	    broadcast_arrays = False  
 
 	elif np.isscalar(val):
 	    raise ValueError("indices must be provided for non-DimArray or non-matching shape. See also `fill` method.")
@@ -482,16 +526,13 @@ def put(obj, val, indices=None, axis=0, indexing="values", tol=TOLERANCE, conver
     if is_boolean_index(indices, obj.shape):
 	return _put(obj, val, np.asarray(indices), inplace=inplace, convert=convert)
 
-    if matlab_like is None:
-	matlab_like = MATLAB_LIKE_INDEXING
-
     indices_numpy = obj.axes.loc(indices, axis=axis, position_index=(indexing == "position"), tol=tol)
 
     # do nothing for full-array, boolean indexing
     #if len(indices_numpy) == 1 and isinstance
 
     # Convert to matlab-like indexing
-    if matlab_like:
+    if not broadcast_arrays:
 
 	indices_array = array_indices(indices_numpy, obj.shape)
 	indices_numpy_ = np.ix_(*indices_array)
@@ -528,7 +569,7 @@ def fill(obj, val):
 #
 # Variants 
 #
-def take_na(obj, indices, axis=0, indexing="values", tol=TOLERANCE, keepdims=False, fill_value=np.nan, repna=True):
+def take_na(obj, indices, axis=0, indexing="values", tol=TOLERANCE, keepdims=False, fill_value=np.nan, repna=True, broadcast_arrays=True):
     """ like take but replace any missing value with NaNs
 
     additional parameters:
@@ -536,14 +577,15 @@ def take_na(obj, indices, axis=0, indexing="values", tol=TOLERANCE, keepdims=Fal
 
     Examples:
     """
+    #assert not broadcast_arrays, "check potential problem with array broadcasting"
     assert indexing in ("position", "values"), "invalid mode: "+repr(indexing)
     indices_numpy = obj.axes.loc(indices, axis=axis, position_index=(indexing == "position"), keepdims=keepdims, tol=tol, raise_error=not repna)
 
     indices_numpy, indices_mask = _filter_bad_indices(indices_numpy, obj.dims)
-    result = take(obj, indices_numpy, indexing="position")
+    result = take(obj, indices_numpy, indexing="position", broadcast_arrays=broadcast_arrays)
 #    if np.isscalar(result):
 #	return result if indices_mask is None else na
-    put(result, fill_value, indices_mask, convert=True, inplace=True, tol=tol, indexing="position")
+    put(result, fill_value, indices_mask, convert=True, inplace=True, tol=tol, indexing="position", broadcast_arrays=broadcast_arrays)
 
     # correct axis values
     if indices_mask is not None:

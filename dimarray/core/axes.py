@@ -52,7 +52,7 @@ class Axis(object):
     """
     _metadata = MetadataDesc(exclude = ["values", "name", "weights", "modulo"]) # variables which are NOT metadata
 
-    def __init__(self, values, name="", weights=None, modulo=None, **kwargs):
+    def __init__(self, values, name="", weights=None, modulo=None, dtype=None, **kwargs):
 	""" 
 	"""
 	if not name:
@@ -64,11 +64,20 @@ class Axis(object):
 	if np.isscalar(values):
 	    raise TypeError("an axis cannot be a scalar value !")
 
-	values = np.array(values)
+	values = np.asarray(values, dtype)
 
-	#if values.ndim > 2:
-	#    raise ValueError("an Axis object can only be 1-D, use GroupedAxis instead")
+	# Treat the particular case of a sequence of sequences, leads to a 2-D array
+	# ==> convert to a list of tuples
+	if values.ndim == 2: 
+	    val = np.empty(values.shape[0], dtype=object)
+	    val[:] = zip(*values.T.tolist()) # pass a list of tuples
+	    values = val
 
+	# check
+	if values.ndim != 1:
+	    raise ValueError("an Axis object can only be 1-D, check-out GroupedAxis")
+
+	# convert strings to object type
 	if values.dtype not in (np.dtype(float), np.dtype(int), np.dtype(long)):
 	    values = np.asarray(values, dtype=object)
 

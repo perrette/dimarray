@@ -167,7 +167,7 @@ class DimArray(object):
     # NOW MAIN BODY OF THE CLASS
     #
 
-    def __init__(self, values=None, axes=None, dims=None, labels=None, copy=False, dtype=None, _indexing="values", **kwargs):
+    def __init__(self, values=None, axes=None, dims=None, labels=None, copy=False, dtype=None, _indexing="values", _indexing_broadcast=True, **kwargs):
 	""" Initialization. See help on DimArray.
 	"""
 	# check if attached to values (e.g. DimArray object)
@@ -208,6 +208,7 @@ class DimArray(object):
 
 	## options
 	self._indexing = _indexing
+	self._indexing_broadcast = _indexing_broadcast
 
 	#
 	# metadata (see Metadata type in metadata.py)
@@ -551,7 +552,7 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 	"""
 	#indexing = self.axes.loc[indices]
 	#return self.take(indexing, position_index=True)
-	return self.take(indices, indexing=self._indexing)
+	return self.take(indices, indexing=self._indexing, broadcast_arrays=self._indexing_broadcast)
 
     def __setitem__(self, ix, val):
 	"""
@@ -569,7 +570,18 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 	    _indexing = "position"
 	else:
 	    _indexing = "values"
-	return self._constructor(self.values, self.axes, _indexing=_indexing , **self._metadata)
+	return self._constructor(self.values, self.axes, _indexing=_indexing, _indexing_broadcast=self._indexing_broadcast, **self._metadata)
+
+    # 
+    # indexing where default behaviour is not to broadcast array indices, similar to matlab
+    #
+    @property
+    def box(self):
+	return self._constructor(self.values, self.axes, _indexing=self._indexing , _indexing_broadcast= not self._indexing_broadcast, **self._metadata)
+
+    @property
+    def box_ix(self):
+	return self.box.ix
 
     #
     # TRANSFORMS

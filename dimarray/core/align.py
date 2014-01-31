@@ -365,7 +365,7 @@ def aggregate(arrays, check_overlap=True):
 	if check_overlap:
 
 	    # look for nans in replaced and replacing arrays
-	    subarray = newarray.take(indices).values
+	    subarray = newarray.take(indices, broadcast_arrays=False).values
 	    subarray_is_nan = np.isnan(subarray)
 	    newvalues_is_nan = np.isnan(a.values)
 
@@ -381,7 +381,7 @@ def aggregate(arrays, check_overlap=True):
 	    newvalues = a.values
 
 	# The actual operation is done by put
-	newarray.put(newvalues, indices=indices, inplace=True, convert=True)
+	newarray.put(newvalues, indices=indices, inplace=True, convert=True, broadcast_arrays=False)
 
     # That's it !
 
