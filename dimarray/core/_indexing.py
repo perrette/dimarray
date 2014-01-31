@@ -281,14 +281,6 @@ def take(obj, indices, axis=0, indexing="values", tol=TOLERANCE, keepdims=False,
     >>> v.values[[0,1],:,[0,0]].shape # a proof of it
     (2, 3)
 
-    >>> v = DimArray([[0,1,2],[3,4,5]], labels=[['a','b'],[0,1,2]])
-    >>> v['b',[1,2]]
-    >>> v[['a','b'],[0,1]]
-    >>> a = v.box[['a','b'],[0,1]]
-    >>> a
-    >>> np.all(a==v.box.ix[[0,1],[0,1]])
-    True
-
     # Logical indexing
     >>> a = DimArray(np.arange(2*3).reshape(2,3))
     >>> a[a > 3] # FULL ARRAY: return a numpy array in n-d case (at least for now)
