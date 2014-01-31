@@ -294,7 +294,7 @@ def check_dimensions(f, axes, **verb):
 
     if close: f.close()
 
-def createVariable(f, name, axes=None, dims=None, labels=None, dtype=float, **kwargs):
+def createVariable(f, name, axes=None, dtype=float, **kwargs):
     """ create variable from an Axes object
 
     f: Dataset file handle
@@ -303,9 +303,6 @@ def createVariable(f, name, axes=None, dims=None, labels=None, dtype=float, **kw
     a: DimArray
     name: variable name if a.name is not defined
     """
-    # make sure axes is an Axes object, or initialize
-    axes = Axes._init(axes, dims=dims, labels=labels)
-
     # Create dimensions if necessary
     check_dimensions(f, axes)
 
@@ -392,6 +389,14 @@ def scan_var(f, v, **verb):
 
 def check_file(f, mode='r', verbose=True):
     """ open a netCDF4 file
+
+    mode: changed from original 'r','w','r' & clobber option:
+
+    'r' : read, raise Exception if file is not present 
+    'w' : write, overwrite if file if present (clobber=True)
+    'w-': create new file, but raise Exception if file is present (clobber=False)
+    'a' : append, raise Exception if file is not present
+    'a+': append if file is present, otherwise create
     """
     close = False
 
@@ -437,54 +442,54 @@ def check_file(f, mode='r', verbose=True):
     return f, close
 
 
+##
+## Create a wrapper which behaves similarly to a Dataset and DimArray object
+##
+#class NCGeneric(object):
+#    """ generic netCDF class dealing with attribute I/O
+#    """
+#    def _getnc(self):
+#	"""
+#	returns:
+#	nc: Dataset or Variable handle
+#	f : Dataset handle (same as nc for NCDataset)
+#	close: bool, close Dataset after action?
+#	"""
+#	raise NotImplementedError()
 #
-# Create a wrapper which behaves similarly to a Dataset and DimArray object
+#    def setncattr(self, nm, val):
+#	nc, f, close = self._getnc(mode='w-')
+#	nc.setncattr(nm, val)
+#	if close: f.close()
 #
-class NCGeneric(object):
-    """ generic netCDF class dealing with attribute I/O
-    """
-    def _getnc(self):
-	"""
-	returns:
-	nc: Dataset or Variable handle
-	f : Dataset handle (same as nc for NCDataset)
-	close: bool, close Dataset after action?
-	"""
-	raise NotImplementedError()
-
-    def setncattr(self, nm, val):
-	nc, f, close = self._getnc(mode='w-')
-	nc.setncattr(nm, val)
-	if close: f.close()
-
-    def delncattr(self, nm, val):
-	nc, f, close = self._getnc(mode='w-')
-	nc.delncattr(nm, val)
-	if close: f.close()
-
-    def getncattr(self, nm):
-	nc, f, close = self._getnc(mode='r')
-	attr = nc.getncattr(nm)
-	if close: f.close()
-	return attr
-
-    def ncattrs(self):
-	nc, f, close = self._getnc(mode='r')
-	attr = nc.ncattrs()
-	if close: f.close()
-	return attr
-
-    def __getattr__(self, nm):
-	""" get attribute can also retrieve numpy-like properties
-	"""
-	nc, f, close = self._getnc(mode='r')
-	attr = getattr(nc, nm)
-	if close: f.close()
-	return attr
-
-    __delattr__ = delncattr
-    __setattr__ = setncattr
-
+#    def delncattr(self, nm, val):
+#	nc, f, close = self._getnc(mode='w-')
+#	nc.delncattr(nm, val)
+#	if close: f.close()
+#
+#    def getncattr(self, nm):
+#	nc, f, close = self._getnc(mode='r')
+#	attr = nc.getncattr(nm)
+#	if close: f.close()
+#	return attr
+#
+#    def ncattrs(self):
+#	nc, f, close = self._getnc(mode='r')
+#	attr = nc.ncattrs()
+#	if close: f.close()
+#	return attr
+#
+#    def __getattr__(self, nm):
+#	""" get attribute can also retrieve numpy-like properties
+#	"""
+#	nc, f, close = self._getnc(mode='r')
+#	attr = getattr(nc, nm)
+#	if close: f.close()
+#	return attr
+#
+#    __delattr__ = delncattr
+#    __setattr__ = setncattr
+#
 #class NCDataset(NCGeneric):
 #    """
 #    """
