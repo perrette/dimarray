@@ -23,6 +23,30 @@ def is_boolean_index(indices, shape):
 
     return False # otherwise
 
+def _fill_ellipsis(indices, ndim):
+    """ replace Ellipsis
+    """
+    if indices is Ellipsis:
+	return slice(None)
+
+    elif type(indices) is not tuple:
+	return indices
+
+    # Implement some basic patterns
+    is_ellipsis = np.array([ix is Ellipsis for ix in indices])
+    ne = is_ellipsis.sum()
+
+    if ne == 0:
+	return indices
+
+    elif ne > 1:
+	raise NotImplementedError('Only support one Ellipsis')
+
+    # From here, one Ellipsis is present
+    i = np.where(is_ellipsis)[0]
+    indices = indices[:i] + (slice(None),)*(ndim - len(indices) + 1) + indices[(i+1):]
+    return indices
+
 def array_indices(indices_numpy, shape):
     """ Replace non-iterable (incl. slices) with arrays
 
@@ -74,7 +98,7 @@ def broadcast_indices(indices):
     if size is not None:
 	for i,ix in enumerate(aindices):
 	    if type(ix) is int:
-		aindices[i] = np.zeros(size) + ix
+		aindices[i] = np.zeros(size, dtype=int) + ix
 
     return aindices
 
@@ -257,6 +281,14 @@ def take(obj, indices, axis=0, indexing="values", tol=TOLERANCE, keepdims=False,
     >>> v.values[[0,1],:,[0,0]].shape # a proof of it
     (2, 3)
 
+    >>> v = DimArray([[0,1,2],[3,4,5]], labels=[['a','b'],[0,1,2]])
+    >>> v['b',[1,2]]
+    >>> v[['a','b'],[0,1]]
+    >>> a = v.box[['a','b'],[0,1]]
+    >>> a
+    >>> np.all(a==v.box.ix[[0,1],[0,1]])
+    True
+
     # Logical indexing
     >>> a = DimArray(np.arange(2*3).reshape(2,3))
     >>> a[a > 3] # FULL ARRAY: return a numpy array in n-d case (at least for now)
@@ -289,6 +321,13 @@ def take(obj, indices, axis=0, indexing="values", tol=TOLERANCE, keepdims=False,
     dimensions: 'x0'
     0 / x0 (5): a to e
     array([0, 1, 5, 6, 4])
+
+    Ellipsis (only one supported)
+    >>> a = DimArray(np.arange(2*3*4*5).reshape(2,3,4,5))
+    >>> a[0,...,0].shape
+    (3, 4)
+    >>> a[...,0,0].shape
+    (2, 3)
     """
     assert indexing in ("position", "values"), "invalid mode: "+repr(indexing)
 
@@ -297,6 +336,8 @@ def take(obj, indices, axis=0, indexing="values", tol=TOLERANCE, keepdims=False,
     # TODO?: return a 1-D DimArray with tupled axis values
     if obj.ndim > 1 and is_boolean_index(indices, obj.shape):
 	return obj.values[np.asarray(indices)]
+
+    indices = _fill_ellipsis(indices, obj.ndim)
 
     try:
 	indices_numpy = obj.axes.loc(indices, axis=axis, position_index=(indexing == "position"), keepdims=keepdims, tol=tol)
@@ -326,26 +367,40 @@ def _take_broadcast(a, indices):
     # assert np.all(newval == a.values[indices2])
 
     # make a multi-axis with tuples
-    is_array = np.array([np.iterable(ix) for ix in indices2])
-    nb_array = is_array.sum()
+    is_array2 = np.array([np.iterable(ix) for ix in indices2])
+    nb_array2 = is_array2.sum()
 
     # If none or one array is present, easy
-    if nb_array <= 1:
+    if nb_array2 <= 1:
 	newaxes = [a.axes[i][ix] for i, ix in enumerate(indices) if not np.isscalar(ix)] # indices or indices2, does not matter
 
     # More than two arrays: numpy puts sampled values at the position of the first iterable
     else:
+	# same stats but on original indices
+	is_array = np.array([np.iterable(ix) for ix in indices])
 	array_ix_pos = np.where(is_array)[0]
-	tuples = zip(*[a.axes[i].values[indices2[i]] for i in array_ix_pos])
-	# new name: join all names of original axis, except for broadcast integer
-	name = ",".join([a.axes[i].name for i in array_ix_pos if np.iterable(indices[i])])
-	broadcastaxis = Axis(tuples, name)
-	insert = array_ix_pos[0]
+
+	# where the axis will be inserted: need to consider the integers as well
+	array_ix_pos2 = np.where(is_array2)[0]
+	insert = array_ix_pos2[0]
+
+	# if originally only one array was provided, use these values correspondingly
+	if len(array_ix_pos) == 1:
+	    i = array_ix_pos[0]
+	    values = a.axes[i].values[indices[i]]
+	    name = a.axes[i].name
+
+	# else use a list of tuples
+	else:
+	    values = zip(*[a.axes[i].values[indices2[i]] for i in array_ix_pos])
+	    name = ",".join([a.axes[i].name for i in array_ix_pos])
+
+	broadcastaxis = Axis(values, name)
 
 	newaxes = Axes()
 	for i, ax in enumerate(a.axes):
 
-	    if is_array[i] and i != insert:
+	    if is_array2[i] and i != insert:
 		continue
 
 	    if i == insert:
@@ -521,6 +576,10 @@ def put(obj, val, indices=None, axis=0, indexing="values", tol=TOLERANCE, conver
 
 	else:
 	    raise ValueError("indices must be provided for non-DimArray or non-matching shape")
+
+    else:
+    	indices = _fill_ellipsis(indices, obj.ndim)
+
 
     # SPECIAL CASE: full scale boolean array
     if is_boolean_index(indices, obj.shape):

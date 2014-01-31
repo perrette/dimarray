@@ -557,7 +557,7 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     def __setitem__(self, ix, val):
 	"""
 	"""
-	self.put(val, ix, indexing=self._indexing, inplace=True)
+	self.put(val, ix, indexing=self._indexing, broadcast_arrays=self._indexing_broadcast, inplace=True)
 
     # 
     # Can also use integer-indexing via ix
