@@ -437,16 +437,21 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 	name = self.axes[idx].name
 	return idx, name
 
-    def _to_shape(self, dims):
-	""" return shape from a sequence of axis names or position
-	"""
-	dims = self._to_dims(dims) # make sure everything is string
-	return [self.dims.index(nm) for nm in dims]
+    def _get_axes_info(self, axes):
+	""" return axis (dimension) positions AND names from a sequence of axis (dimension) positions OR names
 
-    def _to_dims(self, shape):
-	""" return axis names from a sequence of axis names or position
+	input:
+	------
+	    axes: sequence of str or int, representing axis (dimension) 
+		names or positions, possibly mixed up.
+
+	output:
+	-------
+	    pos	  : list of `int` indicating dimension's rank in the array
+	    names : list of dimension names
 	"""
-	return [self.axes[d].name for d in shape] # make sure everything is string
+	pos, names = zip(*[self._get_axis_info(x) for x in axes])
+	return pos, names
 
     #
     # Return a weight for each array element, used for `mean`, `std` and `var`
@@ -630,6 +635,7 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     newaxis = _reshape.newaxis
     squeeze = _reshape.squeeze
     transpose = _reshape.transpose
+    swapaxes = _reshape.swapaxes
     reshape = _reshape.reshape
     broadcast = _reshape.broadcast
     group = _reshape.group

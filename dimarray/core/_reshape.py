@@ -119,11 +119,40 @@ def transpose(self, *dims):
 	    raise ValueError("indicate dimensions to transpose")
 
     # get equivalent indices 
-    newshape = self._to_shape(dims)
+    newshape, _ = self._get_axes_info(dims)
 
     result = self.values.transpose(newshape)
     newaxes = [self.axes[i] for i in newshape]
     return self._constructor(result, newaxes)
+
+def swapaxes(a, axis1, axis2):
+    """ analogous to numpy's swapaxes, but can provide axes by name
+
+    a	: DimArray (if used as function), or self (to be ignored) if used as method
+    axis1, axis2: `int` or `str`, axes to swap (transpose)
+
+    Examples:
+    ---------
+    >>> a = DimArray(np.arange(2*3*4).reshape(2,3,4))
+    >>> a.dims
+    ('x0', 'x1', 'x2')
+    >>> b = a.swapaxes('x2',0) # put 'x2' at the first position
+    >>> b.dims
+    ('x2', 'x1', 'x0')
+    >>> b.shape
+    (4, 3, 2)
+    """
+    pos, _ = a._get_axes_info([axis1, axis2])
+    axis1, axis2 = pos  # axis positions
+    newshape = []
+    for i in range(a.ndim):
+	if i == axis1:
+	    newshape.append(axis2)
+	elif i == axis2:
+	    newshape.append(axis1)
+	else:
+	    newshape.append(i)
+    return transpose(a, newshape)
 
 #
 # Repeat the array along *existing* axis
@@ -398,10 +427,10 @@ def group(self, *dims, **kwargs):
 	dims = [d for d in self.dims if d not in dims]
 
     # from integer to str names
-    dims = self._to_dims(dims)
+    _ , names = self._get_axes_info(dims)
 
     # check the 
-    if not set(dims).issubset(self.dims):
+    if not set(names).issubset(self.dims):
 	raise ValueError("dimensions to group must be a subset of existing dimensions")
 
 #    # if 
