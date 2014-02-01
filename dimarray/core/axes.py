@@ -91,6 +91,9 @@ class Axis(object):
     def __getitem__(self, item):
 	""" access values elements & return an axis object
 	"""
+	if type(item) is slice and item == slice(None):
+	    return self
+
 	values = self.values[item]
 
 	# if collapsed to scalar, just return it
@@ -217,6 +220,8 @@ class GroupedAxis(Axis):
     """ an Axis that contains several axes flattened together
     """
     modulo = None
+
+    _metadata = MetadataDesc(exclude = ["values", "name", "weights", "modulo","axes"]) # variables which are NOT metadata
 
     def __init__(self, *axes):
 	"""
