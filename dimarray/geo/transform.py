@@ -185,7 +185,7 @@ def check_dim(obj, dim, msg=None, raise_error=False):
     else:
 	return True
 
-def time_mean(obj, period=None):
+def time_mean(obj, period=None, skipna=False):
     """ temporal mean or just slice
 
     >>> a = GeoArray([1,2,3],time=[1950, 1955, 1960])
@@ -202,10 +202,10 @@ def time_mean(obj, period=None):
     if period is not None:
 	obj = obj.take(period, axis='time', keepdims=True)
 
-    return obj.mean('time')
+    return obj.mean('time', skipna=skipna)
 
 
-def since(obj, refperiod):
+def since(obj, refperiod, skipna=False):
     """ express w.r.t. a ref period
 
     Examples:
@@ -235,9 +235,9 @@ def since(obj, refperiod):
            [ 2.,  2.]])
     """
     if not check_dim(obj, 'time'): return obj
-    return obj - time_mean(obj, refperiod)
+    return obj - time_mean(obj, refperiod, skipna=skipna)
 
-def between(obj, refperiod, endperiod):
+def between(obj, refperiod, endperiod, skipna=False):
     """ Make a projection from a refperiod (2 dates) to a refperiod (2 dates)
 
 
@@ -246,5 +246,5 @@ def between(obj, refperiod, endperiod):
     2.0
     """
     if not check_dim(obj, 'time'): return obj
-    obj = since(obj, refperiod)
-    return time_mean(obj, endperiod)
+    obj = since(obj, refperiod, skipna=skipna)
+    return time_mean(obj, endperiod, skipna=skipna)
