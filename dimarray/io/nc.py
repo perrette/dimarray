@@ -442,183 +442,183 @@ def check_file(f, mode='r', verbose=True):
     return f, close
 
 
-#
-# Create a wrapper which behaves similarly to a Dataset and DimArray object
-#
-class NCGeneric(object):
-    """ generic netCDF class dealing with attribute I/O
-    """
-    def _getnc(self):
-	"""
-	returns:
-	nc: Dataset or Variable handle
-	f : Dataset handle (same as nc for NCDataset)
-	close: bool, close Dataset after action?
-	"""
-	raise NotImplementedError()
-
-    def setncattr(self, nm, val):
-	nc, f, close = self._getnc(mode='w-')
-	nc.setncattr(nm, val)
-	if close: f.close()
-
-    def delncattr(self, nm, val):
-	nc, f, close = self._getnc(mode='w-')
-	nc.delncattr(nm, val)
-	if close: f.close()
-
-    def getncattr(self, nm):
-	nc, f, close = self._getnc(mode='r')
-	attr = nc.getncattr(nm)
-	if close: f.close()
-	return attr
-
-    def ncattrs(self):
-	nc, f, close = self._getnc(mode='r')
-	attr = nc.ncattrs()
-	if close: f.close()
-	return attr
-
-    def __getattr__(self, nm):
-	""" get attribute can also retrieve numpy-like properties
-	"""
-	nc, f, close = self._getnc(mode='r')
-	attr = getattr(nc, nm)
-	if close: f.close()
-	return attr
-
-    __delattr__ = delncattr
-    __setattr__ = setncattr
-
-class NCDataset(NCGeneric):
-    """
-    """
-    def __init__(self, f, keepopen=False):
-	""" register the filename
-	"""
-	if keepopen:
-	    f, close = check_file(f, mode='w-')
-
-	self.__dict__.update({'f':f, 'keepopen':keepopen}) # by pass setattr
-
-    def read(self, *args, **kwargs):
-	""" Read the netCDF file and convert to Dataset
-	"""
-	return read(self.f, *args, **kwargs)
-
-    def write(self, *args, **kwargs):
-	""" Read the netCDF file and convert to Dataset
-	"""
-	#f, close = check_file(self.f, mode='w-', verbose=False)
-	return write_obj(self.f, *args, **kwargs)
-
-    def __getitem__(self, nm):
-	return NCVariable(self.f, nm)
-
-    def __setitem__(self, nm, a):
-	""" Add a variable to netCDF file
-	"""
-	return write_variable(self.f, a, name=nm, verbose=False)
-
-#    def __delitem__(self, nm):
-#	""" delete a variable
-#	
-#	NOTE: netCDF4 does not allow deletion of variables because it is not part of netCDF's C api
-#	This command use `ncks` from the nco fortran program to copy the dataset on file, 
-#	except for the variable to delete
+##
+## Create a wrapper which behaves similarly to a Dataset and DimArray object
+##
+#class NCGeneric(object):
+#    """ generic netCDF class dealing with attribute I/O
+#    """
+#    def _getnc(self):
 #	"""
-#	assert isinstance(nm, str), "must be string"
-#	if nm not in self.keys():
-#	    raise ValueError(nm+' not present in dataset')
-#	fname = self.f
-#	assert isinstance(fname, str), "file name must be string, no netCDF handle"
-#	cmd = 'ncks -x -v {nm} {fname} {fname}'.format(nm=nm, fname=fname)
-#	print cmd
-#	r = os.system(cmd)
-#	if r != 0:
-#	    print r
-#	    raise Exception('deleting variable failed: you must be on unix with `nco` installed')
-
-    def __repr__(self):
-	""" string representation of the Dataset
-	"""
-	try:
-	    return summary_repr(self.f)
-	except IOError:
-	    return "empty dataset"
-
-    def _getnc(self, mode, verbose=False):
-	""" used for setting and getting attributes
-	"""
-	f, close = check_file(self.f, mode=mode, verbose=verbose)
-	return f, f, close
-
-    @property
-    def axes(self):
-	return read_dimensions(self.f, verbose=False)
-
-    #
-    # classical ordered dictionary attributes
-    #
-    def keys(self):
-	try:
-	    names, dims = scan(self.f)
-	except IOError:
-	    names = []
-
-	return names
-
-    @property
-    def dims(self):
-	try:
-	    names, dims = scan(self.f)
-	except IOError:
-	    dims = ()
-
-	return dims
-
-    def len(self):
-	return len(self.keys())
-
-class NCVariable(NCGeneric):
-    """
-    """
-    def __init__(self, f, name, indexing = 'values'):
-	"""
-	"""
-	# bypass __setattr__, reserved for metadata
-	self.__dict__.update({'f':f,'name':name,'indexing':indexing})
-
-    def __getitem__(self, indices):
-	return self.read(indices, verbose=False)
-
-    def __setitem__(self, indices, values):
-	return self.write(values, indices=indices)
-
-    def _getnc(self, mode, verbose=False):
-	""" get netCDF4 Variable handle 
-	"""
-	f, close = check_file(self.f, mode=mode, verbose=verbose)
-	return f.variables[f.name], f, close
-
-    def read(self, *args, **kwargs):
-	indexing = kwargs.pop('indexing', self.indexing)
-	kwargs['indexing'] = indexing
-	return read_variable(self.f, self.name, *args, **kwargs)
-
-    def write(self, values, *args, **kwargs):
-	assert 'name' not in kwargs, "'name' is not a valid parameter"
-	indexing = kwargs.pop('indexing', self.indexing)
-	kwargs['indexing'] = indexing
-	return write_variable(self.f, values, self.name, *args, **kwargs)
-
-    @property
-    def ix(self):
-	return NCVariable(self.f, self.name, indexing='position')
-
-    @property
-    def axes(self):
-	return read_dimensions(self.f, name=self.name)
-
-    def __repr__(self):
-	return "\n".join(["{}: {}".format(self.__class__.__name__, self.name),repr(self.axes)])
+#	returns:
+#	nc: Dataset or Variable handle
+#	f : Dataset handle (same as nc for NCDataset)
+#	close: bool, close Dataset after action?
+#	"""
+#	raise NotImplementedError()
+#
+#    def setncattr(self, nm, val):
+#	nc, f, close = self._getnc(mode='w-')
+#	nc.setncattr(nm, val)
+#	if close: f.close()
+#
+#    def delncattr(self, nm, val):
+#	nc, f, close = self._getnc(mode='w-')
+#	nc.delncattr(nm, val)
+#	if close: f.close()
+#
+#    def getncattr(self, nm):
+#	nc, f, close = self._getnc(mode='r')
+#	attr = nc.getncattr(nm)
+#	if close: f.close()
+#	return attr
+#
+#    def ncattrs(self):
+#	nc, f, close = self._getnc(mode='r')
+#	attr = nc.ncattrs()
+#	if close: f.close()
+#	return attr
+#
+#    def __getattr__(self, nm):
+#	""" get attribute can also retrieve numpy-like properties
+#	"""
+#	nc, f, close = self._getnc(mode='r')
+#	attr = getattr(nc, nm)
+#	if close: f.close()
+#	return attr
+#
+#    __delattr__ = delncattr
+#    __setattr__ = setncattr
+#
+#class NCDataset(NCGeneric):
+#    """
+#    """
+#    def __init__(self, f, keepopen=False):
+#	""" register the filename
+#	"""
+#	if keepopen:
+#	    f, close = check_file(f, mode='w-')
+#
+#	self.__dict__.update({'f':f, 'keepopen':keepopen}) # by pass setattr
+#
+#    def read(self, *args, **kwargs):
+#	""" Read the netCDF file and convert to Dataset
+#	"""
+#	return read(self.f, *args, **kwargs)
+#
+#    def write(self, *args, **kwargs):
+#	""" Read the netCDF file and convert to Dataset
+#	"""
+#	#f, close = check_file(self.f, mode='w-', verbose=False)
+#	return write_obj(self.f, *args, **kwargs)
+#
+#    def __getitem__(self, nm):
+#	return NCVariable(self.f, nm)
+#
+#    def __setitem__(self, nm, a):
+#	""" Add a variable to netCDF file
+#	"""
+#	return write_variable(self.f, a, name=nm, verbose=False)
+#
+##    def __delitem__(self, nm):
+##	""" delete a variable
+##	
+##	NOTE: netCDF4 does not allow deletion of variables because it is not part of netCDF's C api
+##	This command use `ncks` from the nco fortran program to copy the dataset on file, 
+##	except for the variable to delete
+##	"""
+##	assert isinstance(nm, str), "must be string"
+##	if nm not in self.keys():
+##	    raise ValueError(nm+' not present in dataset')
+##	fname = self.f
+##	assert isinstance(fname, str), "file name must be string, no netCDF handle"
+##	cmd = 'ncks -x -v {nm} {fname} {fname}'.format(nm=nm, fname=fname)
+##	print cmd
+##	r = os.system(cmd)
+##	if r != 0:
+##	    print r
+##	    raise Exception('deleting variable failed: you must be on unix with `nco` installed')
+#
+#    def __repr__(self):
+#	""" string representation of the Dataset
+#	"""
+#	try:
+#	    return summary_repr(self.f)
+#	except IOError:
+#	    return "empty dataset"
+#
+#    def _getnc(self, mode, verbose=False):
+#	""" used for setting and getting attributes
+#	"""
+#	f, close = check_file(self.f, mode=mode, verbose=verbose)
+#	return f, f, close
+#
+#    @property
+#    def axes(self):
+#	return read_dimensions(self.f, verbose=False)
+#
+#    #
+#    # classical ordered dictionary attributes
+#    #
+#    def keys(self):
+#	try:
+#	    names, dims = scan(self.f)
+#	except IOError:
+#	    names = []
+#
+#	return names
+#
+#    @property
+#    def dims(self):
+#	try:
+#	    names, dims = scan(self.f)
+#	except IOError:
+#	    dims = ()
+#
+#	return dims
+#
+#    def len(self):
+#	return len(self.keys())
+#
+#class NCVariable(NCGeneric):
+#    """
+#    """
+#    def __init__(self, f, name, indexing = 'values'):
+#	"""
+#	"""
+#	# bypass __setattr__, reserved for metadata
+#	self.__dict__.update({'f':f,'name':name,'indexing':indexing})
+#
+#    def __getitem__(self, indices):
+#	return self.read(indices, verbose=False)
+#
+#    def __setitem__(self, indices, values):
+#	return self.write(values, indices=indices)
+#
+#    def _getnc(self, mode, verbose=False):
+#	""" get netCDF4 Variable handle 
+#	"""
+#	f, close = check_file(self.f, mode=mode, verbose=verbose)
+#	return f.variables[f.name], f, close
+#
+#    def read(self, *args, **kwargs):
+#	indexing = kwargs.pop('indexing', self.indexing)
+#	kwargs['indexing'] = indexing
+#	return read_variable(self.f, self.name, *args, **kwargs)
+#
+#    def write(self, values, *args, **kwargs):
+#	assert 'name' not in kwargs, "'name' is not a valid parameter"
+#	indexing = kwargs.pop('indexing', self.indexing)
+#	kwargs['indexing'] = indexing
+#	return write_variable(self.f, values, self.name, *args, **kwargs)
+#
+#    @property
+#    def ix(self):
+#	return NCVariable(self.f, self.name, indexing='position')
+#
+#    @property
+#    def axes(self):
+#	return read_dimensions(self.f, name=self.name)
+#
+#    def __repr__(self):
+#	return "\n".join(["{}: {}".format(self.__class__.__name__, self.name),repr(self.axes)])

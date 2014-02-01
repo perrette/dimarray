@@ -11,7 +11,7 @@ from dataset import Dataset
 from lib.transform import interp1d, interp2d, apply_recursive
 
 try:
-    from io.nc import read as read_nc, summary as summary_nc, NCDataset as ncio
+    from io.nc import read as read_nc, summary as summary_nc
     _ncio = True
 except:
     raise
