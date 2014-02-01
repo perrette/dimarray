@@ -1,5 +1,5 @@
 ============================================================================
-dimarray: array with labelled dimensions and axes, metadata and NaN handling
+dimarray: array with labelled dimensions and axes, alignment, netCDF I/O
 ============================================================================
 
 Forget the underlying array shape and concentrate on what you aim at doing !
@@ -7,34 +7,34 @@ The best of two worlds: numpy arrays and pandas DataFrame.
 
 Inspired by (but does not rely on) pandas:
 
-    * behave like a numpy array (operations, transformations)
-    * labelled axes, NaN handling
-    * automatic axis aligment for +-/* between two DimArray objects
-    * similar api (`values`, `axes`,`reindex_axis`) 
-    * group/ungroup methods to flatten any subset of dimensions into a 
-      GroupedAxis object, in some ways similar to pandas' MultiIndex.
-    * groupby method (planned)
+* behave like a numpy array (operations, transformations)
+* labelled axes, NaN handling
+* automatic axis aligment for +-/* between two DimArray objects
+* similar api (`values`, `axes`,`reindex_axis`) 
+* group/ungroup methods to flatten any subset of dimensions into a 
+  GroupedAxis object, in some ways similar to pandas' MultiIndex.
+* groupby method (planned)
 
 But generalized to any dimension and augmented with new features:
 
-    * intuitive multi-dimensional slicing/reshaping/transforms by axis name
-    * arithmetics between arrays of different dimensions (broadcasting)
-    * can assign weights to each axis (such as based on axis spacing)
-      ==> `mean`, `var`, `std` can be weighted
-    * in combination to `group`, can achieve area- or volumne- weighting
-    * natural netCDF I/O  via netCDF4 python module (requires HDF5, netCDF4)
-    * stick to numpy's api when possible (but with enhanced capabilities):
-      `reshape`, `repeat`, `transpose`, `newaxis`, `squeeze`
+* intuitive multi-dimensional slicing/reshaping/transforms by axis name
+* arithmetics between arrays of different dimensions (broadcasting)
+* can assign weights to each axis (such as based on axis spacing)
+  ==> `mean`, `var`, `std` can be weighted
+* in combination to `group`, can achieve area- or volumne- weighting
+* natural netCDF I/O  via netCDF4 python module (requires HDF5, netCDF4)
+* stick to numpy's api when possible (but with enhanced capabilities):
+  `reshape`, `repeat`, `transpose`, `newaxis`, `squeeze`
       
 
 Yet simpler with more control left to user (most attributes are non-protected, 
 e.g. `values` can be overwritten), and organized around a small number of 
 classes and methods:
 
-    * DimArray			: main data structure (see alias `array`)
-    * Dataset		    	: ordered dictionary of DimArray objects
-    * read_nc, write_nc, summary_nc: netCDF I/O (DimArray and Dataset methods)
-    * Axis, Axes, GroupedAxis   : axis and indexing (under the hood)
+* DimArray			: main data structure (see alias `array`)
+* Dataset		    	: ordered dictionary of DimArray objects
+* read_nc, write_nc, summary_nc: netCDF I/O (DimArray and Dataset methods)
+* Axis, Axes, GroupedAxis   : axis and indexing (under the hood)
 
 And for things pandas does better (low-dimensional data analysis, `groupby`, 
 I/O formats, etc...), just export via to_pandas() method (up to 4-D) (only
