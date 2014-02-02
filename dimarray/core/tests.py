@@ -1,4 +1,6 @@
 import sys
+import numpy as np
+import dimarray as da
 from dimarray.testing import testmod
 
 def indexing():
@@ -123,6 +125,38 @@ array([[ 4.,  3.],
     pass
 
 
+def test_transform():
+    test_diff()
+    try:
+	test_vs_pandas()
+    except ImportError:
+	print "pandas not installed, can't test transform against pandas"
+    
+def test_diff():
+    np.random.seed(0)
+    v = da.DimArray(np.random.randn(5,7), {'time':np.arange(1950,1955), 'lat':np.linspace(-90,90,7)})
+    v.diff(axis='time', keepaxis=False)
+    v.diff(axis=0, keepaxis=False, scheme='centered')
+    v.diff(axis=0, keepaxis=False, scheme='backward')
+    v.diff(axis=0, keepaxis=False, scheme='forward')
+    v.diff(axis=0, keepaxis=True, scheme='backward')
+    v.diff(axis=0, keepaxis=True, scheme='forward')
+    v.diff(n=2,axis=('time'), scheme='centered')
+
+def test_vs_pandas():
+    np.random.seed(0)
+    v = da.DimArray(np.random.randn(5,7), {'time':np.arange(1950,1955), 'lat':np.linspace(-90,90,7)})
+    assert np.all(v.std(ddof=1, axis=0).values==v.to_pandas().std().values), "std vs pandas"
+    assert np.sum((v.var(ddof=1, axis=0).values-v.to_pandas().var().values)**2)<1e-10, "var vs pandas"
+    assert np.all(v.cumsum(axis=0).values == v.to_pandas().cumsum().values), "error against pandas"
+    assert np.all(v.cumprod(axis=0).values == v.to_pandas().cumprod().values), "error against pandas"
+    assert np.nansum((v.diff(axis=0, keepaxis=True).cumsum(axis=0, skipna=True).values - v.to_pandas().diff().cumsum().values)**2) \
+      < 1e-10, "error against pandas"
+
+    # TEST diff
+    res = v.diff(axis=0, keepaxis=True) 
+    assert np.all(np.isnan(res) | (res == v.to_pandas().diff()))
+
 def main(**kwargs):
 
     import metadata as metadata
@@ -145,6 +179,7 @@ def main(**kwargs):
     testmod(operation, **kwargs)
     testmod(align, **kwargs)
     testmod(sys.modules[__name__], **kwargs)
+    test_transform()
 
 if __name__ == "__main__":
     main()

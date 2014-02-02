@@ -98,7 +98,12 @@ def get_axes(*arrays):
 
 
 def align_dims(*arrays):
-    """ Align dimensions of a list of arrays, ready to broadcast
+    """ Align dimensions of a list of arrays so that they are ready for broadcast.
+    
+    Method: inserting singleton axes at the right place and transpose where needed.
+
+    Examples:
+    ---------
 
     >>> x = da.DimArray(np.arange(2), dims=('x0',))
     >>> y = da.DimArray(np.arange(3), dims=('x1',))
