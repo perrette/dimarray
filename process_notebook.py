@@ -102,7 +102,7 @@ def replace_toc(nb, toc, FLAG):
     i, cell = get_toc_cell(nb, FLAG)
     cell['source'] = "\n".join([FLAG]+toc)
 
-def main():
+def main(test=False):
 
     nb = read_nb(fname='dimarray.ipynb')
 
@@ -113,7 +113,10 @@ def main():
 
     # Update TOC cell
     replace_toc(nb, toc, FLAG='### Table of Content')
-    write_nb(nb, fname='dimarray_test.ipynb')
+    if test:
+	write_nb(nb, fname='dimarray_test.ipynb')
+    else:
+	write_nb(nb, fname='dimarray.ipynb')
 
 if __name__ == '__main__':
     main()
