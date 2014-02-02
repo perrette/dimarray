@@ -3,7 +3,7 @@ import dimarray.core.tests
 import dimarray.geo.tests
 import dimarray.io.tests
 
-from dimarray.testing import testmod
+from dimarray.testing import testmod, testfile
 
 from dimarray import core
 from dimarray import geo
@@ -18,6 +18,10 @@ def main(**kwargs):
     geo.tests.main(**kwargs)
     testmod(dimarray, **kwargs)
     testmod(dataset, **kwargs)
+    try:
+	testfile('README.rst')
+    except:
+	print 'README.rst not found'
 
 if __name__ == "__main__":
     main()

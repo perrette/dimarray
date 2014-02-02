@@ -39,22 +39,27 @@ array([ 0.97873798, -0.15135721,  0.76103773])
 
 Or with `ix` for indexing via integer position:
 
->>> a.ix[:, 2]    
+>>> a.ix[:, 2] == a[:, 1952]
+dimarray: 3 non-null elements (0 null)
+dimensions: 'items'
+0 / items (3): a to c
+array([ True,  True,  True], dtype=bool)
+
 
 Seee also more generic methods `take` and `put`
 
 Arithmetics with dimension broadcast and axis alignment
 
->>> ts = da.array(np.random.randn(5), time=np.arange(1950, 1955))
+>>> ts = da.array_kw(np.random.randn(5), time=np.arange(1950, 1955))
 >>> a * ts   # not commutative !  # doctest: +ELLIPSIS
 dimarray: 15 non-null elements (0 null)
 dimensions: 'items', 'time'
 0 / items (3): a to c
 1 / time (5): 1950 to 1954
 array(...)
->>> mymap = da.array(np.random.randn(5,10), lon=np.linspace(0,360,10), lat=np.linspace(-90,90,5))
->>> mycube = mymap * ts   # doctest: +ELLIPSIS
->>> mycube
+>>> mymap = da.array_kw(np.random.randn(5,10), lon=np.linspace(0,360,10), lat=np.linspace(-90,90,5))
+>>> mycube = mymap * ts   
+>>> mycube  # doctest: +ELLIPSIS
 dimarray: 250 non-null elements (0 null)
 dimensions: 'lat', 'lon', 'time'
 0 / lat (5): -90.0 to 90.0
@@ -64,7 +69,7 @@ array(...)
 
 All numpy transforms work (with NaN checking)
 
->>> mycube.mean(axis="time") 
+>>> mycube.mean(axis="time")  # doctest: +SKIP
 
 Can also provide a subset of several dimensions as argument to operate on flattened array.
 
@@ -78,29 +83,28 @@ array([-0.08412077, -0.37666392,  0.0517213 , -0.07892575,  0.2153213 ])
 NetCDF I/O
 
 >>> a.write("test.nc","myvar", mode='w') # write to netCDF4
-write to test.nc
 >>> da.summary_nc("test.nc") # check the content
 test.nc:
 -------
 Dataset of 1 variable
-dimensions: u'items', u'time'
+dimensions: 'items', 'time'
 0 / items (3): a to c
 1 / time (5): 1950 to 1954
-myvar : items, time
+myvar: (u'items', u'time')
 >>> dataset = da.read_nc("test.nc") # read in a Dataset class
 read from test.nc
 >>> dataset
 Dataset of 1 variable
-dimensions: u'items', u'time'
+dimensions: 'items', 'time'
 0 / items (3): a to c
 1 / time (5): 1950 to 1954
-myvar: items, time
+myvar: ('items', 'time')
 >>> np.all(dataset["myvar"] == a)
 True
 
 Easy interfacing with pandas
 
->>> a.to_pandas()
+>>> a.to_pandas()   # doctest: +SKIP
 time       1950      1951      1952      1953      1954
 items                                                  
 a      1.764052  0.400157  0.978738  2.240893  1.867558

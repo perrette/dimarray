@@ -523,7 +523,7 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 	#    raise ValueError("weight dimensions not conform")
 
 	# fill NaNs in when necessary
-	if fill_nans:
+	if fill_nans and hasnan(self.values):
 	    weights.values[np.isnan(self.values)] = np.nan
 	
 	assert weights is not None
@@ -1283,3 +1283,13 @@ def zeros_like(a, dtype=None):
 
 array.__doc__ = DimArray.from_kw.__doc__
 
+
+def hasnan(a):
+    """ fast way of checking wether an array has nans
+    input:
+     a: numpy array
+
+    WARNING: if a is a not a numpy array, min will depend on the default behaviour 
+    if the min method of these object, which may be to ignore nans (e.g. larry)
+    """
+    return np.isnan(a.min())
