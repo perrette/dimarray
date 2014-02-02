@@ -941,24 +941,24 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 	data: pandas object (Series, DataFrame, Panel, Panel4D)
 	dims, optional: dimension (axis) names, otherwise look at ax.name for ax in data.axes
 
-	## >>> import pandas as pd
-	## >>> s = pd.Series([3,5,6], index=['a','b','c'])
-	## >>> s.index.name = 'dim0'
-	## >>> DimArray.from_pandas(s)
-	## dimarray: 3 non-null elements (0 null)
-	## dimensions: 'dim0'
-	## 0 / dim0 (3): a to c
-	## array([3, 5, 6], dtype=int64)
+	>>> import pandas as pd
+	>>> s = pd.Series([3,5,6], index=['a','b','c'])
+	>>> s.index.name = 'dim0'
+	>>> DimArray.from_pandas(s)
+	dimarray: 3 non-null elements (0 null)
+	dimensions: 'dim0'
+	0 / dim0 (3): a to c
+	array([3, 5, 6], dtype=int64)
 
-	## Also work with Multi-Index
-	## >>> panel = pd.Panel(np.arange(2*3*4).reshape(2,3,4))
-	## >>> b = panel.to_frame() # pandas' method to convert Panel to DataFrame via MultiIndex
-	## >>> DimArray.from_pandas(b)  # re-import DataFrame back to DimArray
-	## dimarray: 24 non-null elements (0 null)
-	## dimensions: 'major,minor', 'x1'
-	## 0 / major,minor (12): (0, 0) to (2, 3)
-	## 1 / x1 (2): 0 to 1
-	## ...  # doctest: +SKIP
+	Also work with Multi-Index
+	>>> panel = pd.Panel(np.arange(2*3*4).reshape(2,3,4))
+	>>> b = panel.to_frame() # pandas' method to convert Panel to DataFrame via MultiIndex
+	>>> DimArray.from_pandas(b)    # doctest: +SKIP
+	dimarray: 24 non-null elements (0 null)
+	dimensions: 'major,minor', 'x1'
+	0 / major,minor (12): (0, 0) to (2, 3)
+	1 / x1 (2): 0 to 1
+	...  
 	"""
 	import pandas as pd
 	axisnames = []
