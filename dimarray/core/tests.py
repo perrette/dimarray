@@ -131,6 +131,8 @@ def test_transform():
 	test_vs_pandas()
     except ImportError:
 	print "pandas not installed, can't test transform against pandas"
+
+
     
 def test_diff():
     np.random.seed(0)
@@ -157,6 +159,14 @@ def test_vs_pandas():
     res = v.diff(axis=0, keepaxis=True) 
     assert np.all(np.isnan(res) | (res == v.to_pandas().diff()))
 
+def test_operations():
+    a = da.DimArray([[1,2,3],[3,4,5]],dims=('x0','x1'))
+    assert np.all(a == a)
+    assert np.all(a+2 == a + np.ones(a.shape)*2)
+    assert np.all(a+a == a*2)
+    assert np.all(a*a == a**2)
+    assert np.all((a - a.values) == a - a)
+
 def main(**kwargs):
 
     import metadata as metadata
@@ -180,6 +190,7 @@ def main(**kwargs):
     testmod(align, **kwargs)
     testmod(sys.modules[__name__], **kwargs)
     test_transform()
+    test_operations()
 
 if __name__ == "__main__":
     main()

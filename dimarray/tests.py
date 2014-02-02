@@ -18,6 +18,7 @@ def main(**kwargs):
     geo.tests.main(**kwargs)
     testmod(dimarray, **kwargs)
     testmod(dataset, **kwargs)
+    dataset.test()
     try:
 	testfile('README.rst')
     except:

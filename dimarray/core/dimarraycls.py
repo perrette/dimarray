@@ -1166,6 +1166,7 @@ def array(*args, **kwargs):
 
 # handy alias
 from_arrays = DimArray.from_arrays
+from_pandas = DimArray.from_pandas
 
 def empty(axes=None, dims=None, shape=None, dtype=float):
     """ Initialize an empty array

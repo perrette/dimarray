@@ -349,7 +349,7 @@ def reshape(self, *newdims):
     array([[7],
            [8]])
     """
-    if len(newdims) == 1 and type(newdims[0]) in (list, tuple, set):
+    if len(newdims) == 1 and type(newdims[0]) in (list, tuple):
 	newdims = newdims[0]
 
     # Do nothing if dimensions already match
