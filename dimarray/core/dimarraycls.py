@@ -881,7 +881,7 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 
 	input:
 	    - data : list or dict of DimArrays
-	    - keys, optional : ordering of data (for dict)
+	    - keys, optional : labels of the first dimension (if dict, only useful for ordering)
 	    - axis, optional : dimension name along which to aggregate data (default "items")
 
 	output:
@@ -1156,16 +1156,40 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 
 def array_kw(*args, **kwargs):
     """ alias for DimArray.from_kw
+
+    See also:
+    DimArray.from_kw
     """
     return DimArray.from_kw(*args, **kwargs)
 
-def array(*args, **kwargs):
-    """ alias for DimArray
-    """
-    return DimArray(*args, **kwargs)
+array_kw.__doc__ = DimArray.from_kw.__doc__
 
-# handy alias
-from_arrays = DimArray.from_arrays
+def array(data, *args, **kwargs):
+    """ wrapper for DimArray and DimArray.from_arrays
+
+    data: numpy array-like ==> call DimArray
+	  list or dict of DimArray objects ==> call DimArray.from_arrays
+
+    *args, **kwargs: variable argument for DimArray or DimArray.from_arrays
+
+
+    See also:
+    DimArray, DimArray.from_arrays
+    """
+    if isinstance(data, dict):
+	return DimArray.from_arrays(data, *args, **kwargs) 
+
+    elif isinstance(data, list) and len(data) > 0 and isinstance(data[0], DimArray):
+	return DimArray.from_arrays(data, *args, **kwargs) 
+
+    else:
+	return DimArray(data, *args, **kwargs)
+
+# handy aliases
+def from_arrays(*args, **kwargs):
+    warnings.warn(FutureWarning('from_arrays is deprecated, use da.array() instead'))
+    return DimArray.from_arrays(*args, **kwargs) 
+
 from_pandas = DimArray.from_pandas
 
 def empty(axes=None, dims=None, shape=None, dtype=float):
@@ -1281,9 +1305,6 @@ def zeros_like(a, dtype=None):
     """
     if dtype is None: dtype = a.dtype
     return zeros(a.axes, dtype=dtype)
-
-array.__doc__ = DimArray.from_kw.__doc__
-
 
 def hasnan(a):
     """ fast way of checking wether an array has nans

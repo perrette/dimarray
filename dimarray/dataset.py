@@ -220,7 +220,9 @@ def _get_list_arrays(data, keys):
     # Assign names
     if keys is not None:
 	for i, v in enumerate(data):
+	    v = v.copy(shallow=True) # otherwise name is changed on the caller side
 	    v.name = keys[i]
+	    data[i] = v
 
     else:
 	for i, v in enumerate(data):
