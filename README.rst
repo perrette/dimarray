@@ -1,29 +1,68 @@
 dimarray: array with labelled dimensions 
 ========================================
 
-Check out and download the [tutorial as a notebook](http://nbviewer.ipython.org/github/perrette/dimarray/blob/master/dimarray.ipynb)
+Download dimarray on `github <https://github.com/perrette/dimarray/>`_
+or just take a look at this notebook on
+`nbviewer <http://nbviewer.ipython.org/github/perrette/dimarray/blob/master/dimarray.ipynb>`_
 
-* Indexing
-    * See also: `take`/`put`
-* operations: alignment and broadcasting rules
-* along-axis transformations
-* missing values
-* modify dimensions
-    * numpy-like: `reshape`, `transpose`, `swapaxes`, `repeat`
-    * new methods: `newaxis`, `broacast`, `group`/`ungroup`
-    * functions: `align_axes`, `align_dims`, `broadcast_arrays`, `concatenate`, `aggregate`
-* `Dataset` class: an ordered Dictionary of aligned aligned arrays
-* re-indexing and interpolation
-    * `reindex_axis`, `interp1d`
-* I/O: netCDF
-* from/to pandas
+Table of Content
+~~~~~~~~~~~~~~~~
 
->>> a.to_pandas()   # doctest: +SKIP
-time       1950      1951      1952      1953      1954
-items                                                  
-a      1.764052  0.400157  0.978738  2.240893  1.867558
-b     -0.977278  0.950088 -0.151357 -0.103219  0.410599
-c      0.144044  1.454274  0.761038  0.121675  0.443863
+-  `Get started <#Get-started>`_
+-  `Alternative definitions <#Alternative-definitions>`_
+-  `Indexing <#Indexing>`_
+
+   -  `Basics: integer, array, slice <#Basics:-integer,-array,-slice>`_
+   -  `Modify array values <#Modify-array-values>`_
+   -  `take and put methods <#take-and-put-methods>`_
+
+-  `Numpy Transformations <#Numpy-Transformations>`_
+-  `Missing values <#Missing-values>`_
+-  `Modify array shape <#Modify-array-shape>`_
+
+   -  `transpose <#transpose>`_
+   -  `newaxis <#newaxis>`_
+   -  `reshape <#reshape>`_
+   -  `group and ungroup
+      [Experimental] <#group-and-ungroup-[Experimental]>`_
+
+-  `Repeat and broadcast: align
+   dimensions <#Repeat-and-broadcast:-align-dimensions>`_
+
+   -  `repeat <#repeat>`_
+   -  `broadcast <#broadcast>`_
+   -  `broadcast\_arrays <#broadcast_arrays>`_
+
+-  `Reindexing: align axes <#Reindexing:-align-axes>`_
+
+   -  `reindex\_axis <#reindex_axis>`_
+   -  `reindex\_like <#reindex_like>`_
+   -  `Interpolation <#Interpolation>`_
+   -  `align\_axes <#align_axes>`_
+
+-  `Join arrays <#Join-arrays>`_
+
+   -  `concatenate arrays along existing
+      axis <#concatenate-arrays-along-existing-axis>`_
+   -  `join arrays along new axis <#join-arrays-along-new-axis>`_
+   -  `aggregate arrays of varying dimensions
+      [Experimental] <#aggregate-arrays-of-varying-dimensions-[Experimental]>`_
+
+-  `Operations <#Operations>`_
+
+   -  `Basic Operations <#Basic-Operations-------->`_
+   -  `Operation with data alignment <#Operation-with-data-alignment->`_
+
+-  `Dataset <#Dataset>`_
+-  `NetCDF I/O <#NetCDF-I/O>`_
+-  `Experimental Features <#Experimental-Features>`_
+
+   -  `Metadata <#Metadata>`_
+   -  `Weighted mean <#Weighted-mean>`_
+   -  `Compatibility with pandas and
+      larry <#Compatibility-with-pandas-and-larry>`_
+
+-  `doctest framework <#doctest-framework>`_
 
 
 Notebook:
@@ -57,7 +96,7 @@ But generalized to any dimension and augmented with new features:
 
 Organized around a small number of classes and methods:
 
-* DimArray			: main data structure (see alias `array`)
+* DimArray			: main data structure 
 * Dataset		    	: ordered dictionary of DimArray objects
 * read_nc, write_nc, summary_nc : netCDF I/O (DimArray and Dataset methods)
 * Axis, Axes, GroupedAxis   : axis and indexing (under the hood)

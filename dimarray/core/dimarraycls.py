@@ -1179,11 +1179,14 @@ def array(data, *args, **kwargs):
     if isinstance(data, dict):
 	return DimArray.from_arrays(data, *args, **kwargs) 
 
-    elif isinstance(data, list) and len(data) > 0 and isinstance(data[0], DimArray):
-	return DimArray.from_arrays(data, *args, **kwargs) 
+    elif (isinstance(data, list) or isinstance(data, tuple)) and len(data) > 0 and isinstance(data[0], DimArray):
+	return DimArray.from_arrays(list(data), *args, **kwargs) 
 
     else:
 	return DimArray(data, *args, **kwargs)
+
+# another name, more specific for DimArray.from_arrays
+join = DimArray.from_arrays
 
 # handy aliases
 def from_arrays(*args, **kwargs):
