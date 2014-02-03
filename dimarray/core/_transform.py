@@ -490,7 +490,7 @@ def _append_nans(result, axis, first=False):
 # Define weighted mean/std/var
 #
 
-def weighted_mean(obj, axis=None, skipna=False, weights='axis'):
+def weighted_mean(obj, axis=None, skipna=False, weights='axis', dtype=None, out=None):
     """ mean over an axis or group of axes, possibly weighted 
 
     parameters:
@@ -506,19 +506,19 @@ def weighted_mean(obj, axis=None, skipna=False, weights='axis'):
 	- DimArray or scalar, consistently with ndarray behaviour
     """
     # Proceed to a weighted mean
-    if weights:
+    if weights is not None and weights is not False:
 	weights = obj.get_weights(weights, axis=axis, fill_nans=skipna)
 
     # if no weights, just apply numpy's mean
     if weights is None or weights is False:
-	return apply_along_axis(obj, "mean", axis=axis, skipna=skipna)
+	return apply_along_axis(obj, "mean", axis=axis, skipna=skipna, out=out, dtype=dtype)
 
     # weighted mean
-    sum_values = apply_along_axis(obj*weights, "sum", axis=axis, skipna=skipna)
-    sum_weights = apply_along_axis(weights, "sum", axis=axis, skipna=skipna)
-    return sum_values / (sum_weights+0.)
+    sum_values = apply_along_axis(obj*weights, "sum", axis=axis, skipna=skipna, dtype=dtype, out=out)
+    sum_weights = apply_along_axis(weights, "sum", axis=axis, skipna=skipna, dtype=dtype)
+    return sum_values / (sum_weights + 0.)
 
-def weighted_var(obj, axis=None, skipna=False, weights="axis", ddof=0):
+def weighted_var(obj, axis=None, skipna=False, weights="axis", ddof=0, dtype=None, out=None):
     """ standard deviation over an axis or group of axes, possibly weighted 
 
     parameters:
@@ -537,17 +537,17 @@ def weighted_var(obj, axis=None, skipna=False, weights="axis", ddof=0):
 	- DimArray or scalar, consistently with ndarray behaviour
     """
     # Proceed to a weighted var
-    if weights:
+    if weights is not None and weights is not False:
 	weights = obj.get_weights(weights, axis=axis, fill_nans=skipna)
 
     # if no weights, just apply numpy's var
-    if not weights:
-	return apply_along_axis(obj, "var", axis=axis, skipna=skipna, ddof=ddof)
+    if weights is None or weights is False:
+	return apply_along_axis(obj, "var", axis=axis, skipna=skipna, ddof=ddof, dtype=dtype, out=out)
 
     # weighted mean
-    mean = obj.mean(axis=axis, skipna=skipna, weights=weights)
+    mean = obj.mean(axis=axis, skipna=skipna, weights=weights, dtype=dtype, out=out)
     dev = (obj-mean)**2
-    return dev.mean(axis=axis, skipna=skipna, weights=weights)
+    return dev.mean(axis=axis, skipna=skipna, weights=weights, dtype=dtype, out=out)
 
 def weighted_std(obj, *args, **kwargs):
     """ alias for a.var()**0.5: see `var` method for doc

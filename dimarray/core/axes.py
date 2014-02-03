@@ -109,6 +109,26 @@ class Axis(object):
 	return Axis(values, self.name, weights=weights, **self._metadata)
 
     @property
+    def weights(self):
+	return self._weights
+
+    @weights.setter
+    def weights(self, _weights):
+	if _weights is None or hasattr(_weights, '__call__'):
+	    pass
+
+	else:
+	    try:
+		_weights = np.asarray(_weights)
+	    except:
+		raise TypeError("weight mut be array-like or callable, got: {}".format(_weights))
+
+	    if _weights.size != self.values.size:
+		raise ValueError("weights must have the same size as axis values, got: {} and {} !".format(_weights.size, self.values.size))
+
+	self._weights = _weights
+
+    @property
     def loc(self):
 	""" Access the slicer to locate axis elements
 
