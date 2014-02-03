@@ -516,7 +516,7 @@ def weighted_mean(obj, axis=None, skipna=False, weights='axis'):
     # weighted mean
     sum_values = apply_along_axis(obj*weights, "sum", axis=axis, skipna=skipna)
     sum_weights = apply_along_axis(weights, "sum", axis=axis, skipna=skipna)
-    return sum_values / sum_weights
+    return sum_values / (sum_weights+0.)
 
 def weighted_var(obj, axis=None, skipna=False, weights="axis", ddof=0):
     """ standard deviation over an axis or group of axes, possibly weighted 
