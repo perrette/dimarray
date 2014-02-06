@@ -1,106 +1,197 @@
 dimarray: array with labelled dimensions 
 ========================================
 
-Download dimarray on `github <https://github.com/perrette/dimarray/>`_
-or just take a look at this notebook on
-`nbviewer <http://nbviewer.ipython.org/github/perrette/dimarray/blob/master/dimarray.ipynb>`_
+Idea:
+-----
+Have a numpy array with labelled axes, like `larry` or `pandas`, 
+with additional focus on axis names (the dimensions, without restriction on their number). 
+This means that most standard transforms (e.g. `transpose`, `mean` etc...) 
+take axis name for the `axis=` parameter, in addition to its integer position.
 
-Table of Content
-~~~~~~~~~~~~~~~~
+Having axis name and axis values allow on-the-fly axis alignment and broadcasting 
+in basic operations (addition, etc...), so that rules can be defined for nearly 
+every sequence of operands. 
 
--  `Get started <#Get-started>`_
--  `Alternative definitions <#Alternative-definitions>`_
--  `Indexing <#Indexing>`_
+Indexing works on axis values by default, with a `ix` toogle to switch to indexing
+on position like numpy, and generic `take`/`put` methods.
 
-   -  `Basics: integer, array, slice <#Basics:-integer,-array,-slice>`_
-   -  `Modify array values <#Modify-array-values>`_
-   -  `take and put methods <#take-and-put-methods>`_
+A natural I/O format for such an array is netCDF, common in geophysics, which rely on 
+the netCDF4 package. Other formats are under development (HDF5). Metadata are also 
+supported, and conserved via slicing and along-axis transformations.
 
--  `Numpy Transformations <#Numpy-Transformations>`_
--  `Missing values <#Missing-values>`_
--  `Modify array shape <#Modify-array-shape>`_
-
-   -  `transpose <#transpose>`_
-   -  `newaxis <#newaxis>`_
-   -  `reshape <#reshape>`_
-   -  `group and ungroup
-      [Experimental] <#group-and-ungroup-[Experimental]>`_
-
--  `Repeat and broadcast: align
-   dimensions <#Repeat-and-broadcast:-align-dimensions>`_
-
-   -  `repeat <#repeat>`_
-   -  `broadcast <#broadcast>`_
-   -  `broadcast\_arrays <#broadcast_arrays>`_
-
--  `Reindexing: align axes <#Reindexing:-align-axes>`_
-
-   -  `reindex\_axis <#reindex_axis>`_
-   -  `reindex\_like <#reindex_like>`_
-   -  `Interpolation <#Interpolation>`_
-   -  `align\_axes <#align_axes>`_
-
--  `Join arrays <#Join-arrays>`_
-
-   -  `concatenate arrays along existing
-      axis <#concatenate-arrays-along-existing-axis>`_
-   -  `join arrays along new axis <#join-arrays-along-new-axis>`_
-   -  `aggregate arrays of varying dimensions
-      [Experimental] <#aggregate-arrays-of-varying-dimensions-[Experimental]>`_
-
--  `Operations <#Operations>`_
-
-   -  `Basic Operations <#Basic-Operations-------->`_
-   -  `Operation with data alignment <#Operation-with-data-alignment->`_
-
--  `Dataset <#Dataset>`_
--  `NetCDF I/O <#NetCDF-I/O>`_
--  `Experimental Features <#Experimental-Features>`_
-
-   -  `Metadata <#Metadata>`_
-   -  `Weighted mean <#Weighted-mean>`_
-   -  `Compatibility with pandas and
-      larry <#Compatibility-with-pandas-and-larry>`_
-
--  `doctest framework <#doctest-framework>`_
-
-
-Notebook:
----------
+Notebook tutorial:
+------------------
 http://nbviewer.ipython.org/github/perrette/dimarray/blob/master/dimarray.ipynb
 
+Download latest version on GitHub:
+----------------------------------
+https://github.com/perrette/dimarray/
 
-Summary:
---------
+Get started
+-----------
 
-Inspired by (but does not rely on) pandas:
+A **``DimArray``** can be defined just like a numpy array, with
+additional information about its dimensions, which are referred to as
+``axes``, for consistency with numpy and pandas. The default way it to
+provide axes as a list of tuples (``axis name``, ``axis values``) to
+fully identify the array.
 
-* behave like a numpy array (operations, transformations)
-* labelled axes, NaN handling
-* automatic axis aligment for +-/* between two DimArray objects
-* similar api (`values`, `axes`,`reindex_axis`) 
-* group/ungroup methods to flatten any subset of dimensions into a 
-  GroupedAxis object, in some ways similar to pandas' MultiIndex.
+.. code:: python
 
-But generalized to any dimension and augmented with new features:
+    import numpy as np
+    import dimarray as da
+    from dimarray import DimArray
+.. code:: python
 
-* intuitive multi-dimensional slicing/reshaping/transforms by axis name
-* arithmetics between arrays of different dimensions (broadcasting)
-* can assign weights to each axis (such as based on axis spacing)
-  ==> `mean`, `var`, `std` can be weighted
-* in combination to `group`, can achieve area- or volumne- weighting
-* natural netCDF I/O  via netCDF4 python module (requires HDF5, netCDF4)
-* stick to numpy's api when possible (but with enhanced capabilities):
-  `reshape`, `repeat`, `transpose`, `newaxis`, `squeeze`
-      
+    a = DimArray([[1,2,3],[4,5,6]], axes=[("dim0",["a","b"]), ("dim1", [0,1,2])]) 
+    a
 
-Organized around a small number of classes and methods:
 
-* DimArray			: main data structure 
-* Dataset		    	: ordered dictionary of DimArray objects
-* read_nc, write_nc, summary_nc : netCDF I/O (DimArray and Dataset methods)
-* Axis, Axes, GroupedAxis   : axis and indexing (under the hood)
 
-And for things pandas does better (low-dimensional data analysis, `groupby`, 
-I/O formats, etc...), just export via to_pandas() method (up to 4-D) (only
-if pandas is installed of course - otherwise dimarray does not rely on pandas)
+.. parsed-literal::
+
+    dimarray: 6 non-null elements (0 null)
+    dimensions: 'dim0', 'dim1'
+    0 / dim0 (2): a to b
+    1 / dim1 (3): 0 to 2
+    array([[1, 2, 3],
+           [4, 5, 6]])
+
+
+
+Array data are stored in a ``values`` attribute:
+
+.. code:: python
+
+    a.values
+
+
+
+.. parsed-literal::
+
+    array([[1, 2, 3],
+           [4, 5, 6]])
+
+
+
+While dimensions are stored in an ``axes`` attribute, which is a custom
+list of **``Axis``** objects:
+
+.. code:: python
+
+    a.axes
+
+
+
+.. parsed-literal::
+
+    dimensions: 'dim0', 'dim1'
+    0 / dim0 (2): a to b
+    1 / dim1 (3): 0 to 2
+
+
+
+.. code:: python
+
+    ax = a.axes[0]  # by integer position
+    ax = a.axes['dim0'] # by axis name (for pythonistas: list with overloaded __getitem__ property)
+    ax
+
+
+
+.. parsed-literal::
+
+    dim0 (2): a to b
+
+
+
+An **``Axis``** object itself has ``name`` and ``values`` attributes:
+
+.. code:: python
+
+    ax.name
+
+
+
+.. parsed-literal::
+
+    'dim0'
+
+
+
+.. code:: python
+
+    ax.values
+
+
+
+.. parsed-literal::
+
+    array(['a', 'b'], dtype=object)
+
+
+
+For convenience, axis names and values can be accessed directly via
+``dims`` and ``labels`` attributes, and directly by their names (as long
+as the name does not conflict with another protected attribute of the
+class, in that case it needs to be accessed by axes[].values):
+
+.. code:: python
+
+    a.dims # alias for a.axes[0].name, a.axes[1].name
+
+
+
+.. parsed-literal::
+
+    ('dim0', 'dim1')
+
+
+
+.. code:: python
+
+    a.dim0, a.dim1   # alias for a.axes['dim0'].values, a.axes['dim1'].values
+    a.labels
+
+
+
+.. parsed-literal::
+
+    (array(['a', 'b'], dtype=object), array([0, 1, 2]))
+
+
+
+Note that numpy-like attribute ``shape`` and ``ndim``, among others, are
+also defined:
+
+.. code:: python
+
+    a.shape
+
+
+
+.. parsed-literal::
+
+    (2, 3)
+
+
+
+.. code:: python
+
+    a.ndim
+
+
+
+.. parsed-literal::
+
+    2
+
+
+Notebook tutorial:
+------------------
+http://nbviewer.ipython.org/github/perrette/dimarray/blob/master/dimarray.ipynb
+
+Further development:
+--------------------
+All suggestions for improvement very welcome, please file an `issue` on github:
+https://github.com/perrette/dimarray/ for further discussion.

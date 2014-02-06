@@ -11,10 +11,6 @@ from dimarray.core import DimArray, Axis, Axes
 
 __all__ = ['read','summary']
 
-#
-# wrapper functions which will make it to the api
-#
-
 def summary(fname):
     print(summary_repr(fname))
 
@@ -57,30 +53,6 @@ def read(f, nms=None, *args, **kwargs):
 	obj = read_dataset(f, nms, *args, **kwargs)
 
     return obj
-
-
-#def write(f, name, data, axes=None, dims=None, mode='w', **metadata):
-#    """ Initialize a DimArray and write to netCDF
-#
-#    Input:
-#	f	: file name or buffer
-#	name	: variable name
-#	data	: numpy array
-#	axes	: list of numpy arrays (or Axes objects)
-#	dims	: dims of the axes (the dimensions) 
-#	mode    : mode to access the netcdf: 'w' (default, overwrite) or 'a' (append)
-#	**metadata: for convenience, can pass dimensions as keyword arguments (beware the order is lost)
-#
-#    data, axes, dims, **metadata are passed to dimarray to instantiate a DimArray, see corresponding doc for details.
-#
-#    Provide dimensions as a list:
-#
-#    >>> write("test.nc", "testvar", np.randn(20, 30), [np.linspace(-90,90,20), np.linspace(-180,180,30)],['lat','lon'])
-#    """
-#    #axes = Axes.from_list(axes, dims)
-#    obj = DimArray.from_list(data, axes, dims, **metadata) # initialize a dimarray
-#    obj.write(f, name, mode=mode) # write to file
-
 
 #
 # read from file
@@ -155,13 +127,13 @@ def _extract_kw(kwargs, argnames, delete=True):
 	    if delete: del kwargs[k]
     return kw
 
-def read_variable(f, v, indices=None, axis=0, *args, **kwargs):
+def read_variable(f, v, indices=None, axis=0, **kwargs):
     """ read one variable from netCDF4 file
     Input:
 
 	f    	    : file name or file handle
 	v         : netCDF variable name to extract
-	indices, axis, *args, **kwargs: passed to take
+	indices, axis, **kwargs: passed to take
 
 	Please see help on `Dimarray.take` for more information.
 
@@ -191,7 +163,7 @@ def read_variable(f, v, indices=None, axis=0, *args, **kwargs):
     else:
 
 	try:
-	    ix = axes.loc(indices, axis=axis, *args, **kwargs)
+	    ix = axes.loc(indices, axis=axis, **kwargs)
 	except IndexError, msg:
 	    raise
 	    raise IndexError(msg)
@@ -444,6 +416,8 @@ def check_file(f, mode='r', verbose=True):
 
 ##
 ## Create a wrapper which behaves similarly to a Dataset and DimArray object
+##
+## ==> NEED TO FIX BUGS BEFORE USE (netCDF4 crashes)
 ##
 #class NCGeneric(object):
 #    """ generic netCDF class dealing with attribute I/O

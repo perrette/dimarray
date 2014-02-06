@@ -18,9 +18,9 @@ setup(name='dimarray',
       url='https://github.com/perrette/dimarray',
       license = "BSD 3-Clause",
       install_requires = ["numpy>=1.7"],
-      extras_requires = {
-	  "ncio": "netCDF4>=1.0.6",
-	  "pandas": "pandas>=0.8.0",
+      extras_require = {
+	  "ncio": ["netCDF4>=1.0.6"],
+	  "pandas": ["pandas>=0.8.0"],
 	  "plotting": ["pandas>=0.8.0"],
 	  "interp2d": ["basemap>=1.06"],
 	  }
