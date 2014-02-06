@@ -1073,10 +1073,14 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     def __repr__(self):
 	""" pretty printing
 	"""
-	if self.ndim > 0:
-	    nonnull = np.size(self.values[~np.isnan(self.values)])
-	else:
-	    nonnull = ~np.isnan(self.values)
+	try:
+	    if self.ndim > 0:
+		nonnull = np.size(self.values[~np.isnan(self.values)])
+	    else:
+		nonnull = ~np.isnan(self.values)
+
+	except TypeError: # e.g. object
+	    nonnull = self.size
 
 	lines = []
 
