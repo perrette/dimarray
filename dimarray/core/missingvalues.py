@@ -84,11 +84,11 @@ def fillna(a, value, inplace=False, na=np.nan):
     """
     return a.put(value, _isnan(a.values, na=na), convert=True, inplace=inplace)
 
-def dropna(a, axis=0, minval=None, na=np.nan):
+def dropna(a, axis=0, minvalid=None, na=np.nan):
     """ drop nans along an axis
 
     axis: axis position or name or list of names
-    minval, optional: min number of valid point in each slice along axis values
+    minvalid, optional: min number of valid point in each slice along axis values
 	by default all the points
 
     Examples:
@@ -109,37 +109,34 @@ def dropna(a, axis=0, minval=None, na=np.nan):
     array([ 1.,  3.])
 
     Multi-dimensional
-    >>> a = DimArray(np.arange(3*2).reshape((3,2)))+0.
-    >>> a.ix[0, 1] = np.nan
-    >>> a 
-    dimarray: 5 non-null elements (1 null)
+    >>> a = DimArray([[ np.nan, 2., 3.],[ np.nan, 5., np.nan]])
+    >>> a
+    dimarray: 3 non-null elements (3 null)
     dimensions: 'x0', 'x1'
-    0 / x0 (3): 0 to 2
-    1 / x1 (2): 0 to 1
-    array([[  0.,  nan],
-           [  2.,   3.],
-           [  4.,   5.]])
-    >>> a.dropna() # default axis=0
-    dimarray: 4 non-null elements (0 null)
-    dimensions: 'x0', 'x1'
-    0 / x0 (2): 1 to 2
-    1 / x1 (2): 0 to 1
-    array([[ 2.,  3.],
-           [ 4.,  5.]])
+    0 / x0 (2): 0 to 1
+    1 / x1 (3): 0 to 2
+    array([[ nan,   2.,   3.],
+	   [ nan,   5.,  nan]])
     >>> a.dropna(axis=1)
-    dimarray: 3 non-null elements (0 null)
+    dimarray: 2 non-null elements (0 null)
     dimensions: 'x0', 'x1'
-    0 / x0 (3): 0 to 2
-    1 / x1 (1): 0 to 0
-    array([[ 0.],
-           [ 2.],
-           [ 4.]])
+    0 / x0 (2): 0 to 1
+    1 / x1 (1): 1 to 1
+    array([[ 2.],
+	   [ 5.]])
+    >>> a.dropna(axis=1, minvalid=1)  # minimum number of valid values, equivalent to `how="all"` in pandas
+    dimarray: 3 non-null elements (1 null)
+    dimensions: 'x0', 'x1'
+    0 / x0 (2): 0 to 1
+    1 / x1 (2): 1 to 2
+    array([[  2.,   3.],
+	   [  5.,  nan]])
     """
     assert axis is not None, "axis cannot be None for dropna"
 #    # if None, all axes
 #    if axis is None:
 #	for dim in a.dims:
-#	    a = dropna(a, axis=dim, minval=minval)
+#	    a = dropna(a, axis=dim, minvalid=minvalid)
 #	return a
 
     idx, name = a._get_axis_info(axis)
@@ -149,19 +146,18 @@ def dropna(a, axis=0, minval=None, na=np.nan):
 
     else:
 	nans = isnan(a, na=na) 
-	#nans = nans.group([dim for dim in a.dims if dim != name]) # in first position
-	nans = nans.group([dim for dim in a.dims if dim != name]) # in first position
+	nans = nans.group([dim for dim in a.dims if dim != name], insert=0) # in first position
 	count_nans_axis = nans.sum(axis=0) # number of points valid along that axis
 	count_vals_axis = (~nans).sum(axis=0) # number of points valid along that axis
 	#count_nans_axis = nans.sum(axis=[dim for dim in a.dims if dim != name]) # number of points valid along that axis
 	#count_vals_axis = nans.sum(axis=[dim for dim in a.dims if dim != name]) # number of points valid along that axis
 
     # pick up only points whose number of nans is below the threshold
-    if minval is None: 
-	maxna = 1
+    if minvalid is None: 
+	maxna = 0
     else:
-	maxna = nans.axes[0].size - minval
+	maxna = nans.axes[0].size - minvalid
 
-    indices = count_nans_axis < maxna
+    indices = count_nans_axis <= maxna
 
     return a.take(indices, axis=idx)
