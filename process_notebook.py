@@ -108,7 +108,7 @@ def main(test=False):
 
     # Create a table of content
     headings, levels = get_headings(nb)
-    toc = create_toc(headings, levels, minlev=2)
+    toc = create_toc(headings, levels, minlev=1)
     print "\n".join(toc)
 
     # Update TOC cell

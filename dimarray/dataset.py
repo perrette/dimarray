@@ -144,15 +144,23 @@ class Dataset(odict):
 
     read = read_nc
 
-    def to_array(self, axis="items"):
+    def to_array(self, axis=None):
 	""" Convert to DimArray
 
-	axis  : axis name, by default "items"
+	axis  : axis name, by default "unnamed"
 
 	NOTE: will raise an error if axis name already present in the data
 	"""
 	#if names is not None or dims is not None:
 	#    return self.subset(names=names, dims=dims).to_array()
+
+	if axis is None:
+	    axis = "unnamed"
+	    if axis in self.dims:
+		i = 1
+		while "unnamed_{}".format(i) in self.dims:
+		    i+=1
+		axis = "unnamed_{}".format(i)
 
 	if axis in self.dims:
 	    raise ValueError("please provide an axis name which does not \
@@ -245,7 +253,7 @@ def test():
     dimensions: 'time'
     0 / time (10): 1950 to 1959
     array([  0.,   1.,   2.,   3.,   4.,  nan,  nan,  nan,  nan,  nan])
-    >>> data.to_array()
+    >>> data.to_array(axis='items')
     dimarray: 12250 non-null elements (1750 null)
     dimensions: 'items', 'time', 'lon', 'lat', 'source'
     0 / items (4): ts to test

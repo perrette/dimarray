@@ -664,7 +664,7 @@ def flatten(self):
     dimarray: 6 non-null elements (0 null)
     dimensions: 'x0,x1'
     0 / x0,x1 (6): (0, 0) to (1, 2)
-    array([1, 2, 3, 4, 5, 6])    
+    array([1, 2, 3, 4, 5, 6])
 
     >>> b.labels
     (array([(0, 0), (0, 1), (0, 2), (1, 0), (1, 1), (1, 2)], dtype=object),)

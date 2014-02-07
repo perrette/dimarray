@@ -874,7 +874,7 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 	return self.values.__contains__(value)
 
     @classmethod
-    def from_arrays(cls, data, keys=None, axis="items"):
+    def from_arrays(cls, data, keys=None, axis=None):
 	""" initialize a DimArray from a dictionary of smaller dimensional DimArray
 
 	Convenience method for: collect.Dataset(data, keys).to_array(axis)
@@ -882,7 +882,7 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 	input:
 	    - data : list or dict of DimArrays
 	    - keys, optional : labels of the first dimension (if dict, only useful for ordering)
-	    - axis, optional : dimension name along which to aggregate data (default "items")
+	    - axis, optional : dimension name along which to aggregate data (default "unnamed")
 
 	output:
 	    - new DimArray object, with axis alignment (reindexing)
@@ -894,15 +894,15 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 	>>> a = DimArray([1,2,3])
 	>>> DimArray.from_arrays([a, 2*a]) # if keys not provided, name is 'v0', 'v1'
 	dimarray: 6 non-null elements (0 null)
-	dimensions: 'items', 'x0'
-	0 / items (2): v0 to v1
+	dimensions: 'unnamed', 'x0'
+	0 / unnamed (2): v0 to v1
 	1 / x0 (3): 0 to 2
 	array([[1, 2, 3],
 	       [2, 4, 6]])
 
-	From a dict, here also with axis alignment
+	From a dict, here also with axis alignment, and naming the axis
 	>>> d = {'a':DimArray([10,20,30.],[0,1,2]), 'b':DimArray([1,2,3.],[1.,2.,3])}
-	>>> a = DimArray.from_arrays(d, keys=['a','b']) # keys= just needed to enforce ordering
+	>>> a = DimArray.from_arrays(d, keys=['a','b'], axis='items') # keys= just needed to enforce ordering
 	>>> a
 	dimarray: 6 non-null elements (2 null)
 	dimensions: 'items', 'x0'
