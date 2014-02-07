@@ -1202,7 +1202,7 @@ join = DimArray.from_arrays
 #def from_arrays(*args, **kwargs):
 #    warnings.warn(FutureWarning('from_arrays is deprecated, use da.array() instead'))
 #    return DimArray.from_arrays(*args, **kwargs) 
-from_arrays = DimArray.from_arrays(*args, **kwargs) 
+from_arrays = DimArray.from_arrays
 
 from_pandas = DimArray.from_pandas
 
