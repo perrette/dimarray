@@ -34,7 +34,6 @@ additional information about its axes, which can be given via ``labels``
 and ``dims`` parameters.
 
 >>> from dimarray import DimArray, Dataset
-
 >>> a = DimArray(values=[[1,2,3],[4,5,6.]], labels=[["a","b"], [0,1,2]], dims=['dim0','dim1']) 
 >>> a
 dimarray: 6 non-null elements (0 null)
@@ -250,12 +249,18 @@ Comparisons with other packages:
 
 - **larry** 
     ...was pioneer as labelled array, it skips nans in along-axis transforms
-    and comes with many handy methods. After giving it a go, I find it is not 
-    so intuitive to use, but this is a matter of taste. `larry` does not seem 
-    to support naming dimensions.
+    and comes with a wealth of built-in methods. It seems to do a very good job but does
+    not offer as many features as `dimarray` or `pandas` as far as indexing 
+    is concerned. For example it does not 
+    support naming dimensions and does not support indexing on axis values 
+    (but provides `get` method for single element access). Still, from the 
+    structure (array-like), `dimarray` is closer to larry than to pandas.
+    
 
 Compared with these two pacakges, `dimarray` adds the possibility of passing axis 
-name to the various methods, instead of simply axis rank. This applies for 
+name to the various methods, instead of simply axis rank. Having a focus on dimension
+names and axis values instead of axis rank and position of elements along an axis
+is a strong feature of `dimarray`. This applies for
 instance to along-axis operation, `take` and `put` methods, or reshaping operations.
 
 - **iris** 
