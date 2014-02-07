@@ -347,7 +347,7 @@ def reshape(self, *newdims, **kwargs):
 	    Any dimension name containing a comma is interpreting as a grouping command.
 	    All dimensions to group have to exist already.
 
-	transpose: {bool} if True, transpose dimensions to match new order (default True)
+	transpose: {bool} if True, transpose dimensions to match new order (default False)
 
     output:
 	reshape: DimArray with reshape.dims == tuple(newdims)
@@ -411,7 +411,7 @@ def reshape(self, *newdims, **kwargs):
 	newdims = newdims[0]
 
     # ...tranpose parameter
-    transpose = kwargs.pop('transpose',True)
+    transpose = kwargs.pop('transpose', False)
     assert len(kwargs) == 0, "invalid parameters: {}".format(kwargs)
 
     # Do nothing if dimensions already match
