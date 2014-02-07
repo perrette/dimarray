@@ -313,7 +313,7 @@ class Axis(object):
 	return cls(index.values, name=index.name)
 
 class GroupedAxis(Axis):
-    """ an Axis that contains several axes flattened together
+    """ an Axis which is a grouping of several axes flattened together
     """
     modulo = None
 
@@ -324,36 +324,48 @@ class GroupedAxis(Axis):
 	"""
 	self.axes = Axes(axes)
 	self.name = ",".join([ax.name for ax in self.axes])
+	self._values = None  # values not computed unless needed
+	self._weights = None  
+	self._size = None  
 
     @property
     def values(self):
 	""" values as 2-D numpy array, to keep things consistent with Axis
 	"""
+	if self._values is None:
+	    self._values = self._get_values()
+	return self._values
+
+    def _get_values(self):
 	# Each element of the new axis is a tuple, which makes a 2-D numpy array
 	aval = _flatten(*[ax.values for ax in self.axes])
-	#list_of_tuples = zip(*val.T.tolist())
 	val = np.empty(aval.shape[0], dtype=object)
 	val[:] = zip(*aval.T.tolist()) # pass a list of tuples
 	return val 
-	#return _flatten(*[ax.values for ax in self.axes])
 
     @property
     def weights(self):
 	""" Combine the weights as a product of the individual axis weights
 	"""
+	if self._weights is None:
+	    self._weights = self._get_weights()
+	return self._weights
+
+    def _get_weights(self):
 	if np.all([ax.weights is None for ax in self.axes]):
 	    return None
-
 	else:
 	    return _flatten(*[ax.get_weights() for ax in self.axes]).prod(axis=1)
-
-	#if np.all(axis_weights == 1):
-	#    axis_weights = None
 
     @property
     def size(self): 
 	""" size as product of axis sizes
 	"""
+	if self._size is None:
+	    self._size = self._get_size()
+	return self._size
+
+    def _get_size(self):
 	return np.prod([ax.size for ax in self.axes])
 
     @property

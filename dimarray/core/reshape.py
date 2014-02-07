@@ -87,6 +87,11 @@ def transpose(self, *dims):
     """ Permute dimensions
     
     Analogous to numpy, but also allows axis names
+
+    See also:
+    ---------
+    reshape, group, ungroup, newaxis
+
     >>> a = da.DimArray(np.zeros((2,3)), ['x0','x1'])
     >>> a          
     dimarray: 6 non-null elements (0 null)
@@ -319,19 +324,37 @@ def squeeze(self, axis=None):
 
     return self._constructor(res, newaxes, **self._metadata)
 
+def _ungroup_dims(dims):
+    """ ['a','b,c','d'] ==> ['a','b','c','d']
+    """
+    flatdims = []
+    for d in dims:
+	flatdims.extend(d.split(','))
+    return flatdims
+
+
 #
 # Reshape by adding/removing as many singleton axes as needed to match prescribed dimensions
 #
-def reshape(self, *newdims):
-    """ Conform array to new dimensions
+def reshape(self, *newdims, **kwargs):
+    """ Add/remove/group dimensions to conform array to new dimensions
     
     input:
-	*newdims: tuple or list of dimensions (`str`)
+	newdims: tuple or list or variable list of dimension names {str} 
+
+	    Any dimension now present in the array is added as singleton dimension
+
+	    Any dimension name containing a comma is interpreting as a grouping command.
+	    All dimensions to group have to exist already.
+
+	transpose: {bool} if True, transpose dimensions to match new order (default True)
 
     output:
 	reshape: DimArray with reshape.dims == tuple(newdims)
-    
-    Method: add/remove singleton dimensions and transpose array
+
+    See also:
+    ---------
+    group, ungroup, transpose, newaxis
 
     Examples:
     ---------
@@ -341,6 +364,7 @@ def reshape(self, *newdims):
     dimensions: 'x0'
     0 / x0 (2): 0 to 1
     array([7, 8])
+
     >>> a.reshape(('x0','new'))
     dimarray: 2 non-null elements (0 null)
     dimensions: 'x0', 'new'
@@ -348,28 +372,102 @@ def reshape(self, *newdims):
     1 / new (1): None to None
     array([[7],
            [8]])
+
+    >>> b = DimArray(np.arange(2*2*2).reshape(2,2,2))
+    >>> b
+    dimarray: 8 non-null elements (0 null)
+    dimensions: 'x0', 'x1', 'x2'
+    0 / x0 (2): 0 to 1
+    1 / x1 (2): 0 to 1
+    2 / x2 (2): 0 to 1
+    array([[[0, 1],
+            [2, 3]],
+    <BLANKLINE>
+           [[4, 5],
+            [6, 7]]])
+
+    >>> c = b.reshape('x0','x1,x2')
+    >>> c
+    dimarray: 8 non-null elements (0 null)
+    dimensions: 'x0', 'x1,x2'
+    0 / x0 (2): 0 to 1
+    1 / x1,x2 (4): (0, 0) to (1, 1)
+    array([[0, 1, 2, 3],
+           [4, 5, 6, 7]])
+
+    >>> c.reshape('x0,x1','x2')
+    dimarray: 8 non-null elements (0 null)
+    dimensions: 'x0,x1', 'x2'
+    0 / x0,x1 (4): (0, 0) to (1, 1)
+    1 / x2 (2): 0 to 1
+    array([[0, 1],
+           [2, 3],
+           [4, 5],
+           [6, 7]])
     """
+    # parse input parameters
+    # ...sequence or variable sequence
     if len(newdims) == 1 and type(newdims[0]) in (list, tuple):
 	newdims = newdims[0]
+
+    # ...tranpose parameter
+    transpose = kwargs.pop('transpose',True)
+    assert len(kwargs) == 0, "invalid parameters: {}".format(kwargs)
 
     # Do nothing if dimensions already match
     if tuple(newdims) == self.dims:
 	return self
 
+    # check that newd dimensions
+    assert len(newdims) == len(set(newdims)), "must not contain duplicate axes !"
+
+    # First ungroup the array to compare with flattened newdims
+    o = self.ungroup()
+
+    # Temporarily replace "," by ";" in any dimension with is NOT a grouped axis, and flatten all dimensions apart from that
+    newdims_renamed = []
+    for d in newdims:
+	if ',' in d and d in o.dims:
+	    d = d.replace(',',';')
+	newdims_renamed.append(d)
+    newdims_ungrouped = _ungroup_dims(newdims_renamed) 
+
+    assert len(newdims_ungrouped) == len(set(newdims_ungrouped)), "must not contain duplicate axes !"
+
+    for ax in o.axes:
+	ax.name = ax.name.replace(',',';')
+
     # Remove unwanted singleton dimensions, if any
-    o = self
     for dim in o.dims:
 	assert isinstance(dim, str), "newdims must be a tuple of axis names (`str`)"
-	if dim not in newdims:
+	if dim not in newdims_ungrouped:
 	    o = o.squeeze(dim)
 
     # Transpose array to match existing dimensions
-    o = o.transpose([dim for dim in newdims if dim in o.dims])
+    if transpose:
+	o = o.transpose([dim for dim in newdims_ungrouped if dim in o.dims])
+
+    # check sortedness
+    else:
+	if tuple([d for d in o.dims if d in newdims_ungrouped]) != tuple([d for d in newdims_ungrouped if d in o.dims]):
+	    raise ValueError("First transpose the array before reshaping, or set parameter `transpose=True`")
 
     # Add missing dimensions by inserting singleton axes
-    for i, dim in enumerate(newdims):
+    for i, dim in enumerate(newdims_ungrouped):
 	if dim not in o.dims:
 	    o = o.newaxis(dim, pos=i)
+
+    # Group dimensions as required
+    for i, d in enumerate(newdims_renamed):
+	if ',' in d:
+	    o = o.group(d.split(','), insert=i)
+
+    # Replace back ';' by ','
+    for ax in o.axes:
+	ax.name = ax.name.replace(';',',')
+
+    if o.dims != tuple(newdims):
+	raise ValueError("Could not perform reshaping, read documentation for acceptable arguments")
 
     return o
 
@@ -394,17 +492,68 @@ def group(self, *dims, **kwargs):
 
     Note: can be passed via the "axis" parameter of the transformation, too
 
+    See also:
+    ---------
+    reshape, transpose
+
     Example:
     --------
 
-    a.group(('lon','lat')).mean()
+    >>> np.random.seed(0)
+    >>> values = np.arange(2*3*4).reshape(2,3,4)
+    >>> v = da.array_kw(values, time=[1950,1955], lat=np.linspace(-90,90,3), lon=np.linspace(-180,180,4))
+    >>> v
+    dimarray: 24 non-null elements (0 null)
+    dimensions: 'time', 'lat', 'lon'
+    0 / time (2): 1950 to 1955
+    1 / lat (3): -90.0 to 90.0
+    2 / lon (4): -180.0 to 180.0
+    array([[[ 0,  1,  2,  3],
+	    [ 4,  5,  6,  7],
+	    [ 8,  9, 10, 11]],
+    <BLANKLINE>
+	   [[12, 13, 14, 15],
+	    [16, 17, 18, 19],
+	    [20, 21, 22, 23]]])
 
-    Is equivalent to:
+    >>> w = v.group(('lat','lon'), insert=1)
+    >>> w 
+    dimarray: 24 non-null elements (0 null)
+    dimensions: 'time', 'lat,lon'
+    0 / time (2): 1950 to 1955
+    1 / lat,lon (12): (-90.0, -180.0) to (90.0, 180.0)
+    array([[ 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11],
+	   [12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]])
 
-    a.mean(axis=('lon','lat')) 
+    >>> np.all( w.ungroup() == v )
+    True
+
+    But be careful, the order matter !
+    >>> v.group(('lon','lat'), insert=1)
+    dimarray: 24 non-null elements (0 null)
+    dimensions: 'time', 'lon,lat'
+    0 / time (2): 1950 to 1955
+    1 / lon,lat (12): (-180.0, -90.0) to (180.0, 90.0)
+    array([[ 0,  4,  8,  1,  5,  9,  2,  6, 10,  3,  7, 11],
+	   [12, 16, 20, 13, 17, 21, 14, 18, 22, 15, 19, 23]])
+
+    Useful to average over a group of dimensions:
+    >>> v.group(('lon','lat'), insert=0).mean(axis=0)
+    dimarray: 2 non-null elements (0 null)
+    dimensions: 'time'
+    0 / time (2): 1950 to 1955
+    array([  5.5,  17.5])
+
+    is equivalent to:
+    >>> v.mean(axis=('lon','lat')) 
+    dimarray: 2 non-null elements (0 null)
+    dimensions: 'time'
+    0 / time (2): 1950 to 1955
+    array([  5.5,  17.5])
     """
     reverse= kwargs.pop('reverse',False)
     insert = kwargs.pop('insert', 0)
+    #insert = kwargs.pop('insert', None)
     assert len(kwargs) == 0, "invalid arguments: "+repr(kwargs.keys())
 
     re_order = False
