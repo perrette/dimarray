@@ -248,6 +248,19 @@ def newaxis(self, name, values=None, pos=0):
 	    dimension (see `repeat`) for more information.
     pos: `int`, optional: axis position, default 0 (first axis)
 
+    Notes:
+    ------
+    Numpy provides a np.newaxis constant (equal to None), to augment the array 
+    dimensions with new singleton axes. In dimarray, newaxis has been 
+    implemented as an array method, which requires to indicate axis name and 
+    optionally axis position (`pos=`). 
+    Additionally, passing providing values will repeat the array along that 
+    dimension as many times as necessary.
+
+    See Also:
+    ---------
+    squeeze, repeat
+
     Examples:
     ---------
     >>> a = DimArray([1,2])
@@ -627,6 +640,36 @@ def group(self, *dims, **kwargs):
     new = self._constructor(newvalues, newaxes, **self._metadata)
 
     return new
+
+def flatten(self):
+    """ analogous to numpy's flatten, but conserves axes with a GroupedAxis object
+
+    See also:
+    ---------
+    reshape, group, ungroup
+
+    Examples:
+    ---------
+    >>> a = DimArray([[1,2,3],[4,5,6]])
+    >>> a
+    dimarray: 6 non-null elements (0 null)
+    dimensions: 'x0', 'x1'
+    0 / x0 (2): 0 to 1
+    1 / x1 (3): 0 to 2
+    array([[1, 2, 3],
+	   [4, 5, 6]])
+
+    >>> b = a.flatten()
+    >>> b
+    dimarray: 6 non-null elements (0 null)
+    dimensions: 'x0,x1'
+    0 / x0,x1 (6): (0, 0) to (1, 2)
+    array([1, 2, 3, 4, 5, 6])    
+
+    >>> b.labels
+    (array([(0, 0), (0, 1), (0, 2), (1, 0), (1, 1), (1, 2)], dtype=object),)
+    """
+    return self.group(self.dims)
 
 def ungroup(self, axis=None):
     """ opposite from group

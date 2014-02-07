@@ -645,12 +645,13 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     repeat = _reshape.repeat
     newaxis = _reshape.newaxis
     squeeze = _reshape.squeeze
+    group = _reshape.group
+    flatten = _reshape.flatten
+    ungroup = _reshape.ungroup
+    reshape = _reshape.reshape
     transpose = _reshape.transpose
     swapaxes = _reshape.swapaxes
-    reshape = _reshape.reshape
     broadcast = _reshape.broadcast
-    group = _reshape.group
-    ungroup = _reshape.ungroup
     groupby = _reshape.groupby
     
     @property
