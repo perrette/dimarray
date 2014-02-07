@@ -182,17 +182,22 @@ def align_axes(*arrays):
 
 
 def _common_axis(*axes):
-    """ find the common axis between a list of axes
+    """ find the common axis among a list of axes ==> proceed recursively
     """
+    assert len(axes) > 0
 
-    # First merge the axes with duplicates (while preserving the order of the lists)
-    axes_lists = [list(ax.values) for ax in axes] # axes as lists
-    newaxis_val = axes_lists[0]
-    for val in itertools.chain(*axes_lists[1:]):
-	if val not in newaxis_val:
-	    newaxis_val.append(val)
+    if len(axes) == 1:
+	return axes[0]
 
-    return Axis(newaxis_val, axes[0].name)
+    elif len(axes) == 2:
+	ax0, ax1 = axes
+	return ax0.union(ax1)
+
+    else:
+	ax0 = axes[0]
+	ax1 = _common_axis(*axes[1:])
+	return ax0.union(ax1)
+
 
 
 def concatenate(arrays, axis=0, check_other_axes=True):

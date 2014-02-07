@@ -10,6 +10,8 @@ from tools import is_array1d_equiv
 __all__ = ["Axis","Axes", "is_regular"]
 
 def is_regular(values):
+    """ test if numeric, monotonically increasing and constant step
+    """
     if values.dtype is np.dtype('O'): 
 	regular = False
 
@@ -19,6 +21,20 @@ def is_regular(values):
 	regular = np.all(diff==step) and step > 0
 
     return regular
+
+def is_monotonic(values):
+    """ test is monotonically increasing or decreasing
+    """
+    if values.size < 2:
+	monotonic = True
+
+    else:
+	#increasing = np.diff(values) > 0 
+	increasing = values[1:] >= values[:-1] 
+	monotonic = np.all(increasing) or np.all(values[1:] <= values[:-1])
+
+    return monotonic
+
 
 def _convert_dtype(dtype):
     """ convert numpy type in a python type
@@ -52,7 +68,7 @@ class Axis(object):
     """
     _metadata = MetadataDesc(exclude = ["values", "name", "weights", "modulo"]) # variables which are NOT metadata
 
-    def __init__(self, values, name="", weights=None, modulo=None, dtype=None, **kwargs):
+    def __init__(self, values, name="", weights=None, modulo=None, dtype=None, _monotonic=None, **kwargs):
 	""" 
 	"""
 	if not name:
@@ -85,6 +101,7 @@ class Axis(object):
 	self.name = name 
 	self.weights = weights 
 	self.modulo = modulo
+	self._monotonic = _monotonic
 
 	self._metadata = kwargs
 
@@ -107,6 +124,65 @@ class Axis(object):
 	    weights = self.weights
 
 	return Axis(values, self.name, weights=weights, **self._metadata)
+
+    def union(self, other):
+	""" join two Axis objects
+
+	Examples:
+	---------
+
+	>>> ax1 = Axis([0, 1, 2, 3, 4], name='myaxis')
+	>>> ax2 = Axis([-3, 2, 3, 6], name='myaxis')
+	>>> ax3 = ax1.union(ax2)
+	>>> ax3.values
+	array([-3,  0,  1,  2,  3,  4,  6])
+	"""
+	#assert isinstance(other, Axis), "can only make the Union of two Axis objects"
+	if isinstance(other, Axis):
+	    assert self.name == other.name, "axes have different names, cannot make union"
+	else:
+	    other = Axis(other, self.name) # to give it the same methods is_monotonic etc...
+	
+	if np.all(self.values == other.values):
+	    # TODO: check other attributes such as weights
+	    return self.copy()
+
+	joined = np.unique(np.concatenate([self.values, [val for val in other.values if val not in self.values]]))
+
+	# join two sorted axes?
+	if self.is_monotonic() and other.is_monotonic():
+	    is_increasing = lambda ax: ax.size < 2 or ax.values[1] >= ax.values[0]
+	    is_decreasing = lambda ax: ax.size < 2 or ax.values[1] <= ax.values[0]
+
+	    if is_increasing(self) and is_increasing(other):
+		joined.sort()
+
+	    elif is_decreasing(self) and is_decreasing(other):
+		joined2 = joined[::-1] # reverse should be increasing
+		joined2.sort()
+		joined = joined2[::-1] # back to normal
+
+	    # one increases, the other decreases !
+	    else:
+		joined.sort()
+
+	return Axis(joined, self.name)
+
+    def is_monotonic(self):
+	""" return True if monotonic
+	"""
+	if self._monotonic is None:
+	    self._monotonic = is_monotonic(self.values)
+
+	return self._monotonic
+
+    def is_regular(self):
+	""" return True if regular axis (numeric and steadily increasing)
+	"""
+	if self._regular is None:
+	    self._regular = self.is_numeric() and self.is_monotonic() and is_regular(self.values)
+
+	return self._regular
 
     @property
     def weights(self):
@@ -133,19 +209,19 @@ class Axis(object):
 	""" Access the slicer to locate axis elements
 
 	>>> ax = Axis([1,2,3],'x0')
-	>>> ax.isnumeric()
+	>>> ax.is_numeric()
 	True
 	>>> ax = Axis(['a','b','c'],'x0')
-	>>> ax.isnumeric()
+	>>> ax.is_numeric()
 	False
 	"""
 	assert self.values.ndim == 1, "!!! 2-dimensional axis !!!"
-	if self.isnumeric():
+	if self.is_numeric():
 	    return NumLocator(self.values, modulo=self.modulo)
 	else:
 	    return ObjLocator(self.values)
 
-    def isnumeric(self):
+    def is_numeric(self):
 	""" numeric type?
 	"""
 	return self.values.dtype in (np.dtype(int), np.dtype(long), np.dtype(float))
@@ -569,6 +645,8 @@ def _init_axes(axes=None, dims=None, labels=None, shape=None, raise_warning=True
 	raise TypeError("axes, if provided, must be a list of: `Axis` or `tuple` or arrays. Got: {} (instance:{})".format(axes.__class__, axes))
 
     return axes
+
+
 
 #
 # Locate values on an axis
