@@ -265,7 +265,7 @@ is a strong feature of `dimarray`. This applies for
 instance to along-axis operation, `take` and `put` methods, or reshaping operations.
 Additionally, `dimarray` is to my knowledge the only package supporting automatic
 dimension broadcasting for any two operands. This has proven useful to write pretty
-generic code with array of various shape which all share a few dimensions `time`, 
+generic code with arrays of various shape which all share a few dimensions `time`, 
 `lon`, `lat`, `model`, `scenario`, `sample`, `percentile` and so on.
 
 - **iris** 
