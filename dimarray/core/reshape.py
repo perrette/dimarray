@@ -183,8 +183,18 @@ def repeat(self, values, axis=None):
 
     Examples:
     --------
-    >>> a = da.DimArray.from_kw(np.arange(3), time=[1950., 1951., 1952.])
-    >>> a2d = a.reshape(('time','lon')) # lon is now singleton dimension
+    >>> a = da.DimArray(np.arange(3), labels = [[1950., 1951., 1952.]], dims=('time',))
+    >>> a2d = a.newaxis('lon', pos=1) # lon is now singleton dimension
+
+    >>> a2d.repeat(2, axis="lon")  
+    dimarray: 6 non-null elements (0 null)
+    dimensions: 'time', 'lon'
+    0 / time (3): 1950.0 to 1952.0
+    1 / lon (2): 0 to 1
+    array([[0, 0],
+           [1, 1],
+           [2, 2]])
+
     >>> a2d.repeat([30., 50.], axis="lon")  
     dimarray: 6 non-null elements (0 null)
     dimensions: 'time', 'lon'
@@ -482,8 +492,9 @@ def group(self, *dims, **kwargs):
 	- dims: list or tuple of axis names
 	- reverse [False]: if True, reverse behaviour: dims are interpreted as 
 	    the dimensions to keep, and all the other dimensions are grouped
-	- insert: position where to insert the grouped axis 
-		  (by default, any grouped dimensions is placed as first axis)
+	- insert, optional: position where to insert the grouped axis 
+		  (by default, any grouped dimension is inserted at 
+		the position of the first axis involved in grouping)
 
     Output:
 	- DimArray appropriately reshaped, with collapsed dimensions as first axis (tuples)
@@ -552,17 +563,17 @@ def group(self, *dims, **kwargs):
     array([  5.5,  17.5])
     """
     reverse= kwargs.pop('reverse',False)
-    insert = kwargs.pop('insert', 0)
-    #insert = kwargs.pop('insert', None)
+    #insert = kwargs.pop('insert', 0)
+    insert = kwargs.pop('insert', None)
     assert len(kwargs) == 0, "invalid arguments: "+repr(kwargs.keys())
 
-    re_order = False
+    reorder = False # internal flag to indicate the need to reorder dimensions
 
     # from variable list to tuple
     if len(dims) == 1 and type(dims[0]) in (list, tuple, set):
 	dims = dims[0]
 	if type(dims) is set:
-	    re_order = True
+	    reorder = True
 
     if len(dims) == 0: 
 	raise ValueError("dims must have length > 0")
@@ -578,21 +589,8 @@ def group(self, *dims, **kwargs):
     if reverse:
 	dims = [d for d in self.dims if d not in dims]
 
-#    # check the 
-#    if not set(names).issubset(self.dims):
-#	raise ValueError("dimensions to group must be a subset of existing dimensions")
-
-#    # if 
-#    if len(dims) == 1:
-#	if self.dims[insert] != dims[0]:
-#	    newdims = [d for d in self.dims if d != dims[0]]
-#	    newdims = newdims[:insert] + list(dims) + newdims[insert:]
-#	    self = self.transpose(newdims)
-#	return self
-#	#raise ValueError("cannot group less than 2 dimensions")
-
     # reorder dimensions to group and convert to tuple
-    if re_order: # only if provided as set
+    if reorder: # only if provided as set
 	dims = [d for d in self.dims if d in dims] # do not reorder, this may matter
     dims = tuple(dims)
 

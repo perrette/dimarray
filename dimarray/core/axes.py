@@ -446,7 +446,14 @@ class Axes(list):
 
     @staticmethod
     def _init(*args, **kwargs):
-	return _init_axes(*args, **kwargs)
+	# try to catch errors one level higher
+	try:
+	    axes = _init_axes(*args, **kwargs)
+	except TypeError, msg:
+	    raise TypeError(msg)
+	except ValueError, msg:
+	    raise ValueError(msg)
+	return axes
 
     @classmethod
     def from_tuples(cls, *tuples_name_values):
@@ -454,7 +461,7 @@ class Axes(list):
 
 	Axes.from_tuples(('lat',mylat), ('lon',mylon)) 
 	"""
-	assert type(tuples_name_values[0]) is tuple, "need to provide a list of `name, values` tuples !"
+	assert np.all([type(tup) is tuple for tup in tuples_name_values]), "need to provide a list of `name, values` tuples !"
 
 	newaxes = cls()
 	for nm, values in tuples_name_values:
@@ -637,20 +644,19 @@ def _init_axes(axes=None, dims=None, labels=None, shape=None, raise_warning=True
 	return Axes()
 
     # list of Axis objects
-    elif isinstance(axes[0], Axis):
+    elif np.all([isinstance(ax, Axis) for ax in axes]):
 	axes = Axes(axes)
 
     # (name, values) tuples
-    elif isinstance(axes[0], tuple):
+    elif np.all([isinstance(ax, tuple) for ax in axes]):
 	axes = Axes.from_tuples(*axes)
 
     # axes contains only axis values, with names possibly provided in `dims=`
-    #elif is_array_equiv(axes[0]): 
-    elif type(axes[0]) in (list, np.ndarray): 
+    elif np.all([type(ax) in (list, np.ndarray) for ax in axes]):
 	axes = Axes.from_arrays(axes, dims=dims)
 
     # axes only cointain axis labels
-    elif type(axes[0]) in (str, unicode):
+    elif np.all([type(ax) in (str, unicode) for ax in axes]):
 	axes = Axes.from_shape(shape, dims=axes)
 
     else:
