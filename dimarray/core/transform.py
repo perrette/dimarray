@@ -350,7 +350,7 @@ def argmax(obj, axis=None, skipna=False):
 
 @format_doc(default_axis=-1)
 @format_doc(axis=_doc_axis)
-def diff(obj, n=1, axis=-1, scheme="backward", keepaxis=False):
+def diff(obj, axis=-1, scheme="backward", keepaxis=False, n=1):
     """ Analogous to numpy's diff
 
     Calculate the n-th order discrete difference along given axis.
@@ -361,8 +361,6 @@ def diff(obj, n=1, axis=-1, scheme="backward", keepaxis=False):
 
     Parameters
     ----------
-    n : int, optional
-	The number of times values are differenced.
     {axis}
 
     scheme: str, determines the values of the resulting axis
@@ -374,13 +372,54 @@ def diff(obj, n=1, axis=-1, scheme="backward", keepaxis=False):
     keepaxis: bool, if True, keep the initial axis by padding with NaNs
 	      Only compatible with "forward" or "backward" differences
 
-    rate    : bool, default `False`: use axis spacing: TO DO
+    n : int, optional
+	The number of times values are differenced.
 
     Returns
     -------
     diff : DimArray
 	The `n` order differences. The shape of the output is the same as `a`
 	except along `axis` where the dimension is smaller by `n`.
+
+    Examples:
+    ---------
+
+    Create some example data
+    >>> v = da.DimArray([1,2,3,4], ('time', np.arange(1950,1954)), dtype=float)
+    >>> s = v.cumsum()
+    >>> s 
+    dimarray: 4 non-null elements (0 null)
+    dimensions: 'time'
+    0 / time (4): 1950 to 1953
+    array([  1.,   3.,   6.,  10.])
+
+    `diff` reduces axis size by one, by default
+    >>> s.diff()
+    dimarray: 3 non-null elements (0 null)
+    dimensions: 'time'
+    0 / time (3): 1951 to 1953
+    array([ 2.,  3.,  4.])
+
+    The `keepaxis=` parameter fills array with `nan` where necessary to keep the axis unchanged. Default is backward differencing: `diff[i] = v[i] - v[i-1]`.
+    >>> s.diff(keepaxis=True)
+    dimarray: 3 non-null elements (1 null)
+    dimensions: 'time'
+    0 / time (4): 1950 to 1953
+    array([ nan,   2.,   3.,   4.])
+
+    But other schemes are available to control how the new axis is defined: `backward` (default), `forward` and even `centered`
+    >>> s.diff(keepaxis=True, scheme="forward") # diff[i] = v[i+1] - v[i]
+    dimarray: 3 non-null elements (1 null)
+    dimensions: 'time'
+    0 / time (4): 1950 to 1953
+    array([  2.,   3.,   4.,  nan])
+
+    The `keepaxis=True` option is invalid with the `centered` scheme, since every axis value is modified by definition:
+    >>> s.diff(axis='time', scheme='centered')
+    dimarray: 3 non-null elements (0 null)
+    dimensions: 'time'
+    0 / time (3): 1950.5 to 1952.5
+    array([ 2.,  3.,  4.])
     """
     # If `axis` is None (operations on the flattened array), just returns the numpy array
     if axis is None:
