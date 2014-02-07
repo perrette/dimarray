@@ -72,7 +72,7 @@ but integer-index is always possible via ``ix`` toogle between
 >>> a.ix[1, 1]
 5.0
 
-Numpy **transformations** are defined, and now accept axis name:
+Standard numpy **transformations** are defined, and now accept axis name:
 
 >>> a.mean(axis='dim0')
 dimarray: 3 non-null elements (0 null)
@@ -193,7 +193,7 @@ array([  4.,  nan,   5.])
 
 
 Additional novelty includes a wealth of methods to reshape an array via 
-dimension names, such as **group**, **ungroup**, **reshape**, **transpose**,
+dimension names, such as **group**, **ungroup**, **reshape**, **transpose**, **swapaxes**
 all very useful for high-dimensional data analysis.
 
 >>> large_array = da.array(np.arange(2*2*5*2).reshape(2,2,5,2), dims=('A','B','C','D'))
