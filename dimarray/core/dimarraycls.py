@@ -632,8 +632,8 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     #
     # change `arg` to `loc`, suggesting change in indexing behaviour
     #
-    locmin = _transform.locmin
-    locmax = _transform.locmax
+    argmin = _transform.argmin
+    argmax = _transform.argmax
 
     cumsum = _transform.cumsum
     cumprod = _transform.cumprod

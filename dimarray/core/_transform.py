@@ -300,7 +300,7 @@ def cumprod(a, axis=-1, skipna=False):
 #
 @format_doc(default_axis="None")
 @format_doc(axis=_doc_axis, skipna=_doc_skipna)
-def locmin(obj, axis=None, skipna=False):
+def argmin(obj, axis=None, skipna=False):
     """ similar to numpy's argmin, but return axis values instead of integer position
 
     Parameters:
@@ -323,7 +323,7 @@ def locmin(obj, axis=None, skipna=False):
 
 @format_doc(default_axis="None")
 @format_doc(axis=_doc_axis, skipna=_doc_skipna)
-def locmax(obj, axis=None, skipna=False):
+def argmax(obj, axis=None, skipna=False):
     """ similar to numpy's argmax, but return axis values instead of integer position
 
     Parameters:
