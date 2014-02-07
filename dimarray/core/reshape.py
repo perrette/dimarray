@@ -421,17 +421,17 @@ def group(self, *dims, **kwargs):
     if type(dims) not in (tuple, list, set):
 	raise TypeError("dimensions to group must be a list or a tuple  or a set")
 
+    # make sure dims contains axis names
+    _ , dims = self._get_axes_info(dims)
+
     # reverse? mirror call
     assert type(reverse) is bool, "reverse must be a boolean !"
     if reverse:
 	dims = [d for d in self.dims if d not in dims]
 
-    # from integer to str names
-    _ , names = self._get_axes_info(dims)
-
-    # check the 
-    if not set(names).issubset(self.dims):
-	raise ValueError("dimensions to group must be a subset of existing dimensions")
+#    # check the 
+#    if not set(names).issubset(self.dims):
+#	raise ValueError("dimensions to group must be a subset of existing dimensions")
 
 #    # if 
 #    if len(dims) == 1:
