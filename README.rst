@@ -193,8 +193,9 @@ dimensions: 'time'
 array([  4.,  nan,   5.])
 
 
-Additional novelty includes methods to reshaping an array in easy ways,
-very useful for high-dimensional data analysis.
+Additional novelty includes a wealth of methods to reshape an array via 
+dimension names, such as **group**, **ungroup**, **reshape**, **transpose**,
+all very useful for high-dimensional data analysis.
 
 >>> large_array = da.array(np.arange(2*2*5*2).reshape(2,2,5,2), dims=('A','B','C','D'))
 >>> small_array = large_array.group('A','B').group('C','D')  # same as reshape('A,B','C,D')
