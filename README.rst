@@ -262,6 +262,10 @@ name to the various methods, instead of simply axis rank. Having a focus on dime
 names and axis values instead of axis rank and position of elements along an axis
 is a strong feature of `dimarray`. This applies for
 instance to along-axis operation, `take` and `put` methods, or reshaping operations.
+Additionally, `dimarray` is to my knowledge the only package supporting automatic
+dimension broadcasting for any two operands. This has proven useful to write pretty
+generic code with array of various shape which all share a few dimensions `time`, 
+`lon`, `lat`, `model`, `scenario`, `sample`, `percentile` and so on.
 
 - **iris** 
     ...looks like a very powerful package to manipulate geospatial data with 
@@ -270,7 +274,7 @@ instance to along-axis operation, `take` and `put` methods, or reshaping operati
     In contrast, `dimarray` is more general and intuitive for python users. `dimarray`
     also comes with netCDF I/O capability and may gain a few geospatial features 
     (weighted mean for lon/lat, 360 modulo for lon, regridding, etc...) as a subpackage 
-    dimarray.geo -- and why not an interface to `iris`.
+    **dimarray.geo** -- and why not an interface to `iris`.
 
 
 Further development:
