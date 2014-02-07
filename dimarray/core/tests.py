@@ -172,11 +172,11 @@ def main(**kwargs):
     import metadata as metadata
     import dimarraycls
     import axes as axes
-    import _indexing as indexing
-    import _reshape as reshape
-    import _transform as transform
+    import indexing
+    import reshape
+    import transform
     import missingvalues as missingvalues 
-    import _operation as operation
+    import operation
     import align as align
 
     testmod(metadata, **kwargs)

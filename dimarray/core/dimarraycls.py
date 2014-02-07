@@ -10,10 +10,10 @@ from dimarray.config import Config
 from metadata import MetadataDesc
 from axes import Axis, Axes, GroupedAxis
 
-import _transform  # numpy along-axis transformations, interpolation
-import _reshape	   # change array shape and dimensions
-import _indexing   # perform slicing and indexing operations
-import _operation  # operation between DimArrays
+import transform as _transform  # numpy along-axis transformations, interpolation
+import reshape as _reshape      # change array shape and dimensions
+import indexing as _indexing    # perform slicing and indexing operations
+import operation as _operation  # operation between DimArrays
 import missingvalues # operation between DimArrays
 
 from tools import pandas_obj
@@ -642,7 +642,6 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     #
     # METHODS TO CHANGE ARRAY SHAPE AND SIZE
     #
-    #from _reshape import repeat, newaxis, transpose, reshape, broadcast, group, ungroup, squeeze
     repeat = _reshape.repeat
     newaxis = _reshape.newaxis
     squeeze = _reshape.squeeze
