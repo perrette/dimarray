@@ -99,6 +99,8 @@ dimensions: 'dim1'
 0 / dim1 (3): 0 to 2
 array([ 2.5,  3.5,  6. ])
 
+More methods to handle missing values are available, though still experimental
+at this stage, inspired by pandas: **dropna**, **setna**, **fillna**
 
 Having axis name and axis values allow on-the-fly **axis alignment** and
 **dimension broadcasting** in basic operations (addition, etc...), so
