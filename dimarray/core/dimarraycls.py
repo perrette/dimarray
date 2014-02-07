@@ -1168,6 +1168,13 @@ def array_kw(*args, **kwargs):
 
 array_kw.__doc__ = DimArray.from_kw.__doc__
 
+# 
+# EXPERIMENTAL: STILL THINKING ABOUT WHAT IS THE BEST SYNTAX
+# array
+# join
+# from_arrays
+# 
+
 def array(data, *args, **kwargs):
     """ wrapper for DimArray and DimArray.from_arrays
 
@@ -1175,7 +1182,6 @@ def array(data, *args, **kwargs):
 	  list or dict of DimArray objects ==> call DimArray.from_arrays
 
     *args, **kwargs: variable argument for DimArray or DimArray.from_arrays
-
 
     See also:
     DimArray, DimArray.from_arrays
@@ -1193,9 +1199,10 @@ def array(data, *args, **kwargs):
 join = DimArray.from_arrays
 
 # handy aliases
-def from_arrays(*args, **kwargs):
-    warnings.warn(FutureWarning('from_arrays is deprecated, use da.array() instead'))
-    return DimArray.from_arrays(*args, **kwargs) 
+#def from_arrays(*args, **kwargs):
+#    warnings.warn(FutureWarning('from_arrays is deprecated, use da.array() instead'))
+#    return DimArray.from_arrays(*args, **kwargs) 
+from_arrays = DimArray.from_arrays(*args, **kwargs) 
 
 from_pandas = DimArray.from_pandas
 
