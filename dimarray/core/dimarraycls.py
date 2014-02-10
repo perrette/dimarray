@@ -664,6 +664,7 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     #
     reindex_axis = _indexing.reindex_axis
     reindex_like = _indexing.reindex_like
+    sort_axis = _indexing.sort_axis
 
     # Drop missing values
     dropna = missingvalues.dropna

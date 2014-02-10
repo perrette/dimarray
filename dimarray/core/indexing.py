@@ -875,4 +875,82 @@ def reindex_like(self, other, method='exact', **kwargs):
     return _reindex_axes(self, axes, method=method, **kwargs)
 
 
+def sort_axis(a, axis=0, key=None):
+    """ sort an axis 
+
+    parameters:
+    -----------
+    a : DimArray (this argument is pre-assigned when using as bound method)
+    axis, optional: axis by position (int) or name (str) (default: 0)
+    key, optional: function that is called on each axis label and 
+	whose return value is used for sorting instead of axis label.
+	Any other object with __getitem__ attribute may also be used as key,
+	such as a dictionary.
+	If None (the default), axis label is used for sorting.
+
+    returns:
+    --------
+    sorted: new DimArray with sorted axis
+
+    Examples:
+    ---------
+    Basic
+    >>> a = DimArray([10,20,30], labels=[2, 0, 1])
+    >>> a
+    dimarray: 3 non-null elements (0 null)
+    dimensions: 'x0'
+    0 / x0 (3): 2 to 1
+    array([10, 20, 30])
+
+    >>> a.sort_axis()
+    dimarray: 3 non-null elements (0 null)
+    dimensions: 'x0'
+    0 / x0 (3): 0 to 2
+    array([20, 30, 10])
+
+    >>> a.sort_axis(key=lambda x: -x)
+    dimarray: 3 non-null elements (0 null)
+    dimensions: 'x0'
+    0 / x0 (3): 2 to 0
+    array([10, 30, 20])
+
+    Multi-dimensional
+    >>> a = DimArray([[10,20,30],[40,50,60]], labels=[[0, 1], ['a','c','b']])
+    >>> a.sort_axis(axis=1)
+    dimarray: 6 non-null elements (0 null)
+    dimensions: 'x0', 'x1'
+    0 / x0 (2): 0 to 1
+    1 / x1 (3): a to c
+    array([[10, 30, 20],
+           [40, 60, 50]])
+    """
+    index = a.axes[axis].values
+
+    # convert key to a function
+    if not hasattr(key, '__call__') and hasattr(key, '__getitem__'):
+	key = key.__getitem__
+
+    if key is None:
+	ii = index.argsort()
+    else:
+	ii = argsort(index, key)
+
+    return a.take(ii, axis=axis, indexing='position')
+
+def argsort(seq, key=None):
+    """ equivalent of numpy's argsort in basic python
+
+    Modified after http://stackoverflow.com/questions/3382352/equivalent-of-numpy-argsort-in-basic-python
+
+    >>> a = ['a', 'd', 'c']
+    >>> argsort(a)
+    [0, 2, 1]
+    >>> argsort(a, key=lambda x: {'a':2,'c':1,'d':0}[x])
+    [1, 2, 0]
+    """
+    if key is None:
+	_key = seq.__getitem__
+    else:
+	_key = lambda x: key(seq.__getitem__(x))
+    return sorted(range(len(seq)), key=_key)
 
