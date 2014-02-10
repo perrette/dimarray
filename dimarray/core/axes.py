@@ -538,18 +538,22 @@ class Axes(list):
 
 	return axes
 
-    def __getitem__(self, item):
+    def __getitem__(self, k):
 	""" get an axis by integer or name
 	"""
-	if type(item) in [str, unicode, tuple, np.string_]:
-	    item = self.get_idx(item)
+	k = self.get_idx(k)
 
-	# confusing
-	#if np.iterable(item):
-	#    return Axes([self[i] for i in item])
-
-	return list.__getitem__(self, item)
+	return list.__getitem__(self, k)
 	#return super(Axes,self)[item]
+
+    def __setitem__(self, k, item):
+	""" get an axis by integer or name
+	"""
+	k = self.get_idx(k)
+	if not isinstance(item, Axis):
+	    raise TypeError("can only set axis type, got: {}".format(item))
+
+	return list.__setitem__(self, k, item)
 
     def __repr__(self):
 	""" string representation
@@ -575,8 +579,10 @@ class Axes(list):
 	""" always return axis integer location
 	"""
 	# if axis is already an integer, just return it
-	if type(axis) is int:
+	if type(axis) in (int, np.int_, np.dtype(int)):
 	    return axis
+
+	assert type(axis) in [str, unicode, tuple, np.string_], "unexpected axis index: {}, {}".format(type(axis), axis)
 
 	dims = [ax.name for ax in self]
 
