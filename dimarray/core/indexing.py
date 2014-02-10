@@ -152,7 +152,7 @@ def size(self):
     return np.size(self.values)
 
 
-def take(obj, indices, axis=0, indexing="values", tol=TOLERANCE, keepdims=False, broadcast_arrays=True):
+def take(obj, indices, axis=0, indexing="values", tol=TOLERANCE, keepdims=False, broadcast_arrays=True, mode='raise'):
     """ Retrieve values from a DimArray
 
     input:
@@ -181,6 +181,9 @@ def take(obj, indices, axis=0, indexing="values", tol=TOLERANCE, keepdims=False,
 	    
 	    if broadcast_arrays is False, the result will be a 3-D array of shape 2 x 2 x 2
 	    if broadcast_arrays is True, the result will be a 1-D array of size 2
+
+	- mode: "raise", "clip", "wrap"
+	    analogous to numpy.ndarray.take's mode parameter, only valid (for now) if indexing is 'position'
 
     output:
 	- DimArray object or python built-in type, consistently with numpy slicing
@@ -281,16 +284,21 @@ def take(obj, indices, axis=0, indexing="values", tol=TOLERANCE, keepdims=False,
     >>> v.values[[0,1],:,[0,0]].shape # a proof of it
     (2, 3)
 
-    # Logical indexing
     >>> a = DimArray(np.arange(2*3).reshape(2,3))
+
     >>> a[a > 3] # FULL ARRAY: return a numpy array in n-d case (at least for now)
+    dimarray: 2 non-null elements (0 null)
+    dimensions: 'x0,x1'
+    0 / x0,x1 (2): (1, 1) to (1, 2)
     array([4, 5])
+
     >>> a[a.x0 > 0] # SINGLE AXIS: only first axis
     dimarray: 3 non-null elements (0 null)
     dimensions: 'x0', 'x1'
     0 / x0 (1): 1 to 1
     1 / x1 (3): 0 to 2
     array([[3, 4, 5]])
+
     >>> a[:, a.x1 > 0] # only second axis 
     dimarray: 4 non-null elements (0 null)
     dimensions: 'x0', 'x1'
@@ -298,6 +306,7 @@ def take(obj, indices, axis=0, indexing="values", tol=TOLERANCE, keepdims=False,
     1 / x1 (2): 1 to 2
     array([[1, 2],
 	   [4, 5]])
+
     >>> a.box[a.x0 > 0, a.x1 > 0]  # AXIS-BASED (need `box` to prevent broadcasting)
     dimarray: 2 non-null elements (0 null)
     dimensions: 'x0', 'x1'
@@ -324,10 +333,20 @@ def take(obj, indices, axis=0, indexing="values", tol=TOLERANCE, keepdims=False,
     assert indexing in ("position", "values"), "invalid mode: "+repr(indexing)
 
     # SPECIAL CASE: full scale boolean array
-    # for now, just return the (numpy) flattened array as numpy would do
-    # TODO?: return a 1-D DimArray with tupled axis values
     if obj.ndim > 1 and is_boolean_index(indices, obj.shape):
-	return obj.values[np.asarray(indices)]
+	indices = np.where(np.asarray(indices))
+	newvalues = obj.values[indices]
+
+	# return a scalar if size is 1
+	if np.size(newvalues) <= 1:
+	    return newvalues
+
+	# or return a DimArray with axes as tuple
+	newaxisvalues = zip(*[obj.axes[i].values[ii] for i, ii in enumerate(indices)])
+	newaxisname = ",".join(obj.dims)
+	newaxis = Axis(newaxisvalues, newaxisname)
+	newobj = obj._constructor(newvalues, [newaxis], **obj._metadata)
+	return newobj
 
     indices = _fill_ellipsis(indices, obj.ndim)
 
