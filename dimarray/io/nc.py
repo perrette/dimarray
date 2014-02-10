@@ -225,17 +225,19 @@ def read_dataset(f, nms=None, *args, **kwargs):
 def write_obj(f, obj, *args, **kwargs):
     """  call write_dataset or write_variable
     """
-    import core
-    if isinstance(obj, core.DimArray):
+    if isinstance(obj, DimArray):
 	write_variable(f, obj, *args, **kwargs)
 
-    else:
+    elif isinstance(obj, Dataset):
 	write_dataset(f, obj, *args, **kwargs)
 
-def write_dataset(f, obj, mode='w-'):
+    else:
+	raise TypeError("only DimArray or Dataset types allowed, got {}:{}".format(type(obj), obj))
+
+def write_dataset(f, obj, mode='w-', **kwargs):
     """ write object to file
     """
-    f, close = check_file(f, mode)
+    f, close = check_file(f, mode, **kwargs)
     nms = obj.keys()
     for nm in obj:
 	write_variable(f, obj[nm], nm)
@@ -283,7 +285,7 @@ def createVariable(f, name, axes=None, dtype=float, **kwargs):
 
 #def write_attributes(f, obj):
 
-def write_variable(f, obj, name=None, mode='a+', indices=None, axis=0, verbose=False, **kwargs):
+def write_variable(f, obj, name=None, mode='a+', format='NETCDF4', indices=None, axis=0, verbose=False, **kwargs):
     """ save DimArray instance to file
 
     f	: file name or netCDF file handle
@@ -295,7 +297,7 @@ def write_variable(f, obj, name=None, mode='a+', indices=None, axis=0, verbose=F
     assert name, "invalid variable name !"
 
     # control wether file name or netCDF handle
-    f, close = check_file(f, mode=mode, verbose=verbose)
+    f, close = check_file(f, mode=mode, verbose=verbose, format=format)
 
     # create variable if necessary
     if name not in f.variables:
@@ -359,7 +361,7 @@ def scan_var(f, v, **verb):
     return dims, shape
 
 
-def check_file(f, mode='r', verbose=True):
+def check_file(f, mode='r', verbose=True, format='NETCDF4'):
     """ open a netCDF4 file
 
     mode: changed from original 'r','w','r' & clobber option:
@@ -369,6 +371,9 @@ def check_file(f, mode='r', verbose=True):
     'w-': create new file, but raise Exception if file is present (clobber=False)
     'a' : append, raise Exception if file is not present
     'a+': append if file is present, otherwise create
+
+    format: passed to netCDF4.Dataset, only relevatn when mode = 'w', 'w-', 'a+'
+	'NETCDF4', 'NETCDF4_CLASSIC', 'NETCDF3_CLASSIC', 'NETCDF3_64BIT'
     """
     close = False
 
@@ -393,7 +398,7 @@ def check_file(f, mode='r', verbose=True):
 	    os.remove(fname)
 
 	try:
-	    f = nc.Dataset(fname, mode, clobber=clobber)
+	    f = nc.Dataset(fname, mode, clobber=clobber, format=format)
 
 	except UserWarning, msg:
 	    print msg
