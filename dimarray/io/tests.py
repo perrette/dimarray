@@ -21,7 +21,7 @@ def test_ncio():
     data = read_nc(fname)
     assert(np.all(data['a'] == a))
     assert(np.all(data['b'] == b))
-    ds = da.Dataset([a,b],keys=['a','b'])
+    ds = da.Dataset(a=a, b=b)
     for k in ds:
 	assert(np.all(ds[k] == data[k]))
 

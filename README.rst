@@ -144,7 +144,7 @@ array([[  2.,   4.,   6.],
 As a commodity, the **``Dataset``** class is an ordered dictionary of
 DimArrays which also maintains axis aligment
 
->>> dataset = Dataset({'data':data, 'weights':weights,'incomplete_timeseries':incomplete_timeseries})
+>>> dataset = Dataset(data=data, weights=weights, incomplete_timeseries=incomplete_timeseries)
 >>> dataset
 Dataset of 3 variables
 dimensions: 'items', 'time'

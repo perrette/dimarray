@@ -14,38 +14,37 @@ class Dataset(odict):
 
     _metadata = MetadataDesc(exclude=['axes'])
 
-    def __init__(self, data=None, keys=None, axes=None):
+    def __init__(self, *args, **kwargs):
 	""" initialize a dataset from a set of objects of varying dimensions
 
 	data  : dict of DimArrays or list of named DimArrays or Axes object
 	keys  : keys to order data if provided as dict, or to name data if list
 	"""
-	assert data is None or axes is None, "can't provide both data and axes"
-	#assert keys is None or type(keys) in (list, np.ndarray, tuple) and np.isscalar(keys[0]), "pb with keys"
-	assert keys is None or np.any([isinstance(keys, type_) for type_ in (list, np.ndarray, tuple)]) and np.isscalar(keys[0]), "pb with keys"
+	assert not {'axes','keys'}.issubset(kwargs.keys()) # just to check bugs due to back-compat ==> TO BE REMOVED AFTER DEBUGGING
+
+	# check input arguments: same init as odict
+	kwargs = odict(*args, **kwargs)
 
 	# initialize an ordered dictionary
 	super(Dataset, self).__init__()
 
 	# Basic initialization
-	if axes is None:
-	    axes = Axes()
-	else:
-	    axes = Axes._init(axes)
-	self.axes = axes
+	self.axes = Axes()
 
-	# If initialized from data
-	if data is not None:
+	values = kwargs.values()
+	keys = kwargs.keys()
 
-	    # First, get a list of named DataFrames
-	    data = _get_list_arrays(data, keys)
+        # Check everything is a DimArray
+	for key, value in zip(keys, values):
+	    if not isinstance(value, DimArray):
+		raise TypeError("A Dataset can only store DimArray instances, got {}: {}".format(key, value))
 
-	    # Align objects
-	    data = align_axes(*data)
+	# Align objects
+	values = align_axes(*values)
 
-	    # Append object (will automatically update self.axes)
-	    for v in data:
-		self[v.name] = v
+	# Append object (will automatically update self.axes)
+	for key, value in zip(keys, values):
+	    self[key] = value
 
     @property
     def dims(self):
@@ -90,23 +89,19 @@ class Dataset(odict):
 
 	Tests:
 	-----
-	>>> axes = da.Axes.from_tuples(('time',[1, 2, 3]))
-	>>> ds = Dataset(axes=axes)
+#	>>> axes = da.Axes.from_tuples(('time',[1, 2, 3]))
+	>>> ds = Dataset()
 	>>> ds
 	Dataset of 0 variables
-	dimensions: 'time'
-	0 / time (3): 1 to 3
+	dimensions: 
+	<BLANKLINE>
 	>>> a = DimArray([0, 1, 2], dims=('time',))
-	>>> ds['yo'] = a # doctest: +SKIP
-	ValueError: axes values do not match, align data first.			    
-	Dataset: time(3)=1:3, 
-	Got: time(3)=0:2
-	>>> ds['yo'] = a.reindex_like(ds)
+	>>> ds['yo'] = a 
 	>>> ds['yo']
-	dimarray: 2 non-null elements (1 null)
+	dimarray: 3 non-null elements (0 null)
 	dimensions: 'time'
-	0 / time (3): 1 to 3
-	array([  1.,   2.,  nan])
+	0 / time (3): 0 to 2
+	array([0, 1, 2])
 	"""
 	if not isinstance(val, DimArray):
 	    raise TypeError("can only append DimArray instances")
@@ -144,12 +139,10 @@ class Dataset(odict):
 
     read = read_nc
 
-    def to_array(self, axis=None):
+    def to_array(self, axis=None, keys=None, _constructor=None):
 	""" Convert to DimArray
 
 	axis  : axis name, by default "unnamed"
-
-	NOTE: will raise an error if axis name already present in the data
 	"""
 	#if names is not None or dims is not None:
 	#    return self.subset(names=names, dims=dims).to_array()
@@ -166,19 +159,24 @@ class Dataset(odict):
 	    raise ValueError("please provide an axis name which does not \
 		    already exist in Dataset")
 
+	if keys is None:
+	    keys = self.keys()
+
 	# align all variables to the same dimensions
 	data = odict()
-	for k in self:
+
+	for k in keys:
 	    data[k] = self[k].reshape(self.dims).broadcast(self.axes)
 
 	# make it a numpy array
-	data = [data[k].values for k in self]
+	data = [data[k].values for k in keys]
 	data = np.array(data)
 
 	# determine axes
-	axes = [Axis(self.keys(), axis)] + self.axes 
+	axes = [Axis(keys, axis)] + self.axes 
 
-	return DimArray(data, axes)
+	if _constructor is None: _constructor = DimArray
+	return _constructor(data, axes)
 
 #    def subset(self, names=None, dims=None):
 #	""" return a subset of the dictionary
@@ -255,19 +253,19 @@ def test():
     array([  0.,   1.,   2.,   3.,   4.,  nan,  nan,  nan,  nan,  nan])
     >>> data.to_array(axis='items')
     dimarray: 12250 non-null elements (1750 null)
-    dimensions: 'items', 'time', 'lon', 'lat', 'source'
-    0 / items (4): ts to test
-    1 / time (10): 1950 to 1959
-    2 / lon (50): -180.0 to 180.0
-    3 / lat (7): -90.0 to 90.0
+    dimensions: 'items', 'lon', 'lat', 'time', 'source'
+    0 / items (4): mymap to test
+    1 / lon (50): -180.0 to 180.0
+    2 / lat (7): -90.0 to 90.0
+    3 / time (10): 1950 to 1959
     4 / source (1): greenland to greenland
     array(...)
     """
     import dimarray as da
     axes = da.Axes.from_tuples(('time',[1, 2, 3]))
-    ds = da.Dataset(axes=axes)
+    ds = da.Dataset()
     a = da.DimArray([[0, 1],[2, 3]], dims=('time','items'))
-    ds['yo'] = a.reindex_like(ds)
+    ds['yo'] = a.reindex_like(axes)
 
     np.random.seed(0)
     mymap = da.DimArray.from_kw(np.random.randn(50,7), lon=np.linspace(-180,180,50), lat=np.linspace(-90,90,7))
@@ -276,7 +274,7 @@ def test():
 
     # Define a Dataset made of several variables
     data = da.Dataset({'ts':ts, 'ts2':ts2, 'mymap':mymap})
-    data = da.Dataset([ts, ts2, mymap], keys=['ts','ts2','mymap'])
+    #data = da.Dataset([ts, ts2, mymap], keys=['ts','ts2','mymap'])
 
     assert np.all(data['ts'].time == data['ts2'].time),"Dataset: pb data alignment" 
 

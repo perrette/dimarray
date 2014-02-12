@@ -932,9 +932,37 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 	       [[ nan,   1.],
 		[  2.,   3.]]])
 	"""
+	from dimarray.dataset import Dataset, odict # 
+	#data = _get_list_arrays(data, keys)	
+
+	if not isinstance(data, dict):
+	    assert isinstance(data, list), "DimArray.from_arrays only acceps dict and list, got {}: {}".format(type(data), data)
+	    if keys is None:
+		keys = []
+		for i, v in enumerate(data):
+		    assert isinstance(v, DimArray), "DimArray.from_arrays only acceps dict and list of DimArray objects, got {}: {}".format(type(v), v)
+		    if not hasattr(v, "name") or v.name is None:
+			name = "v%i"%(i)
+
+		    else:
+			name = v.name
+		    keys.append(name)
+	    data = {keys[i]:v for i, v in enumerate(data)}
+	
+	return cls.from_dict(data, keys=keys, axis=axis)
+
+    @classmethod
+    def from_dict(cls, dict_, keys=None, axis=None):
+	""" Initialize a DimArray for a dictionary of DimArrays
+
+	keys, optional: re-order the keys 
+	axis, optional: give a name to the keys axis
+	"""
+	assert isinstance(dict_, dict)
 	from dimarray.dataset import Dataset
-	data = Dataset(data, keys=keys)
-	return data.to_array(axis=axis)
+	if keys is None: keys = dict_.keys()
+	data = Dataset(dict_)
+	return data.to_array(axis=axis, keys=keys, _constructor=cls._constructor)
 
     @classmethod
     def from_pandas(cls, data, dims=None):

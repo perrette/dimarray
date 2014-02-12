@@ -208,7 +208,8 @@ def read_dataset(f, nms=None, *args, **kwargs):
     data = dict()
     for nm in nms:
 	data[nm] = read_variable(f, nm, *args, **kwargs)
-    data = Dataset(data, keys=nms)
+
+    data = Dataset(**data)
 
     # get dataset's metadata
     for k in f.ncattrs():
