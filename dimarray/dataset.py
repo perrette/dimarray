@@ -35,9 +35,14 @@ class Dataset(odict):
 	keys = kwargs.keys()
 
         # Check everything is a DimArray
-	for key, value in zip(keys, values):
+	#for key, value in zip(keys, values):
+	for i, key in enumerate(keys):
+	    value = values[i]
 	    if not isinstance(value, DimArray):
-		raise TypeError("A Dataset can only store DimArray instances, got {}: {}".format(key, value))
+		if np.isscalar(value):
+		    values[i] = DimArray(value)
+		else:
+		    raise TypeError("A Dataset can only store DimArray instances, got {}: {}".format(key, value))
 
 	# Align objects
 	values = align_axes(*values)
@@ -177,6 +182,62 @@ class Dataset(odict):
 
 	if _constructor is None: _constructor = DimArray
 	return _constructor(data, axes)
+
+
+    def take(self, indices, axis=0, raise_error=True, **kwargs):
+	""" analogous to DimArray's take, but for each DimArray of the Dataset
+
+	indices: scalar, or array-like, or slice
+	axis: axis name (str)
+	raise_error: raise an error if a variable does not have the desired dimension
+	**kwargs: arguments passed to the axis locator
+
+	Examples:
+	---------
+	>>> a = DimArray([1,2,3], axes=('time', [1950, 1951, 1952]))
+	>>> b = DimArray([11,22,33], axes=('time', [1951, 1952, 1953]))
+	>>> ds = Dataset(a=a, b=b)
+	>>> ds
+	Dataset of 2 variables
+	dimensions: 'time'
+	0 / time (4): 1950 to 1953
+	a: ('time',)
+	b: ('time',)
+	>>> ds.take(1951, axis='time')
+	Dataset of 2 variables
+	dimensions: 
+	<BLANKLINE>
+	a: ()
+	b: ()
+	"""
+	assert isinstance(axis, str), "axis must be a string"
+	ii = self.axes[axis].loc(indices, **kwargs)
+	newdata = self.copy() # copy the dict
+	for k in self.keys():
+	    if axis not in self[k].dims: 
+		if raise_error: 
+		    raise ValueError("{} does not have dimension {}".format(k, axis))
+		else:
+		    continue
+	    a = self[k].take(ii, axis=axis, indexing='position')
+	    if not isinstance(a, DimArray):
+		a = DimArray(a)
+	    odict.__setitem__(newdata, k, a)
+
+	# update the axis
+	newaxis = self.axes[axis][ii]
+	if type(axis) is not int: axis = self.dims.index(axis) # axis is int
+
+	# remove if axis collapsed
+	if not isinstance(newaxis, Axis):
+	    del newdata.axes[axis]
+
+	# otherwise update
+	else:
+	    newdata.axes[axis] = newaxis
+
+	return newdata
+
 
 #    def subset(self, names=None, dims=None):
 #	""" return a subset of the dictionary
