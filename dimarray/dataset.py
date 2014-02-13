@@ -230,7 +230,7 @@ class Dataset(odict):
 	for k in self.keys():
 	    if axis not in self[k].dims: 
 		if raise_error: 
-		    raise ValueError("{} does not have dimension {}".format(k, axis))
+		    raise ValueError("{} does not have dimension {} ==> set raise_error=False to keep this variable unchanged".format(k, axis))
 		else:
 		    continue
 	    a = self[k].take(ii, axis=axis, indexing='position')
