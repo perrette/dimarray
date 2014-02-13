@@ -70,7 +70,9 @@ class Dataset(odict):
 	    dims = self[nm].dims
 	    shape = self[nm].shape
 	    #print nm,":", ", ".join(dims)
-	    lines.append("{}: {}".format(nm,repr(dims)))
+	    repr_dims = repr(dims)
+	    if repr_dims == "()": repr_dims = self[nm].values
+	    lines.append("{}: {}".format(nm,repr_dims))
 	return "\n".join(lines)
 
     def __delitem__(self, item):
@@ -187,10 +189,16 @@ class Dataset(odict):
     def take(self, indices, axis=0, raise_error=True, **kwargs):
 	""" analogous to DimArray's take, but for each DimArray of the Dataset
 
+	parameters:
+	-----------
 	indices: scalar, or array-like, or slice
 	axis: axis name (str)
 	raise_error: raise an error if a variable does not have the desired dimension
-	**kwargs: arguments passed to the axis locator
+	**kwargs: arguments passed to the axis locator, similar to `take`, such as `indexing` or `keepdims`
+
+	parameters:
+	-----------
+
 
 	Examples:
 	---------
@@ -207,8 +215,14 @@ class Dataset(odict):
 	Dataset of 2 variables
 	dimensions: 
 	<BLANKLINE>
-	a: ()
-	b: ()
+	a: 2.0
+	b: 11.0
+	>>> ds.take(0, axis='time', indexing='position')
+	Dataset of 2 variables
+	dimensions: 
+	<BLANKLINE>
+	a: 1.0
+	b: nan
 	"""
 	assert isinstance(axis, str), "axis must be a string"
 	ii = self.axes[axis].loc(indices, **kwargs)
