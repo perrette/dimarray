@@ -252,6 +252,51 @@ class Dataset(odict):
 
 	return newdata
 
+    def _apply_dimarray_axis(self, funcname, *args, **kwargs):
+	""" Apply a function on every Dataset variable. 
+	
+	If the 'axis=' parameter is passed, only the variables with the required axis are called.
+	"""
+	axis = kwargs.pop('axis',None)
+	if axis is not None: axis = self.axes[axis].name
+	kwargs['axis'] = axis
+
+	d = odict(self)
+	for k in self.keys():
+	    if axis is not None and axis not in self[k].dims: 
+		continue
+	    #d[k] = self[k].apply(func, *args, **kwargs)
+	    d[k] = getattr(self[k], funcname)(*args, **kwargs)
+
+	return Dataset(d)
+
+    def mean(self, axis=0, **kwargs):
+	""" Apply transformantion on every variable of the Dataset
+
+	Examples:
+	---------
+	>>> a = DimArray([1,2,3], axes=('time', [1950, 1951, 1952]))
+	>>> b = DimArray([[11,22,33],[44,55,66]], axes=[('items',['a','b']), ('time', [1950, 1951, 1952])])
+	>>> ds = Dataset(a=a, b=b)
+	>>> ds.mean(axis='time')
+	Dataset of 2 variables
+	dimensions: 'items'
+	0 / items (2): a to b
+	a: 2.0
+	b: ('items',)
+	>>> ds.mean(axis='items')
+	Dataset of 2 variables
+	dimensions: 'time'
+	0 / time (3): 1950 to 1952
+	a: ('time',)
+	b: ('time',)
+	"""
+	return self._apply_dimarray_axis('mean', axis=axis, **kwargs)
+
+    def std(self, axis=0, **kwargs): return self._apply_dimarray_axis('std', axis=axis, **kwargs)
+    def var(self, axis=0, **kwargs): return self._apply_dimarray_axis('var', axis=axis, **kwargs)
+    def median(self, axis=0, **kwargs): return self._apply_dimarray_axis('median', axis=axis, **kwargs)
+    #def dropna(self, axis=0, **kwargs): return self._apply_dimarray_axis('dropna', axis=axis, **kwargs)
 
 #    def subset(self, names=None, dims=None):
 #	""" return a subset of the dictionary
