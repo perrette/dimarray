@@ -25,11 +25,11 @@ class Dataset(odict):
 	# check input arguments: same init as odict
 	kwargs = odict(*args, **kwargs)
 
-	# initialize an ordered dictionary
-	super(Dataset, self).__init__()
-
 	# Basic initialization
 	self.axes = Axes()
+
+	# initialize an ordered dictionary
+	super(Dataset, self).__init__()
 
 	values = kwargs.values()
 	keys = kwargs.keys()
@@ -296,6 +296,18 @@ class Dataset(odict):
     def std(self, axis=0, **kwargs): return self._apply_dimarray_axis('std', axis=axis, **kwargs)
     def var(self, axis=0, **kwargs): return self._apply_dimarray_axis('var', axis=axis, **kwargs)
     def median(self, axis=0, **kwargs): return self._apply_dimarray_axis('median', axis=axis, **kwargs)
+
+    def __getattr__(self, att):
+	""" allow access of dimensions
+	"""
+	# check for dimensions
+	if att in self.dims:
+	    ax = self.axes[att]
+	    return ax.values # return numpy array
+
+	else:
+	    raise AttributeError("{} object has no attribute {}".format(self.__class__.__name__, att))
+
     #def dropna(self, axis=0, **kwargs): return self._apply_dimarray_axis('dropna', axis=axis, **kwargs)
 
 #    def subset(self, names=None, dims=None):
