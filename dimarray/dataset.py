@@ -308,6 +308,16 @@ class Dataset(odict):
 	else:
 	    raise AttributeError("{} object has no attribute {}".format(self.__class__.__name__, att))
 
+    def to_dict(self):
+	""" export to dict
+	"""
+	return dict(self)
+
+    def to_odict(self):
+	""" export to ordered dict
+	"""
+	return odict(self)
+
     #def dropna(self, axis=0, **kwargs): return self._apply_dimarray_axis('dropna', axis=axis, **kwargs)
 
 #    def subset(self, names=None, dims=None):
