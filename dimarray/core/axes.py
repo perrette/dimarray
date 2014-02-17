@@ -338,6 +338,9 @@ class GroupedAxis(Axis):
 
     def _get_values(self):
 	# Each element of the new axis is a tuple, which makes a 2-D numpy array
+	if len(self.axes) == 1:
+	    return self.axes[0].values
+
 	aval = _flatten(*[ax.values for ax in self.axes])
 	val = np.empty(aval.shape[0], dtype=object)
 	val[:] = zip(*aval.T.tolist()) # pass a list of tuples
@@ -413,7 +416,9 @@ class GroupedAxis(Axis):
 def _flatten(*list_of_arrays):
     """ flatten a list of arrays ax1, ax2, ... to  a list of tuples [(ax1[0], ax2[0], ax3[0]..), (ax1[0], ax2[0], ax3[1]..), ...]
     """
-    assert len(list_of_arrays) > 1, "only one axis!"
+    assert len(list_of_arrays) > 0, "empty axis"
+    if len(list_of_arrays) == 1:
+	return list_of_arrays[0]
 
     kwargs = dict(indexing="ij")
     grd = np.meshgrid(*list_of_arrays, **kwargs)

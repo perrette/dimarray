@@ -119,7 +119,8 @@ def transpose(self, *dims):
 	    dims = [1,0] # numpy, 2-D case
 	elif self.ndim == 1:
 	    dims = [0]
-
+	elif self.ndim == 0:
+	    return self
 	else:
 	    raise ValueError("indicate dimensions to transpose")
 
