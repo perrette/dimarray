@@ -3,15 +3,15 @@
 import numpy as np
 import dimarray as da
 
-def percentile(a, pct, axis=0, name=None, out=None, overwrite_input=False):
+def percentile(a, pct, axis=0, newaxis=None, out=None, overwrite_input=False):
     """ calculate percentile along an axis
 
     parameters:
     -----------
     pct: float, percentile or sequence of percentiles (0< <100)
     axis, optional, default 0: axis along which to compute percentiles
-    name, optional: name of the new percentile axis, if more than one pct. 
-	By default, append "_pct" to the axis name on which the transformation
+    newaxis, optional: name of the new percentile axis, if more than one pct. 
+	By default, append "_percentile" to the axis name on which the transformation
 	is applied.
 
     out, overwrite_input: passed to numpy's percentile method (see documentation)
@@ -48,13 +48,13 @@ def percentile(a, pct, axis=0, name=None, out=None, overwrite_input=False):
 
     # pct is array-like, recreate a Dimarray
     else:
-	if name is None:
-	    name = nm + '_percentile'
-	results = da.from_arrays(results, keys=pct, axis=name)
+	if newaxis is None:
+	    newaxis = nm + '_percentile'
+	results = da.from_arrays(results, keys=pct, axis=newaxis)
 
     return results
 
-def quantile(a, q, axis=0, name=None, out=None, overwrite_input=False):
+def quantile(a, q, axis=0, newaxis=None, out=None, overwrite_input=False):
     """ Same as percentile, but provide quantiles instead 
     
     parameters: same as percentile, except than pct is replaced by q:
@@ -78,10 +78,10 @@ def quantile(a, q, axis=0, name=None, out=None, overwrite_input=False):
     array([-0.05802803,  1.66012041])
     """
     pos, nm = a._get_axis_info(axis)
-    if name is None:
-	name = nm + '_quantile'
+    if newaxis is None:
+	newaxis = nm + '_quantile'
 
-    res = percentile(a, [qi*100 for qi in q], axis=axis, name=name, out=out, overwrite_input=overwrite_input)
+    res = percentile(a, [qi*100 for qi in q], axis=axis, newaxis=newaxis, out=out, overwrite_input=overwrite_input)
 
     # change the percentile axis into quantile axis
     if not np.isscalar(q):
