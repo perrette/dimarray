@@ -9,7 +9,8 @@ import lib.transform
 from config import set_option, get_option, Config
 from core import *
 from dataset import Dataset
-from lib.transform import interp1d, interp2d, apply_recursive
+#from lib.transform import interp1d, interp2d, apply_recursive
+from lib import *
 
 try:
     from io.nc import read as read_nc, summary as summary_nc
