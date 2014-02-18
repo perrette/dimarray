@@ -6,6 +6,8 @@ import dimarray as da
 def percentile(a, pct, axis=0, name=None, out=None, overwrite_input=False):
     """ calculate percentile along an axis
 
+    parameters:
+    -----------
     pct: float, percentile or sequence of percentiles (0< <100)
     axis, optional, default 0: axis along which to compute percentiles
     name, optional: name of the new percentile axis, if more than one pct. 
@@ -13,6 +15,10 @@ def percentile(a, pct, axis=0, name=None, out=None, overwrite_input=False):
 	is applied.
 
     out, overwrite_input: passed to numpy's percentile method (see documentation)
+
+    outputs:
+    --------
+    pctiles: DimArray or scalar whose required axis has been reduced or replaced by percentiles
 
     Examples:
     ---------
@@ -51,6 +57,8 @@ def percentile(a, pct, axis=0, name=None, out=None, overwrite_input=False):
 def quantile(a, q, axis=0, name=None, out=None, overwrite_input=False):
     """ Same as percentile, but provide quantiles instead 
     
+    parameters: same as percentile, except than pct is replaced by q:
+    -----------
     q: quantile(s): must be between 0 and 1 instead of 0 and 100
 
     See help on percentile for full documentation.
