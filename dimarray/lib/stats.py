@@ -43,14 +43,16 @@ def percentile(a, pct, axis=0, newaxis=None, out=None, overwrite_input=False):
 	return results
 
     # for scalar pct, results is a numpy array. Just reduce the axis.
+    subaxes = [ax for ax in a.axes if ax.name != nm]
     if np.isscalar(pct):
-	results = da.DimArray(results, axes=[ax for ax in a.axes if ax.name != nm])
+	results = da.DimArray(results, axes=subaxes)
 
     # pct is array-like, recreate a Dimarray
     else:
 	if newaxis is None:
 	    newaxis = nm + '_percentile'
-	results = da.from_arrays(results, keys=pct, axis=newaxis)
+	results = [da.DimArray(res, axes=subaxes) for res in results] # list of DimArrays
+	results = da.from_arrays(results, keys=pct, axis=newaxis) # join in a larger DimArray
 
     return results
 
