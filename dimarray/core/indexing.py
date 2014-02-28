@@ -609,6 +609,11 @@ def put(obj, val, indices=None, axis=0, indexing="values", tol=TOLERANCE, conver
 	shp = [len(ix) for ix in indices_array] # get an idea of the shape
 
 	## ...first check that val's shape is consistent with originally required indices
+	# if DimArray, transpose to the right shape
+	if is_DimArray(val):
+	    newdims = [d for d in obj.dims if d in val.dims] + [d for d in val.dims if d not in obj.dims]
+	    val = val.transpose(newdims)
+
 	# only check for n-d array of size and dimensions > 1
 	if np.size(val) > 1 and np.ndim(val) > 1 and np.any(np.array(shp) > 1):
 	    shp1 = [d for d in shp if d > 1]
