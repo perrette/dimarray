@@ -200,6 +200,15 @@ def _apply_along_axis(values, funcname, axis=None, skipna=False, args=(), **kwar
     if np.ma.isMaskedArray(result):
 	result = result.filled(np.nan)
 
+    # numpy's median ignore NaNs as long as less than 50% ==> change that
+    if funcname == 'median' and not skipna:
+	nans = np.isnan(np.sum(values, axis=axis))
+	if np.any(nans):
+	    if np.size(result) == 1: 
+		result = np.nan
+	    else:
+		result[nans] = np.nan
+
     return result
 
 def _to_MaskedArray(values):
@@ -265,12 +274,10 @@ class _NumpyDesc(object):
 
 	return newmethod
 
-# basic, unmodified transforms
-#def median(a, axis=None, skipna=False):
-#    #return _apply_along_axis(values, funcname, axis=None, skipna=False, args=(), **kwargs):
-#    return apply_along_axis(a, 'median', axis=axis, skipna=skipna)
-
 median = _NumpyDesc("median")
+
+# basic, unmodified transforms
+
 prod = _NumpyDesc("prod")
 sum  = _NumpyDesc("sum")
 
@@ -553,8 +560,8 @@ def weighted_mean(obj, axis=None, skipna=False, weights='axis', dtype=None, out=
 	return apply_along_axis(obj, "mean", axis=axis, skipna=skipna, out=out, dtype=dtype)
 
     # weighted mean
-    sum_values = apply_along_axis(obj*weights, "sum", axis=axis, skipna=skipna, dtype=dtype, out=out)
-    sum_weights = apply_along_axis(weights, "sum", axis=axis, skipna=skipna, dtype=dtype)
+    sum_values = apply_along_axis(obj*weights, "sum", axis=axis, skipna=skipna)
+    sum_weights = apply_along_axis(weights, "sum", axis=axis, skipna=skipna)
     return sum_values / (sum_weights + 0.)
 
 def weighted_var(obj, axis=None, skipna=False, weights="axis", ddof=0, dtype=None, out=None):

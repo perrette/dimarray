@@ -91,7 +91,7 @@ def find_indices_coordinates(lat, lon, lats, lons, lons_lims = None, mask = None
     return LonLatGrid(lons, lats, lon0 = lons_lims[0]).locate_point(lon, lat, mask=mask, maxdist=search_radius)
 
 
-def rectify_longitude(lon, lon0=0):
+def rectify_longitude(lon, lon0=0, sort=True):
     """ change the longitude to a particular reference 
 
     input:
@@ -110,8 +110,12 @@ def rectify_longitude(lon, lon0=0):
 	lon = lon.copy()
 	lon[lon<lon0] += 360
 	lon[lon>lon0+360] -= 360
-	ii = np.argsort(lon)
-	lon = lon[ii]
+
+	# Re-sort the longitude axis
+	if sort:
+	    lonf = lon.flatten()
+	    ii = np.argsort(lonf)
+	    lon[:] = lonf[ii].reshape(lon.shape)
 
     return lon
 
@@ -125,12 +129,19 @@ def rectify_longitude_data(lon, data, lon0):
     output:
 	lon: longitude on the domain [lon0, lon0+360]
     """
+    assert lon.ndim == 1, "must be 1-D lon data"
+    assert data.ndim in [1,2], "must be 1-D or 2-D data"
+
     lon = lon.copy()
     lon[lon<lon0] += 360
     lon[lon>lon0+360] -= 360
     ii = np.argsort(lon)
     lon = lon[ii]
-    data = data[:,ii]
+
+    if data.ndim == 1:
+	data = data[ii]
+    else:
+	data = data[:,ii]
 
     return lon, data
 

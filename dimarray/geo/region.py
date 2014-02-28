@@ -1,8 +1,10 @@
 """ Region object to extract data from netcdf
 """
 
+from copy import copy
 import numpy as np
 from grid import rectify_longitude, rectify_longitude_data, LonLatGrid
+from mpl_toolkits.basemap import interp
 
 __all__ = ["World","Point","BoxRegion","drawbox","extract"] # from region import *
 
@@ -139,6 +141,148 @@ def get_lon0(*lons):
 
     return lon0
 
+class Polygon(Region):
+    """
+    """
+    def __init__(self, lon, lat, lon0=None):
+	self.coords = lon, lat
+	if lon0 is None:
+	    lon0 = get_lon0(*lon)
+	self.lon0 = lon0
+
+#    def plot(self, **kwargs):
+#	import matplotlib.pyplot as plt
+#	lon, lat = self.to_shapely().exterior.xy
+#	ax = kwargs.pop('ax', plt.gca())
+#	return ax.plot(lon, lat, **kwargs)
+
+    def contour(self):
+	lons, lats = self.to_shapely().exterior.xy
+	return np.asarray(lons), np.asarray(lats)
+
+    def to_shapely(self):
+	from shapely.geometry import Polygon
+	lon, lat = self.coords
+	poly = Polygon(np.vstack((lon, lat)).T)
+	return poly
+
+    def contains_arrays(self, lon, lat):
+	""" return an array of same size as lon and lat
+
+	lon, lat: arrays of longitude and latitude
+	"""
+	from matplotlib.nxutils import points_inside_poly as inpoly
+	lon = np.asarray(lon)
+	lat = np.asarray(lat)
+	lon = rectify_longitude(lon, lon0=self.lon0, sort=False)
+	#if lon.ndim == 1:
+	#    lon, lat = np.meshgrid(lon, lat)
+	xypoints = np.vstack((lon.flatten(), lat.flatten())).T
+	xyvertices = np.asarray(self.to_shapely().exterior.xy).T # contours of the polynom
+	mask = inpoly(xypoints, xyvertices)
+	return mask.reshape(lon.shape)
+	#region = np.zeros_like(lon, dtype=bool)
+
+    def contains(self, lon, lat):
+	""" return True if x, y is in the Polygon
+	"""
+	if np.size(lon) > 1:
+	    #return np.array([self.contains(xx, yy) for xx, yy in zip(lon, lat)])
+	    return self.contains_arrays(lon, lat)
+
+	from shapely.geometry import Point
+	poly = self.to_shapely()
+	lon = rectify_longitude(lon, lon0=self.lon0, sort=False)
+	res = poly.contains(Point(lon, lat))
+	assert res is not None
+	return res
+
+class Mask(Region):
+    """ Region defined by a boolean mask
+    """
+    def __init__(self, lon, lat, mask, lon0=None):
+	"""
+	"""
+	assert lon.ndim == 1 and lat.ndim == 1, "can only have 1-D coordinates"
+	self.coords = lon, lat
+	if lon0 is None:
+	    lon0 = get_lon0(*lon)
+	self.lon0 = lon0
+	self.mask = mask
+
+    def interpolate(self, lon, lat):
+	""" interpolate the mask
+
+	lon, lat: 1-D arrays to be passed to meshgrid
+	"""
+	assert lon.ndim == 1 and lat.ndim == 1, "must be 1-D coordinates compatible with meshgrid"
+	# first fix lon0 to match new data
+	lon0 = get_lon0(*lon.flatten())
+	mlon, mlat = self.coords
+	mlon, mask = rectify_longitude_data(mlon, self.mask, lon0)
+
+	# make input coords is 2-D
+	#if lon.ndim == 1 and meshgrid:
+	lon2, lat2 = np.meshgrid(lon, lat)
+
+	maskf = interp(np.asarray(self.mask, dtype=float), mlon, mlat, lon2, lat2)
+	mask = maskf >= 0.5
+	return Mask(lon, lat, mask, lon0)
+
+    def contains(self, lon, lat):
+	""" Return a boolean array of same shape as lon and lat with points contained in the patch
+	"""
+	lon = np.asarray(lon)
+	lat = np.asarray(lat)
+	mlon, mlat = self.coords
+	assert lon.shape == lat.shape, "lon, lat must have the same shape"
+	#lon = rectify_longitude(lon, lon0=self.lon0, sort=False)
+
+	# first fix lon0 to match new data
+	lon0 = get_lon0(*lon.flatten())
+	if lon0 != self.lon0:
+	    self = copy(self)
+	    mlon, self.mask = rectify_longitude_data(mlon, self.mask, lon0)
+
+	if not (np.all(lon == mlon) and np.all(lat == mlat)):
+	    self = copy(self)
+
+	    # interpolate the mask onto the input grid
+	    maskf = interp(np.asarray(self.mask, dtype=float), mlon, mlat, lon, lat)
+	    mask = maskf >= 0.5
+
+	else:
+	    mask = self.mask
+
+	return mask
+
+    def plot(self, ax=None):
+	import matplotlib.pyplot as plt
+	if ax is None:
+	    ax = plt.gca()
+	lon, lat = self.coords
+	return ax.contourf(lon, lat, np.asarray(self.mask, dtype=float))
+
+#    def mask(self, lon, lat):
+#	""" make a mask from a 2-D lon, lat grid
+#	"""
+#	lon = rectify_longitude(lon, lon0=self.lon0)
+#	if lon.ndim == 1:
+#	    lon, lat = np.meshgrid(lon, lat)
+#
+#	region = np.zeros_like(lon, dtype=bool)
+#
+#	ni, nj = region.shape
+#	for i in range(ni):
+#	    for j in range(nj):
+#		res = self.contains(lon[i,j], lat[i,j])
+#		assert res is not None
+#		region[i,j] = self.contains(lon[i,j], lat[i,j])
+#
+#	assert np.any(region)
+#	return region
+
+
 class BoxRegion(Region):
     """ Rectangular region
     """
@@ -166,7 +310,7 @@ class BoxRegion(Region):
 	output:
 	    ii, jj: slice
 	"""
-	lon = rectify_longitude(lon, lon0 = self.lon0)
+	lon = rectify_longitude(lon, lon0=self.lon0)
 
 	lon_llcorner, lat_llcorner, lon_urcorner, lat_urcorner = self.coords
 	ii = (lat >= lat_llcorner) & (lat <= lat_urcorner)
@@ -216,3 +360,4 @@ class Point(Region):
 	if 'marker' not in kwargs:
 	    kwargs['marker'] = 'o'
 	plt.plot(lon, lat, *args, **kwargs)
+

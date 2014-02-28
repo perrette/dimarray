@@ -111,7 +111,10 @@ class Dataset(odict):
 	array([0, 1, 2])
 	"""
 	if not isinstance(val, DimArray):
-	    raise TypeError("can only append DimArray instances")
+	    if np.isscalar(val):
+		val = DimArray(val)
+	    else:
+		raise TypeError("can only append DimArray instances")
 
 	if not np.isscalar(key):
 	    raise TypeError("only scalar keys allowed")

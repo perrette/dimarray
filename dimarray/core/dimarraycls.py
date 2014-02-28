@@ -851,6 +851,8 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     def __le__(self, other): return self._cmp('__le__', other)
     def __gt__(self, other): return self._cmp('__gt__', other)
     def __ge__(self, other): return self._cmp('__ge__', other)
+    def __and__(self, other): return self._cmp('__and__', other)
+    def __or__(self, other): return self._cmp('__or__', other)
 
     def __nonzero__(self):
 	""" Boolean value of the object

@@ -100,13 +100,13 @@ def interp1d(obj, values=None, axis=0, method='linear', **kwargs):
 	raise NotImplementedError(method)
 	#return obj.reindex_axis(values, axis, method=method **kwargs)
 
-def interp2d_mpl(obj, newaxes, axes=None, order=1):
+def interp2d_mpl(obj, newaxes, dims=None, order=1):
     """ bilinear interpolation: wrapper around mpl_toolkits.basemap.interp
 
     input:
 	obj : DimArray
 	newaxes: list of Axis object, or list of 1d arrays
-	axes, optional: list of str (axis names), required if newaxes is a list of arrays
+	dims, optional: list of str (axis names), required if newaxes is a list of arrays
 
     output:
 	interpolated data (n-d)
@@ -114,7 +114,7 @@ def interp2d_mpl(obj, newaxes, axes=None, order=1):
     from mpl_toolkits.basemap import interp
 
     # make sure input axes have the valid format
-    newaxes = Axes.from_arrays(newaxes, axes) # valid format
+    newaxes = Axes._init(newaxes, dims) # valid format
     newaxes.sort(obj.dims) # re-order according to object's dimensions
     x, y = newaxes  # 2-d interpolation
 
