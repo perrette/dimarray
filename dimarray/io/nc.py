@@ -2,6 +2,7 @@
 """
 import os
 from collections import OrderedDict as odict
+import warnings
 import netCDF4 as nc
 import numpy as np
 #from geo.data.index import to_slice, _slice3D
@@ -84,7 +85,12 @@ def read_dimensions(f, name=None, ix=slice(None), verbose=False):
     axes = Axes()
     for k in dims:
 
-	values = f.variables[k][ix]
+	try:
+	    values = f.variables[k][ix]
+	except KeyError:
+	    msg = "'{}' dimension not found, define integer range".format(k)
+	    warnings.warn(msg)
+	    values = np.arange(len(f.dimensions[k]))
 
 	# replace unicode by str as a temporary bug fix (any string seems otherwise to be treated as unicode in netCDF4)
 	if values.size > 0 and type(values[0]) is unicode:

@@ -79,7 +79,7 @@ def broadcast_indices(indices):
     size = None
     for i,ix in enumerate(indices):
 
-	if isinstance(ix, np.ndarray) and ix.dtype is np.dtype(bool):
+	if np.iterable(ix) and np.asarray(ix).dtype is np.dtype(bool):
 	    ix = np.where(ix)[0]
 
 	if np.iterable(ix):
@@ -97,8 +97,8 @@ def broadcast_indices(indices):
     # Now convert all integers to the same size, if applicable
     if size is not None:
 	for i,ix in enumerate(aindices):
-	    if type(ix) is int:
-		aindices[i] = np.zeros(size, dtype=int) + ix
+	    if not np.iterable(ix) and not type(ix) is slice:
+		aindices[i] = np.zeros(size, dtype=type(ix)) + ix
 
     return aindices
 
@@ -365,6 +365,14 @@ def take(obj, indices, axis=0, indexing="values", tol=TOLERANCE, keepdims=False,
 
 def _take_broadcast(a, indices):
     """ broadcast array-indices & integers, numpy's classical
+
+    Examples:
+    ---------
+    >>> a = da.zeros(shape=(3,4,5,6))
+    >>> a[:,[0, 1],:,2].shape
+    (2, 3, 5)
+    >>> a[:,[0, 1],2,:].shape
+    (3, 2, 6)
     """
     # new values
     newval = a.values[indices]  
@@ -385,23 +393,32 @@ def _take_broadcast(a, indices):
     if nb_array2 <= 1:
 	newaxes = [a.axes[i][ix] for i, ix in enumerate(indices) if not np.isscalar(ix)] # indices or indices2, does not matter
 
-    # More than two arrays: numpy puts sampled values at the position of the first iterable
+    # else, finer check needed
     else:
 	# same stats but on original indices
 	is_array = np.array([np.iterable(ix) for ix in indices])
 	array_ix_pos = np.where(is_array)[0]
 
-	# where the axis will be inserted: need to consider the integers as well
+	# Determine where the axis will be inserted
+	# - need to consider the integers as well (broadcast as arrays)
+	# - if two indexed dimensions are not contiguous, new axis placed at first position...
+	# a = zeros((3,4,5,6))
+    	# a[:,[1,2],:,0].shape ==> (2, 3, 5)
+    	# a[:,[1,2],0,:].shape ==> (3, 2, 6)
 	array_ix_pos2 = np.where(is_array2)[0]
-	insert = array_ix_pos2[0]
+	if np.any(np.diff(array_ix_pos2) > 1):  # that mean, if two indexed dimensions are not contiguous
+	    insert = 0
+	else: 
+	    insert = array_ix_pos2[0]
 
-	# if originally only one array was provided, use these values correspondingly
+	# Now determine axis value
+	# ...if originally only one array was provided, use these values correspondingly
 	if len(array_ix_pos) == 1:
 	    i = array_ix_pos[0]
 	    values = a.axes[i].values[indices[i]]
 	    name = a.axes[i].name
 
-	# else use a list of tuples
+	# ...else use a list of tuples
 	else:
 	    values = zip(*[a.axes[i].values[indices2[i]] for i in array_ix_pos])
 	    name = ",".join([a.axes[i].name for i in array_ix_pos])
@@ -411,16 +428,21 @@ def _take_broadcast(a, indices):
 	newaxes = Axes()
 	for i, ax in enumerate(a.axes):
 
-	    if is_array2[i] and i != insert:
+	    # axis is already part of the broadcast axis: skip
+	    if is_array2[i]:
 		continue
 
-	    if i == insert:
-		newaxis = broadcastaxis
-
 	    else:
-		newaxis = ax[indices[i]]
+		newaxis = ax[indices2[i]]
+
+		## do not append axis if scalar
+		#if np.isscalar(newaxis):
+		#    continue
 
 	    newaxes.append(newaxis)
+
+	# insert the right new axis at the appropriate position
+	newaxes.insert(insert, broadcastaxis)
 
     return a._constructor(newval, newaxes, **a._metadata)
 
