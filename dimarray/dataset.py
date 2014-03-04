@@ -116,9 +116,6 @@ class Dataset(odict):
 	    else:
 		raise TypeError("can only append DimArray instances")
 
-	if not np.isscalar(key):
-	    raise TypeError("only scalar keys allowed")
-
 	# Check dimensions
 	for axis in val.axes:
 
