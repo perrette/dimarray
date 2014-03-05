@@ -1,4 +1,5 @@
 import sys
+from warnings import warn
 import numpy as np
 import dimarray as da
 from dimarray.testing import testmod
@@ -130,7 +131,9 @@ def test_transform():
     try:
 	test_vs_pandas()
     except ImportError:
-	print "pandas not installed, can't test transform against pandas"
+	warn("pandas not installed, can't test transform against pandas")
+    except AssertionError, msg:
+	warn("pandas test failed {}".format(msg))
 
 
     
