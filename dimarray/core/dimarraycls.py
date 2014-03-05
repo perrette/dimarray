@@ -991,7 +991,11 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 	1 / x1 (2): 0 to 1
 	...  
 	"""
-	import pandas as pd
+	try:
+	    import pandas as pd
+	except ImportError:
+	    raise ImportError("pandas module is required to use this method")
+
 	axisnames = []
 	axes = []
 	for i, ax in enumerate(data.axes):
@@ -1029,7 +1033,10 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     def to_pandas(self):
 	""" return the equivalent pandas object
 	"""
-	import pandas as pd
+	try:
+	    import pandas as pd
+	except ImportError:
+	    raise ImportError("pandas module is required to use this method")
 	obj = pandas_obj(self.values, *[ax.to_pandas() for ax in self.axes])
 	return obj
 
@@ -1092,9 +1099,12 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     def to_larry(self):
 	""" return the equivalent pandas object
 	"""
-	import la
+	try:
+	    import la
+	except ImportError:
+	    raise ImportError("la (larry) module is required to use this method")
+
 	a = la.larry(self.values, [list(ax.values) for ax in self.axes])
-	print "warning: dimension names have not been passed to larry"
 	return a
 
     #
