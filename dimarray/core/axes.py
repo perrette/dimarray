@@ -1107,12 +1107,24 @@ class LocatorAxes(object):
 	return numpy_indices
 
     def __call__(self, indices, axis=0, **opt):
-	"""
-	"""
-	# convert to nd tuple
-	if type(indices) is tuple or isinstance(indices, dict):
-	    assert axis in (None, 0), "cannot have axis > 0 for tuple (multi-dimensional) indexing"
+	""" Convert to N-D tuple
 
+	>>> a = da.array(np.arange(2*3*4).reshape(2,3,4))
+	>>> b = a.group('x1','x2')
+	>>> c = b.take((0,1), axis=1)
+	>>> np.all(a.take({'x1':0,'x2':1}) == c)
+	True
+	"""
+	if isinstance(indices, dict):
+	    assert axis in (None, 0), "cannot have axis > 0 for dict (multi-dimensional) indexing"
+
+	# If already a tuple, shift according to axis (object-type axis)
+	if type(indices) is tuple and axis not in (0, None):
+	    axis = self.axes.get_idx(axis) # make it integer location
+	    indices = tuple([slice(None)]*axis + [indices])
+	    #assert axis in (None, 0), "cannot have axis > 0 for tuple (multi-dimensional) indexing"
+
+	# Convert to a N-D index
 	if type(indices) is not tuple:
 	    
 	    # format (indices=..., axis=...)
