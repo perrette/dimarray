@@ -9,7 +9,8 @@ from tools import is_DimArray
 
 __all__ = ["take", "put", "reindex_axis", "reindex_like"]
 
-TOLERANCE=1e-8
+#TOLERANCE=1e-8
+TOLERANCE=None
 
 def is_boolean_index(indices, shape):
     """ check if something like a[a>2] is performed for ndim > 1
@@ -165,7 +166,7 @@ def take(obj, indices, axis=0, indexing="values", tol=TOLERANCE, keepdims=False,
 	- indexing     : "values" or "position" 
 		     "position": use numpy-like position index
 		     "values": indexing on axis values 
-	- tol	   : tolerance when looking for floats
+	- tol	   : tolerance when looking for numerical values, e.g. to use nearest neighbor search, default `None`
 	- keepdims : keep singleton dimensions
 	- broadcast_arrays: True, by default, consistently with numpy
 	

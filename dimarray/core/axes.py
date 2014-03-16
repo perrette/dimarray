@@ -64,11 +64,13 @@ class Axis(object):
     modulo: [None] if not None, consider axis values as being defined +/- n*modulo, where n is an integer
 	    this modify `loc` behaviour only, but does not impose any constraint on actual axis values
 
+    tol: [None], if not None, attempt a nearest neighbour search with specified tolerance
+
     + metadata
     """
-    _metadata = MetadataDesc(exclude = ["values", "name", "weights", "modulo"]) # variables which are NOT metadata
+    _metadata = MetadataDesc(exclude = ["values", "name", "weights", "modulo", "tol"]) # variables which are NOT metadata
 
-    def __init__(self, values, name="", weights=None, modulo=None, dtype=None, _monotonic=None, **kwargs):
+    def __init__(self, values, name="", weights=None, modulo=None, dtype=None, _monotonic=None, tol=None, **kwargs):
 	""" 
 	"""
 	if not name:
@@ -101,6 +103,7 @@ class Axis(object):
 	self.name = name 
 	self.weights = weights 
 	self.modulo = modulo
+	self.tol = None # tolerance, when searching an axis
 	self._monotonic = _monotonic
 
 	self._metadata = kwargs
@@ -123,7 +126,7 @@ class Axis(object):
 	else:
 	    weights = self.weights
 
-	return Axis(values, self.name, weights=weights, **self._metadata)
+	return Axis(values, self.name, weights=weights, tol=self.tol, **self._metadata)
 
     def union(self, other):
 	""" join two Axis objects
@@ -217,7 +220,7 @@ class Axis(object):
 	"""
 	assert self.values.ndim == 1, "!!! 2-dimensional axis !!!"
 	if self.is_numeric():
-	    return NumLocator(self.values, modulo=self.modulo)
+	    return NumLocator(self.values, modulo=self.modulo, tol=self.tol)
 	else:
 	    return ObjLocator(self.values)
 
@@ -938,7 +941,7 @@ class NumLocator(LocatorAxis):
     def __init__(self, *args, **kwargs):
 
 	# extract parameters specific to NumLocator
-	opt = {'tol':1e-8, 'modulo':None}
+	opt = {'tol':None, 'modulo':None}
 	for k in kwargs.copy():
 	    if k in opt:
 		opt[k] = kwargs.pop(k)
@@ -969,11 +972,19 @@ class NumLocator(LocatorAxis):
 	    if self.modulo and (val < mi or val > ma):
 		val = _adjust_modulo(val, self.modulo, mi)
 
-	# locate value in axis
-	loc = np.argmin(np.abs(val-values))
+	if self.tol is not None:
 
-	if np.abs(values[loc]-val) > self.tol:
-	    raise IndexError("%f not found within tol %f (closest match %i:%f)" % (val, self.tol, loc, values[loc]))
+	    # locate value in axis
+	    loc = np.argmin(np.abs(val-values))
+
+	    if np.abs(values[loc]-val) > self.tol:
+		raise IndexError("%f not found within tol %f (closest match %i:%f)" % (val, self.tol, loc, values[loc]))
+
+	else:
+	    try:
+		loc = values.tolist().index(val)
+	    except ValueError, msg:
+		raise IndexError("{}. Try setting axis `tol` parameter for nearest neighbor search.".format(msg))
 
 	return loc
 
@@ -1084,6 +1095,11 @@ class LocatorAxes(object):
 	self.axes = axes
 	self.opt = opt
 
+	# fix: ignore "tol" parameter is None, so that axis default is used
+	if 'tol' in self.opt.keys() and self.opt['tol'] is None:
+	    del self.opt['tol']
+
+
     def set(self, **kwargs):
 	""" convenience function for chained call: update methods and return itself 
 	"""
@@ -1097,6 +1113,7 @@ class LocatorAxes(object):
 
 	numpy_indices = ()
 	for i, ix in enumerate(indices):
+
 	    loc = self.axes[i].loc(ix, **self.opt)
 	#    assert np.isscalar(loc) \
 	#	    or type(loc) is slice \
