@@ -177,7 +177,8 @@ class Polygon(Region):
     def to_shapely(self):
 	from shapely.geometry import Polygon
 	lon, lat = self.coords
-	poly = Polygon(np.vstack((lon, lat)).T)
+	poly = Polygon(zip(lon, lat))
+	#poly = Polygon(np.vstack((lon, lat)).T)
 	return poly
 
     def contains_arrays(self, lon, lat):
