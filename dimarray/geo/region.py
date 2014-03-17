@@ -71,6 +71,20 @@ def drawbox(ax=None):
 
     return BoxRegion(*(xy[0]+xy[1]))
 
+def drawpoly(ax=None):
+    """ interactive drawing of a polygone
+    """
+    import matplotlib.pyplot as plt
+    if ax is None: plt.gca()
+
+    print 'Select path'
+    xy = plt.ginput(n=0, timeout=0)
+
+    lon = [p[0] for p in xy]
+    lat = [p[1] for p in xy]
+
+    return Polygon(lon, lat)
+
 
 class Region(object):
     """ region class
