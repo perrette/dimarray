@@ -34,6 +34,10 @@ Requires:
 
 - pandas (optional) :  to_pandas() and from_pandas() methods, plot()
 
+Installation:
+-------------
+sudo python setup.py install
+
 Get started
 -----------
 
