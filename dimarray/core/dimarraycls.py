@@ -5,7 +5,7 @@ import copy
 import warnings
 from collections import OrderedDict as odict
 
-from dimarray.config import Config
+from dimarray.config import get_option
 
 from metadata import MetadataDesc
 from axes import Axis, Axes, GroupedAxis
@@ -167,12 +167,16 @@ class DimArray(object):
     # NOW MAIN BODY OF THE CLASS
     #
 
-    def __init__(self, values=None, axes=None, dims=None, labels=None, copy=False, dtype=None, _indexing="values", _indexing_broadcast=True, **kwargs):
+    def __init__(self, values=None, axes=None, dims=None, labels=None, copy=False, dtype=None, _indexing=None, _indexing_broadcast=None, **kwargs):
 	""" Initialization. See help on DimArray.
 	"""
 	# check if attached to values (e.g. DimArray object)
 	if hasattr(values, "axes") and axes is None:
 	    axes = values.axes
+
+	# default options
+	if _indexing is None: _indexing = get_option('indexing')
+	if _indexing_broadcast is None: _indexing_broadcast = get_option('indexing_broadcast')
 
 	#
 	# array values
@@ -742,11 +746,11 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 	>>> np.all(s == 5*a)
 	True
 	"""
-	result = _operation.operation(func, self, other, broadcast=Config.op_broadcast, reindex=Config.op_reindex, constructor=self._constructor)
+	result = _operation.operation(func, self, other, broadcast=get_option('op_broadcast'), reindex=get_option('op_reindex'), constructor=self._constructor)
 	return result
 
     def _roperation(self, func, other):
-	return _operation.operation(func, other, self, broadcast=Config.op_broadcast, reindex=Config.op_reindex, constructor=self._constructor)
+	return _operation.operation(func, other, self, broadcast=get_option('op_broadcast'), reindex=get_option('op_reindex'), constructor=self._constructor)
 
     def __neg__(self): return self._constructor(-self.values, self.axes)
     def __pos__(self): return self._constructor(+self.values, self.axes)
@@ -1140,7 +1144,7 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 	    line = repr(self.axes)
 	    lines.append(line)
 
-	if self.size < Config.display_max:
+	if self.size < get_option('display_max'):
 	    line = repr(self.values)
 	else:
 	    line = "array(...)"

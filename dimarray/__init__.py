@@ -6,7 +6,7 @@ import config
 import dataset
 import lib.transform
 
-from config import set_option, get_option, Config
+from config import set_option, get_option
 from core import *
 from dataset import Dataset
 #from lib.transform import interp1d, interp2d, apply_recursive
