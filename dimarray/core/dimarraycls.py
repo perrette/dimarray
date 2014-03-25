@@ -389,9 +389,22 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     def dtype(self): 
 	return self.values.dtype
 
-    @property
     def __array__(self): 
-	return self.values.__array__
+	""" so that np.array() works as expected (returns values)
+	"""
+	return self.values
+
+    def __array_wrap__(self, result): 
+	""" returns a DimArray when doing e.g. self.values + self
+
+	>>> a = DimArray([3,4], axes=[('xx',['a','b'])])
+	>>> a.values + a
+	dimarray: 2 non-null elements (0 null)
+	dimensions: 'xx'
+	0 / xx (2): a to b
+	array([6, 8])
+	"""
+	return self._constructor(result, self.axes) # copy=True by default, ok?
 
     #
     # iteration

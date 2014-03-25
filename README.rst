@@ -44,7 +44,7 @@ Get started
 
 A **``DimArray``** can be defined just like a numpy array, with
 additional information about its axes, which can be given via ``labels``
-and ``dims`` parameters.
+and ``dims`` parameters (see below another example with a list of tuples [(name_0, values_0), ...]).
 
 >>> from dimarray import DimArray, Dataset
 >>> a = DimArray(values=[[1,2,3],[4,5,6.]], labels=[["a","b"], [0,1,2]], dims=['dim0','dim1']) 
@@ -120,7 +120,8 @@ Having axis name and axis values allow on-the-fly **axis alignment** and
 that rules can be defined for nearly every sequence of operands.
 
 Let's define some axes on dimensions ``time`` and ``items``, using the
-tuple form (name, values)
+list-of-tuple form [(name, values), (name2, values2), ...], here reduced to simple `tuple` since
+we are dealing with 1-D arrays.
 
 >>> time = ('time', [1950, 1951, 1952])
 >>> incomplete_time = ('time', [1950, 1952])
