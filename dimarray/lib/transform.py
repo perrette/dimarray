@@ -3,6 +3,9 @@
 import numpy as np
 from dimarray.core import Axes, Axis
 
+#from mpl_toolkits.basemap import interp
+from dimarray.compat.basemap import interp
+
 #
 # recursively apply a DimArray ==> DimArray transform
 #
@@ -111,7 +114,6 @@ def interp2d_mpl(obj, newaxes, dims=None, order=1):
     output:
 	interpolated data (n-d)
     """
-    from mpl_toolkits.basemap import interp
 
     # make sure input axes have the valid format
     newaxes = Axes._init(newaxes, dims) # valid format

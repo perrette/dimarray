@@ -5,7 +5,7 @@ with open('README.rst') as file:
         long_description = file.read()
 
 setup(name='dimarray',
-      version='0.1.4',
+      version='0.1.6',
       author='Mahe Perrette',
       author_email='mahe.perrette@pik-potsdam.de',
       description='numpy array with labelled dimensions and axes, dimension, NaN handling and netCDF I/O',
@@ -21,7 +21,6 @@ setup(name='dimarray',
       extras_require = {
 	  "ncio": ["netCDF4>=1.0.6"],
 	  "pandas": ["pandas>=0.8.0"],
-	  "plotting": ["pandas>=0.8.0","matplotlib>=1.2.1"],
-	  "interp2d": ["basemap>=1.06"],
+	  "plotting": ["pandas>=0.8.0"],
 	  }
       )
