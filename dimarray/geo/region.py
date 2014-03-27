@@ -4,7 +4,7 @@
 from copy import copy
 import numpy as np
 from grid import rectify_longitude, rectify_longitude_data, LonLatGrid
-from mpl_toolkits.basemap import interp
+from dimarray.compat.basemap import interp
 
 __all__ = ["World","Point","BoxRegion","drawbox","extract"] # from region import *
 

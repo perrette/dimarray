@@ -209,7 +209,7 @@ def interp2(lon, lat, data, lon2, lat2, order=1):
     - 0 : nearest neighbout
     - 1 : linear (default)
     """
-    from mpl_toolkits.basemap import interp
+    from dimarray.compat.basemap import interp
     if np.ndim(lon2) == 1:
         lon2, lat2 = np.meshgrid(lon2, lat2)
     return  interp(data, lon, lat, lon2, lat2, order=order)
