@@ -93,17 +93,17 @@ def interp1d_numpy(obj, values=None, axis=0, left=np.nan, right=np.nan):
     result = apply_recursive(obj, (newaxis.name,), interp1d)
     return result.transpose(obj.dims) # transpose back to original dimensions
 
-def interp1d(obj, values=None, axis=0, method='linear', **kwargs):
+def interp1d(obj, values=None, axis=0, order=1, **kwargs):
     """ interpolate along one axis
     """
-    if method == "linear":
+    if order == 1:
 	return interp1d_numpy(obj, values, axis, **kwargs)
 
     else:
-	raise NotImplementedError(method)
+	raise NotImplementedError('order: '+repr(order))
 	#return obj.reindex_axis(values, axis, method=method **kwargs)
 
-def interp2d_mpl(obj, newaxes, dims=None, order=1):
+def interp2d(obj, newaxes, dims=None, order=1):
     """ bilinear interpolation: wrapper around mpl_toolkits.basemap.interp
 
     input:
@@ -132,5 +132,3 @@ def interp2d_mpl(obj, newaxes, dims=None, order=1):
 
     result = apply_recursive(obj, (x.name, y.name), interp2d)
     return result.transpose(obj.dims) # transpose back to original dimensions
-
-interp2d = interp2d_mpl # alias
