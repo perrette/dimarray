@@ -10,7 +10,7 @@ setup(name='dimarray',
       author_email='mahe.perrette@pik-potsdam.de',
       description='numpy array with labelled dimensions and axes, dimension, NaN handling and netCDF I/O',
       keywords=('labelled array','numpy','larry','pandas','iris'),
-      packages = ['dimarray','dimarray.core','dimarray.geo','dimarray.io','dimarray.lib'],
+      packages = ['dimarray','dimarray.core','dimarray.geo','dimarray.io','dimarray.lib', 'dimarray.compat'],
       package_data = {
 	  "dimarray": ['README.rst','dimarray.ipynb']
 	  },
