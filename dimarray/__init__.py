@@ -16,7 +16,7 @@ try:
     from io.nc import read as read_nc, summary as summary_nc
     _ncio = True
 
-except IOError:
+except ImportError:
     _ncio = False
     msg = "Could not import netCDF4's package ==> I/O will not be available in this format"
     print msg
