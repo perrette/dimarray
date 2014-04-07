@@ -181,8 +181,14 @@ class DimArray(object):
 	#
 	# array values
 	#
+	# if masked array, replace mask by NaN
 	if isinstance(values, np.ma.MaskedArray):
-	    values = values.filled(np.nan) # fill mask with nans
+	    try:
+		values = values.filled(np.nan) # fill mask with nans
+
+	    # first convert to float
+	    except:
+		values = np.ma.asarray(values, dtype=float).filled(np.nan) # fill mask with nans
 
 	if values is not None:
 	    values = np.array(values, copy=copy, dtype=dtype)
