@@ -96,7 +96,8 @@ class Axis(object):
 	    raise ValueError("an Axis object can only be 1-D, check-out GroupedAxis")
 
 	# convert strings to object type
-	if values.dtype not in (np.dtype(float), np.dtype(int), np.dtype(long)):
+	#if values.dtype not in (np.dtype(float), np.dtype(int), np.dtype(long)):
+        if values.dtype.type == np.string_: 
 	    values = np.asarray(values, dtype=object)
 
 	self.values = values 
@@ -266,7 +267,8 @@ class Axis(object):
 
     @property
     def dtype(self): 
-	return _convert_dtype(np.array(self.values).dtype)
+	#return _convert_dtype(np.array(self.values).dtype)
+        return self.values.dtype
 
     @property
     def __array__(self): 

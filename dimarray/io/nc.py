@@ -268,9 +268,16 @@ def check_dimensions(f, axes, **verb):
 	if not dim in f.dimensions:
 	    f.createDimension(dim, ax.size)
 
-	    # check type: so far object-type arrays are strings
-	    dtype = ax.dtype if ax.dtype is not np.dtype('O') else str  
-	    v = f.createVariable(dim, dtype, dim)
+            # strings are given "object" type in Axis object
+            # ==> assume all objects are actually strings
+            # NOTE: this will fail for other object-typed axes such as tuples
+            # any other idea welcome
+            if ax.dtype is np.dtype('O'):
+                dtype = str 
+            else:
+                dtype = ax.dtype 
+
+            v = f.createVariable(dim, dtype, dim)
 	    v[:] = ax.values
 
     if close: f.close()
