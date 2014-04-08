@@ -395,10 +395,11 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     def dtype(self): 
 	return self.values.dtype
 
+    @property
     def __array__(self): 
 	""" so that np.array() works as expected (returns values)
 	"""
-	return self.values
+	return self.values.__array__
 
     def __array_wrap__(self, result): 
 	""" returns a DimArray when doing e.g. self.values + self
