@@ -51,6 +51,38 @@ def _convert_dtype(dtype):
 
     return type_
 
+class Descriptor(object):
+    """ Property descriptor: set class attributes
+    """
+    def __init__(self, name, default=None):
+        """ 
+        name: name where attribute value is stored
+            Warning: must be different from API class attribute
+            e.g. prefixed by '_'
+
+        default: default value of the attribute name
+
+        Examples:
+        ---------
+        class A:
+            tol = Descriptor('_tol') 
+        """
+        self.name = name
+        self.default = default 
+
+    def __get__(self, obj, cls=None):
+        if hasattr(obj, self.name):
+            return getattr(obj, self.name)
+        else:
+            return self.default
+
+    def __set__(self, obj, value):
+        setattr(obj, self.name, value)
+
+    def __delete__(self, obj):
+        if hasattr(obj, self.name):
+            delattr(obj, self.name)
+
 #
 # Axis class
 #
@@ -68,7 +100,12 @@ class Axis(object):
 
     + metadata
     """
-    _metadata = MetadataDesc(exclude = ["values", "name", "weights", "modulo", "tol"]) # variables which are NOT metadata
+    _metadata = MetadataDesc(exclude = ["values", "name"]) # variables which are NOT metadata
+
+    # Descriptor: define attributes which are inherited by any sub-class (default to None)
+    # in order to avoid the necessity of manual definition when subclassing
+    tol = Descriptor('_tol')
+    modulo = Descriptor('_modulo')
 
     def __init__(self, values, name="", weights=None, modulo=None, dtype=None, _monotonic=None, tol=None, **kwargs):
 	""" 
@@ -208,6 +245,10 @@ class Axis(object):
 
 	self._weights = _weights
 
+    @weights.deleter
+    def weights(self):
+        self._weights = None
+
     @property
     def loc(self):
 	""" Access the slicer to locate axis elements
@@ -322,7 +363,7 @@ class GroupedAxis(Axis):
     """
     modulo = None
 
-    _metadata = MetadataDesc(exclude = ["values", "name", "weights", "modulo","axes"]) # variables which are NOT metadata
+    _metadata = MetadataDesc(exclude = ["values", "name","axes"]) # variables which are NOT metadata
 
     def __init__(self, *axes):
 	"""
