@@ -999,10 +999,10 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 	>>> s = pd.Series([3,5,6], index=['a','b','c'])
 	>>> s.index.name = 'dim0'
 	>>> DimArray.from_pandas(s)
-	dimarray: 3 non-null elements (0 null)
-	dimensions: 'dim0'
-	0 / dim0 (3): a to c
-	array([3, 5, 6], dtype=int64)
+        dimarray: 3 non-null elements (0 null)
+        dimensions: 'dim0'
+        0 / dim0 (3): a to c
+        array([3, 5, 6])
 
 	Also work with Multi-Index
 	>>> panel = pd.Panel(np.arange(2*3*4).reshape(2,3,4))

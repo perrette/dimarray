@@ -148,19 +148,23 @@ def test_diff():
     v.diff(axis=0, keepaxis=True, scheme='forward')
     v.diff(n=2,axis=('time'), scheme='centered')
 
+def _eq(x, y, tol=1e-6):
+    """ test equality between two arrays, allowing for NaN and single precision
+    """
+    return np.all(np.isnan(x) | (np.abs(x-y) < tol))
+
 def test_vs_pandas():
     np.random.seed(0)
     v = da.DimArray(np.random.randn(5,7), {'time':np.arange(1950,1955), 'lat':np.linspace(-90,90,7)})
-    assert np.all(v.std(ddof=1, axis=0).values==v.to_pandas().std().values), "std vs pandas"
-    assert np.sum((v.var(ddof=1, axis=0).values-v.to_pandas().var().values)**2)<1e-10, "var vs pandas"
-    assert np.all(v.cumsum(axis=0).values == v.to_pandas().cumsum().values), "error against pandas"
-    assert np.all(v.cumprod(axis=0).values == v.to_pandas().cumprod().values), "error against pandas"
-    assert np.nansum((v.diff(axis=0, keepaxis=True).cumsum(axis=0, skipna=True).values - v.to_pandas().diff().cumsum().values)**2) \
-      < 1e-10, "error against pandas"
+    assert _eq(v.std(ddof=1, axis=0).values, v.to_pandas().std().values), "std vs pandas"
+    assert _eq(v.var(ddof=1, axis=0).values, v.to_pandas().var().values), "var vs pandas"
+    assert _eq(v.cumsum(axis=0).values , v.to_pandas().cumsum().values), "pandas: cumsum failed"
+    assert _eq(v.cumprod(axis=0).values , v.to_pandas().cumprod().values), "pandas: cumprod failed"
+    assert _eq(v.diff(axis=0, keepaxis=True).cumsum(axis=0, skipna=True).values, v.to_pandas().diff().cumsum().values), "diff-cumsum failed"
 
     # TEST diff
     res = v.diff(axis=0, keepaxis=True) 
-    assert np.all(np.isnan(res) | (res == v.to_pandas().diff()))
+    assert _eq(res, v.to_pandas().diff()), 'diff failed'
 
 def test_operations():
     a = da.DimArray([[1,2,3],[3,4,5]],dims=('x0','x1'))

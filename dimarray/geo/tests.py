@@ -6,7 +6,7 @@ import geoarray
 import region
 import transform
 import grid
-import decorator
+import decorators
 
 def main(**kwargs):
     """
@@ -15,7 +15,7 @@ def main(**kwargs):
     testmod(region, **kwargs)
     testmod(transform, **kwargs)
     testmod(grid, **kwargs)
-    testmod(decorator, **kwargs)
+    testmod(decorators, **kwargs)
 
 if __name__ == "__main__":
     main()
