@@ -31,8 +31,8 @@ class MetadataDesc(object):
 	else:
 	    exclude = []
 
-	if types is None:
-	    types = int, long, float, tuple, str, bool, unicode # autorized metadata types
+        #if types is None:
+	#    types = int, long, float, tuple, str, bool, unicode # autorized metadata types
 
 	self.types = types
 	self.exclude = exclude
@@ -45,10 +45,10 @@ class MetadataDesc(object):
     def __set__(self, obj, meta):
 	"""
 	"""
-	assert type( meta) is dict, "metadata can only be a dictionary"
+	assert isinstance(meta, dict), "metadata can only be a dictionary"
 	for k in meta:
 	    val = meta[k]
-	    if not np.isscalar(val) and not type(val) in self.types:
+	    if self.types is not None and not np.isscalar(val) and not type(val) in self.types:
 		raise TypeError("Got metadata type {}. Only authorized metadata types: {}".format(val.__class__.__name__, [t.__name__ for t in self.types]))
 	    setattr(obj, k, val)
 
