@@ -5,7 +5,7 @@ with open('README.rst') as file:
         long_description = file.read()
 
 setup(name='dimarray',
-      version='0.1.6',
+      version='0.1.7',
       author='Mahe Perrette',
       author_email='mahe.perrette@pik-potsdam.de',
       description='numpy array with labelled dimensions and axes, dimension, NaN handling and netCDF I/O',
