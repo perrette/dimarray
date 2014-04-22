@@ -7,9 +7,9 @@ def _isnan(a, na=np.nan):
     """ analogous to numpy's isnan
     """
     if np.isnan(na):
-	return np.isnan(a)
+        return np.isnan(a)
     else:
-	return a== na
+        return a== na
 
 def is_boolean_array(value):
     """ 
@@ -21,19 +21,19 @@ def is_boolean_array(value):
     True
     """
     return (isinstance(value, np.ndarray) or is_DimArray(value)) \
-	    and value.dtype is np.dtype('bool')
+            and value.dtype is np.dtype('bool')
 
 def _matches(a, value):
 
     if is_boolean_array(value):
-	# boolean array accepted
-	test = np.asarray(value)
+        # boolean array accepted
+        test = np.asarray(value)
 
     elif np.iterable(value):
-	test = np.any([_matches(a, val) for val in value], axis=0)
+        test = np.any([_matches(a, val) for val in value], axis=0)
 
     else:
-	test = a == value
+        test = a == value
     return test
 
 def isnan(a, na=np.nan):
@@ -89,7 +89,7 @@ def dropna(a, axis=0, minvalid=None, na=np.nan):
 
     axis: axis position or name or list of names
     minvalid, optional: min number of valid point in each slice along axis values
-	by default all the points
+        by default all the points
 
     Examples:
     ---------
@@ -116,47 +116,47 @@ def dropna(a, axis=0, minvalid=None, na=np.nan):
     0 / x0 (2): 0 to 1
     1 / x1 (3): 0 to 2
     array([[ nan,   2.,   3.],
-	   [ nan,   5.,  nan]])
+           [ nan,   5.,  nan]])
     >>> a.dropna(axis=1)
     dimarray: 2 non-null elements (0 null)
     dimensions: 'x0', 'x1'
     0 / x0 (2): 0 to 1
     1 / x1 (1): 1 to 1
     array([[ 2.],
-	   [ 5.]])
+           [ 5.]])
     >>> a.dropna(axis=1, minvalid=1)  # minimum number of valid values, equivalent to `how="all"` in pandas
     dimarray: 3 non-null elements (1 null)
     dimensions: 'x0', 'x1'
     0 / x0 (2): 0 to 1
     1 / x1 (2): 1 to 2
     array([[  2.,   3.],
-	   [  5.,  nan]])
+           [  5.,  nan]])
     """
     assert axis is not None, "axis cannot be None for dropna"
 #    # if None, all axes
 #    if axis is None:
-#	for dim in a.dims:
-#	    a = dropna(a, axis=dim, minvalid=minvalid)
-#	return a
+#        for dim in a.dims:
+#            a = dropna(a, axis=dim, minvalid=minvalid)
+#        return a
 
     idx, name = a._get_axis_info(axis)
 
     if a.ndim == 1:
-	return  a[~_isnan(a.values, na=na)]
+        return  a[~_isnan(a.values, na=na)]
 
     else:
-	nans = isnan(a, na=na) 
-	nans = nans.group([dim for dim in a.dims if dim != name], insert=0) # in first position
-	count_nans_axis = nans.sum(axis=0) # number of points valid along that axis
-	count_vals_axis = (~nans).sum(axis=0) # number of points valid along that axis
-	#count_nans_axis = nans.sum(axis=[dim for dim in a.dims if dim != name]) # number of points valid along that axis
-	#count_vals_axis = nans.sum(axis=[dim for dim in a.dims if dim != name]) # number of points valid along that axis
+        nans = isnan(a, na=na) 
+        nans = nans.group([dim for dim in a.dims if dim != name], insert=0) # in first position
+        count_nans_axis = nans.sum(axis=0) # number of points valid along that axis
+        count_vals_axis = (~nans).sum(axis=0) # number of points valid along that axis
+        #count_nans_axis = nans.sum(axis=[dim for dim in a.dims if dim != name]) # number of points valid along that axis
+        #count_vals_axis = nans.sum(axis=[dim for dim in a.dims if dim != name]) # number of points valid along that axis
 
     # pick up only points whose number of nans is below the threshold
     if minvalid is None: 
-	maxna = 0
+        maxna = 0
     else:
-	maxna = nans.axes[0].size - minvalid
+        maxna = nans.axes[0].size - minvalid
 
     indices = count_nans_axis <= maxna
 

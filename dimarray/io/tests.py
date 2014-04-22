@@ -28,7 +28,7 @@ def test_ncio():
     assert(np.all(data['b'] == b))
     ds = da.Dataset(a=a, b=b)
     for k in ds:
-	assert(np.all(ds[k] == data[k]))
+        assert(np.all(ds[k] == data[k]))
 
 
 #def _main(**kwargs):

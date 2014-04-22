@@ -124,36 +124,36 @@ def apply_along_axis(obj, func, axis=None, skipna=False, args=(), **kwargs):
     result = _apply_along_axis(obj.values, func, axis=idx, skipna=skipna, args=(), **kwargs)
 
     if type(func) is str:
-	funcname = func
-	func = getattr(np, func)
+        funcname = func
+        func = getattr(np, func)
     else:
-	funcname = func.__name__
+        funcname = func.__name__
 
     # If `axis` was None (operations on the flattened array), just returns the numpy array
     if axis is None or not isinstance(result, np.ndarray):
-	return result
+        return result
 
     #
     # New axes
     #
     # standard case: collapsed axis
     if np.ndim(result) == obj.ndim - 1:
-	newaxes = [ax for ax in obj.axes if ax.name != name]
+        newaxes = [ax for ax in obj.axes if ax.name != name]
 
     # cumulative functions: axes remain unchanged
     elif funcname in ('cumsum','cumprod','gradient'):
-	newaxes = obj.axes.copy() 
+        newaxes = obj.axes.copy() 
 
     # diff: reduce axis size by one
     elif funcname == "diff":
-	oldaxis = obj.axes[idx]
-	newaxis = oldaxis[1:]  # assume backward differencing 
-	newaxes = obj.axes.copy() 
-	newaxes[idx] = newaxis
+        oldaxis = obj.axes[idx]
+        newaxis = oldaxis[1:]  # assume backward differencing 
+        newaxes = obj.axes.copy() 
+        newaxes[idx] = newaxis
 
     # axes do not fit for some reason
     else:
-	raise Exception("cannot find new axes for this transformation: "+repr(funcname))
+        raise Exception("cannot find new axes for this transformation: "+repr(funcname))
 
     newobj = obj._constructor(result, newaxes, **obj._metadata)
 
@@ -169,28 +169,28 @@ def _apply_along_axis(values, funcname, axis=None, skipna=False, args=(), **kwar
     # Deal with NaNs
     if skipna:
 
-	# replace with the optimized numpy function if existing
-	if funcname in ("sum","max","min","argmin","argmax"):
-	    funcname = "nan"+funcname
-	    module = np
+        # replace with the optimized numpy function if existing
+        if funcname in ("sum","max","min","argmin","argmax"):
+            funcname = "nan"+funcname
+            module = np
 
-	# otherwise convert to MaskedArray if needed
-	else:
-	    values = _to_MaskedArray(values)
-	    module = np.ma
+        # otherwise convert to MaskedArray if needed
+        else:
+            values = _to_MaskedArray(values)
+            module = np.ma
     
     # use basic numpy functions 
     else:
-	module = np 
+        module = np 
 
     # get actual function if provided as str (the default)
     if type(funcname) is str:
-	func = getattr(module, funcname)
+        func = getattr(module, funcname)
 
     # but also accept functions provided as functions
     else:
-	func = funcname
-	funcname = func.__name__
+        func = funcname
+        funcname = func.__name__
 
     # Call functions
     kwargs['axis'] = axis
@@ -198,16 +198,16 @@ def _apply_along_axis(values, funcname, axis=None, skipna=False, args=(), **kwar
 
     # otherwise, fill NaNs back in
     if np.ma.isMaskedArray(result):
-	result = result.filled(np.nan)
+        result = result.filled(np.nan)
 
     # numpy's median ignore NaNs as long as less than 50% ==> change that
     if funcname == 'median' and not skipna:
-	nans = np.isnan(np.sum(values, axis=axis))
-	if np.any(nans):
-	    if np.size(result) == 1: 
-		result = np.nan
-	    else:
-		result[nans] = np.nan
+        nans = np.isnan(np.sum(values, axis=axis))
+        if np.any(nans):
+            if np.size(result) == 1: 
+                result = np.nan
+            else:
+                result[nans] = np.nan
 
     return result
 
@@ -217,9 +217,9 @@ def _to_MaskedArray(values):
     # fast-check for NaNs, thanks to
     # http://stackoverflow.com/questions/6736590/fast-check-for-nan-in-numpy
     if np.isnan(np.min(values)):
-	mask = np.isnan(values)
+        mask = np.isnan(values)
     else:
-	mask = False
+        mask = False
     values = np.ma.array(values, mask=mask)
     return values
 
@@ -227,26 +227,26 @@ def _deal_with_axis(obj, axis):
     """ deal with the `axis` parameter 
 
     input:
-	obj: DimArray object
-	axis: `int` or `str` or `tuple` or None
+        obj: DimArray object
+        axis: `int` or `str` or `tuple` or None
 
     return:
-	newobj: reshaped obj if axis is tuple otherwise obj
-	idx   : axis index
-	name  : axis name
+        newobj: reshaped obj if axis is tuple otherwise obj
+        idx   : axis index
+        name  : axis name
     """
     # before applying the function on the collapsed array
     if type(axis) in (tuple, list):
-	idx = 0
-	newobj = obj.group(axis, insert=idx)
-	#idx = obj.dims.index(axis[0])  # position where the new axis has been inserted
-	#ax = newobj.axes[idx] 
-	ax = newobj.axes[0]
-	name = ax.name
+        idx = 0
+        newobj = obj.group(axis, insert=idx)
+        #idx = obj.dims.index(axis[0])  # position where the new axis has been inserted
+        #ax = newobj.axes[idx] 
+        ax = newobj.axes[0]
+        name = ax.name
 
     else:
-	newobj = obj
-	idx, name = obj._get_axis_info(axis) 
+        newobj = obj
+        idx, name = obj._get_axis_info(axis) 
 
     return newobj, idx, name
 
@@ -257,22 +257,22 @@ class _NumpyDesc(object):
     """ to apply a numpy function which reduces an axis
     """
     def __init__(self, numpy_method):
-	"""
+        """
         numpy_method: as a string name of the numpy function to apply
-	"""
-	assert type(numpy_method) is str, "can only provide method name as a string"
-	self.numpy_method = numpy_method
+        """
+        assert type(numpy_method) is str, "can only provide method name as a string"
+        self.numpy_method = numpy_method
 
     def __get__(self, obj, cls=None):
-	"""
-	"""
-	# convert self.apply to an actual function
-	newmethod = partial(apply_along_axis, obj, self.numpy_method)
+        """
+        """
+        # convert self.apply to an actual function
+        newmethod = partial(apply_along_axis, obj, self.numpy_method)
 
-	# Update doc string
-	newmethod.__doc__ = _doc_numpy.format(func=self.numpy_method, default_axis=None)
+        # Update doc string
+        newmethod.__doc__ = _doc_numpy.format(func=self.numpy_method, default_axis=None)
 
-	return newmethod
+        return newmethod
 
 median = _NumpyDesc("median")
 
@@ -320,13 +320,13 @@ def argmin(obj, axis=None, skipna=False):
 
     # along axis: single axis value
     if axis is not None: # res is DimArray
-	res.values = obj.axes[idx].values[res.values] 
-	return res
+        res.values = obj.axes[idx].values[res.values] 
+        return res
 
     # flattened array: tuple of axis values
     else: # res is ndarray
-	res = np.unravel_index(res, obj.shape)
-	return tuple(obj.axes[i].values[v] for i, v in enumerate(res))
+        res = np.unravel_index(res, obj.shape)
+        return tuple(obj.axes[i].values[v] for i, v in enumerate(res))
 
 @format_doc(default_axis="None")
 @format_doc(axis=_doc_axis, skipna=_doc_skipna)
@@ -343,13 +343,13 @@ def argmax(obj, axis=None, skipna=False):
 
     # along axis: single axis value
     if axis is not None: # res is DimArray
-	res.values = obj.axes[idx].values[res.values] 
-	return res
+        res.values = obj.axes[idx].values[res.values] 
+        return res
 
     # flattened array: tuple of axis values
     else: # res is ndarray
-	res = np.unravel_index(res, obj.shape)
-	return tuple(obj.axes[i].values[v] for i, v in enumerate(res))
+        res = np.unravel_index(res, obj.shape)
+        return tuple(obj.axes[i].values[v] for i, v in enumerate(res))
 
 #
 # Also define numpy.diff as method, with additional options
@@ -371,22 +371,22 @@ def diff(obj, axis=-1, scheme="backward", keepaxis=False, n=1):
     {axis}
 
     scheme: str, determines the values of the resulting axis
-	    "forward" : diff[i] = x[i+1] - x[i]
-	    "backward": diff[i] = x[i] - x[i-1]
-	    "centered": diff[i] = x[i+1/2] - x[i-1/2]
-	    default is "backward"
+            "forward" : diff[i] = x[i+1] - x[i]
+            "backward": diff[i] = x[i] - x[i-1]
+            "centered": diff[i] = x[i+1/2] - x[i-1/2]
+            default is "backward"
 
     keepaxis: bool, if True, keep the initial axis by padding with NaNs
-	      Only compatible with "forward" or "backward" differences
+              Only compatible with "forward" or "backward" differences
 
     n : int, optional
-	The number of times values are differenced.
+        The number of times values are differenced.
 
     Returns
     -------
     diff : DimArray
-	The `n` order differences. The shape of the output is the same as `a`
-	except along `axis` where the dimension is smaller by `n`.
+        The `n` order differences. The shape of the output is the same as `a`
+        except along `axis` where the dimension is smaller by `n`.
 
     Examples:
     ---------
@@ -430,7 +430,7 @@ def diff(obj, axis=-1, scheme="backward", keepaxis=False, n=1):
     """
     # If `axis` is None (operations on the flattened array), just returns the numpy array
     if axis is None:
-	return np.diff(obj.values, n=n, axis=None)
+        return np.diff(obj.values, n=n, axis=None)
 
     # Deal with `axis` parameter, whether `int`, `str` or `tuple`
     # possibly grouping dimensions if axis is tuple
@@ -438,8 +438,8 @@ def diff(obj, axis=-1, scheme="backward", keepaxis=False, n=1):
 
     # Recursive call if n > 1
     if n > 1:
-	obj = obj.diff(n=n-1, axis=idx, scheme=scheme, keepaxis=keepaxis)
-	n = 1
+        obj = obj.diff(n=n-1, axis=idx, scheme=scheme, keepaxis=keepaxis)
+        n = 1
 
     # n = 1
     assert n == 1, "n must be integer greater or equal to one"
@@ -453,47 +453,47 @@ def diff(obj, axis=-1, scheme="backward", keepaxis=False, n=1):
     # forward differencing
     if scheme == "forward":
 
-	# keep axis: pad last element with NaNs
-	if keepaxis:
-	    result = _append_nans(result, axis=idx)
-	    newaxis = oldaxis.copy()
+        # keep axis: pad last element with NaNs
+        if keepaxis:
+            result = _append_nans(result, axis=idx)
+            newaxis = oldaxis.copy()
 
-	# otherwise just shorten the axis
-	else:
-	    newaxis = oldaxis[:-1]
+        # otherwise just shorten the axis
+        else:
+            newaxis = oldaxis[:-1]
 
     elif scheme == "backward":
 
-	# keep axis: pad first element with NaNs
-	if keepaxis:
-	    result = _append_nans(result, axis=idx, first=True)
-	    newaxis = oldaxis.copy()
+        # keep axis: pad first element with NaNs
+        if keepaxis:
+            result = _append_nans(result, axis=idx, first=True)
+            newaxis = oldaxis.copy()
 
-	# otherwise just shorten the axis
-	else:
-	    newaxis = oldaxis[1:]
+        # otherwise just shorten the axis
+        else:
+            newaxis = oldaxis[1:]
 
     elif scheme == "centered":
 
-	# keep axis: central difference + forward/backward diff at the edges
-	if keepaxis:
-	    #indices = range(oldaxis.size)
-	    raise ValueError("keepaxis=True is not compatible with centered differences")
-	    #central = obj.values.take(indices[2:], axis=idx) \
-	    #        -  obj.values.take(indices[:-2], axis=idx)
-	    #start = obj.values.take([1], axis=idx) \
-	    #        -  obj.values.take([0], axis=idx)
-	    #end = obj.values.take([-1], axis=idx) \
-	    #        -  obj.values.take([-2], axis=idx)
-	    #result = np.concatenate((start, central, end), axis=idx)
-	    #newaxis = oldaxis.copy()
+        # keep axis: central difference + forward/backward diff at the edges
+        if keepaxis:
+            #indices = range(oldaxis.size)
+            raise ValueError("keepaxis=True is not compatible with centered differences")
+            #central = obj.values.take(indices[2:], axis=idx) \
+            #        -  obj.values.take(indices[:-2], axis=idx)
+            #start = obj.values.take([1], axis=idx) \
+            #        -  obj.values.take([0], axis=idx)
+            #end = obj.values.take([-1], axis=idx) \
+            #        -  obj.values.take([-2], axis=idx)
+            #result = np.concatenate((start, central, end), axis=idx)
+            #newaxis = oldaxis.copy()
 
-	else:
-	    axisvalues = 0.5*(oldaxis.values[:-1]+oldaxis.values[1:])
-	    newaxis = Axis(axisvalues, name)
+        else:
+            axisvalues = 0.5*(oldaxis.values[:-1]+oldaxis.values[1:])
+            newaxis = Axis(axisvalues, name)
 
     else:
-	raise ValueError("scheme must be one of 'forward', 'backward', 'central', got {}".format(scheme))
+        raise ValueError("scheme must be one of 'forward', 'backward', 'central', got {}".format(scheme))
 
     newaxes = obj.axes.copy() 
     newaxes[idx] = newaxis
@@ -512,11 +512,11 @@ def _append_nans(result, axis, first=False):
 
     # Insert as first element
     if first:
-	result = np.concatenate((nan_slice, result), axis=axis)
+        result = np.concatenate((nan_slice, result), axis=axis)
 
     # Append
     else:
-	result = np.concatenate((result, nan_slice), axis=axis)
+        result = np.concatenate((result, nan_slice), axis=axis)
 
     return result
 
@@ -527,8 +527,8 @@ def _append_nans(result, axis, first=False):
 #    """
 #    # get actual axis values instead of numpy's integer index
 #    if funcname in ("argmax","argmin","nanargmax","nanargmin"):
-#	assert axis is not None, "axis must not be None for "+funcname+", or apply on values"
-#	return obj.axes[idx].values[result] 
+#        assert axis is not None, "axis must not be None for "+funcname+", or apply on values"
+#        return obj.axes[idx].values[result] 
 
 
 
@@ -541,23 +541,23 @@ def weighted_mean(obj, axis=None, skipna=False, weights='axis', dtype=None, out=
 
     parameters:
     ----------
-	- axis    : int, str, tuple: axis or group of axes to apply the transform on
-	- skipna  : remove nans prior to transformation?
-	- weights : if weights, perform a weighted mean (see get_weights method)
-		    the default behaviour ("axis") is too look in individual axes 
-		    whether they have a not-None weight attribute
+        - axis    : int, str, tuple: axis or group of axes to apply the transform on
+        - skipna  : remove nans prior to transformation?
+        - weights : if weights, perform a weighted mean (see get_weights method)
+                    the default behaviour ("axis") is too look in individual axes 
+                    whether they have a not-None weight attribute
     
     returns:
     --------
-	- DimArray or scalar, consistently with ndarray behaviour
+        - DimArray or scalar, consistently with ndarray behaviour
     """
     # Proceed to a weighted mean
     if weights is not None and weights is not False:
-	weights = obj.get_weights(weights, axis=axis, fill_nans=skipna)
+        weights = obj.get_weights(weights, axis=axis, fill_nans=skipna)
 
     # if no weights, just apply numpy's mean
     if weights is None or weights is False:
-	return apply_along_axis(obj, "mean", axis=axis, skipna=skipna, out=out, dtype=dtype)
+        return apply_along_axis(obj, "mean", axis=axis, skipna=skipna, out=out, dtype=dtype)
 
     # weighted mean
     sum_values = apply_along_axis(obj*weights, "sum", axis=axis, skipna=skipna)
@@ -569,26 +569,26 @@ def weighted_var(obj, axis=None, skipna=False, weights="axis", ddof=0, dtype=Non
 
     parameters:
     ----------
-	- axis    : int, str, tuple: axis or group of axes to apply the transform on
-	- skipna  : remove nans prior to transformation?
-	- weights : if weights, perform a weighted var (see get_weights method)
-		    the default behaviour ("axis") is too look in individual axes 
-		    whether they have a not-None weight attribute
-	- ddof    : "Delta Degrees of Freedom": the divisor used in the calculation is
-		    ``N - ddof``, where ``N`` represents the number of elements. By default `ddof` is zero.
-		    Note ddof is ignored when weights are used
+        - axis    : int, str, tuple: axis or group of axes to apply the transform on
+        - skipna  : remove nans prior to transformation?
+        - weights : if weights, perform a weighted var (see get_weights method)
+                    the default behaviour ("axis") is too look in individual axes 
+                    whether they have a not-None weight attribute
+        - ddof    : "Delta Degrees of Freedom": the divisor used in the calculation is
+                    ``N - ddof``, where ``N`` represents the number of elements. By default `ddof` is zero.
+                    Note ddof is ignored when weights are used
     
     returns:
     --------
-	- DimArray or scalar, consistently with ndarray behaviour
+        - DimArray or scalar, consistently with ndarray behaviour
     """
     # Proceed to a weighted var
     if weights is not None and weights is not False:
-	weights = obj.get_weights(weights, axis=axis, fill_nans=skipna)
+        weights = obj.get_weights(weights, axis=axis, fill_nans=skipna)
 
     # if no weights, just apply numpy's var
     if weights is None or weights is False:
-	return apply_along_axis(obj, "var", axis=axis, skipna=skipna, ddof=ddof, dtype=dtype, out=out)
+        return apply_along_axis(obj, "var", axis=axis, skipna=skipna, ddof=ddof, dtype=dtype, out=out)
 
     # weighted mean
     mean = obj.mean(axis=axis, skipna=skipna, weights=weights, dtype=dtype, out=out)

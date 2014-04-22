@@ -5,14 +5,14 @@ def format_doc(*args, **kwargs):
     """ Apply `format` to docstring
     """
     def pseudo_decorator(func):
-	""" not a real decorator as it modifies the function in place
-	"""
-	try:
-	    func.__doc__ = func.__doc__.format(*args, **kwargs)
-	except AttributeError: # non writable
-	    print "failed for", func
-	    func = _update_doc(func, *args, **kwargs)
-	return func
+        """ not a real decorator as it modifies the function in place
+        """
+        try:
+            func.__doc__ = func.__doc__.format(*args, **kwargs)
+        except AttributeError: # non writable
+            print "failed for", func
+            func = _update_doc(func, *args, **kwargs)
+        return func
 
     return pseudo_decorator
 
@@ -33,34 +33,34 @@ def axes_as_keywords(func):
     func_args = inspect.getargspec(func)[0]
 
     def newfunc(self, values=None, axis=None, **kwargs):
-	""" decorated function
-	"""
-	# Separate optional arguments from axes
-	kwaxes = {}
-	for k in kwargs.keys():
-	    if k not in func_args:
-		kwaxes[k] = kwargs.pop(k)
+        """ decorated function
+        """
+        # Separate optional arguments from axes
+        kwaxes = {}
+        for k in kwargs.keys():
+            if k not in func_args:
+                kwaxes[k] = kwargs.pop(k)
 
-	# Recursive call if keyword arguments are provided
-	if len(kwaxes) > 0:
-	    assert values is None, "can't input both values/axis and keywords arguments"
-	    dims = kwaxes.keys()
+        # Recursive call if keyword arguments are provided
+        if len(kwaxes) > 0:
+            assert values is None, "can't input both values/axis and keywords arguments"
+            dims = kwaxes.keys()
 
-	    # First check that dimensions are there
-	    for k in dims:
-		if k not in self.dims:
-		    raise ValueError("can only repeat existing axis, need to reshape first (or use broadcast)")
+            # First check that dimensions are there
+            for k in dims:
+                if k not in self.dims:
+                    raise ValueError("can only repeat existing axis, need to reshape first (or use broadcast)")
 
-	    # Choose the appropriate order for speed
-	    dims = [k for k in self.dims if k in dims]
-	    obj = self
-	    for k in reversed(dims):
-		obj = func(self, kwaxes[k], axis=k, **kwargs)
+            # Choose the appropriate order for speed
+            dims = [k for k in self.dims if k in dims]
+            obj = self
+            for k in reversed(dims):
+                obj = func(self, kwaxes[k], axis=k, **kwargs)
 
-	else:
-	    obj = func(self, values, axis=axis, **kwargs)
+        else:
+            obj = func(self, values, axis=axis, **kwargs)
 
-	return obj
+        return obj
 
     # update documentation (assume it already includes info about keyword arguments)
     newfunc = functools.update_wrapper(newfunc, func)

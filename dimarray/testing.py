@@ -19,16 +19,16 @@ def get_globals(m=None):
     #    all_ = m.__all__
     #else:
     if m is not None:
-	all_ = [k for k in dir(m) if not k.startswith("_")]
-	for k in all_:
-	    locals()[k] = getattr(m,k)
+        all_ = [k for k in dir(m) if not k.startswith("_")]
+        for k in all_:
+            locals()[k] = getattr(m,k)
     return locals()
 
 def testmod(m, globs=None, **kwargs):
     """ test all docstrings of a module
     """
     if globs is None:
-	globs = get_globals(m) 
+        globs = get_globals(m) 
 
     kwargs['globs'] = globs
 
@@ -39,7 +39,7 @@ def testmod(m, globs=None, **kwargs):
 
 def testfile(fname, globs=None, **kwargs):
     if globs is None:
-	globs = get_globals() 
+        globs = get_globals() 
 
     kwargs['globs'] = globs
 
@@ -58,19 +58,19 @@ def testfile(fname, globs=None, **kwargs):
 #    # list of directory and filenames
 #    for dirname,dirnames,filenames in os.walk(pkgpath):
 #
-#	print dirname
-#	root = import_module(dirname.replace(os.path.sep, "."))
-#	for f in filenames:
-#	    if not f.endswith('.py'): 
-#		continue
-#	    if f == "testing.py": continue
-#	    name, ext = os.path.splitext(f)
-#	    m = import_module("."+name, package=root.__name__)
+#        print dirname
+#        root = import_module(dirname.replace(os.path.sep, "."))
+#        for f in filenames:
+#            if not f.endswith('.py'): 
+#                continue
+#            if f == "testing.py": continue
+#            name, ext = os.path.splitext(f)
+#            m = import_module("."+name, package=root.__name__)
 #
-#	    if hasattr(m, 'test') and use_test:
-#		m.test(globs=globs, **kwargs)
-#	    else:
-#		testmod(m, globs=globs, **kwargs)
+#            if hasattr(m, 'test') and use_test:
+#                m.test(globs=globs, **kwargs)
+#            else:
+#                testmod(m, globs=globs, **kwargs)
 
 
 #def test_rec(**kwargs):

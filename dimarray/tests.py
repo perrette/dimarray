@@ -34,9 +34,9 @@ def main(**kwargs):
     lib.tests.main(**kwargs)
     dataset.test()
     try:
-	testfile('README.rst')
+        testfile('README.rst')
     except:
-	print 'README.rst not found'
+        print 'README.rst not found'
 
 if __name__ == "__main__":
     main()

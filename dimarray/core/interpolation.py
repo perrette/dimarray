@@ -18,10 +18,10 @@ def interp(obj, indices, axis=0, method="linear", repna=False):
     """
     kw = obj._get_keyword_indices(indices, axis)
     for k in kw:
-	if method == "nearest":
-	    obj = _interp_nearest(obj, kw[k], k, repna=repna)
-	else:
-	    obj = _interp_linear(obj, kw[k], k, repna=repna)
+        if method == "nearest":
+            obj = _interp_nearest(obj, kw[k], k, repna=repna)
+        else:
+            obj = _interp_linear(obj, kw[k], k, repna=repna)
     return obj
 
 def _interp_nearest(obj, values, axis, repna):
@@ -35,16 +35,16 @@ def _interp_nearest(obj, values, axis, repna):
     mask = np.zeros_like(values, dtype=bool)
 
     for i, x in enumerate(values):
-	res = _locate_nearest(ax, x)
-	if res is None:
-	    if repna:
-		mask[i] = True
-		continue
-	    else:
-		raise IndexError("value not found: {}".format(x))
-	    continue
+        res = _locate_nearest(ax, x)
+        if res is None:
+            if repna:
+                mask[i] = True
+                continue
+            else:
+                raise IndexError("value not found: {}".format(x))
+            continue
 
-	indices[i], _ = res
+        indices[i], _ = res
 
     # sample nearest neighbors
     result = obj.take(indices, axis=pos, indexing="position")
@@ -66,15 +66,15 @@ def _interp_linear(obj, newindices, axis, repna):
     w1.fill(np.nan)
 
     for i, x in enumerate(newindices):
-	res = _locate_bounds(ax, x)
-	if res is None:
-	    if repna:
-		continue
-	    else:
-		raise IndexError("value not found: {}".format(x))
-	    continue
+        res = _locate_bounds(ax, x)
+        if res is None:
+            if repna:
+                continue
+            else:
+                raise IndexError("value not found: {}".format(x))
+            continue
 
-	i0[i], i1[i], w1[i] = res
+        i0[i], i1[i], w1[i] = res
 
 
     # sample nearest neighbors
@@ -83,9 +83,9 @@ def _interp_linear(obj, newindices, axis, repna):
 
     # result as weighted sum
     if not hasattr(v0, 'values'): # scalar
-	return v0*(1-w1) + v1*w1
+        return v0*(1-w1) + v1*w1
     else:
-	newvalues = v0.values*(1-w1) + v1.values*w1
+        newvalues = v0.values*(1-w1) + v1.values*w1
 
     axes = obj.axes.copy()
     axes[pos] = Axis(newindices, ax.name) # new axis
@@ -97,12 +97,12 @@ def _locate_nearest(axis, x):
 
     min, max = axis.values.min(), axis.values.max()
     if x > max or x < min: 
-	return None
+        return None
 
     i = axis.loc(x, tol=np.inf) # nearest neighbour search
 
     if i is None: 
-	return None
+        return None
 
     # out of bounds check
     xi = axis.values[i]
@@ -119,19 +119,19 @@ def _locate_bounds(axis, x):
     res = _locate_nearest(axis, x)
 
     if res is None:
-	return None
+        return None
     
     i, xi = res
 
     # make sure we have x in [xi, xi+1]
     if xi == x:
-	return i, i, 0
+        return i, i, 0
     elif xi < x:
-	i0, i1 = i, i+1
-	x0, x1 = xi, axis.values[i1]
+        i0, i1 = i, i+1
+        x0, x1 = xi, axis.values[i1]
     else:
-	i0, i1 = i-1, i
-	x0, x1 = axis.values[i0], xi
+        i0, i1 = i-1, i
+        x0, x1 = axis.values[i0], xi
 
     assert x0 <= x <= x1, "irregular axis, cannot interpolate !"
 

@@ -11,8 +11,8 @@ def percentile(a, pct, axis=0, newaxis=None, out=None, overwrite_input=False):
     pct: float, percentile or sequence of percentiles (0< <100)
     axis, optional, default 0: axis along which to compute percentiles
     newaxis, optional: name of the new percentile axis, if more than one pct. 
-	By default, append "_percentile" to the axis name on which the transformation
-	is applied.
+        By default, append "_percentile" to the axis name on which the transformation
+        is applied.
 
     out, overwrite_input: passed to numpy's percentile method (see documentation)
 
@@ -34,25 +34,25 @@ def percentile(a, pct, axis=0, newaxis=None, out=None, overwrite_input=False):
     array([-0.05802803,  1.66012041])
     """
     if not isinstance(a, da.DimArray):
-	raise TypeError("Expected DimArray instance got {} of type {}".format(a, type(a)))
+        raise TypeError("Expected DimArray instance got {} of type {}".format(a, type(a)))
     pos, nm = a._get_axis_info(axis)
     results = np.percentile(a.values, pct, axis=pos, out=out, overwrite_input=overwrite_input)
 
     # If the result is scalar (pct is scalar and ), just return it
     if np.isscalar(results):
-	return results
+        return results
 
     # for scalar pct, results is a numpy array. Just reduce the axis.
     subaxes = [ax for ax in a.axes if ax.name != nm]
     if np.isscalar(pct):
-	results = da.DimArray(results, axes=subaxes)
+        results = da.DimArray(results, axes=subaxes)
 
     # pct is array-like, recreate a Dimarray
     else:
-	if newaxis is None:
-	    newaxis = nm + '_percentile'
-	results = [da.DimArray(res, axes=subaxes) for res in results] # list of DimArrays
-	results = da.from_arrays(results, keys=pct, axis=newaxis) # join in a larger DimArray
+        if newaxis is None:
+            newaxis = nm + '_percentile'
+        results = [da.DimArray(res, axes=subaxes) for res in results] # list of DimArrays
+        results = da.from_arrays(results, keys=pct, axis=newaxis) # join in a larger DimArray
 
     return results
 
@@ -81,12 +81,12 @@ def quantile(a, q, axis=0, newaxis=None, out=None, overwrite_input=False):
     """
     pos, nm = a._get_axis_info(axis)
     if newaxis is None:
-	newaxis = nm + '_quantile'
+        newaxis = nm + '_quantile'
 
     res = percentile(a, [qi*100 for qi in q], axis=axis, newaxis=newaxis, out=out, overwrite_input=overwrite_input)
 
     # change the percentile axis into quantile axis
     if not np.isscalar(q):
-	res.axes[axis].values /= 100.
+        res.axes[axis].values /= 100.
 
     return res

@@ -3,7 +3,7 @@
 Requirements for a transformation:
 
     - call signature: 
-	fun(dim1, dim2, ..., dimn, values, *args, **kwargs)
+        fun(dim1, dim2, ..., dimn, values, *args, **kwargs)
 
     - returns an instance of Dimarray 
 
@@ -33,14 +33,14 @@ def regional_mean(a, region=None):
     """ Average along lon/lat
 
     input:
-	- a: DimArray instance including lat, lon axis
-	- region, optional: 
-	    [lon, lat]: Point
-	    [lon_ll, lat_ll, lon_ur, lat_ur]: BoxRegion
-	    or Region instance
+        - a: DimArray instance including lat, lon axis
+        - region, optional: 
+            [lon, lat]: Point
+            [lon_ll, lat_ll, lon_ur, lat_ur]: BoxRegion
+            or Region instance
 
     output:
-	- GeoArray instance, regional average
+        - GeoArray instance, regional average
 
     Notes:
     ------
@@ -85,17 +85,17 @@ def regional_mean(a, region=None):
     a = GeoArray(a) # make it a GeoArray to check lon, lat 
 
     if not set(dims).issubset(a.dims):
-	raise ValueError("does not have lon, lat axes: {}".format(a))
+        raise ValueError("does not have lon, lat axes: {}".format(a))
 
     # rearrange dimensions with dims first
     flatdims = [ax.name for ax in a.axes if ax.name not in dims]
     newdims = dims + tuple(flatdims)
     if a.dims != newdims:
-	a = a.transpose(newdims)
+        a = a.transpose(newdims)
 
     # If 2-D return a scalar
     if a.dims == ('lat', 'lon'):
-	return regobj.mean(a.lon,a.lat, a.values)
+        return regobj.mean(a.lon,a.lat, a.values)
 
     # flatten all except lat, lon, and make it the first axis
     agrp = a.group(flatdims, insert=0) 
@@ -104,9 +104,9 @@ def regional_mean(a, region=None):
     # iterate over the first, grouped axis
     results = []
     for i in range(grpaxis.size):
-	res = regobj.mean(a.lon,a.lat, agrp.values[i])
-	results.append(res)
-	
+        res = regobj.mean(a.lon,a.lat, agrp.values[i])
+        results.append(res)
+        
     # flat object
     grp_ave = a._constructor(results, [grpaxis])
 
@@ -136,8 +136,8 @@ def interpolate_1x1(lon, lat, values, lon0=0.):
 #    # locate numpy indices first
 #    indices = []
 #    for k, pt in enumerate(path):
-#	i, j = regmod.Point(*pt).locate(a.lon, a.lat) # lon, lat
-#	indices.append((i,j)) # approximate location
+#        i, j = regmod.Point(*pt).locate(a.lon, a.lat) # lon, lat
+#        indices.append((i,j)) # approximate location
 #
 #    ilat, ilon = zip(*indices)
 #
@@ -146,13 +146,13 @@ def interpolate_1x1(lon, lat, values, lon0=0.):
 def extract_box(a, region=None):
     """ extract a subregion
 
-    a	: DimArray instance
+    a        : DimArray instance
     region: lon_ll, lat_ll, lon_ur, lat_ur 
-	or Region instance
+        or Region instance
     """
     # interactive drawing of a region
     if region is None:
-	region = regmod.drawbox()
+        region = regmod.drawbox()
 
     # check the arguments: initialize a BoxRegion if not yet a region
     regobj = regmod.check(region)
@@ -175,15 +175,15 @@ rectify_longitude = shift_longitude # back-compat
 #
 def check_dim(obj, dim, msg=None, raise_error=False):
     if not dim in obj.dims:
-	if msg is None: 
-	    msg = "{} dimension missing, cannot apply this transformation".format(msg)
-	if raise_error: 
-	    raise ValueError(msg)
-	else:
-	    warnings.warn(msg)
-	return False
+        if msg is None: 
+            msg = "{} dimension missing, cannot apply this transformation".format(msg)
+        if raise_error: 
+            raise ValueError(msg)
+        else:
+            warnings.warn(msg)
+        return False
     else:
-	return True
+        return True
 
 def time_mean(obj, period=None, skipna=False):
     """ temporal mean or just slice
@@ -197,10 +197,10 @@ def time_mean(obj, period=None, skipna=False):
     if not check_dim(obj, 'time'): return obj
 
     if type(period) is tuple:
-	period = slice(*period)
+        period = slice(*period)
 
     if period is not None:
-	obj = obj.take(period, axis='time', keepdims=True)
+        obj = obj.take(period, axis='time', keepdims=True)
 
     return obj.mean('time', skipna=skipna)
 

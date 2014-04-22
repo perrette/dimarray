@@ -14,8 +14,8 @@ class MetadataDesc(object):
     """ descriptor to set/get metadata
 
     >>> class A(object):
-    ...	    _metadata = MetadataDesc(exclude=('b',))
-    ...	    c = 3
+    ...            _metadata = MetadataDesc(exclude=('b',))
+    ...            c = 3
     >>> a = A()
     >>> a.b = 4
     >>> a.c = 5
@@ -23,34 +23,34 @@ class MetadataDesc(object):
     {'c': 5}
     """ 
     def __init__(self, exclude=None, types=None):
-	if exclude is not None:
-	    if isinstance(exclude, str):
-		exclude = [exclude]
-	    else:
-		assert type(exclude) in (list, tuple)
-	else:
-	    exclude = []
+        if exclude is not None:
+            if isinstance(exclude, str):
+                exclude = [exclude]
+            else:
+                assert type(exclude) in (list, tuple)
+        else:
+            exclude = []
 
         #if types is None:
-	#    types = int, long, float, tuple, str, bool, unicode # autorized metadata types
+        #    types = int, long, float, tuple, str, bool, unicode # autorized metadata types
 
-	self.types = types
-	self.exclude = exclude
+        self.types = types
+        self.exclude = exclude
 
     def __get__(self, obj, cls=None):
-	""" just get 
-	""" 
-	return {k:getattr(obj, k) for k in obj.__dict__ if k not in self.exclude and not k.startswith('_')}
+        """ just get 
+        """ 
+        return {k:getattr(obj, k) for k in obj.__dict__ if k not in self.exclude and not k.startswith('_')}
 
     def __set__(self, obj, meta):
-	"""
-	"""
-	assert isinstance(meta, dict), "metadata can only be a dictionary"
-	for k in meta:
-	    val = meta[k]
-	    if self.types is not None and not np.isscalar(val) and not type(val) in self.types:
-		raise TypeError("Got metadata type {}. Only authorized metadata types: {}".format(val.__class__.__name__, [t.__name__ for t in self.types]))
-	    setattr(obj, k, val)
+        """
+        """
+        assert isinstance(meta, dict), "metadata can only be a dictionary"
+        for k in meta:
+            val = meta[k]
+            if self.types is not None and not np.isscalar(val) and not type(val) in self.types:
+                raise TypeError("Got metadata type {}. Only authorized metadata types: {}".format(val.__class__.__name__, [t.__name__ for t in self.types]))
+            setattr(obj, k, val)
 
 
 class Metadata(object):
@@ -89,68 +89,68 @@ class Metadata(object):
     _metadata_operation_warning = True
 
     def __init__(self):
-	"""
-	"""
-	object.__setattr__(self, "_metadata", odict()) # ordered dictionary of metadata
+        """
+        """
+        object.__setattr__(self, "_metadata", odict()) # ordered dictionary of metadata
 
     def __getattr__(self, att):
-	""" set attributes: distinguish between metadata and other 
-	"""
-	# Searching first in __dict__ is the default behaviour, 
-	# included here for clarity
-	if att in self.__dict__:
-	    return self.__getattribute__(att) # no __getattr__ in object
+        """ set attributes: distinguish between metadata and other 
+        """
+        # Searching first in __dict__ is the default behaviour, 
+        # included here for clarity
+        if att in self.__dict__:
+            return self.__getattribute__(att) # no __getattr__ in object
 
-	# check if att is a metadata
-	elif att in self._metadata:
-	    return self._metadata[att]
+        # check if att is a metadata
+        elif att in self._metadata:
+            return self._metadata[att]
 
-	#elif: or att.startswith('_'):
+        #elif: or att.startswith('_'):
 
-	# again here, to raise a typical error message
-	else:
-	    return self.__getattribute__(att)
+        # again here, to raise a typical error message
+        else:
+            return self.__getattribute__(att)
 
     def __setattr__(self, att, val):
-	""" set attributes: some are metadata, other not
-	"""
-	# add name to odict of metadata
-	if self._ismetadata(att, val):
-	    self._metadata[att] = val
+        """ set attributes: some are metadata, other not
+        """
+        # add name to odict of metadata
+        if self._ismetadata(att, val):
+            self._metadata[att] = val
 
-	else:
-	    object.__setattr__(self, att, val)
+        else:
+            object.__setattr__(self, att, val)
 
     def __detattr__(self, att):
-	""" delete an attribute
-	"""
-	# default behaviour
-	if att in self.__dict__:
-	    object.__delattr__(self, att) # standard method
+        """ delete an attribute
+        """
+        # default behaviour
+        if att in self.__dict__:
+            object.__delattr__(self, att) # standard method
 
-	# delete metadata if it applicable
-	elif att in self._metadata:
-	    del self._metadata[att]
+        # delete metadata if it applicable
+        elif att in self._metadata:
+            del self._metadata[att]
 
-	# again here, to raise a typical error message
-	else:
-	    object.__delattr__(self, att) # standard method
+        # again here, to raise a typical error message
+        else:
+            object.__delattr__(self, att) # standard method
 
 
     def _ismetadata(self, att, val=None):
-	""" returns True if att is metadata
-	"""
-	# if val is None, test if att in self._metadata
-	# if att already in metadata, then "True"
-	if val is None or att in self._metadata:
-	    test = att in self._metadata
+        """ returns True if att is metadata
+        """
+        # if val is None, test if att in self._metadata
+        # if att already in metadata, then "True"
+        if val is None or att in self._metadata:
+            test = att in self._metadata
 
-	# otherwise, check if it is a valid metadata
-	else: 
-	    test = not att.startswith('_') and att not in self._metadata_exclude \
-		    and (type(val) in self._metadata_types or np.isscalar(val))# also check type (to avoid limit errors)
+        # otherwise, check if it is a valid metadata
+        else: 
+            test = not att.startswith('_') and att not in self._metadata_exclude \
+                    and (type(val) in self._metadata_types or np.isscalar(val))# also check type (to avoid limit errors)
 
-	return test
+        return test
 
 
     #
@@ -159,53 +159,53 @@ class Metadata(object):
     #
 
     def ncattrs(self):
-	return self._metadata.keys()
+        return self._metadata.keys()
 
     def setncattr(self, att, val):
-	""" force setting attribute to metadata
-	"""
-	if not np.isscalar(val) and not type(val) in self._metadata_types:
-	    raise TypeError("Found type {}. Only authorized metadata types: {}".format(type(val), self._metadata_types))
+        """ force setting attribute to metadata
+        """
+        if not np.isscalar(val) and not type(val) in self._metadata_types:
+            raise TypeError("Found type {}. Only authorized metadata types: {}".format(type(val), self._metadata_types))
 
-	self._metadata[att] = val
+        self._metadata[att] = val
 
     def getncattr(self, att):
-	""" 
-	"""
-	return self._metadata[att]
+        """ 
+        """
+        return self._metadata[att]
 
     def delncattr(self, att):
-	""" 
-	"""
-	del self._metadata[att]
+        """ 
+        """
+        del self._metadata[att]
 
     #
     # "pretty" printing
     #
 
     def repr_meta(self):
-	""" string representation for metadata
-	"""
-	return ", ".join(['{}: {}'.format(att, self.getncattr(att)) for att in self.ncattrs()])
+        """ string representation for metadata
+        """
+        return ", ".join(['{}: {}'.format(att, self.getncattr(att)) for att in self.ncattrs()])
 
     #
     # add a new stamp to "stamp" list via json 
     #
     def _metadata_stamp(self, stamp=None):
-	""" append a new transform or operation stamp to metadata
-	"""
-	if stamp:
-	    append_stamp(self._metadata, stamp, inplace=True)
+        """ append a new transform or operation stamp to metadata
+        """
+        if stamp:
+            append_stamp(self._metadata, stamp, inplace=True)
 
 def append_stamp(metadata, stamp, inplace=False):
     """ append a new transform or operation stamp to metadata
     """
     if not inplace:
-	metadata = metadata.copy()
+        metadata = metadata.copy()
 
     # add transform (json-ed list)
     if "stamp" not in metadata:
-	metadata["stamp"] = json.dumps(()) # json-ed empty tuple
+        metadata["stamp"] = json.dumps(()) # json-ed empty tuple
 
     # de-json the stamp
     stamp_tuple = json.loads(metadata['stamp'])
@@ -217,7 +217,7 @@ def append_stamp(metadata, stamp, inplace=False):
     metadata['stamp'] = json.dumps(stamp_tuple)
 
     if not inplace:
-	return metadata
+        return metadata
 
 def test(**kwargs):
     import doctest

@@ -25,26 +25,26 @@ class GeoArray(DimArray):
     #_order = ('time','lat','lon')
 
     def __init__(self, values=None, axes=None, time=None, lat=None, lon=None, **kwargs):
-	""" 
-	"""
-	keyword = (time is not None or lat is not None or lon is not None)
-	assert not (axes is not None and keyword), "can't input both `axes=` and keyword arguments!"
+        """ 
+        """
+        keyword = (time is not None or lat is not None or lon is not None)
+        assert not (axes is not None and keyword), "can't input both `axes=` and keyword arguments!"
 
-	# construct the axes
-	if keyword:
-	    axes = Axes()
-	    if time is not None: axes.append(Axis(time, 'time'))
-	    if lat is not None: axes.append(Axis(lat, 'lat'))
-	    if lon is not None: axes.append(Axis(lon, 'lon'))
+        # construct the axes
+        if keyword:
+            axes = Axes()
+            if time is not None: axes.append(Axis(time, 'time'))
+            if lat is not None: axes.append(Axis(lat, 'lat'))
+            if lon is not None: axes.append(Axis(lon, 'lon'))
 
-	super(GeoArray, self).__init__(values, axes, **kwargs) # order dimensions
+        super(GeoArray, self).__init__(values, axes, **kwargs) # order dimensions
 
-	# add weight on latitude
-	for ax in self.axes:
-	    if is_latitude(ax.name):
-		ax.weights = lambda x: np.cos(np.radians(x))
-	    if is_longitude(ax.name):
-		ax.modulo = 360
+        # add weight on latitude
+        for ax in self.axes:
+            if is_latitude(ax.name):
+                ax.weights = lambda x: np.cos(np.radians(x))
+            if is_longitude(ax.name):
+                ax.modulo = 360
 
     def __repr__(self): return super(GeoArray, self).__repr__().replace("dimarray","geoarray")
     def __print__(self): return super(GeoArray, self).__print__().replace("dimarray","geoarray")
@@ -56,9 +56,9 @@ class GeoArray(DimArray):
 #    if globs is None: globs = globals()
 #    cls = None
 #    for obj in globs.keys():
-#	if isinstance(obj, globals()['GeoArray']):
-#	    if tuple(dims) == cls._dimensions:
-#		cls = obj
+#        if isinstance(obj, globals()['GeoArray']):
+#            if tuple(dims) == cls._dimensions:
+#                cls = obj
 #
 #    return cls
 
@@ -67,36 +67,36 @@ class GeoArray(DimArray):
 #    #pass
 #    _order = ('items','time','lat','lon','height','sample')
 #    def __init__(self, values=None, *axes, **kwargs):
-#	"""
-#	"""
-#	assert (len(axes) == 0 or len(kwargs) ==0), "cant provide axes both as kwargs and list"
-#	assert self._dims is None or (len(axes) == self._dims or len(kwargs) == len(self._dims)), "dimension mismatch"
-#	if len(kwargs) > 0:
-#	    for k in kwargs:
-#		if k not in self._order:
-#		    raise ValueError("unknown dimension, please provide as axes")
-#	    if self._dims is not None:
-#		axes = [k,kwargs[k] for k in self._dims if k in kwargs]
-#	    else:
-#		axes = [k,kwargs[k] for k in self._order if k in kwargs]
+#        """
+#        """
+#        assert (len(axes) == 0 or len(kwargs) ==0), "cant provide axes both as kwargs and list"
+#        assert self._dims is None or (len(axes) == self._dims or len(kwargs) == len(self._dims)), "dimension mismatch"
+#        if len(kwargs) > 0:
+#            for k in kwargs:
+#                if k not in self._order:
+#                    raise ValueError("unknown dimension, please provide as axes")
+#            if self._dims is not None:
+#                axes = [k,kwargs[k] for k in self._dims if k in kwargs]
+#            else:
+#                axes = [k,kwargs[k] for k in self._order if k in kwargs]
 #
-#	else:
-#	    if self._dims is not None:
-#		assert tuple(ax.name for ax in axes) == self._dims, "dimension mismtach"
+#        else:
+#            if self._dims is not None:
+#                assert tuple(ax.name for ax in axes) == self._dims, "dimension mismtach"
 #
-#	super(CommonGeoArray, self).__init__(values, axes)
-#	for k in kwargs: self.setncattr(k, kwargs[k])
+#        super(CommonGeoArray, self).__init__(values, axes)
+#        for k in kwargs: self.setncattr(k, kwargs[k])
 #    
 #    @classmethod
 #    def _constructor(cls, values, axes, **kwargs):
-#	dims = tuple(ax.name for ax in axes)
-#	class_ = _get_geoarray_cls(dims)
-#	if class_ is not None:
-#	    obj = class_(values, *axes)
-#	else:
-#	    obj = cls(values, *axes)
-#	for k in kwargs: obj.setncattr(k, kwargs[k])
-#	return obj
+#        dims = tuple(ax.name for ax in axes)
+#        class_ = _get_geoarray_cls(dims)
+#        if class_ is not None:
+#            obj = class_(values, *axes)
+#        else:
+#            obj = cls(values, *axes)
+#        for k in kwargs: obj.setncattr(k, kwargs[k])
+#        return obj
 
 #
 #class TimeSeries(GeoArray):

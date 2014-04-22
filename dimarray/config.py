@@ -12,7 +12,7 @@ Options that determine alignment behaviour during an operation:
 
 Display:
 - display_max: max number of array values displayed (if greater than that
-	       array(...) will be shown)
+               array(...) will be shown)
 """
 from collections import OrderedDict as odict
 
@@ -20,9 +20,9 @@ class Params(odict):
     """ class to make user interface easier, e.g. displays all parameter values
     """
     def __repr__(self): 
-	""" nicer printing to string
-	"""
-	return "\n".join(["{:>20} = {:<20}".format(k,self[k]) for k in self])
+        """ nicer printing to string
+        """
+        return "\n".join(["{:>20} = {:<20}".format(k,self[k]) for k in self])
 
 rcParams = Params()
 rcParamsHelp = Params() # help
@@ -51,12 +51,12 @@ def set_option(name, value):
     """ set global options
     """
     if name not in rcParams:
-	raise ValueError("unknown option: {}".format(name))
+        raise ValueError("unknown option: {}".format(name))
     rcParams[name] = value
 
 def get_option(name):
     if name not in rcParams:
-	raise ValueError("unknown option: {}".format(name))
+        raise ValueError("unknown option: {}".format(name))
     return rcParams[name]
 
 def print_options():

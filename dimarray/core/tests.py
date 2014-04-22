@@ -129,11 +129,11 @@ array([[ 4.,  3.],
 def test_transform():
     test_diff()
     try:
-	test_vs_pandas()
+        test_vs_pandas()
     except ImportError:
-	warn("pandas not installed, can't test transform against pandas")
+        warn("pandas not installed, can't test transform against pandas")
     except AssertionError, msg:
-	warn("pandas test failed {}".format(msg))
+        warn("pandas test failed {}".format(msg))
 
 
     
