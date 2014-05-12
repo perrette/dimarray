@@ -241,13 +241,14 @@ def write_obj(f, obj, *args, **kwargs):
     else:
         raise TypeError("only DimArray or Dataset types allowed, got {}:{}".format(type(obj), obj))
 
-def write_dataset(f, obj, mode='w-', **kwargs):
+def write_dataset(f, obj, mode='w-', zlib=False, **kwargs):
     """ write object to file
     """
     f, close = check_file(f, mode, **kwargs)
     nms = obj.keys()
+        
     for nm in obj:
-        write_variable(f, obj[nm], nm)
+        write_variable(f, obj[nm], nm, zlib=zlib)
 
     # set metadata for the whole dataset
     meta = obj._metadata
@@ -309,7 +310,7 @@ def createVariable(f, name, axes=None, dtype=float, **kwargs):
 
 #def write_attributes(f, obj):
 
-def write_variable(f, obj, name=None, mode='a+', format='NETCDF4', indices=None, axis=0, verbose=False, **kwargs):
+def write_variable(f, obj, name=None, mode='a+', format='NETCDF4', indices=None, axis=0, verbose=False, zlib=False, **kwargs):
     """ save DimArray instance to file
 
     f        : file name or netCDF file handle
@@ -326,7 +327,7 @@ def write_variable(f, obj, name=None, mode='a+', format='NETCDF4', indices=None,
     # create variable if necessary
     if name not in f.variables:
         assert isinstance(obj, DimArray), "a must be a DimArray"
-        v = createVariable(f, name, obj.axes, dtype=obj.dtype)
+        v = createVariable(f, name, obj.axes, dtype=obj.dtype, zlib=zlib)
 
     # or just check dimensions
     else:
