@@ -280,6 +280,16 @@ def check_dimensions(f, axes, **verb):
             v = f.createVariable(dim, dtype, dim)
             v[:] = ax.values
 
+        # add metadata if any
+        meta = ax._metadata
+        for k in meta.keys():
+            if k == "name": continue # 
+            try:
+                f.variables[dim].setncattr(k, meta[k])
+
+            except TypeError, msg:
+                raise Warning(msg)
+
     if close: f.close()
 
 def createVariable(f, name, axes=None, dtype=float, **kwargs):
@@ -339,7 +349,7 @@ def write_variable(f, obj, name=None, mode='a+', format='NETCDF4', indices=None,
     # Write Variable
     v[ix] = np.asarray(obj)
 
-    # add attributes if any
+    # add metadata if any
     if isinstance(obj, DimArray):
         meta = obj._metadata
         for k in meta.keys():
