@@ -241,14 +241,14 @@ def write_obj(f, obj, *args, **kwargs):
     else:
         raise TypeError("only DimArray or Dataset types allowed, got {}:{}".format(type(obj), obj))
 
-def write_dataset(f, obj, mode='w-', zlib=False, **kwargs):
+def write_dataset(f, obj, mode='w-', zlib=False, complevel=4, **kwargs):
     """ write object to file
     """
     f, close = check_file(f, mode, **kwargs)
     nms = obj.keys()
         
     for nm in obj:
-        write_variable(f, obj[nm], nm, zlib=zlib)
+        write_variable(f, obj[nm], nm, zlib=zlib, complevel=complevel)
 
     # set metadata for the whole dataset
     meta = obj._metadata
