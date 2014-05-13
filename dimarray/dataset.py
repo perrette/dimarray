@@ -134,6 +134,20 @@ class Dataset(odict):
         super(Dataset, self).__setitem__(key, val)
 
     def write_nc(self, f, *args, **kwargs):
+        """ Saves dataset in netCDF file.
+        
+        parameters:
+        -----------
+        f : netCDF file name.
+        
+        understood keyword arguments:
+        zlib = Enable zlib compression if True. Default is False (no compression).
+        mode = File creation mode. Default is 'w-'. Set to 'w' to overwrite any existing file
+        format = netCDF file format. Default is 'NETCDF4'.
+        
+        See the netCDF4-python module documentation for more information about the use
+        of keyword arguments to write_nc.
+        """
         import io.nc as ncio
         ncio.write_dataset(f, self, *args, **kwargs)
 
