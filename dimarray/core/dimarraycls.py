@@ -1222,6 +1222,27 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         """
         assert self.ndim <= 2, "only support plotting for 1- and 2-D objects"
         return self.to_pandas().plot(*args, **kwargs)
+    
+    def pcolor(self, *args, **kwargs):
+        """ Plot a quadrilateral mesh. Wraps matplotlib pcolormesh().
+        See pcolormesh documentation in matplotlib for accepted keyword arguments.
+        
+        Examples:
+        --------
+        >>> x = DimArray(numpy.zeros([100,40])
+        >>> x.pcolor()
+        >>> x.T.pcolor() # to flip horizontal/vertical axes
+        """
+        
+        if len(self.dims) != 2:
+            raise NotImplementedError("pcolor can only be called on two-dimensional dimarrays.")
+
+        import matplotlib.pyplot as plt
+        
+        plt.pcolormesh(self.labels[0], self.labels[1], self.values.T, **kwargs)
+        plt.xlabel(self.dims[0])
+        plt.ylabel(self.dims[1])
+        
 
 def array_kw(*args, **kwargs):
     """ alias for DimArray.from_kw
