@@ -1239,9 +1239,9 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 
         import matplotlib.pyplot as plt
         
-        pc = plt.pcolormesh(self.labels[0], self.labels[1], self.values.T, **kwargs)
-        plt.xlabel(self.dims[0])
-        plt.ylabel(self.dims[1])
+        pc = plt.pcolormesh(self.labels[1], self.labels[0], self.values, **kwargs)
+        plt.xlabel(self.dims[1])
+        plt.ylabel(self.dims[0])
         
         return pc
         
