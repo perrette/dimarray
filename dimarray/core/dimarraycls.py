@@ -1239,9 +1239,11 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 
         import matplotlib.pyplot as plt
         
-        plt.pcolormesh(self.labels[0], self.labels[1], self.values.T, **kwargs)
+        pc = plt.pcolormesh(self.labels[0], self.labels[1], self.values.T, **kwargs)
         plt.xlabel(self.dims[0])
         plt.ylabel(self.dims[1])
+        
+        return pc
         
 
 def array_kw(*args, **kwargs):
