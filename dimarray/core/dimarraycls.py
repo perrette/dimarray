@@ -1270,10 +1270,11 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         
         Examples:
         --------
-        >>> x = DimArray(np.zeros([100,40]))
-        >>> x.pcolor()
-        >>> x.T.pcolor() # to flip horizontal/vertical axes
+        x = DimArray(np.zeros([100,40]))
+        x.pcolor()
+        x.T.pcolor() # to flip horizontal/vertical axes
         """
+        
         if len(self.dims) != 2:
             raise NotImplementedError("pcolor can only be called on two-dimensional dimarrays.")
 
@@ -1287,10 +1288,10 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         
         Examples:
         --------
-        >>> x = DimArray(np.zeros([100,40]))
-        >>> x[:50,:20] = 1.
-        >>> x.contourf()
-        >>> x.T.contourf() # to flip horizontal/vertical axes
+        x = DimArray(np.zeros([100,40]))
+        x[:50,:20] = 1.
+        x.contourf()
+        x.T.contourf() # to flip horizontal/vertical axes
         """
         if len(self.dims) != 2:
             raise NotImplementedError("contourf can only be called on two-dimensional dimarrays.")
@@ -1305,10 +1306,10 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         
         Examples:
         --------
-        >>> x = DimArray(np.zeros([100,40]))
-        >>> x[:50,:20] = 1.
-        >>> x.contour()
-        >>> x.T.contour() # to flip horizontal/vertical axes
+        x = DimArray(np.zeros([100,40]))
+        x[:50,:20] = 1.
+        x.contour()
+        x.T.contour() # to flip horizontal/vertical axes
         """
         if len(self.dims) != 2:
             raise NotImplementedError("contour can only be called on two-dimensional dimarrays.")
