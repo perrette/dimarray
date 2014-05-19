@@ -1,6 +1,7 @@
 """ NetCDF I/O to access and save geospatial data
 """
 import os
+import glob
 from collections import OrderedDict as odict
 import warnings
 import netCDF4 as nc
@@ -38,16 +39,56 @@ def summary_repr(fname):
     #attr = read_attributes(f, name):
 
 def read(f, nms=None, *args, **kwargs):
-    """  Read one or several variables from a netCDF file
+    """  Read one or several variables from one or several netCDF file
 
-    Input:
-        f        : file name or buffer
-        nms        : variable name(s) to read: list or str
+    Parameters:
+    ----------
+    f        : file name or buffer or regular expression
+    nms        : variable name(s) to read: list or str
+
+    *args, **kwargs: see doc in wrapped functions (see below)
+
+    Returns:
+    --------
+    DimArray or Dataset, depending on whether a (single) variable name is passed as argument (nms) or not
+
+    Note: parameters vary depending on the case:
+
+    a) Single file
+       -----------
+       *args, **kwargs are passed to DimArray.take
+       It includes: indices=, axis=, indexing=, position=, tol=
+
+       Please see help on `Dimarray.take` for more information.
+
+    b) Several files
+       -------------
+       same keywords arguments are allowed except that `axis` now has another meaning. It is not used for 
+       indexing but to pick the record dimension (call concatenate_ds) or the new dimension along which 
+       to join the datasets (call stack_ds). Indexing is still possible via `indices=` in dictionary form.
+       Note it is possible to pass `align=True` in stack_ds mode in order to align datasets prior to 
+       concatenations. `concatenate_only` is another optional parameter specific to read_nc: 
+       if True, only concatenate along existing axis (and raise error if axis not existing)
+
+       Please see help on stack_ds and concatenate_ds for more information
+       
+        
+    passed to read_variable, read_dataset or read_multinc
 
     >>> data = read('test.nc')  # load full file
     >>> data = read('test.nc','dynsealevel') # only one variable
     >>> data = read('test.nc','dynsealevel', {"time":slice(2000,2100), "lon":slice(50,70), "lat":42})  # load only a chunck of the data
     """
+    # check for regular expression
+    if type(f) is str:
+        test = glob.glob(f)
+        if len(test) == 1:
+            f = test[0]
+        elif len(test) == 0:
+            raise ValueError('File is not present: '+repr(f))
+        else:
+            f = test
+
     # multi-file ?
     if type(f) is list:
         mf = True
