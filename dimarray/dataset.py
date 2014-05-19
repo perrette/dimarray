@@ -396,7 +396,7 @@ def _get_list_arrays(data, keys):
     return data
 
 
-def stack_ds(datasets, axis, keys=None):
+def stack_ds(datasets, axis, keys=None, align=False):
     """ stack dataset along a new dimension
 
     parameters:
@@ -404,6 +404,7 @@ def stack_ds(datasets, axis, keys=None):
     datasets: sequence or dict of datasets
     axis: str, new dimension along which to stack the dataset 
     keys, optional: stack axis values, useful if dataset is a sequence, or a non-ordered dictionary
+    align, optional: if True, align axes (via reindexing) prior to stacking
 
     returns:
     --------
@@ -449,7 +450,7 @@ def stack_ds(datasets, axis, keys=None):
     dataset = Dataset()
     for v in variables:
         arrays = [ds[v] for ds in datasets]
-        array = stack(arrays, axis=axis, keys=keys)
+        array = stack(arrays, axis=axis, keys=keys, align=align)
         dataset[v] = array
 
     return dataset

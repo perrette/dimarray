@@ -236,7 +236,7 @@ def _check_stack_axis(axis, dims, default='unnamed'):
 		already exist")
     return axis
 
-def stack(arrays, axis, keys=None):
+def stack(arrays, axis, keys=None, align=False):
     """ stack arrays along a new dimension (raise error if already existing)
 
     parameters:
@@ -244,6 +244,7 @@ def stack(arrays, axis, keys=None):
     arrays: sequence or dict of arrays
     axis: str, new dimension along which to stack the array 
     keys, optional: stack axis values, useful if array is a sequence, or a non-ordered dictionary
+    align, optional: if True, align axes prior to stacking (Default to False)
 
     returns:
     --------
@@ -274,6 +275,10 @@ def stack(arrays, axis, keys=None):
     # make sure the stacking dimension is OK (new)
     dims = get_dims(*arrays)
     axis = _check_stack_axis(axis, dims)
+
+    # re-index axes if needed
+    if align:
+	arrays = align_axes(*arrays)
 
     # make it a numpy array
     data = [a.values for a in arrays]

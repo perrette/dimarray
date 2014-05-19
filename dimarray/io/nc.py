@@ -249,7 +249,7 @@ def read_dataset(f, nms=None, **kwargs):
 
     return data
 
-def read_multinc(fnames, nms=None, axis=None, keys=None, **kwargs):
+def read_multinc(fnames, nms=None, axis=None, keys=None, align=False, concatenate_only=False, **kwargs):
     """ read multiple netCDF files 
 
     parameters:
@@ -259,6 +259,8 @@ def read_multinc(fnames, nms=None, axis=None, keys=None, **kwargs):
     axis, optional: string, dimension along which the files are concatenated 
         (created as new dimension if not already existing)
     keys, optional: sequence to be passed to stack_nc, if axis is not part of the dataset
+    align, optional: if True, align axis prior to stacking (default to False)
+    concatenate_only, optional: if True, only concatenate along existing axis (and raise error if axis not existing)
     **kwargs: keyword arguments passed to io.nc.read_variable  (cannot 
     contain 'axis', though, but indices can be passed as a dictionary
     if needed, e.g. {'time':2010})
@@ -275,7 +277,7 @@ def read_multinc(fnames, nms=None, axis=None, keys=None, **kwargs):
 
     datasets = []
     for fn in fnames:
-        ds = read_dataset(f, nms, **kwargs)
+        ds = read_dataset(fn, nms, **kwargs)
 
         # check that the same variables are present in the file
         if variables is None:
@@ -288,14 +290,18 @@ def read_multinc(fnames, nms=None, axis=None, keys=None, **kwargs):
 
         # check that the same dimensions are present in the file
         if dimensions is None:
-            dimensions = ds.dims()
+            dimensions = ds.dims
         else:
-            dimensions_new = ds.dims()
+            dimensions_new = ds.dims
             assert dimensions == dimensions_new, \
                     "netCDF files must contain the same \
                     subset of dimensions to be concatenated/stacked"
 
         datasets.append(ds)
+
+    # check that dimension in dataset if required
+    if concatenate_only and axis not in dimensions:
+        raise Exception('required axis {} not found, only got {}'.format(axis, dimensions))
 
     # Join dataset
     if axis in dimensions:
@@ -303,7 +309,7 @@ def read_multinc(fnames, nms=None, axis=None, keys=None, **kwargs):
         ds = concatenate_ds(datasets, axis=axis)
 
     else:
-        ds = stack_ds(datasets, axis=axis, keys=keys)
+        ds = stack_ds(datasets, axis=axis, keys=keys, align=align)
 
     return ds
 
