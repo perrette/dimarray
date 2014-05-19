@@ -1225,24 +1225,16 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         assert self.ndim <= 2, "only support plotting for 1- and 2-D objects"
         return self.to_pandas().plot(*args, **kwargs)
     
-    def pcolor(self, *args, **kwargs):
-        """ Plot a quadrilateral mesh. Wraps matplotlib pcolormesh().
-        See pcolormesh documentation in matplotlib for accepted keyword arguments.
-        
-        Examples:
-        --------
-        >>> x = DimArray(numpy.zeros([100,40])
-        >>> x.pcolor()
-        >>> x.T.pcolor() # to flip horizontal/vertical axes
+    def _plot2D(self, function, *args, **kwargs):
+        """ generic plotting function for 2-D plots
         """
-        
         if len(self.dims) != 2:
             raise NotImplementedError("pcolor can only be called on two-dimensional dimarrays.")
 
         import matplotlib.pyplot as plt
         
         ax = plt.gca()
-        pc = plt.pcolormesh(self.labels[1], self.labels[0], self.values, **kwargs)
+        pc = function(self.labels[1], self.labels[0], self.values, **kwargs)
         plt.xlabel(self.dims[1])
         plt.ylabel(self.dims[0])
         
@@ -1271,6 +1263,59 @@ mismatch between values and axes""".format(inferred, self.values.shape)
             ax.yaxis.set_major_formatter(FuncFormatter(lat_formatter))            
         
         return pc
+
+    def pcolor(self, *args, **kwargs):
+        """ Plot a quadrilateral mesh. Wraps matplotlib pcolormesh().
+        See pcolormesh documentation in matplotlib for accepted keyword arguments.
+        
+        Examples:
+        --------
+        >>> x = DimArray(np.zeros([100,40]))
+        >>> x.pcolor()
+        >>> x.T.pcolor() # to flip horizontal/vertical axes
+        """
+        if len(self.dims) != 2:
+            raise NotImplementedError("pcolor can only be called on two-dimensional dimarrays.")
+
+        import matplotlib.pyplot as plt
+
+        return self._plot2D(plt.pcolormesh, *args, **kwargs)
+
+    def contourf(self, *args, **kwargs):
+        """ Plot filled 2-D contours. Wraps matplotlib contourf().
+        See contourf documentation in matplotlib for accepted keyword arguments.
+        
+        Examples:
+        --------
+        >>> x = DimArray(np.zeros([100,40]))
+        >>> x[:50,:20] = 1.
+        >>> x.contourf()
+        >>> x.T.contourf() # to flip horizontal/vertical axes
+        """
+        if len(self.dims) != 2:
+            raise NotImplementedError("contourf can only be called on two-dimensional dimarrays.")
+
+        import matplotlib.pyplot as plt
+
+        return self._plot2D(plt.contourf, *args, **kwargs)
+
+    def contour(self, *args, **kwargs):
+        """ Plot 2-D contours. Wraps matplotlib contour().
+        See contour documentation in matplotlib for accepted keyword arguments.
+        
+        Examples:
+        --------
+        >>> x = DimArray(np.zeros([100,40]))
+        >>> x[:50,:20] = 1.
+        >>> x.contour()
+        >>> x.T.contour() # to flip horizontal/vertical axes
+        """
+        if len(self.dims) != 2:
+            raise NotImplementedError("contour can only be called on two-dimensional dimarrays.")
+
+        import matplotlib.pyplot as plt
+
+        return self._plot2D(plt.contour, *args, **kwargs)
         
 
 def array_kw(*args, **kwargs):
