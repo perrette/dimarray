@@ -644,6 +644,7 @@ class Axes(list):
         return LocatorAxes(self)
 
 
+
 def _init_axes(axes=None, dims=None, labels=None, shape=None, raise_warning=True):
     """ initialize axis instance with many different ways
 

@@ -4,7 +4,8 @@ from collections import OrderedDict as odict
 import numpy as np
 
 from core import DimArray, array, Axis, Axes
-from core import align_axes 
+from core import align_axes, stack, concatenate
+from core.align import _check_stack_args, _get_axes, stack, concatenate
 from core import pandas_obj
 from core.metadata import MetadataDesc
 
@@ -394,8 +395,123 @@ def _get_list_arrays(data, keys):
 
     return data
 
-def test():
+
+def stack_ds(datasets, axis, keys=None):
+    """ stack dataset along a new dimension
+
+    parameters:
+    ----------
+    datasets: sequence or dict of datasets
+    axis: str, new dimension along which to stack the dataset 
+    keys, optional: stack axis values, useful if dataset is a sequence, or a non-ordered dictionary
+
+    returns:
+    --------
+    stacked dataset
+
+    See Also:
+    ---------
+    concatenate_ds
+
+    Examples:
+    ---------
+    >>> a = DimArray([1,2,3], dims=('dima',))
+    >>> b = DimArray([11,22], dims=('dimb',))
+    >>> ds = Dataset({'a':a,'b':b}) # dataset of 2 variables from an experiment
+    >>> ds2 = Dataset({'a':a*2,'b':b*2}) # dataset of 2 variables from a second experiment
+    >>> stack_ds([ds, ds2], axis='stackdim', keys=['exp1','exp2'])
+    Dataset of 2 variables
+    dimensions: 'stackdim', 'dima', 'dimb'
+    0 / stackdim (2): exp1 to exp2
+    1 / dima (3): 0 to 2
+    2 / dimb (2): 0 to 1
+    a: ('stackdim', 'dima')
+    b: ('stackdim', 'dimb')
     """
+    if not isinstance(axis, str): raise TypeError("axis parameter must be str")
+
+    # make a sequence of datasets
+    datasets, keys = _check_stack_args(datasets, keys) 
+
+    # find the list of variables common to all datasets
+    variables = None
+    for ds in datasets:
+        # check that stack axis is not already present
+        assert axis not in ds.dims, axis+" already exists in the dataset" 
+
+        # check that variables have the same variables
+        if variables is None:
+            variables = ds.keys()
+        else:
+            assert sorted(ds.keys()) == sorted(variables), "variables differ across datasets"
+
+    # Compute stacked dataset
+    dataset = Dataset()
+    for v in variables:
+        arrays = [ds[v] for ds in datasets]
+        array = stack(arrays, axis=axis, keys=keys)
+        dataset[v] = array
+
+    return dataset
+
+
+def concatenate_ds(datasets, axis=0):
+    """ concatenate two datasets along an existing dimension
+
+    Parameters:
+    -----------
+    datasets: sequence of datasets 
+    axis: axis along which to concatenate
+
+    Returns:
+    --------
+    joint Dataset along axis
+
+    NOTE: will raise an error if variables are there which do not contain the required dimension
+
+    See Also:
+    ---------
+    stack_ds
+
+    Examples:
+    ---------
+    >>> a = da.zeros(axes=[list('abc')], dims=('x0',))  # 1-D DimArray
+    >>> b = da.zeros(axes=[list('abc'), [1,2]], dims=('x0','x1')) # 2-D DimArray
+    >>> ds = Dataset({'a':a,'b':b}) # dataset of 2 variables from an experiment
+    >>> a2 = da.ones(axes=[list('def')], dims=('x0',)) 
+    >>> b2 = da.ones(axes=[list('def'), [1,2]], dims=('x0','x1')) # 2-D DimArray
+    >>> ds2 = Dataset({'a':a2,'b':b2}) # dataset of 2 variables from a second experiment
+    >>> concatenate_ds([ds, ds2])
+    Dataset of 2 variables
+    dimensions: 'x0', 'x1'
+    0 / x0 (6): a to f
+    1 / x1 (2): 1 to 2
+    a: ('x0',)
+    b: ('x0', 'x1')
+    """
+    # find the list of variables common to all datasets
+    variables = None
+    for ds in datasets:
+
+        # check that variables have the same variables
+        if variables is None:
+            variables = ds.keys()
+        else:
+            assert sorted(ds.keys()) == sorted(variables), "variables differ across datasets"
+
+    # Compute concatenated dataset
+    dataset = Dataset()
+    for v in variables:
+        arrays = [ds[v] for ds in datasets]
+        array = concatenate(arrays, axis=axis)
+        dataset[v] = array
+
+    return dataset
+
+
+def test():
+    """ Test Dataset functionality
+
     >>> data = test() 
     >>> data['test2'] = da.DimArray([0,3],('source',['greenland','antarctica'])) # doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):

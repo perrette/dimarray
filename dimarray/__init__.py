@@ -8,7 +8,7 @@ import lib.transform
 
 from config import set_option, get_option, print_options, rcParams, rcParamsHelp
 from core import *
-from dataset import Dataset
+from dataset import Dataset, stack_ds, concatenate_ds
 #from lib.transform import interp1d, interp2d, apply_recursive
 from lib import *
 

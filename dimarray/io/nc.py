@@ -7,7 +7,7 @@ import netCDF4 as nc
 import numpy as np
 #from geo.data.index import to_slice, _slice3D
 
-from dimarray.dataset import Dataset
+from dimarray.dataset import Dataset, concatenate_ds, stack_ds
 from dimarray.core import DimArray, Axis, Axes
 
 __all__ = ['read','summary']
@@ -48,10 +48,33 @@ def read(f, nms=None, *args, **kwargs):
     >>> data = read('test.nc','dynsealevel') # only one variable
     >>> data = read('test.nc','dynsealevel', {"time":slice(2000,2100), "lon":slice(50,70), "lat":42})  # load only a chunck of the data
     """
-    if nms is not None and isinstance(nms, str):
-        obj = read_variable(f, nms, *args, **kwargs)
+    # multi-file ?
+    if type(f) is list:
+        mf = True
     else:
-        obj = read_dataset(f, nms, *args, **kwargs)
+        mf = False
+
+    # Read a single file
+    if not mf:
+
+        # single variable ==> DimArray
+        if nms is not None and isinstance(nms, str):
+            obj = read_variable(f, nms, *args, **kwargs)
+
+        # multiple variable ==> Dataset
+        else:
+            obj = read_dataset(f, nms, *args, **kwargs)
+
+    # Read multiple files
+    else:
+        # single variable ==> DimArray (via Dataset)
+        if nms is not None and isinstance(nms, str):
+            obj = read_multinc(f, [nms], *args, **kwargs)
+            obj = obj[nms]
+
+        # single variable ==> DimArray
+        else:
+            obj = read_multinc(f, nms, *args, **kwargs)
 
     return obj
 
@@ -196,10 +219,11 @@ def read_variable(f, v, indices=None, axis=0, **kwargs):
 
 #read.__doc__ += read_variable.__doc__
 
-def read_dataset(f, nms=None, *args, **kwargs):
+def read_dataset(f, nms=None, **kwargs):
     """ read several (or all) names from a netCDF file
 
     nms : list of variables to read (default None for all variables)
+    **kwargs: keyword arguments passed to io.nc.read_variable 
     """
     kw = _extract_kw(kwargs, ('verbose',))
     f, close = check_file(f, 'r', **kw)
@@ -213,7 +237,7 @@ def read_dataset(f, nms=None, *args, **kwargs):
 
     data = dict()
     for nm in nms:
-        data[nm] = read_variable(f, nm, *args, **kwargs)
+        data[nm] = read_variable(f, nm, **kwargs)
 
     data = Dataset(**data)
 
@@ -225,6 +249,63 @@ def read_dataset(f, nms=None, *args, **kwargs):
 
     return data
 
+def read_multinc(fnames, nms=None, axis=None, keys=None, **kwargs):
+    """ read multiple netCDF files 
+
+    parameters:
+    -----------
+    fnames: list of file names or file handles to be read
+    nms: variable names to be read
+    axis, optional: string, dimension along which the files are concatenated 
+        (created as new dimension if not already existing)
+    keys, optional: sequence to be passed to stack_nc, if axis is not part of the dataset
+    **kwargs: keyword arguments passed to io.nc.read_variable  (cannot 
+    contain 'axis', though, but indices can be passed as a dictionary
+    if needed, e.g. {'time':2010})
+
+    returns:
+    --------
+    dimarray's Dataset instance
+
+    This function reads several files and call stack_ds or concatenate_ds 
+    depending on whether `axis` is absent from or present in the dataset, respectively
+    """
+    variables = None
+    dimensions = None
+
+    datasets = []
+    for fn in fnames:
+        ds = read_dataset(f, nms, **kwargs)
+
+        # check that the same variables are present in the file
+        if variables is None:
+            variables = ds.keys()
+        else:
+            variables_new = ds.keys()
+            assert variables == variables_new, \
+                    "netCDF files must contain the same \
+                    subset of variables to be concatenated/stacked"
+
+        # check that the same dimensions are present in the file
+        if dimensions is None:
+            dimensions = ds.dims()
+        else:
+            dimensions_new = ds.dims()
+            assert dimensions == dimensions_new, \
+                    "netCDF files must contain the same \
+                    subset of dimensions to be concatenated/stacked"
+
+        datasets.append(ds)
+
+    # Join dataset
+    if axis in dimensions:
+	if keys is None: warnings.warn('keys argument is not used')
+        ds = concatenate_ds(datasets, axis=axis)
+
+    else:
+        ds = stack_ds(datasets, axis=axis, keys=keys)
+
+    return ds
 
 #
 # write to file

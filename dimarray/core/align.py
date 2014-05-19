@@ -1,9 +1,11 @@
 """ Functions associated to array alignment
 """
+from collections import OrderedDict as odict
 import numpy as np
 import itertools
 from axes import Axes, Axis
 import warnings
+from tools import is_DimArray
 
 def broadcast_arrays(*arrays):
     """ Analogous to numpy.broadcast_arrays
@@ -38,7 +40,7 @@ def broadcast_arrays(*arrays):
 
     # get axes object made of all non-singleton common axes
     try:
-        axes = get_axes(*arrays)
+        axes = _get_axes(*arrays)
 
     # fails if axes are not aligned
     except AssertionError, msg:
@@ -66,7 +68,7 @@ def get_dims(*arrays):
     return dims
 
 
-def get_axes(*arrays):
+def _get_axes(*arrays):
     """ find list of axes from a list of axis-aligned DimArray objects
     """
     dims = get_dims(*arrays) # all dimensions present in objects
@@ -198,15 +200,118 @@ def _common_axis(*axes):
         ax1 = _common_axis(*axes[1:])
         return ax0.union(ax1)
 
+def _check_stack_args(arrays, keys=None):
+    """ generic function to deal with arguments for stacking
+    accepts arrays as sequence or dict and returns 
+    a list of keys and values
+    """
+    # convert dictionary to sequence + keys
+    if isinstance(arrays, dict):
+        if keys is None: keys = arrays.keys()
+        arrays = arrays.values()
+        
+    # make sure the result is a sequence
+    if type(arrays) not in (list, tuple):
+	raise TypeError("argument must be a dictionary, list or tuple")
+
+    # make sure keys exist
+    if keys is None: keys = np.arange(len(arrays))
+
+    return arrays, keys
+
+def _check_stack_axis(axis, dims, default='unnamed'):
+    """ check or get new axis name when stacking array or datasets
+    (just to have that in one place)
+    """
+    if axis is None:
+	axis = default
+	if axis in dims:
+	    i = 1
+	    while default+"_{}".format(i) in dims:
+		i+=1
+	    axis = default+"_{}".format(i)
+
+    if axis in dims:
+	raise ValueError("please provide an axis name which does not \
+		already exist")
+    return axis
+
+def stack(arrays, axis, keys=None):
+    """ stack arrays along a new dimension (raise error if already existing)
+
+    parameters:
+    ----------
+    arrays: sequence or dict of arrays
+    axis: str, new dimension along which to stack the array 
+    keys, optional: stack axis values, useful if array is a sequence, or a non-ordered dictionary
+
+    returns:
+    --------
+    DimArray: joint array
+
+    Sea Also:
+    ---------
+    concatenate: join arrays along an existing dimension
+
+    Examples:
+    ---------
+    >>> a = DimArray([1,2,3])
+    >>> b = DimArray([11,22,33])
+    >>> stack([a, b], axis='stackdim', keys=['a','b'])
+    dimarray: 6 non-null elements (0 null)
+    dimensions: 'stackdim', 'x0'
+    0 / stackdim (2): a to b
+    1 / x0 (3): 0 to 2
+    array([[ 1,  2,  3],
+           [11, 22, 33]])
+    """
+    # make a sequence of arrays
+    arrays, keys = _check_stack_args(arrays, keys)
+
+    for a in arrays: 
+        if not is_DimArray(a): raise TypeError('can only stack DimArray instances')
+
+    # make sure the stacking dimension is OK (new)
+    dims = get_dims(*arrays)
+    axis = _check_stack_axis(axis, dims)
+
+    # make it a numpy array
+    data = [a.values for a in arrays]
+    data = np.array(data)
+
+    # new axis
+    newaxis = Axis(keys, axis)
+
+    # find common axes
+    axes = _get_axes(*arrays)
+
+    # new axes
+    #newaxes = axes[:pos] + [newaxis] + axes[pos:] 
+    newaxes = [newaxis] + axes
+
+    # create dimarray
+    _constructor = arrays[0]._constructor # DimArray
+    return _constructor(data, axes=newaxes)
 
 
 def concatenate(arrays, axis=0, check_other_axes=True):
     """ concatenate several DimArrays
 
+    Parameters:
+    -----------
     arrays: list of DimArrays
     axis  : axis along which to concatenate
 
-    EXPERIMENTAL
+    Returns:
+    --------
+    concatenated DimArray 
+
+    Sea Also:
+    ---------
+    stack: join arrays along a new dimension
+
+    Examples:
+    ---------
 
     1-D
     >>> a = DimArray([1,2,3],['a','b','c'])
@@ -408,7 +513,7 @@ def aggregate(arrays, check_overlap=True):
 #
 #    # test whether common non-singleton axes are equal
 #    try: 
-#        axes = get_axes(*objects)
+#        axes = _get_axes(*objects)
 #    except:
 #        return False
 #

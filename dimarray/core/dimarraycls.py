@@ -906,7 +906,9 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     def from_arrays(cls, data, keys=None, axis=None):
         """ initialize a DimArray from a dictionary of smaller dimensional DimArray
 
-        Convenience method for: collect.Dataset(data, keys).to_array(axis)
+	==> align and stack a sequence of dimarrays
+
+        Convenience method for: Dataset(data, keys).to_array(axis)
 
         input:
             - data : list or dict of DimArrays
@@ -915,6 +917,10 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 
         output:
             - new DimArray object, with axis alignment (reindexing)
+
+	See Also:
+	---------
+	stack, concatenate
 
         Examples:
         ---------
