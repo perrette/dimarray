@@ -63,17 +63,24 @@ def read(f, nms=None, *args, **kwargs):
 
     b) Several files
        -------------
-       same keywords arguments are allowed except that `axis` now has another meaning. It is not used for 
-       indexing but to pick the record dimension (call concatenate_ds) or the new dimension along which 
-       to join the datasets (call stack_ds). Indexing is still possible via `indices=` in dictionary form.
-       Note it is possible to pass `align=True` in stack_ds mode in order to align datasets prior to 
-       concatenations. `concatenate_only` is another optional parameter specific to read_nc: 
-       if True, only concatenate along existing axis (and raise error if axis not existing)
+       same keywords arguments are allowed except except for:
+
+       - `axis` now has another meaning. It is not used for indexing but to 
+       pick the record dimension (in case of concatenate) or the new dimension 
+       along which to join the datasets (in case of stack). 
+       Note that indexing is still possible via `indices=` (in dictionary form)
+       see DimArray.take for more information.
+       - `align=True` in stack mode in order to align datasets prior to 
+       concatenation. 
+       - keys, optional: sequence to be passed to stack_ds, if axis is not 
+        part of the dataset
+    align, optional: if True, align axis prior to stacking (default to False)
+        - concatenate_only, optional: if True, only concatenate along existing 
+        axis (and raise error if axis not existing)
 
        Please see help on stack_ds and concatenate_ds for more information
        
-        
-    passed to read_variable, read_dataset or read_multinc
+    Under the hood: passed to read_variable, read_dataset or read_multinc
 
     >>> data = read('test.nc')  # load full file
     >>> data = read('test.nc','dynsealevel') # only one variable
@@ -122,7 +129,6 @@ def read(f, nms=None, *args, **kwargs):
 #
 # read from file
 # 
-
 
 def read_dimensions(f, name=None, ix=slice(None), verbose=False):
     """ return an Axes object
@@ -350,6 +356,9 @@ def read_multinc(fnames, nms=None, axis=None, keys=None, align=False, concatenat
         ds = concatenate_ds(datasets, axis=axis)
 
     else:
+        # use file name as keys by default
+        if keys is None:
+            keys = fnames
         ds = stack_ds(datasets, axis=axis, keys=keys, align=align)
 
     return ds

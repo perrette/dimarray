@@ -5,7 +5,7 @@ import numpy as np
 
 from core import DimArray, array, Axis, Axes
 from core import align_axes, stack, concatenate
-from core.align import _check_stack_args, _get_axes, stack, concatenate
+from core.align import _check_stack_args, _get_axes, stack, concatenate, _check_stack_axis, get_dims as _get_dims
 from core import pandas_obj
 from core.metadata import MetadataDesc
 
@@ -429,10 +429,14 @@ def stack_ds(datasets, axis, keys=None, align=False):
     a: ('stackdim', 'dima')
     b: ('stackdim', 'dimb')
     """
-    if not isinstance(axis, str): raise TypeError("axis parameter must be str")
+    #if not isinstance(axis, str): raise TypeError("axis parameter must be str")
 
     # make a sequence of datasets
     datasets, keys = _check_stack_args(datasets, keys) 
+
+    # make sure the stacking dimension is ok
+    dims = _get_dims(*datasets)
+    axis = _check_stack_axis(axis, dims) 
 
     # find the list of variables common to all datasets
     variables = None

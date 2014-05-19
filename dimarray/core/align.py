@@ -90,7 +90,8 @@ def _get_axes(*arrays):
                 common_axis = axis
 
             # Test alignment for non-singleton axes
-            assert axis.size == 1 or np.all(axis.values==common_axis.values), "axes are not aligned"
+	    if not (axis.size == 1 or np.all(axis.values==common_axis.values)):
+		raise ValueError("axes are not aligned")
 
         # append new axis
         axes.append(common_axis)
@@ -288,7 +289,12 @@ def stack(arrays, axis, keys=None, align=False):
     newaxis = Axis(keys, axis)
 
     # find common axes
-    axes = _get_axes(*arrays)
+    try: 
+	axes = _get_axes(*arrays)
+    except ValueError, msg: 
+	if 'axes are not aligned' in repr(msg):
+	    msg = 'axes are not aligned\n ==> Try passing `align=True`' 
+	raise ValueError(msg)
 
     # new axes
     #newaxes = axes[:pos] + [newaxis] + axes[pos:] 
