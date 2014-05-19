@@ -1238,8 +1238,8 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         plt.xlabel(self.dims[1])
         plt.ylabel(self.dims[0])
         
-        if ((self.dims[0].lower() == 'latitude' or self.dims[0].lower() == 'lat') and
-            self.dims[1].lower() == 'longitude' or self.dims[1].lower() == 'lon'):
+        if self.dims[0].lower() in ('latitude','lat') and \
+           self.dims[1].lower() in ('longitude','lon','long'):
             
             from matplotlib.ticker import FuncFormatter
             
