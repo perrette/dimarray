@@ -142,29 +142,39 @@ def align_dims(*arrays):
 def align_axes(*arrays):
     """ align axes of a list of DimArray arrays by reindexing
 
-    >>> a = DimArray([[0,1],[2,3.]])
-    >>> b = DimArray([[0,1],[2,3.],[4.,5.]])
-    >>> b.axes[0].values = np.array([1,2])
+    Examples:
+    ---------
+    >>> a = DimArray([0,1,2],axes=[[0,1,2]])
+    >>> b = DimArray([2,3],axes=[[2,3]])
     >>> align_axes(a, b)
-    [dimarray: 4 non-null elements (2 null)
+    [dimarray: 3 non-null elements (1 null)
+    dimensions: 'x0'
+    0 / x0 (4): 0 to 3
+    array([  0.,   1.,   2.,  nan]), dimarray: 2 non-null elements (2 null)
+    dimensions: 'x0'
+    0 / x0 (4): 0 to 3
+    array([ nan,  nan,   2.,   3.])]
+
+    Also work on multi-dimensional arrays
+    >>> a = DimArray([0,1], axes=[[0,1]]) # on 'x0' only
+    >>> b = DimArray([[0,1],[2,3.],[4.,5.]], axes=[[0,1,2],[1,2]]) # one more element along the 1st dimension, 2nd dimension ignored
+    >>> align_axes(a, b)
+    [dimarray: 2 non-null elements (1 null)
+    dimensions: 'x0'
+    0 / x0 (3): 0 to 2
+    array([  0.,   1.,  nan]), dimarray: 6 non-null elements (0 null)
     dimensions: 'x0', 'x1'
     0 / x0 (3): 0 to 2
-    1 / x1 (2): 0 to 1
-    array([[  0.,   1.],
-           [  2.,   3.],
-           [ nan,  nan]]), dimarray: 4 non-null elements (2 null)
-    dimensions: 'x0', 'x1'
-    0 / x0 (3): 0 to 2
-    1 / x1 (2): 0 to 1
-    array([[ nan,  nan],
-           [  0.,   1.],
-           [  2.,   3.]])]
+    1 / x1 (2): 1 to 2
+    array([[ 0.,  1.],
+           [ 2.,  3.],
+           [ 4.,  5.]])]
     """
     # find the dimensiosn
     dims = get_dims(*arrays)
 
     arrays = list(arrays)
-    for d in dims:
+    for jj, d in enumerate(dims):
 
         # arrays which have that dimension
         ii = filter(lambda i: d in arrays[i].dims, range(len(arrays)))
