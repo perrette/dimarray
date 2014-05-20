@@ -13,6 +13,9 @@ Options that determine alignment behaviour during an operation:
 Display:
 - display_max: max number of array values displayed (if greater than that
                array(...) will be shown)
+
+Optimization:
+. use_pandas: use pandas in some crucial operations such as re-indexing
 """
 from collections import OrderedDict as odict
 
@@ -26,8 +29,6 @@ class Params(odict):
 
 rcParams = Params()
 rcParamsHelp = Params() # help
-
-# Define options
 
 # indexing
 rcParams['indexing.by'] = "values"
@@ -46,6 +47,11 @@ rcParamsHelp['op.reindex'] = "bool (default True). If True, reindex axis before 
 # options for display
 rcParams['display.max'] = 100 
 rcParamsHelp['display.max'] = "int (default: 100): max array size shown. Note: if set to large values (e.g. inf), follows numpy display.\n"
+
+# options for optimization
+rcParams['optim.use_pandas'] = True
+rcParamsHelp['optim.use_pandas'] = 'bool (default: True). If True, use pandas for indexing by default'
+
 
 def set_option(name, value):
     """ set global options
