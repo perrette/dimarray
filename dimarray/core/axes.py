@@ -168,6 +168,8 @@ class Axis(object):
 
     def union(self, other):
         """ join two Axis objects
+	
+	Note this removes singletons by default
 
         Examples:
         ---------
@@ -187,8 +189,22 @@ class Axis(object):
         if np.all(self.values == other.values):
             # TODO: check other attributes such as weights
             return self.copy()
+	elif self.values.size == 0:
+	    return other
+	elif other.values.size == 0:
+	    return self
 
-        joined = np.unique(np.concatenate([self.values, [val for val in other.values if val not in self.values]]))
+	### concatenate two axes (minus missing elements)
+	##if self.other.size < self.values.size:
+	##    l1 = self.values
+	##    l2 = [val for val in other.values if val not in self.values]
+	##else:
+	##    l1 = [val for val in self.values if val not in other.values]
+	##    l2 = other.values
+        ## joined = np.concatenate((l1, l2))
+
+	# use unique and concatenate to make things simpler
+        joined = np.unique(np.concatenate((self.values, other.values)))
 
         # join two sorted axes?
         if self.is_monotonic() and other.is_monotonic():
