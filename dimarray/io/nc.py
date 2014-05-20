@@ -82,9 +82,29 @@ def read(f, nms=None, *args, **kwargs):
        
     Under the hood: passed to read_variable, read_dataset or read_multinc
 
+    Examples:
+    ---------
     >>> data = read('test.nc')  # load full file
     >>> data = read('test.nc','dynsealevel') # only one variable
     >>> data = read('test.nc','dynsealevel', {"time":slice(2000,2100), "lon":slice(50,70), "lat":42})  # load only a chunck of the data
+
+
+    Multi-files:
+    
+    Read variable 'tg' across multiple files (experiments outputs).
+    In this case the variable is a time series, whose length may 
+    vary across experiments (thus align=True is passed)
+
+        tg = da.read_nc('RCP*/OUT/history.nc', 'tg', align=True, axis='scenario')
+
+    A new 'scenario' axis is created labeled with file names. It is then 
+    possible to rename it more appropriately, e.g. keeping only the part
+    directly relevant to identify the experiment:
+    
+        tg.scenario[:] = [x.replace('/OUT/history.nc','') for x in tg.scenario]
+
+    If the experiments did represent various time slices (e.g. 10 time slices),
+    one would have indicated the existing dimension 'time' instead of 'scenario'
     """
     # check for regular expression
     if type(f) is str:
