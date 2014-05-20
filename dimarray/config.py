@@ -25,7 +25,18 @@ class Params(odict):
     def __repr__(self): 
         """ nicer printing to string
         """
-        return "\n".join(["{:>20} = {:<20}".format(k,self[k]) for k in self])
+        lines = []
+        for k in self:
+            val = self[k]
+            if isinstance(val, str):
+                val = "'{}'".format(val)
+            elif type(val) is bool:
+                val = "{}".format(val)
+            line = "{:>20} = {:<}".format(k,val)
+            lines.append(line)
+
+        return "\n".join(lines)
+        #return "\n".join(["{:>20} = {}".format(k,self[k]) for k in self])
 
 rcParams = Params()
 rcParamsHelp = Params() # help
