@@ -1243,31 +1243,7 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         pc = function(self.labels[1], self.labels[0], self.values, **kwargs)
         plt.xlabel(self.dims[1])
         plt.ylabel(self.dims[0])
-        
-        if self.dims[0].lower() in ('latitude','lat') and \
-           self.dims[1].lower() in ('longitude','lon','long'):
             
-            from matplotlib.ticker import FuncFormatter
-            
-            def lon_formatter(x, pos):
-                if x == 0:
-                    return u'0°'
-                elif x > 0:
-                    return u'%3.0f°E' % x
-                elif x < 0:
-                    return u'%3.0f°W' % -x
-            
-            def lat_formatter(x, pos):
-                if x == 0:
-                    return u'0°'
-                elif x > 0:
-                    return u'%3.0f°N' % x
-                elif x < 0:
-                    return u'%3.0f°S' % -x
-
-            ax.xaxis.set_major_formatter(FuncFormatter(lon_formatter))
-            ax.yaxis.set_major_formatter(FuncFormatter(lat_formatter))            
-        
         return pc
 
     def pcolor(self, *args, **kwargs):
