@@ -863,8 +863,8 @@ def reindex_axis(self, values, axis=0, method='exact', repna=True, fill_value=np
         axis = newaxis.name
 
     axis_id = self.axes.get_idx(axis)
-    axis_nm = self.axes.get_idx(axis)
     ax = self.axes[axis_id] # Axis object
+    axis_nm = ax.name
 
     # do nothing if axis is same or only None element
     if ax.values[0] is None or np.all(values==ax.values):
@@ -872,7 +872,51 @@ def reindex_axis(self, values, axis=0, method='exact', repna=True, fill_value=np
 
     # indices along which to sample
     if method == "exact":
-        newobj = take_na(self, values, axis=axis, repna=repna, fill_value=fill_value)
+
+        # Experimental: If pandas is installed, use re-indexing facilities from Index
+        try:
+            if tol is not None or ax.tol is not None or ax.modulo is not None: 
+                raise ImportError # just to get to the manual method below
+
+            import pandas as pd # here could raise ImportError if not defined
+
+            idx = pd.Series(np.arange(ax.size), index=ax.values) # create a Series
+            ii = idx.reindex_axis(values).values # reindex
+            bad = np.isnan(ii)
+            ii[bad] = 0   # set nan indices to 0
+            ii = np.asarray(ii, dtype=int) # integers
+
+            newval = self.values.take(ii, axis=axis_id)   # take new values
+
+            # Fill back the NaNs
+            # ...create tuple of `bad` indices (n-D index)
+            badn = ()
+            i = 0
+            while i <= self.ndim: # loop until finding the proper axis position
+                assert len(badn) < self.ndim, "reindexing index not found"
+                if i == axis_id:
+                    badn += bad,
+                    break
+                else:
+                    badn += slice(None),  
+                    i += 1
+
+            # ... fill back
+            try:
+                newval[badn] = fill_value # put NaN or the like 
+            except ValueError:
+                newval = np.asarray(newval, dtype=type(fill_value)) # force convertion of the array before filling with NaN
+                newval[badn] = fill_value # put NaN or the like 
+
+            # Prepare the new axse
+            newaxes = copy.copy(self.axes) # copy the list of Axes (but not the indexed content)
+            newaxes[axis_id] = Axis(values, axis_nm) #  replace with new axis 
+
+            # Create new DimArray
+            newobj = self._constructor(newval, newaxes, **self._metadata)
+
+        except ImportError:
+            newobj = take_na(self, values, axis=axis, repna=repna, fill_value=fill_value)
 
     elif method in ("nearest", "interp"):
         from interpolation import interp

@@ -942,7 +942,7 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         dimarray: 6 non-null elements (2 null)
         dimensions: 'items', 'x0'
         0 / items (2): a to b
-        1 / x0 (4): 0 to 3
+        1 / x0 (4): 0.0 to 3.0
         array([[ 10.,  20.,  30.,  nan],
                [ nan,   1.,   2.,   3.]])
 
