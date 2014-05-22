@@ -134,7 +134,8 @@ class Axis(object):
 
         # convert strings to object type
         #if values.dtype not in (np.dtype(float), np.dtype(int), np.dtype(long)):
-        if values.dtype.type == np.string_: 
+        if values.dtype.type == np.string_ or \
+                values.dtype.type == np.unicode_: 
             values = np.asarray(values, dtype=object)
 
         self.values = values 

@@ -378,7 +378,7 @@ def read_multinc(fnames, nms=None, axis=None, keys=None, align=False, concatenat
     else:
         # use file name as keys by default
         if keys is None:
-            keys = fnames
+            keys = [os.path.splitext(fn)[0] for fn in fnames]
         ds = stack_ds(datasets, axis=axis, keys=keys, align=align)
 
     return ds
