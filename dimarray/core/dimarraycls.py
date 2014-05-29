@@ -325,23 +325,18 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     # Attributes access
     #
     def __getattr__(self, att):
-        """ return dimension or numpy attribue
+        """ allows for accessing axis values by '.' directly
         """
+        # exclude special attributes from checking
+        exclude = ['values', 'axes']
+
         # check for dimensions
-        if att in self.dims:
+        if not att.startswith('_') and att not in exclude and att in self.dims:
             ax = self.axes[att]
             return ax.values # return numpy array
 
         else:
             raise AttributeError("{} object has no attribute {}".format(self.__class__.__name__, att))
-        #    try:
-        #        return super(DimArray, self).__getattr__(att) # call Metadata's method
-
-        #    except AttributeError, msg:
-        #        raise AttributeError(msg)
-
-        #    else:
-        #        raise
 
     def copy(self, shallow=False):
         """ copy of the object and update arguments
