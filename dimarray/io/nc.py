@@ -43,16 +43,22 @@ def read(f, nms=None, *args, **kwargs):
 
     Parameters:
     ----------
-    f        : file name or buffer or regular expression
-    nms        : variable name(s) to read: list or str
+    f : file name or buffer or regular expression
+    nms, optional : variable name(s) to read: list or str
 
-    *args, **kwargs: see doc in wrapped functions (see below)
+    *indexing parameters similar to `take` are accepted:
+    
+    indices, optional : dict, provide indices or slice to extract {nm1:val1}
+    indexing, optional : str, 'values' (default) or 'position' (integer position) similarly to `take`
+    tol, optional: float, floating point tolerance when indexing float-arrays
+
+    *additional keyword arguments depend on whether one or several files, one or several variables are required for reading (see below)
 
     Returns:
     --------
     DimArray or Dataset, depending on whether a (single) variable name is passed as argument (nms) or not
 
-    Note: parameters vary depending on the case:
+    Several cases:
 
     a) Single file
        -----------
@@ -80,13 +86,16 @@ def read(f, nms=None, *args, **kwargs):
 
        Please see help on stack_ds and concatenate_ds for more information
        
-    Under the hood: passed to read_variable, read_dataset or read_multinc
+    See Also:
+    ---------
+    summary_nc, take, stack, concatenate, stack_ds, concatenate_ds
 
     Examples:
     ---------
     >>> data = read('test.nc')  # load full file
     >>> data = read('test.nc','dynsealevel') # only one variable
-    >>> data = read('test.nc','dynsealevel', {"time":slice(2000,2100), "lon":slice(50,70), "lat":42})  # load only a chunck of the data
+    >>> data = read('test.nc','dynsealevel', indices={"time":slice(2000,2100), "lon":slice(50,70), "lat":42})  # load only a chunck of the data
+    >>> data = read('test.nc','dynsealevel', indices={"lat":42}, tol=0.1)  # select a latitude slice with a float tolerance of 0.1
 
 
     Multi-files:
