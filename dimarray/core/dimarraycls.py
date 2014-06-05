@@ -1179,9 +1179,11 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     #
     #  I/O
     # 
-
     def write_nc(self, f, name=None, *args, **kwargs):
         """ Write to netCDF
+
+        If you read this documenation, it means that netCDF4 is not installed on your 
+        system and the write_nc / read_nc function will raise an Exception.
         """
         import dimarray.io.nc as ncio
 
@@ -1189,16 +1191,17 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         if name is None and hasattr(self, "name"):
             name = self.name
 
-        ncio.write_variable(f, self, name, *args, **kwargs)
+        ncio._write_variable(f, self, name, *args, **kwargs)
 
     @classmethod
     def read_nc(cls, f, *args, **kwargs):
         """ Read from netCDF
 
-        Usage: a.DimArray(file, vname)
+        If you read this documenation, it means that netCDF4 is not installed on your 
+        system and the write_nc / read_nc function will raise an Exception.
         """
         import dimarray.io.nc as ncio
-        return ncio.read_variable(f, *args, **kwargs)
+        return ncio._read_variable(f, *args, **kwargs)
 
     # Aliases
     write = write_nc
@@ -1306,12 +1309,6 @@ def array_kw(*args, **kwargs):
 
 array_kw.__doc__ = DimArray.from_kw.__doc__
 
-# 
-# EXPERIMENTAL: STILL THINKING ABOUT WHAT IS THE BEST SYNTAX
-# array
-# join
-# from_arrays
-# 
 
 def array(data, *args, **kwargs):
     """ wrapper for DimArray and DimArray.from_arrays

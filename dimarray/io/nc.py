@@ -11,12 +11,49 @@ import numpy as np
 from dimarray.dataset import Dataset, concatenate_ds, stack_ds
 from dimarray.core import DimArray, Axis, Axes
 
-__all__ = ['read','summary']
+__all__ = ['read','summary', 'write', 'read_dimensions']
+
+
+#
+# some common piece of documentation
+#
+_doc_indexing = """
+    indices : dict, provide indices or slice to extract {nm1:val1}
+    indexing : str, 'values' (default) or 'position' (integer position) similarly to `take`
+    tol : None or float, floating point tolerance when indexing float-arrays 
+          (default to None for exact match) 
+""".strip()
+
+_doc_indexing_write = """
+    *indexing parameters similar to `DimArray.put` and `DimArray.take` are accepted,
+    in order to insert elements in a pre-defined netCDF variable:
+
+    {take} 
+""".format(take=_doc_indexing).strip()
+
+FORMAT='NETCDF4'
+
+_doc_write_nc = """ 
+    format : netCDF file format. Default is '{format}' (only accounted for during file creation)
+    zlib : Enable zlib compression if True. Default is False (no compression).
+    complevel : integer between 1 and 9 describing the level of compression desired. Ignored if zlib=False.
+    **kwargs : Any additional keyword arguments accepted by `netCDF4.Dataset.CreateVariable`
+    
+    See the netCDF4-python module documentation for more information about the use
+    of keyword arguments to write_nc.
+""".strip().format(format=FORMAT)
+
+_doc_write_modes = """Several write modes are available:
+        'w' : write, overwrite if file if present (clobber=True)
+        'w-': create new file, but raise Exception if file is present (clobber=False)
+        'a' : append, raise Exception if file is not present
+        'a+': append if file is present, otherwise create"""
+
 
 def summary(fname):
-    print(summary_repr(fname))
+    print(_summary_repr(fname))
 
-def summary_repr(fname):
+def _summary_repr(fname):
     """ print info about netCDF file
     
     input: 
@@ -24,19 +61,19 @@ def summary_repr(fname):
     """
     lines = []
     lines.append( fname+":\n"+"-"*len(fname))
-    nms, _ = scan(fname, verbose=False)
+    nms, _ = _scan(fname, verbose=False)
     header = "Dataset of %s variables" % (len(nms))
     if len(nms) == 1: header = header.replace('variables','variable')
     lines.append(header)
     lines.append(repr(read_dimensions(fname, verbose=False)))
     for nm in nms:
-        dims, shape = scan_var(fname, nm, verbose=False)
+        dims, shape = _scan_var(fname, nm, verbose=False)
         line = nm+": "+repr(dims)
         lines.append(line)
 
     return "\n".join(lines)
 
-    #attr = read_attributes(f, name):
+    #attr = _read_attributes(f, name):
 
 def read(f, nms=None, *args, **kwargs):
     """  Read one or several variables from one or several netCDF file
@@ -47,10 +84,7 @@ def read(f, nms=None, *args, **kwargs):
     nms, optional : variable name(s) to read: list or str
 
     *indexing parameters similar to `take` are accepted:
-    
-    indices, optional : dict, provide indices or slice to extract {nm1:val1}
-    indexing, optional : str, 'values' (default) or 'position' (integer position) similarly to `take`
-    tol, optional: float, floating point tolerance when indexing float-arrays
+    %s
 
     *additional keyword arguments depend on whether one or several files, one or several variables are required for reading (see below)
 
@@ -77,10 +111,10 @@ def read(f, nms=None, *args, **kwargs):
        Note that indexing is still possible via `indices=` (in dictionary form)
        see DimArray.take for more information.
        - `align=True` in stack mode in order to align datasets prior to 
-       concatenation. 
+       concatenation (re-index axes). 
        - keys, optional: sequence to be passed to stack_ds, if axis is not 
         part of the dataset
-    align, optional: if True, align axis prior to stacking (default to False)
+    align, optional: if True, reindex axis prior to stacking (default to False)
         - concatenate_only, optional: if True, only concatenate along existing 
         axis (and raise error if axis not existing)
 
@@ -88,14 +122,15 @@ def read(f, nms=None, *args, **kwargs):
        
     See Also:
     ---------
-    summary_nc, take, stack, concatenate, stack_ds, concatenate_ds
+    summary_nc, take, stack, concatenate, stack_ds, concatenate_ds,
+    DimArray.write_nc, Dataset.write_nc
 
     Examples:
     ---------
-    >>> data = read('test.nc')  # load full file
-    >>> data = read('test.nc','dynsealevel') # only one variable
-    >>> data = read('test.nc','dynsealevel', indices={"time":slice(2000,2100), "lon":slice(50,70), "lat":42})  # load only a chunck of the data
-    >>> data = read('test.nc','dynsealevel', indices={"lat":42}, tol=0.1)  # select a latitude slice with a float tolerance of 0.1
+    >>> data = read_nc('test.nc')  # load full file
+    >>> data = read_nc('test.nc','dynsealevel') # only one variable
+    >>> data = read_nc('test.nc','dynsealevel', indices={"time":slice(2000,2100), "lon":slice(50,70), "lat":42})  # load only a chunck of the data
+    >>> data = read_nc('test.nc','dynsealevel', indices={"lat":42}, tol=0.1)  # select a latitude slice with a float tolerance of 0.1
 
 
     Multi-files:
@@ -104,13 +139,13 @@ def read(f, nms=None, *args, **kwargs):
     In this case the variable is a time series, whose length may 
     vary across experiments (thus align=True is passed)
 
-        tg = da.read_nc('RCP*/OUT/history.nc', 'tg', align=True, axis='scenario')
+    >>> tg = da.read_nc('RCP*/OUT/history.nc', 'tg', align=True, axis='scenario')
 
     A new 'scenario' axis is created labeled with file names. It is then 
     possible to rename it more appropriately, e.g. keeping only the part
     directly relevant to identify the experiment:
     
-        tg.scenario[:] = [x.replace('/OUT/history.nc','') for x in tg.scenario]
+    >>> tg.scenario[:] = [x.replace('/OUT/history.nc','') for x in tg.scenario]
 
     If the experiments did represent various time slices (e.g. 10 time slices),
     one would have indicated the existing dimension 'time' instead of 'scenario'
@@ -136,24 +171,26 @@ def read(f, nms=None, *args, **kwargs):
 
         # single variable ==> DimArray
         if nms is not None and isinstance(nms, str):
-            obj = read_variable(f, nms, *args, **kwargs)
+            obj = _read_variable(f, nms, *args, **kwargs)
 
         # multiple variable ==> Dataset
         else:
-            obj = read_dataset(f, nms, *args, **kwargs)
+            obj = _read_dataset(f, nms, *args, **kwargs)
 
     # Read multiple files
     else:
         # single variable ==> DimArray (via Dataset)
         if nms is not None and isinstance(nms, str):
-            obj = read_multinc(f, [nms], *args, **kwargs)
+            obj = _read_multinc(f, [nms], *args, **kwargs)
             obj = obj[nms]
 
         # single variable ==> DimArray
         else:
-            obj = read_multinc(f, nms, *args, **kwargs)
+            obj = _read_multinc(f, nms, *args, **kwargs)
 
     return obj
+
+read.__doc__ = read.__doc__ % _doc_indexing   # format's {} fails because of dictionary syntax in examples {}
 
 #
 # read from file
@@ -166,7 +203,7 @@ def read_dimensions(f, name=None, ix=slice(None), verbose=False):
 
     return: Axes object
     """
-    f, close = check_file(f, mode='r', verbose=verbose)
+    f, close = _check_file(f, mode='r', verbose=verbose)
 
     # dimensions associated to the variable to load
     if name is None:
@@ -203,12 +240,12 @@ def read_dimensions(f, name=None, ix=slice(None), verbose=False):
 
     return axes
 
-def read_attributes(f, name=None, verbose=False):
+def _read_attributes(f, name=None, verbose=False):
     """ Read netCDF attributes
 
     name: variable name
     """
-    f, close = check_file(f, mode='r', verbose=verbose)
+    f, close = _check_file(f, mode='r', verbose=verbose)
     attr = {}
     if name is None:
         var = f
@@ -232,32 +269,29 @@ def _extract_kw(kwargs, argnames, delete=True):
             if delete: del kwargs[k]
     return kw
 
-def read_variable(f, v, indices=None, axis=0, **kwargs):
-    """ read one variable from netCDF4 file
-    Input:
+def _read_variable(f, name, indices=None, axis=0, verbose=False, **kwargs):
+    """ Read one variable from netCDF4 file 
 
-        f                : file name or file handle
-        v         : netCDF variable name to extract
-        indices, axis, **kwargs: passed to take
-
-        Please see help on `Dimarray.take` for more information.
+    Parameters:
+    -----------
+    f              : file name or file handle
+    name           : netCDF variable name to extract
+    indices, axis, **kwargs: similar to `DimArray.take`
 
     Returns:
+    --------
+    Returns a Dimarray instance
 
-        DimArray object 
-
-    >>> data = read_variable('myfile.nc','dynsealevel')  # load full file
-    >>> data = read_variable('myfile.nc','dynsealevel', {"time":2100, "lon":slice(70,None)})  # load only a chunck of the data
+    See preferred function `dimarray.read_nc` for more complete documentation 
     """
-    kw = _extract_kw(kwargs, ('verbose',))
-    f, close = check_file(f, mode='r', **kw)
+    f, close = _check_file(f, mode='r', verbose=verbose)
 
     # Construct the indices
-    axes = read_dimensions(f, v)
+    axes = read_dimensions(f, name)
 
     if indices is None:
         newaxes = axes
-        newdata = f.variables[v][:]
+        newdata = f.variables[name][:]
 
         # scalar variables come out as arrays ! Fix that.
         if len(axes) == 0:
@@ -276,14 +310,14 @@ def read_variable(f, v, indices=None, axis=0, **kwargs):
         # slice the data and dimensions
         newaxes_raw = [ax[ix[i]] for i, ax in enumerate(axes)] # also get the appropriate axes
         newaxes = [ax for ax in newaxes_raw if isinstance(ax, Axis)] # remove singleton values
-        newdata = f.variables[v][ix]
+        newdata = f.variables[name][ix]
 
     # initialize a dimarray
     obj = DimArray(newdata, newaxes)
-    obj.name = v
+    obj.name = name
 
     # Read attributes
-    attr = read_attributes(f, v)
+    attr = _read_attributes(f, name)
     for k in attr:
         setattr(obj, k, attr[k])
 
@@ -293,27 +327,36 @@ def read_variable(f, v, indices=None, axis=0, **kwargs):
 
     return obj
 
-#read.__doc__ += read_variable.__doc__
+#read.__doc__ += _read_variable.__doc__
 
-def read_dataset(f, nms=None, **kwargs):
-    """ read several (or all) names from a netCDF file
+def _read_dataset(f, nms=None, **kwargs):
+    """ Read several (or all) variable from a netCDF file
 
+    Parameters:
+    -----------
+    f   : file name or (netcdf) file handle
     nms : list of variables to read (default None for all variables)
-    **kwargs: keyword arguments passed to io.nc.read_variable 
+    **kwargs
+
+    Returns:
+    --------
+    Dataset instance
+
+    See preferred function `dimarray.read_nc` for more complete documentation 
     """
     kw = _extract_kw(kwargs, ('verbose',))
-    f, close = check_file(f, 'r', **kw)
+    f, close = _check_file(f, 'r', **kw)
 
     # automatically read all variables to load (except for the dimensions)
     if nms is None:
-        nms, dims = scan(f)
+        nms, dims = _scan(f)
 
 #    if nms is str:
 #        nms = [nms]
 
     data = dict()
     for nm in nms:
-        data[nm] = read_variable(f, nm, **kwargs)
+        data[nm] = _read_variable(f, nm, **kwargs)
 
     data = Dataset(**data)
 
@@ -325,7 +368,7 @@ def read_dataset(f, nms=None, **kwargs):
 
     return data
 
-def read_multinc(fnames, nms=None, axis=None, keys=None, align=False, concatenate_only=False, **kwargs):
+def _read_multinc(fnames, nms=None, axis=None, keys=None, align=False, concatenate_only=False, **kwargs):
     """ read multiple netCDF files 
 
     parameters:
@@ -335,9 +378,10 @@ def read_multinc(fnames, nms=None, axis=None, keys=None, align=False, concatenat
     axis, optional: string, dimension along which the files are concatenated 
         (created as new dimension if not already existing)
     keys, optional: sequence to be passed to stack_nc, if axis is not part of the dataset
-    align, optional: if True, align axis prior to stacking (default to False)
-    concatenate_only, optional: if True, only concatenate along existing axis (and raise error if axis not existing)
-    **kwargs: keyword arguments passed to io.nc.read_variable  (cannot 
+    align, optional: if True, reindex axis prior to stacking (default to False)
+    concatenate_only, optional: if True, only concatenate along existing axis (and raise error if axis not existing) 
+
+    **kwargs: keyword arguments passed to io.nc._read_variable  (cannot 
     contain 'axis', though, but indices can be passed as a dictionary
     if needed, e.g. {'time':2010})
 
@@ -347,13 +391,19 @@ def read_multinc(fnames, nms=None, axis=None, keys=None, align=False, concatenat
 
     This function reads several files and call stack_ds or concatenate_ds 
     depending on whether `axis` is absent from or present in the dataset, respectively
+
+    See `dimarray.read_nc` for more complete documentation.
+
+    See also:
+    ---------
+    read_nc
     """
     variables = None
     dimensions = None
 
     datasets = []
     for fn in fnames:
-        ds = read_dataset(fn, nms, **kwargs)
+        ds = _read_dataset(fn, nms, **kwargs)
 
         # check that the same variables are present in the file
         if variables is None:
@@ -392,29 +442,69 @@ def read_multinc(fnames, nms=None, axis=None, keys=None, align=False, concatenat
 
     return ds
 
-#
-# write to file
-#
-def write_obj(f, obj, *args, **kwargs):
-    """  call write_dataset or write_variable
-    """
-    if isinstance(obj, DimArray):
-        write_variable(f, obj, *args, **kwargs)
+##
+## write to file
+##
+def write(f, obj=None, *args, **kwargs):
+    """  Write DimArray or Dataset to file or Create Empty netCDF file
 
-    elif isinstance(obj, Dataset):
-        write_dataset(f, obj, *args, **kwargs)
+    Parameters depend on object to write:
+
+    ### Create Empty netCDF file  ###
+    {axes}
+
+    ### DimArray ###
+    {dimarray}
+
+    ### Dataset ###
+    {dataset}
+    """
+    if isinstance(obj, Dataset):
+        _write_dataset(f, obj, *args, **kwargs)
+
+    elif isinstance(obj, str):
+        name = obj
+        _createVariable(f, name, *args, **kwargs)
+
+    elif isinstance(obj, DimArray) or isinstance(obj, np.ndarray) or isinstance(obj, list):
+        _write_variable(f, obj, *args, **kwargs)
 
     else:
-        raise TypeError("only DimArray or Dataset types allowed, got {}:{}".format(type(obj), obj))
+        raise TypeError("only DimArray or Dataset types allowed, \
+                or provide variable name (first argument) and axes parameters to create empty variable.\
+                \nGot first argument {}:{}".format(type(obj), obj))
 
-def write_dataset(f, obj, mode='w-', zlib=False, complevel=4, **kwargs):
-    """ write object to file
+#def _write_empty_variable(f, obj, name, **kwargs):
+##_createVariable.__doc__ = _createVariable.__doc__.format(netCDF4=_doc_write_nc)
+
+#_doc_write_nc = """ 
+
+#def write_attributes(f, obj):
+
+def _write_dataset(f, obj, mode='w-', indices=None, axis=0, format=FORMAT, verbose=False, **kwargs):
+    """ Write Dataset to netCDF file
+
+    Parameters:
+    -----------
+    f : netCDF file name.
+
+    mode : File creation mode. Default is 'w-'. Set to 'w' to overwrite any existing file.
+    {write_modes}
+
+    {netCDF4}
+
+    {indexing}
+
+    See Also:
+    ---------
+    read_nc
+    DimArray.write_nc
     """
-    f, close = check_file(f, mode, **kwargs)
+    f, close = _check_file(f, mode=mode, verbose=verbose, format=format)
     nms = obj.keys()
         
     for nm in obj:
-        write_variable(f, obj[nm], nm, zlib=zlib, complevel=complevel)
+        _write_variable(f, obj[nm], nm, **kwargs)
 
     # set metadata for the whole dataset
     meta = obj._metadata
@@ -423,13 +513,138 @@ def write_dataset(f, obj, mode='w-', zlib=False, complevel=4, **kwargs):
 
     if close: f.close()
 
-def check_dimensions(f, axes, **verb):
+
+
+def _write_variable(f, obj=None, name=None, mode='a+', format=FORMAT, indices=None, axis=0, verbose=False, **kwargs):
+    """ Write DimArray instance to file
+
+    parameters:
+    -----------
+    f      : file name or netCDF file handle
+    name   : variable name, optional if `name` attribute already defined.
+    mode: default 'a+'
+    {write_modes}
+
+    {netCDF4}
+
+    {indexing}
+
+    See Also:
+    ---------
+    read_nc
+    Dataset.write_nc
+    """
+    if not name and hasattr(obj, "name"): name = obj.name
+    assert name, "invalid variable name !"
+
+    # control wether file name or netCDF handle
+    f, close = _check_file(f, mode=mode, verbose=verbose, format=format)
+
+    # create variable if necessary
+    if name not in f.variables:
+        assert isinstance(obj, DimArray), "a must be a DimArray"
+        v = _createVariable(f, name, obj.axes, dtype=obj.dtype, **kwargs)
+
+    else:
+        v = f.variables[name]
+
+        # remove dimension check to write slices
+        #if isinstance(obj, DimArray) and obj.dims != tuple(v.dimensions):
+        #    raise ValueError("Dimension name do not correspond {}: {} attempted to write: {}".format(name, tuple(v.dimensions), obj.dims))
+
+    # determine indices
+    if indices is None:
+        ix = slice(None)
+
+    else:
+        axes = read_dimensions(f, name)
+        try:
+            ix = axes.loc(indices, axis=axis)
+        except IndexError, msg:
+            raise
+            raise IndexError(msg)
+
+    # Write Variable
+    v[ix] = np.asarray(obj)
+
+    # add metadata if any
+    if isinstance(obj, DimArray):
+        meta = obj._metadata
+        for k in meta.keys():
+            if k == "name": continue # 
+            try:
+                f.variables[name].setncattr(k, meta[k])
+
+            except TypeError, msg:
+                raise Warning(msg)
+
+    if close:
+        f.close()
+
+def _createVariable(f, name, axes, dims=None, dtype=float, verbose=False, mode='a+', format=FORMAT, **kwargs):
+    """ Create empty netCDF4 variable from axes
+
+    parameters:
+    -----------
+    f: string or netCDF4.Dataset file handle
+    name : variable name
+    axes : Axes's instance or list of numpy arrays (axis values)
+    dims, optional: dimension names (to be used in combination with axes to create Axes instance)
+    dtype : variable type
+    mode : default is 'a+'
+    {write_modes}
+
+    {netCDF4}
+
+    Examples:
+    ---------
+    >>> da.write_nc('test3.nc','myvar', axes=[[1,2,3,4],['a','b','c']], dims=['dim1', 'dim2'], mode='w')
+    >>> a = da.array([11, 22, 33, 44], axes=[[1, 2, 3, 4]], dims=('dim1',)) # some array slice 
+    >>> da.write_nc('test3.nc', a, 'myvar', indices='b', axis='dim2') 
+    >>> da.write_nc('test3.nc', [111,222,333,444], 'myvar', indices='a', axis='dim2') 
+    >>> da.read_nc('test3.nc','myvar')
+    dimarray: 8 non-null elements (4 null)
+    dimensions: 'dim1', 'dim2'
+    0 / dim1 (4): 1 to 4
+    1 / dim2 (3): a to c
+    array([[ 111.,   11.,   nan],
+           [ 222.,   22.,   nan],
+           [ 333.,   33.,   nan],
+           [ 444.,   44.,   nan]])
+    """
+    f, close = _check_file(f, mode=mode, verbose=verbose, format=format)
+
+    # make sure axes is an Axes instance
+    if not isinstance(axes, Axes):
+        axes = Axes._init(axes, dims=dims)
+
+    _check_dimensions(f, axes)
+
+    # Create Variable
+    v = f.createVariable(name, dtype, [ax.name for ax in axes], **kwargs)
+
+    if close: 
+        f.close()
+
+    return v
+
+
+# add doc for keyword arguments
+_write_dataset.__doc__ = _write_dataset.__doc__.format(netCDF4=_doc_write_nc, indexing=_doc_indexing_write, write_modes=_doc_write_modes)
+_write_variable.__doc__ = _write_variable.__doc__.format(netCDF4=_doc_write_nc, indexing=_doc_indexing_write, write_modes=_doc_write_modes)
+_createVariable.__doc__ = _createVariable.__doc__.format(netCDF4=_doc_write_nc, write_modes=_doc_write_modes)
+
+write.__doc__ = write.__doc__.format(dimarray=_write_variable.__doc__, dataset=_write_dataset.__doc__, axes=_createVariable.__doc__)
+
+
+def _check_dimensions(f, axes, **verb):
     """ create dimensions if not already existing
 
     f : file handle or string
     axes: list of Axis objects
+    **verb: passed to _check_file (e.g. verbose=False)
     """
-    f, close = check_file(f, mode='a+', **verb)
+    f, close = _check_file(f, mode='a+', **verb)
     for ax in axes:
         dim = ax.name
         if not dim in f.dimensions:
@@ -459,92 +674,23 @@ def check_dimensions(f, axes, **verb):
 
     if close: f.close()
 
-def createVariable(f, name, axes=None, dtype=float, **kwargs):
-    """ create variable from an Axes object
 
-    f: Dataset file handle
-    name : variable name
-    dtype : variable type
-    a: DimArray
-    name: variable name if a.name is not defined
-    """
-    # Create dimensions if necessary
-    check_dimensions(f, axes)
-
-    # Create Variable
-    return f.createVariable(name, dtype, [ax.name for ax in axes], **kwargs)
-
-#def write_attributes(f, obj):
-
-def write_variable(f, obj, name=None, mode='a+', format='NETCDF4', indices=None, axis=0, verbose=False, zlib=False, **kwargs):
-    """ save DimArray instance to file
-
-    f        : file name or netCDF file handle
-    obj : DimArray object
-    name: variable name
-    mode: 'a+' append if possible, otherwise write
-    """
-    if not name and hasattr(obj, "name"): name = obj.name
-    assert name, "invalid variable name !"
-
-    # control wether file name or netCDF handle
-    f, close = check_file(f, mode=mode, verbose=verbose, format=format)
-
-    # create variable if necessary
-    if name not in f.variables:
-        assert isinstance(obj, DimArray), "a must be a DimArray"
-        v = createVariable(f, name, obj.axes, dtype=obj.dtype, zlib=zlib)
-
-    # or just check dimensions
-    else:
-        v = f.variables[name]
-
-        if isinstance(obj, DimArray) and obj.dims != tuple(v.dimensions):
-            raise ValueError("Dimension name do not correspond {}: {} attempted to write: {}".format(name, tuple(v.dimensions), obj.dims))
-    # determine indices
-    if indices is None:
-        ix = slice(None)
-
-    else:
-        axes = read_dimensions(f, name)
-        try:
-            ix = axes.loc(indices, axis=axis, **kwargs)
-        except IndexError, msg:
-            raise
-            raise IndexError(msg)
-
-    # Write Variable
-    v[ix] = np.asarray(obj)
-
-    # add metadata if any
-    if isinstance(obj, DimArray):
-        meta = obj._metadata
-        for k in meta.keys():
-            if k == "name": continue # 
-            try:
-                f.variables[name].setncattr(k, meta[k])
-
-            except TypeError, msg:
-                raise Warning(msg)
-
-    if close:
-        f.close()
 
 #
 # util
 #
 
-def scan(f, **verb):
+def _scan(f, **verb):
     """ get variable names in a netCDF file
     """
-    f, close = check_file(f, 'r', **verb)
+    f, close = _check_file(f, 'r', **verb)
     nms = f.variables.keys()
     dims = f.dimensions.keys()
     if close: f.close()
     return [n for n in nms if n not in dims], dims
 
-def scan_var(f, v, **verb):
-    f, close = check_file(f, 'r', **verb)
+def _scan_var(f, v, **verb):
+    f, close = _check_file(f, 'r', **verb)
     var = f.variables[v]
     dims = var.dimensions
     shape = var.shape
@@ -552,16 +698,13 @@ def scan_var(f, v, **verb):
     return dims, shape
 
 
-def check_file(f, mode='r', verbose=True, format='NETCDF4'):
+def _check_file(f, mode='r', verbose=True, format='NETCDF4'):
     """ open a netCDF4 file
 
     mode: changed from original 'r','w','r' & clobber option:
 
     'r' : read, raise Exception if file is not present 
-    'w' : write, overwrite if file if present (clobber=True)
-    'w-': create new file, but raise Exception if file is present (clobber=False)
-    'a' : append, raise Exception if file is not present
-    'a+': append if file is present, otherwise create
+    {write_modes}
 
     format: passed to netCDF4.Dataset, only relevatn when mode = 'w', 'w-', 'a+'
         'NETCDF4', 'NETCDF4_CLASSIC', 'NETCDF3_CLASSIC', 'NETCDF3_64BIT'
@@ -609,6 +752,16 @@ def check_file(f, mode='r', verbose=True, format='NETCDF4'):
 
     return f, close
 
+_check_file.__doc__ = _check_file.__doc__.format(write_modes=_doc_write_modes)
+
+#
+# Append documentation to dimarray's methods
+#
+DimArray.write_nc.__func__.__doc__ = _write_variable.__doc__
+Dataset.write_nc.__func__.__doc__ = _write_dataset.__doc__
+
+DimArray.read_nc.__func__.__doc__ = _read_variable.__doc__
+Dataset.read_nc.__func__.__doc__ = _read_dataset.__doc__
 
 ##
 ## Create a wrapper which behaves similarly to a Dataset and DimArray object
@@ -667,7 +820,7 @@ def check_file(f, mode='r', verbose=True, format='NETCDF4'):
 #        """ register the filename
 #        """
 #        if keepopen:
-#            f, close = check_file(f, mode='w-')
+#            f, close = _check_file(f, mode='w-')
 #
 #        self.__dict__.update({'f':f, 'keepopen':keepopen}) # by pass setattr
 #
@@ -679,7 +832,7 @@ def check_file(f, mode='r', verbose=True, format='NETCDF4'):
 #    def write(self, *args, **kwargs):
 #        """ Read the netCDF file and convert to Dataset
 #        """
-#        #f, close = check_file(self.f, mode='w-', verbose=False)
+#        #f, close = _check_file(self.f, mode='w-', verbose=False)
 #        return write_obj(self.f, *args, **kwargs)
 #
 #    def __getitem__(self, nm):
@@ -688,7 +841,7 @@ def check_file(f, mode='r', verbose=True, format='NETCDF4'):
 #    def __setitem__(self, nm, a):
 #        """ Add a variable to netCDF file
 #        """
-#        return write_variable(self.f, a, name=nm, verbose=False)
+#        return _write_variable(self.f, a, name=nm, verbose=False)
 #
 ##    def __delitem__(self, nm):
 ##        """ delete a variable
@@ -713,14 +866,14 @@ def check_file(f, mode='r', verbose=True, format='NETCDF4'):
 #        """ string representation of the Dataset
 #        """
 #        try:
-#            return summary_repr(self.f)
+#            return _summary_repr(self.f)
 #        except IOError:
 #            return "empty dataset"
 #
 #    def _getnc(self, mode, verbose=False):
 #        """ used for setting and getting attributes
 #        """
-#        f, close = check_file(self.f, mode=mode, verbose=verbose)
+#        f, close = _check_file(self.f, mode=mode, verbose=verbose)
 #        return f, f, close
 #
 #    @property
@@ -732,7 +885,7 @@ def check_file(f, mode='r', verbose=True, format='NETCDF4'):
 #    #
 #    def keys(self):
 #        try:
-#            names, dims = scan(self.f)
+#            names, dims = _scan(self.f)
 #        except IOError:
 #            names = []
 #
@@ -741,7 +894,7 @@ def check_file(f, mode='r', verbose=True, format='NETCDF4'):
 #    @property
 #    def dims(self):
 #        try:
-#            names, dims = scan(self.f)
+#            names, dims = _scan(self.f)
 #        except IOError:
 #            dims = ()
 #
@@ -768,19 +921,19 @@ def check_file(f, mode='r', verbose=True, format='NETCDF4'):
 #    def _getnc(self, mode, verbose=False):
 #        """ get netCDF4 Variable handle 
 #        """
-#        f, close = check_file(self.f, mode=mode, verbose=verbose)
+#        f, close = _check_file(self.f, mode=mode, verbose=verbose)
 #        return f.variables[f.name], f, close
 #
 #    def read(self, *args, **kwargs):
 #        indexing = kwargs.pop('indexing', self.indexing)
 #        kwargs['indexing'] = indexing
-#        return read_variable(self.f, self.name, *args, **kwargs)
+#        return _read_variable(self.f, self.name, *args, **kwargs)
 #
 #    def write(self, values, *args, **kwargs):
 #        assert 'name' not in kwargs, "'name' is not a valid parameter"
 #        indexing = kwargs.pop('indexing', self.indexing)
 #        kwargs['indexing'] = indexing
-#        return write_variable(self.f, values, self.name, *args, **kwargs)
+#        return _write_variable(self.f, values, self.name, *args, **kwargs)
 #
 #    @property
 #    def ix(self):

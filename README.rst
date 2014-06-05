@@ -198,10 +198,8 @@ which rely on the netCDF4 package. If netCDF4 is installed (much
 recommanded), a dataset can easily read and write to the netCDF format:
 
 >>> dataset.write_nc('test.nc', mode='w')
-write to test.nc
 >>> import dimarray as da
 >>> da.read_nc('test.nc', 'incomplete_timeseries')
-read from test.nc
 dimarray: 2 non-null elements (1 null)
 dimensions: 'time'
 0 / time (3): 1950 to 1952

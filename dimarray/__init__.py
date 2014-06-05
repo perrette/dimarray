@@ -13,7 +13,7 @@ from dataset import Dataset, stack_ds, concatenate_ds
 from lib import *
 
 try:
-    from io.nc import read as read_nc, summary as summary_nc
+    from io.nc import read as read_nc, summary as summary_nc, write as write_nc, read_dimensions as read_nc_axes
     _ncio = True
 
 except ImportError:

@@ -1,6 +1,7 @@
 """ Test module for nc
 """
 import os
+import doctest
 from warnings import warn
 
 import numpy as np
@@ -29,6 +30,8 @@ def test_ncio():
     ds = da.Dataset(a=a, b=b)
     for k in ds:
         assert(np.all(ds[k] == data[k]))
+
+    doctest.run_docstring_examples(da.io.nc._createVariable, globs=globals())
 
 
 #def _main(**kwargs):
