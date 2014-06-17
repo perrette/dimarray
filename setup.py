@@ -85,8 +85,8 @@ setup(name='dimarray',
       install_requires = ["numpy>=1.7"],
       extras_require = {
 	  "ncio": ["netCDF4>=1.0.6"],
-	  "pandas": ["pandas>=0.8.0"],
-	  "plotting": ["pandas>=0.8.0"],
+	  "pandas": ["pandas>=0.11.0"],
+	  "plotting": ["matplotlib>=1.1", "pandas>=0.11.0"],
 	  }
       )
 
