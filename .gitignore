@@ -1,3 +1,5 @@
+dimarray/version.py
+
 *.py[cod]
 
 # C extensions

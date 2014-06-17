@@ -235,8 +235,6 @@ A B
   1  10  11  12  13  14  15  16  17  18  19
 1 0  20  21  22  23  24  25  26  27  28  29
   1  30  31  32  33  34  35  36  37  38  39
-<BLANKLINE>
-[4 rows x 10 columns]
 
 
 More on the notebook documentation:

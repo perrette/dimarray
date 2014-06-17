@@ -12,6 +12,8 @@ from dataset import Dataset, stack_ds, concatenate_ds
 #from lib.transform import interp1d, interp2d, apply_recursive
 from lib import *
 
+from dimarray.version import version as __version__
+
 try:
     from io.nc import read as read_nc, summary as summary_nc, write as write_nc, read_dimensions as read_nc_axes
     _ncio = True

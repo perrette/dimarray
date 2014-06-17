@@ -1,11 +1,76 @@
+#!/usr/bin/env python
+"""
+The version tracking part of this file comes from pandas' setup.py 
+which is under the BSD license
+"""
 #from distutils.core import setup
+import os, sys
+import re
 from setuptools import setup
 
 with open('README.rst') as file:
         long_description = file.read()
 
+#
+# Track version after pandas' setup.py
+#
+MAJOR = 0
+MINOR = 1
+MICRO = 7
+ISRELEASED = False
+VERSION = '%d.%d.%d' % (MAJOR, MINOR, MICRO)
+QUALIFIER = ''
+
+FULLVERSION = VERSION
+write_version = True
+
+if not ISRELEASED:
+    import subprocess
+    FULLVERSION += '.dev'
+
+    pipe = None
+    for cmd in ['git','git.cmd']:
+        try:
+            pipe = subprocess.Popen([cmd, "describe", "--always", "--match", "v[0-9]*"],
+                                stdout=subprocess.PIPE)
+            (so,serr) = pipe.communicate()
+            if pipe.returncode == 0:
+                break
+        except:
+            pass
+
+    if pipe is None or pipe.returncode != 0:
+        # no git, or not in git dir
+        if os.path.exists('dimarray/version.py'):
+            warnings.warn("WARNING: Couldn't get git revision, using existing dimarray/version.py")
+            write_version = False
+        else:
+            warnings.warn("WARNING: Couldn't get git revision, using generic version string")
+    else:
+      # have git, in git dir, but may have used a shallow clone (travis does this)
+      rev = so.strip()
+      # makes distutils blow up on Python 2.7
+      if sys.version_info[0] >= 3:
+          rev = rev.decode('ascii')
+
+      if not rev.startswith('v') and re.match("[a-zA-Z0-9]{7,9}",rev):
+          # partial clone, manually construct version string
+          # this is the format before we started using git-describe
+          # to get an ordering on dev version strings.
+          rev ="v%s.dev-%s" % (VERSION, rev)
+
+      # Strip leading v from tags format "vx.y.z" to get th version string
+      FULLVERSION = rev.lstrip('v')
+
+else:
+    FULLVERSION += QUALIFIER
+
+#
+#
+#
+
 setup(name='dimarray',
-      version='0.1.7',
+      version=FULLVERSION,
       author='Mahe Perrette',
       author_email='mahe.perrette@pik-potsdam.de',
       description='numpy array with labelled dimensions and axes, dimension, NaN handling and netCDF I/O',
@@ -24,3 +89,23 @@ setup(name='dimarray',
 	  "plotting": ["pandas>=0.8.0"],
 	  }
       )
+
+def write_version_py(filename=None):
+    cnt = """\
+version = '%s'
+short_version = '%s'
+"""
+    if not filename:
+        filename = os.path.join(
+            os.path.dirname(__file__), 'dimarray', 'version.py')
+
+    a = open(filename, 'w')
+    try:
+        a.write(cnt % (FULLVERSION, VERSION))
+    finally:
+        a.close()
+
+# Write version.py to dimarray
+if write_version:
+    write_version_py()
+
