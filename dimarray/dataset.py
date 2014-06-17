@@ -128,7 +128,13 @@ class Dataset(odict):
 
             # Append new axis
             else:
-                self.axes.append(axis)
+                # NOTE: make a copy so that Dataset's axes are different from individual dimarray's axes
+                # Otherwise confusing things happen.
+                # Other alternative? Make all axes a reference of the Dataset axes
+                # But I could not get this work properly so I gave up. 
+                # Moreover this involves making axis copy when calling __getitem__, which is a
+                # significant deviation from dictionary's behaviour
+                self.axes.append(axis.copy())  
 
         # update name
         val.name = key
