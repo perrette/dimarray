@@ -9,6 +9,17 @@ from tools import is_array1d_equiv
 
 __all__ = ["Axis","Axes", "is_regular"]
 
+# generic documentation serving for various functions
+_doc_reset_axis =  dict(
+	values = """values, optional: None or False or numpy array-like or mapper (function, dict)
+	    if None, axis values will be reset to 0, 1, 2...
+	    if False, axis values are not kept identical (e.g. if only metadata are to be changed)
+	    Default to None.""",
+	axis = "axis, optional: int or str, axis to be reset",
+	inplace="inplace, optional: reset axis values in-place (True) or return copy (False)? (default False)",
+	kwargs="**kwargs: also reset other axis attributes (e.g. name, modulo, weights, or any metadata)",
+	)
+
 def is_regular(values):
     """ test if numeric, monotonically increasing and constant step
     """
@@ -36,20 +47,27 @@ def is_monotonic(values):
     return monotonic
 
 
-def _convert_dtype(dtype):
-    """ convert numpy type in a python type
+def _convert_dtype(values):
+    """ convert Axis type to have "object" instead of string
     """
-    if dtype is np.dtype(int):
-        type_ = int
+    values = np.asarray(values)
 
-    # objects represent strings
-    elif dtype is np.dtype('O'):
-        type_ = str
+    # Treat the particular case of a sequence of sequences, leads to a 2-D array
+    # ==> convert to a list of tuples
+    if values.ndim == 2: 
+	val = np.empty(values.shape[0], dtype=object)
+	val[:] = zip(*values.T.tolist()) # pass a list of tuples
+	values = val
 
     else:
-        type_ = float
+	# convert strings to object type
+	#if values.dtype not in (np.dtype(float), np.dtype(int), np.dtype(long)):
+	if values.dtype.type == np.string_ or \
+		values.dtype.type == np.unicode_: 
+	    values = np.asarray(values, dtype=object)
 
-    return type_
+    return values
+
 
 class Descriptor(object):
     """ Property descriptor: set class attributes
@@ -119,24 +137,13 @@ class Axis(object):
         if np.isscalar(values):
             raise TypeError("an axis cannot be a scalar value !")
 
-        values = np.asarray(values, dtype)
-
-        # Treat the particular case of a sequence of sequences, leads to a 2-D array
-        # ==> convert to a list of tuples
-        if values.ndim == 2: 
-            val = np.empty(values.shape[0], dtype=object)
-            val[:] = zip(*values.T.tolist()) # pass a list of tuples
-            values = val
+	# make sure the type is right
+	values = np.asarray(values, dtype)
+	values = _convert_dtype(values)
 
         # check
         if values.ndim != 1:
             raise ValueError("an Axis object can only be 1-D, check-out GroupedAxis")
-
-        # convert strings to object type
-        #if values.dtype not in (np.dtype(float), np.dtype(int), np.dtype(long)):
-        if values.dtype.type == np.string_ or \
-                values.dtype.type == np.unicode_: 
-            values = np.asarray(values, dtype=object)
 
         self.values = values 
         self.name = name 
@@ -168,7 +175,91 @@ class Axis(object):
         return Axis(values, self.name, weights=weights, tol=self.tol, **self._metadata)
 
     def __setitem__(self, item, value):
-        self.values[item] = value
+	""" do some type checking/conversion before setting new axis values
+
+	Examples:
+	>>> a = Axis([1, 2, 3], name='dummy')
+	>>> a.values
+	array([1, 2, 3])
+	>>> a[0] = 1.2  # convert to float
+	>>> a.values
+	array([ 1.2,  2. ,  3. ])
+	>>> a[0] = 'a'  # convert to object dtype
+	>>> a.values
+        array(['a', 2.0, 3.0], dtype=object)
+	"""
+	# check numpy-equivalent dtype
+	dtype = _convert_dtype(value).dtype
+
+	# dtype comparison seems to be a good indicator of when type conversion works
+	# e.g. dtype('O') > dtype(int) , dtype('O') > dtype(str) and dtype(float) > dtype(int) all return True
+	# first convert Axis datatype to new values's type, if needed
+	if self.values.dtype < dtype:
+	    self.values = np.asarray(self.values, dtype=dtype)
+
+	# otherwise (no ordering relationship), just define an object type
+	elif not (self.values.dtype  >= dtype):
+	    self.values = np.asarray(self.values, dtype=object)  
+
+	# now can proceed to asignment
+	self.values[item] = value
+
+	# here could do some additional check about _monotoic and other axis attributes
+	# for now just set to None
+	self._monotonic = None
+
+    def reset(self, values=None, inplace=False, **kwargs):
+	""" Reset axis values and attributes
+
+	parameters:
+	-----------
+	{values}
+	{inplace}
+	{kwargs}
+
+	returns:
+	-------
+	Axis instance, or None if inplace is True
+	"""
+	# if values is not provided, reset axis values
+	if values is None:
+	    values = np.arange(self.size)
+
+	# If values is False, do not change values (e.g. to change only some keyword arguments)
+	elif values is False:
+	    values = self.values.copy()
+
+	# if values is a dictionary, use it to create a mapper
+	elif isinstance(values, dict):
+	    def mapper(x):
+		if x in values.keys():
+		    return values[x] 
+		else:
+		    return x
+	    values = [mapper(x) for x in self.values]
+
+	elif callable(values):
+	    mapper = values
+	    values = [mapper(x) for x in self.values]
+
+	# At this point values must be an array of size equal to values
+	values = np.asarray(values)
+
+	assert values.size == self.values.size, "size cannot be changed"
+	
+	if inplace: 
+	    ax = self
+	else: 
+	    ax = self.copy()
+
+	# does necessary type checking
+	ax[:] = values
+
+	for k in kwargs:
+	    setattr(ax, k, kwargs[k])
+
+	if not inplace: 
+	    return ax
 
     def union(self, other):
         """ join two Axis objects
@@ -331,7 +422,6 @@ class Axis(object):
 
     @property
     def dtype(self): 
-        #return _convert_dtype(np.array(self.values).dtype)
         return self.values.dtype
 
     @property
@@ -380,6 +470,9 @@ class Axis(object):
     @classmethod
     def from_pandas(cls, index):
         return cls(index.values, name=index.name)
+
+# update doc
+Axis.reset.__func__.__doc__ = Axis.reset.__func__.__doc__.format(**_doc_reset_axis)
 
 class GroupedAxis(Axis):
     """ an Axis which is a grouping of several axes flattened together
@@ -666,6 +759,30 @@ class Axes(list):
     def loc(self):
         return LocatorAxes(self)
 
+
+    def reset_axis(self, values=None, axis=0, inplace=False, **kwargs):
+	""" Reset axis values and attributes
+
+	parameters:
+	-----------
+	{values}
+	{axis}
+	{inplace}
+	{kwargs}
+
+	returns:
+	--------
+	Axes instance, or None if inplace is True
+	"""
+	axis = self.get_idx(axis)
+	ax = self[axis].reset(values, inplace=inplace, **kwargs)
+
+	if not inplace:
+	    axes = self.copy()
+	    axes[axis] = ax
+	    return axes
+
+Axes.reset_axis.__func__.__doc__ = Axes.reset_axis.__func__.__doc__.format(**_doc_reset_axis)
 
 
 def _init_axes(axes=None, dims=None, labels=None, shape=None, raise_warning=True):

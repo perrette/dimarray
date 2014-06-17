@@ -8,6 +8,7 @@ from core import align_axes, stack, concatenate
 from core.align import _check_stack_args, _get_axes, stack, concatenate, _check_stack_axis, get_dims as _get_dims
 from core import pandas_obj
 from core.metadata import MetadataDesc
+from core.axes import _doc_reset_axis
 
 class Dataset(odict):
     """ Container for a set of aligned objects
@@ -334,6 +335,51 @@ class Dataset(odict):
         """ export to ordered dict
         """
         return odict(self)
+
+    def reset_axis(self, values=None, axis=0, inplace=False, **kwargs):
+        """ Reset axis values and attributes in all dimarrays present in the dataset
+
+        parameters:
+        -----------
+        {values}
+        {axis}
+        {inplace}
+        {kwargs}
+
+        returns:
+        --------
+        Dataset instance, or None if inplace is True
+
+        Examples:
+        ---------
+        >>> ds = Dataset()
+        >>> ds['a'] = da.zeros(shape=(3,))  # some dimarray with dimension 'x0'
+        >>> ds['b'] = da.zeros(shape=(3,4)) # dimensions 'x0', 'x1'
+        >>> ds.reset_axis(['a','b','c'], axis='x0')
+        Dataset of 2 variables
+        dimensions: 'x0', 'x1'
+        0 / x0 (3): a to c
+        1 / x1 (4): 0 to 3
+        a: ('x0',)
+        b: ('x0', 'x1')
+        """
+        if inplace is False:
+            self = self.copy()
+
+        # update every dimarray in the dict
+        axis_name = self.axes[axis].name
+        for nm in self.keys():
+            if not axis_name in self[nm].dims:
+                continue
+            super(Dataset, self).__setitem__(nm, self[nm].reset_axis(values, axis, inplace=False, **kwargs) )
+
+        # update the main axis instance
+        self.axes = self.axes.reset_axis(values, axis, inplace=False, **kwargs)
+
+        if inplace is False:
+            return self
+
+Dataset.reset_axis.__func__.__doc__ = Dataset.reset_axis.__func__.__doc__.format(**_doc_reset_axis)
 
     #def dropna(self, axis=0, **kwargs): return self._apply_dimarray_axis('dropna', axis=axis, **kwargs)
 

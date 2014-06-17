@@ -10,7 +10,7 @@ from collections import OrderedDict as odict
 from dimarray.config import get_option
 
 from metadata import MetadataDesc
-from axes import Axis, Axes, GroupedAxis
+from axes import Axis, Axes, GroupedAxis, _doc_reset_axis
 
 import transform as _transform  # numpy along-axis transformations, interpolation
 import reshape as _reshape      # change array shape and dimensions
@@ -1298,6 +1298,30 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 
         return self._plot2D(plt.contour, *args, **kwargs)
         
+    # reset axis values
+    def reset_axis(self, values=None, axis=0, inplace=False, **kwargs):
+	""" Reset axis values and attributes
+
+	parameters:
+	-----------
+	{values}
+	{axis}
+	{inplace}
+	{kwargs}
+
+	returns:
+	--------
+	DimArray instance, or None if inplace is True
+	"""
+	axes = self.axes.reset_axis(values, axis, inplace=inplace, **kwargs)
+
+	# make a copy?
+	if not inplace:
+	    a = self.copy()
+	    a.axes = axes
+	    return a
+
+DimArray.reset_axis.__func__.__doc__ = DimArray.reset_axis.__func__.__doc__.format(**_doc_reset_axis)
 
 def array_kw(*args, **kwargs):
     """ alias for DimArray.from_kw
