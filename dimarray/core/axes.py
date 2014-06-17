@@ -167,6 +167,9 @@ class Axis(object):
 
         return Axis(values, self.name, weights=weights, tol=self.tol, **self._metadata)
 
+    def __setitem__(self, item, value):
+        self.values[item] = value
+
     def union(self, other):
         """ join two Axis objects
 	
@@ -316,7 +319,10 @@ class Axis(object):
         return "{}({})={}:{}".format(self.name, self.size, *self._bounds())
 
     def copy(self):
-        return copy.copy(self)
+        tmp = copy.copy(self) # shallow copy
+        tmp.values = self.values.copy() # copy of axis values
+        tmp.weights = copy.copy(self.weights) # axis weights
+        return tmp
 
     # a few array-like properties
     @property
