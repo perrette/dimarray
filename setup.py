@@ -16,8 +16,8 @@ with open('README.rst') as file:
 #
 MAJOR = 0
 MINOR = 1
-MICRO = 7
-ISRELEASED = False
+MICRO = 8
+ISRELEASED = True
 VERSION = '%d.%d.%d' % (MAJOR, MINOR, MICRO)
 QUALIFIER = ''
 
