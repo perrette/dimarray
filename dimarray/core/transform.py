@@ -82,7 +82,7 @@ def apply_along_axis(obj, func, axis=None, skipna=False, args=(), **kwargs):
     >>> a = DimArray([[0,1],[2,3.]])
     >>> b = a.copy()
     >>> b[0,0] = np.nan
-    >>> c = DimArray.from_arrays([a,b],keys=['a','b'],axis='items')
+    >>> c = da.stack([a,b],keys=['a','b'],axis='items')
     >>> c
     dimarray: 7 non-null elements (1 null)
     dimensions: 'items', 'x0', 'x1'

@@ -52,7 +52,7 @@ def percentile(a, pct, axis=0, newaxis=None, out=None, overwrite_input=False):
         if newaxis is None:
             newaxis = nm + '_percentile'
         results = [da.DimArray(res, axes=subaxes) for res in results] # list of DimArrays
-        results = da.from_arrays(results, keys=pct, axis=newaxis) # join in a larger DimArray
+        results = da.stack(results, keys=pct, axis=newaxis) # stack in a larger DimArray
 
     return results
 

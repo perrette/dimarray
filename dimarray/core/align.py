@@ -247,13 +247,13 @@ def _check_stack_axis(axis, dims, default='unnamed'):
 		already exist")
     return axis
 
-def stack(arrays, axis, keys=None, align=False):
+def stack(arrays, axis=None, keys=None, align=False):
     """ stack arrays along a new dimension (raise error if already existing)
 
     parameters:
     ----------
     arrays: sequence or dict of arrays
-    axis: str, new dimension along which to stack the array 
+    axis, optional: str, new dimension along which to stack the array
     keys, optional: stack axis values, useful if array is a sequence, or a non-ordered dictionary
     align, optional: if True, align axes prior to stacking (Default to False)
 
@@ -335,8 +335,8 @@ def concatenate(arrays, axis=0, check_other_axes=True):
     ---------
 
     1-D
-    >>> a = DimArray([1,2,3],['a','b','c'])
-    >>> b = DimArray([4,5,6],['d','e','f'])
+    >>> a = DimArray([1,2,3], axes=[['a','b','c']])
+    >>> b = DimArray([4,5,6], axes=[['d','e','f']])
     >>> concatenate((a, b))
     dimarray: 6 non-null elements (0 null)
     dimensions: 'x0'
@@ -522,6 +522,66 @@ def aggregate(arrays, check_overlap=True):
     # That's it !
 
     return newarray
+
+
+##
+## Kind of all-purpose align method: not very relevant so it may be removed at some point
+## it is also used by da.array
+##
+#def join(data, keys=None, axis=None, cls=None):
+#    """ initialize a DimArray from a dictionary of smaller dimensional DimArray
+#
+#    ==> align and stack a sequence of dimarrays
+#
+#    Convenience method for: Dataset(data, keys).to_array(axis)
+#
+#    input:
+#        - data : list or dict of DimArrays
+#        - keys, optional : labels of the first dimension (if dict, only useful for ordering)
+#        - axis, optional : dimension name along which to aggregate data (default "unnamed")
+#
+#    output:
+#        - new DimArray object, with axis alignment (reindexing)
+#
+#    See Also:
+#    ---------
+#    array, stack, concatenate, Dataset
+#    """
+#    from dimarray.dataset import Dataset, odict # 
+#    from dimarray import DimArray
+#    #data = _get_list_arrays(data, keys)        
+#
+#    if not isinstance(data, dict):
+#        assert isinstance(data, list), "DimArray.from_arrays only acceps dict and list, got {}: {}".format(type(data), data)
+#        if keys is None:
+#            keys = []
+#            for i, v in enumerate(data):
+#                assert isinstance(v, DimArray), "DimArray.from_arrays only acceps dict and list of DimArray objects, got {}: {}".format(type(v), v)
+#                if not hasattr(v, "name") or v.name is None:
+#                    name = i
+#
+#                else:
+#                    name = v.name
+#                keys.append(name)
+#        data = {keys[i]:v for i, v in enumerate(data)}
+#    
+#    return _join_from_dict(data, keys=keys, axis=axis, cls=cls)
+#
+#def _join_from_dict(dict_, keys=None, axis=None, cls=None):
+#    """ Initialize a DimArray for a dictionary of DimArrays
+#
+#    keys, optional: re-order the keys 
+#    axis, optional: give a name to the keys axis
+#    """
+#    assert isinstance(dict_, dict)
+#    from dimarray.dataset import Dataset
+#    if keys is None: keys = dict_.keys()
+#    data = Dataset(dict_)
+#    if cls is None: 
+#        _constructor = None
+#    else:
+#        _constructor = cls._constructor
+#    return data.to_array(axis=axis, keys=keys, _constructor=_constructor)
 
 #def aligned(objects, skip_missing=True, skip_singleton=True):
 #    """ test whether common non-singleton axes are equal

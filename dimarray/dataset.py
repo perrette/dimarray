@@ -438,7 +438,8 @@ def _get_list_arrays(data, keys):
     else:
         for i, v in enumerate(data):
             if not hasattr(v,'name') or not v.name:
-                v.name = "v%i"%(i)
+                v.name = i
+                #v.name = "v%i"%(i)
 
     return data
 

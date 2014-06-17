@@ -17,6 +17,7 @@ import reshape as _reshape      # change array shape and dimensions
 import indexing as _indexing    # perform slicing and indexing operations
 import operation as _operation  # operation between DimArrays
 import missingvalues # operation between DimArrays
+from align import broadcast_arrays, align_axes, stack
 
 from tools import pandas_obj
 
@@ -898,102 +899,6 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         return self.values.__contains__(value)
 
     @classmethod
-    def from_arrays(cls, data, keys=None, axis=None):
-        """ initialize a DimArray from a dictionary of smaller dimensional DimArray
-
-	==> align and stack a sequence of dimarrays
-
-        Convenience method for: Dataset(data, keys).to_array(axis)
-
-        input:
-            - data : list or dict of DimArrays
-            - keys, optional : labels of the first dimension (if dict, only useful for ordering)
-            - axis, optional : dimension name along which to aggregate data (default "unnamed")
-
-        output:
-            - new DimArray object, with axis alignment (reindexing)
-
-	See Also:
-	---------
-	stack, concatenate
-
-        Examples:
-        ---------
-
-        From a list:
-        >>> a = DimArray([1,2,3])
-        >>> DimArray.from_arrays([a, 2*a]) # if keys not provided, name is 'v0', 'v1'
-        dimarray: 6 non-null elements (0 null)
-        dimensions: 'unnamed', 'x0'
-        0 / unnamed (2): v0 to v1
-        1 / x0 (3): 0 to 2
-        array([[1, 2, 3],
-               [2, 4, 6]])
-
-        From a dict, here also with axis alignment, and naming the axis
-        >>> d = {'a':DimArray([10,20,30.],[0,1,2]), 'b':DimArray([1,2,3.],[1.,2.,3])}
-        >>> a = DimArray.from_arrays(d, keys=['a','b'], axis='items') # keys= just needed to enforce ordering
-        >>> a
-        dimarray: 6 non-null elements (2 null)
-        dimensions: 'items', 'x0'
-        0 / items (2): a to b
-        1 / x0 (4): 0.0 to 3.0
-        array([[ 10.,  20.,  30.,  nan],
-               [ nan,   1.,   2.,   3.]])
-
-        Concatenate 2-D data
-        >>> a = DimArray([[0,1],[2,3.]])
-        >>> b = a.copy()
-        >>> b[0,0] = np.nan
-        >>> c = DimArray.from_arrays([a,b],keys=['a','b'],axis='items')
-        >>> d = DimArray.from_arrays({'a':a,'b':b},axis='items')
-        >>> np.all(np.isnan(c) | (c == d) )
-        True
-        >>> c
-        dimarray: 7 non-null elements (1 null)
-        dimensions: 'items', 'x0', 'x1'
-        0 / items (2): a to b
-        1 / x0 (2): 0 to 1
-        2 / x1 (2): 0 to 1
-        array([[[  0.,   1.],
-                [  2.,   3.]],
-        <BLANKLINE>
-               [[ nan,   1.],
-                [  2.,   3.]]])
-        """
-        from dimarray.dataset import Dataset, odict # 
-        #data = _get_list_arrays(data, keys)        
-
-        if not isinstance(data, dict):
-            assert isinstance(data, list), "DimArray.from_arrays only acceps dict and list, got {}: {}".format(type(data), data)
-            if keys is None:
-                keys = []
-                for i, v in enumerate(data):
-                    assert isinstance(v, DimArray), "DimArray.from_arrays only acceps dict and list of DimArray objects, got {}: {}".format(type(v), v)
-                    if not hasattr(v, "name") or v.name is None:
-                        name = "v%i"%(i)
-
-                    else:
-                        name = v.name
-                    keys.append(name)
-            data = {keys[i]:v for i, v in enumerate(data)}
-        
-        return cls.from_dict(data, keys=keys, axis=axis)
-
-    @classmethod
-    def from_dict(cls, dict_, keys=None, axis=None):
-        """ Initialize a DimArray for a dictionary of DimArrays
-
-        keys, optional: re-order the keys 
-        axis, optional: give a name to the keys axis
-        """
-        assert isinstance(dict_, dict)
-        from dimarray.dataset import Dataset
-        if keys is None: keys = dict_.keys()
-        data = Dataset(dict_)
-        return data.to_array(axis=axis, keys=keys, _constructor=cls._constructor)
-
-    @classmethod
     def from_pandas(cls, data, dims=None):
         """ Initialize a DimArray from pandas
         data: pandas object (Series, DataFrame, Panel, Panel4D)
@@ -1321,6 +1226,15 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 	    a.axes = axes
 	    return a
 
+    # for back-compatibility
+    @classmethod
+    def from_arrays(cls, *args, **kwargs):
+        """ use dimarray.array instead """
+        kwargs['cls'] = cls
+        warnings.warn(FutureWarning('from_arrays is deprecated, use da.array() instead'))
+        return array(*args, **kwargs)
+
+
 DimArray.reset_axis.__func__.__doc__ = DimArray.reset_axis.__func__.__doc__.format(**_doc_reset_axis)
 
 def array_kw(*args, **kwargs):
@@ -1335,34 +1249,115 @@ array_kw.__doc__ = DimArray.from_kw.__doc__
 
 
 def array(data, *args, **kwargs):
-    """ wrapper for DimArray and DimArray.from_arrays
+    """ initialize DimArray or list of dimarray (EXPERIMENTAL)
 
-    data: numpy array-like ==> call DimArray
-          list or dict of DimArray objects ==> call DimArray.from_arrays
+    parameters:
+    -----------
+    data: numpy array-like ==> call DimArray(data, *args, **kwargs)
+          list or dict of DimArray objects ==> call stack(data, *args, **kwargs)
 
-    *args, **kwargs: variable argument for DimArray or DimArray.from_arrays
+    *args, **kwargs: variable argument for DimArray or stack
+
+    returns:
+    --------
+    DimArray
+
+    if data is an array-like, this call is the same as DimArray(data, *args, **kwargs)
+    if data is a dict, list or tuple, this call is similar to da.stack(data, *args, **kwargs) but 
+	with align=True by default and an additional parameter broadcast=True by default
+	This behaviour might change.
 
     See also:
-    DimArray, DimArray.from_arrays
+    ---------
+    DimArray, stack, Dataset.to_array
+
+    Examples:
+    ---------
+
+    From a list:
+    >>> a = DimArray([1,2,3])
+    >>> da.array([a, 2*a]) # if keys not provided, default is 0, 1
+    dimarray: 6 non-null elements (0 null)
+    dimensions: 'unnamed', 'x0'
+    0 / unnamed (2): 0 to 1
+    1 / x0 (3): 0 to 2
+    array([[1, 2, 3],
+           [2, 4, 6]])
+
+    From a dict, here also with axis alignment, and naming the axis
+    >>> d = {'a':DimArray([10,20,30.],[0,1,2]), 'b':DimArray([1,2,3.],[1.,2.,3])}
+    >>> a = da.array(d, keys=['a','b'], axis='items') # keys= just needed to enforce ordering
+    >>> a
+    dimarray: 6 non-null elements (2 null)
+    dimensions: 'items', 'x0'
+    0 / items (2): a to b
+    1 / x0 (4): 0.0 to 3.0
+    array([[ 10.,  20.,  30.,  nan],
+           [ nan,   1.,   2.,   3.]])
+
+    Concatenate 2-D data
+    >>> a = DimArray([[0,1],[2,3.]])
+    >>> b = a.copy()
+    >>> b[0,0] = np.nan
+    >>> c = da.array([a,b],keys=['a','b'],axis='items')
+    >>> d = da.array({'a':a,'b':b},axis='items')
+    >>> np.all(np.isnan(c) | (c == d) )
+    True
+    >>> c
+    dimarray: 7 non-null elements (1 null)
+    dimensions: 'items', 'x0', 'x1'
+    0 / items (2): a to b
+    1 / x0 (2): 0 to 1
+    2 / x1 (2): 0 to 1
+    array([[[  0.,   1.],
+            [  2.,   3.]],
+    <BLANKLINE>
+           [[ nan,   1.],
+            [  2.,   3.]]])
     """
+    # if some kind of dictionary, first transform to list of values and keys
     if isinstance(data, dict):
-        return DimArray.from_arrays(data, *args, **kwargs) 
+	from collections import OrderedDict as odict
 
-    elif (isinstance(data, list) or isinstance(data, tuple)) and len(data) > 0 and isinstance(data[0], DimArray):
-        return DimArray.from_arrays(list(data), *args, **kwargs) 
+	d = odict()
+	keys = kwargs.pop('keys', data.keys())
+	for k in keys:
+	    d[k] = data[k]
 
+	data = d.values()
+	kwargs['keys'] = keys
+
+    # sequence: align axes and stack arrays
+    if (isinstance(data, list) or isinstance(data, tuple)) and len(data) > 0 and isinstance(data[0], DimArray):
+
+	# reindex and broad-cast arrays? (by default, yes)
+	reindex = kwargs.pop('align', True)
+	broadcast = kwargs.pop('broadcast', True)
+
+	if reindex:
+	    data = align_axes(*data)
+
+	if broadcast:
+	    data = broadcast_arrays(*data) # make sure the arrays have the same dimension
+
+	kwargs['align'] = False # already aligned
+
+        return stack(data, *args, **kwargs) 
+
+    # equivalent to calling DimArray
     else:
         return DimArray(data, *args, **kwargs)
 
-# another name, more specific for DimArray.from_arrays
-join = DimArray.from_arrays
+# DEPRECATED
+def from_arrays(*args, **kwargs):
+    warnings.warn(FutureWarning('from_arrays is deprecated, use da.array() instead'))
+    return array(*args, **kwargs)
 
-# handy aliases
-#def from_arrays(*args, **kwargs):
-#    warnings.warn(FutureWarning('from_arrays is deprecated, use da.array() instead'))
-#    return DimArray.from_arrays(*args, **kwargs) 
-from_arrays = DimArray.from_arrays
+def join(*args, **kwargs):
+    warnings.warn(FutureWarning('join is deprecated, use da.array() instead'))
+    return array(*args, **kwargs)
 
+# HANDY ALIAS
 from_pandas = DimArray.from_pandas
 
 def empty(axes=None, dims=None, shape=None, dtype=float):

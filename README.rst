@@ -191,7 +191,7 @@ array([[[  2. ,   2. ,   2. ],
 
 
 Note a shorter way of obtaining the above, if the only desired result is
-to align axes, would have been to use the **``from_arrays``** method (see interactive help).
+to align axes, would have been to use the **``stack``** method (see interactive help).
 
 A natural I/O format for such an array is netCDF, common in geophysics,
 which rely on the netCDF4 package. If netCDF4 is installed (much
