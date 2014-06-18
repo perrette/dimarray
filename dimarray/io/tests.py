@@ -49,6 +49,5 @@ def main(**kw):
     except RuntimeError, msg:
         warn("NetCDF test failed: {}".format(msg))
 
-
 if __name__ == "__main__":
     main()

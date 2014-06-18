@@ -42,6 +42,9 @@ class DimArray(object):
 
     _metadata : `dict` of metadata (experimental)
 
+    T : transposed DimArray
+    ix : DimArray's view indexed by position index (numpy-like)
+
     Methods
     -------
     mean, median, max, sum, diff, ...: most common along-axis numpy methods
@@ -54,6 +57,7 @@ class DimArray(object):
     reshape : flexible reshape method by (group of) axis names
     group, ungroup : flatten/inflate along particular sets of dimensions
     swapaxes : swap two axes, e.g. a.swapaxes(0, 'x1') 
+    transpose, squeeze : similar to ndarray's methods
 
     to_pandas : convert to pandas object (must be <= 4D) (pretty printing)
     from_pandas : convert from pandas object, support MultiIndex
@@ -76,35 +80,81 @@ class DimArray(object):
     Examples:
     ---------
 
-    Broadcasting (dimension alignment)
-    >>> x = da.DimArray(np.arange(2), dims=('x0',))
-    >>> y = da.DimArray(np.arange(3), dims=('x1',))
-    >>> x+y
+    >>> a = DimArray([[1.,2,3], [4,5,6]], axes=[['grl', 'ant'], [1950, 1960, 1970]], dims=['variable', 'time']) 
+    >>> a
+    dimarray: 6 non-null elements (0 null)
+    dimensions: 'variable', 'time'
+    0 / variable (2): grl to ant
+    1 / time (3): 1950 to 1970
+    array([[ 1.,  2.,  3.],
+	   [ 4.,  5.,  6.]])
+
+    Array data are stored in a `values` attribute:
+
+    >>> a.values
+    array([[ 1.,  2.,  3.],
+	   [ 4.,  5.,  6.]])
+
+    while its axes are stored in `axes`:
+
+    >>> a.axes
+    dimensions: 'variable', 'time'
+    0 / variable (2): grl to ant
+    1 / time (3): 1950 to 1970
+
+    Each axis can be accessed by its rank or its name:
+
+    >>> ax = a.axes[1]
+    >>> ax.name , ax.values
+    ('time', array([1950, 1960, 1970]))
+
+    A few handy aliases are defined for the above, just like `shape`, `size` or `ndim`:
+
+    >>> a.dims     # grab axis names (the dimensions)
+    ('variable', 'time')
+
+    >>> a.labels   # grab axis values
+    (array(['grl', 'ant'], dtype=object), array([1950, 1960, 1970]))
+
+    **Indexing works on axis values** instead of integer position:
+
+    >>> a['grl', 1970]
+    3.0
+
+    but integer-index is always possible via `ix` toogle between
+    `labels`- and `position`-based indexing:
+
+    >>> a.ix[0, -1]
+    3.0
+
+    Standard numpy **transformations** are defined, and now accept axis name:
+
+    >>> a.mean(axis='time')
+    dimarray: 2 non-null elements (0 null)
+    dimensions: 'variable'
+    0 / variable (2): grl to ant
+    array([ 2.,  5.])
+
+    During an operation, arrays are automatically re-indexed to span the 
+    same axis domain, with nan filling if needed
+    >>> a = DimArray([0, 1], axes = [[0, 1]])
+    >>> b = DimArray([0,1,2], axes = [[0, 1, 2]])
+    >>> a+b
+    dimarray: 2 non-null elements (1 null)
+    dimensions: 'x0'
+    0 / x0 (3): 0 to 2
+    array([  0.,   2.,  nan])
+
+    Dimensions are factored (broadcast) when performing an operation
+    >>> a = DimArray([0, 1], dims=('x0',))
+    >>> b = DimArray([0, 1, 2], dims=('x1',))
+    >>> a+b
     dimarray: 6 non-null elements (0 null)
     dimensions: 'x0', 'x1'
     0 / x0 (2): 0 to 1
     1 / x1 (3): 0 to 2
     array([[0, 1, 2],
 	   [1, 2, 3]])
-    
-    Reindexing (axis values alignment)
-    >>> z = da.DimArray([0,1,2],('x0',[0,1,2]))
-    >>> x+z
-    dimarray: 2 non-null elements (1 null)
-    dimensions: 'x0'
-    0 / x0 (3): 0 to 2
-    array([  0.,   2.,  nan])
-    
-    Broadcasting + Reindexing
-    >>> (x+y)+(x+z)
-    dimarray: 6 non-null elements (3 null)
-    dimensions: 'x0', 'x1'
-    0 / x0 (3): 0 to 2
-    1 / x1 (3): 0 to 2
-    array([[  0.,   1.,   2.],
-	   [  3.,   4.,   5.],
-	   [ nan,  nan,  nan]])
-
     """
     _order = None  # set a general ordering relationship for dimensions
     _metadata = MetadataDesc(exclude=('values','axes'))

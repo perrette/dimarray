@@ -1,6 +1,6 @@
 """ Test module for geo
 """
-from dimarray.testing import testmod
+from dimarray.testing import testmod, MyTestResults
 
 import geoarray
 import region
@@ -11,11 +11,13 @@ import decorators
 def main(**kwargs):
     """
     """
-    testmod(geoarray, **kwargs)
-    testmod(region, **kwargs)
-    testmod(transform, **kwargs)
-    testmod(grid, **kwargs)
-    testmod(decorators, **kwargs)
+    test = MyTestResults(0, 0)
+    test += testmod(geoarray, **kwargs)
+    test += testmod(region, **kwargs)
+    test += testmod(transform, **kwargs)
+    test += testmod(grid, **kwargs)
+    test += testmod(decorators, **kwargs)
+    return test
 
 if __name__ == "__main__":
     main()

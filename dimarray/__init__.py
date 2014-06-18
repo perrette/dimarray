@@ -1,4 +1,4 @@
-""" 
+""" Dimarray module
 """
 import warnings
 import core

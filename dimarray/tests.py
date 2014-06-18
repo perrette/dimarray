@@ -5,7 +5,7 @@ import dimarray.core.tests
 import dimarray.io.tests
 import dimarray.lib.tests
 
-from dimarray.testing import testmod, testfile
+from dimarray.testing import testmod, testfile, MyTestResults
 
 from dimarray import core
 from dimarray import io
@@ -25,18 +25,20 @@ except ImportError, msg:
 def main(**kwargs):
     """
     """
-    core.tests.main(**kwargs)
+    test = MyTestResults(0, 0)
+    test += core.tests.main(**kwargs)
     io.tests.main(**kwargs)
-    if geo_success: geo.tests.main(**kwargs)
-    testmod(dimarray, **kwargs)
-    testmod(dataset, **kwargs)
+    if geo_success: test += geo.tests.main(**kwargs)
+    test += testmod(dimarray, **kwargs) 
+    test += testmod(dataset, **kwargs)   
     #testmod(lib, **kwargs)
     lib.tests.main(**kwargs)
-    dataset.test()
     try:
-        testfile('README.rst')
-    except:
+        test += testfile('README.rst')
+    except IOError:
         print 'README.rst not found'
+
+    return test
 
 if __name__ == "__main__":
     main()

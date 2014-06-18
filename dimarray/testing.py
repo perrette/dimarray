@@ -7,6 +7,26 @@ from importlib import import_module
 import core
 #from dimarray.core import metadata, core, axes, _indexing as indexing, _transform as transform, _reshape as reshape
 
+class MyTestResults(doctest.TestResults):
+    """ test results that can be summed
+    """
+    maxfailed = 5   # maximum number of failed test before which it stops
+
+    def __add__(self, other):
+	assert isinstance(other, doctest.TestResults), "can only sum TestResults instances"
+	test = self.__class__(self.failed + other.failed, self.attempted + other.attempted)
+        #print 'incremented (self:{}, other:{}, res:{})'.format(self.attempted, other.attempted, test.attempted) # debug
+        self.check()
+        return test
+
+    def __radd__(self, other):
+	return self + other
+
+    def check(self):
+	if self.failed > self.maxfailed:
+	    raise Exception("Number of failed test {} exceeds max tolerated limit {}".format(self.failed, self.maxfailed))
+
+
 def get_globals(m=None):
     """ 
     """
@@ -32,9 +52,7 @@ def testmod(m, globs=None, **kwargs):
 
     kwargs['globs'] = globs
 
-    print "\n\n============================"
-    print "TEST",m.__name__
-    print "============================\n\n"
+    print "...DOCTEST",m.__name__
     return doctest.testmod(m, **kwargs)
 
 def testfile(fname, globs=None, **kwargs):
@@ -43,9 +61,7 @@ def testfile(fname, globs=None, **kwargs):
 
     kwargs['globs'] = globs
 
-    print "\n\n============================"
-    print "TEST",fname
-    print "============================\n\n"
+    print "...DOCTEST",fname
     return doctest.testfile(fname, module_relative=False, **kwargs)
 
 #def testpkg(pkg, globs=None, use_test=True, **kwargs):
