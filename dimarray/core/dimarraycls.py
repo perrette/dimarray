@@ -24,115 +24,57 @@ from tools import pandas_obj
 __all__ = ["DimArray", "array"]
 
 class DimArray(object):
-    """ numpy's ndarray with physical dimensions (named and values axes)
+    """ numpy's ndarray with labelled dimensions and axes
 
-    Parameters:
+    Attributes:
     -----------
+    values : `ndarray`
+    axes : `Axes` instance
+        This is a custom list of axes.
+        Each axis is an `Axis` instancce
 
-    values        : numpy-like array, or DimArray instance
-                  If `values` is not provided, will initialize an empty array 
-                  with dimensions inferred from axes (in that case `axes=` 
-                  must be provided).
+    Dynamic attributes (properties):
 
-    axes        : optional, list or tuple: axis values as ndarrays, whose order 
-                  matches axis names (the dimensions) provided via `dims=` 
-                  parameter. Each axis can also be provided as a tuple 
-                  (str, array-like) which contains both axis name and axis 
-                  values, in which case `dims=` becomes superfluous.
-                  `axes=` can also be provided with a list of Axis objects
-                  If `axes=` is omitted, a standard axis `np.arange(shape[i])`
-                  is created for each axis `i`.
+    dims : tuple of axis names
+    labels : tuple of axis values 
+    
+    shape, ndim, size, dtype : ndarray's attributes
 
-    dims        : optional, list or tuple: dimensions (or axis names)
-                  This parameter can be omitted if dimensions are already 
-                  provided by other means, such as passing a list of tuple 
-                  to `axes=`. If axes are passed as keyword arguments (via 
-                  **kwargs), `dims=` is used to determine the order of 
-                  dimensions. If `dims` is not provided by any of the means 
-                  mentioned above, default dimension names are 
-                  given `x0`, `x1`, ...`xn`, where n is the number of 
-                  dimensions.
+    _metadata : `dict` of metadata (experimental)
 
-    dtype        : optional, data type, passed to np.array() 
-    copy        : optional, passed to np.array()
+    Methods
+    -------
+    mean, median, max, sum, diff, ...: most common along-axis numpy methods
 
-    **kwargs        : metadata
+    broadcast : repeat array to match target dimensions
+    reindex_like : re-index like another dimarray / axes instance
+    reindex_axis : re-index / interpolate an axis
+    reset_axis : reset axis / change axis values & metadata
 
-                  NOTE: metadata passed this way cannot have name already taken by other 
-                  parameters such as "values", "axes", "dims", "dtype" or "copy".
+    reshape : flexible reshape method by (group of) axis names
+    group, ungroup : flatten/inflate along particular sets of dimensions
+    swapaxes : swap two axes, e.g. a.swapaxes(0, 'x1') 
+
+    to_pandas : convert to pandas object (must be <= 4D) (pretty printing)
+    from_pandas : convert from pandas object, support MultiIndex
+
+    to_dataset : split the dimarray along an axis to create a Dataset 
+
+    write_nc : write DimArray to netCDF file
+
+    plot, pcolor, contourf, contour : plotting methods
+
+    Note: 
+    -----
+    see interactive help for a full listing of methods with doc
+
+    See Also:
+    ---------
+    Axes, Axis, GroupedAxis, Dataset
+    read_nc, stack, concatenate
 
     Examples:
     ---------
-
-    Basic:
-
-    >>> DimArray([[1,2,3],[4,5,6]]) # automatic labelling
-    dimarray: 6 non-null elements (0 null)
-    dimensions: 'x0', 'x1'
-    0 / x0 (2): 0 to 1
-    1 / x1 (3): 0 to 2
-    array([[1, 2, 3],
-           [4, 5, 6]])
-
-    >>> DimArray([[1,2,3],[4,5,6]], dims=['items','time'])  # axis names only
-    dimarray: 6 non-null elements (0 null)
-    dimensions: 'items', 'time'
-    0 / items (2): 0 to 1
-    1 / time (3): 0 to 2
-    array([[1, 2, 3],
-           [4, 5, 6]])
-
-    >>> DimArray([[1,2,3],[4,5,6]], axes=[list("ab"), np.arange(1950,1953)]) # axis values only
-    dimarray: 6 non-null elements (0 null)
-    dimensions: 'x0', 'x1'
-    0 / x0 (2): a to b
-    1 / x1 (3): 1950 to 1952
-    array([[1, 2, 3],
-           [4, 5, 6]])
-
-    More general case:
-
-    >>> a = DimArray([[1,2,3],[4,5,6]], axes=[list("ab"), np.arange(1950,1953)], dims=['items','time']) 
-    >>> b = DimArray([[1,2,3],[4,5,6]], axes=[('items',list("ab")), ('time',np.arange(1950,1953))])
-    >>> c = DimArray([[1,2,3],[4,5,6]], {'items':list("ab"), 'time':np.arange(1950,1953)}) # here dims can be omitted because shape = (2, 3)
-    >>> np.all(a == b) and np.all(a == c)
-    True
-    >>> a
-    dimarray: 6 non-null elements (0 null)
-    dimensions: 'items', 'time'
-    0 / items (2): a to b
-    1 / time (3): 1950 to 1952
-    array([[1, 2, 3],
-           [4, 5, 6]])
-
-    Empty data
-
-    >>> a = DimArray(axes=[('items',list("ab")), ('time',np.arange(1950,1953))])
-
-    Metadata
-
-    >>> a = DimArray([[1,2,3],[4,5,6]], name='test', units='none') 
-    
-    Operations
-
-    >>> a = da.DimArray([[1,2,3],[3,4,5]],dims=('x0','x1'))
-    >>> a == a
-    dimarray: 6 non-null elements (0 null)
-    dimensions: 'x0', 'x1'
-    0 / x0 (2): 0 to 1
-    1 / x1 (3): 0 to 2
-    array([[ True,  True,  True],
-           [ True,  True,  True]], dtype=bool)
-    >>> np.all(a == a)
-    True
-    >>> np.all(a+2 == a + np.ones(a.shape)*2)
-    True
-    >>> np.all(a+a == a*2)
-    True
-    >>> np.all(a*a == a**2)
-    True
-    >>> np.all((a - a.values) == a - a)
-    True
 
     Broadcasting (dimension alignment)
     >>> x = da.DimArray(np.arange(2), dims=('x0',))
@@ -143,7 +85,7 @@ class DimArray(object):
     0 / x0 (2): 0 to 1
     1 / x1 (3): 0 to 2
     array([[0, 1, 2],
-           [1, 2, 3]])
+	   [1, 2, 3]])
     
     Reindexing (axis values alignment)
     >>> z = da.DimArray([0,1,2],('x0',[0,1,2]))
@@ -160,8 +102,9 @@ class DimArray(object):
     0 / x0 (3): 0 to 2
     1 / x1 (3): 0 to 2
     array([[  0.,   1.,   2.],
-           [  3.,   4.,   5.],
-           [ nan,  nan,  nan]])
+	   [  3.,   4.,   5.],
+	   [ nan,  nan,  nan]])
+
     """
     _order = None  # set a general ordering relationship for dimensions
     _metadata = MetadataDesc(exclude=('values','axes'))
@@ -171,7 +114,98 @@ class DimArray(object):
     #
 
     def __init__(self, values=None, axes=None, dims=None, labels=None, copy=False, dtype=None, _indexing=None, _indexing_broadcast=None, **kwargs):
-        """ Initialization. See help on DimArray.
+        """ Initialize a DimArray instance
+
+	Parameters:
+	-----------
+
+	values : numpy-like array, or DimArray instance
+		  If `values` is not provided, will initialize an empty array 
+		  with dimensions inferred from axes (in that case `axes=` 
+		  must be provided).
+
+	axes : optional, list or tuple 
+	
+	    axis values as ndarrays, whose order 
+	    matches axis names (the dimensions) provided via `dims=` 
+	    parameter. Each axis can also be provided as a tuple 
+	    (str, array-like) which contains both axis name and axis 
+	    values, in which case `dims=` becomes superfluous.
+	    `axes=` can also be provided with a list of Axis objects
+	    If `axes=` is omitted, a standard axis `np.arange(shape[i])`
+	    is created for each axis `i`.
+
+	dims : optional, list or tuple
+	    dimensions (or axis names)
+	    This parameter can be omitted if dimensions are already 
+	    provided by other means, such as passing a list of tuple 
+	    to `axes=`. If axes are passed as keyword arguments (via 
+	    **kwargs), `dims=` is used to determine the order of 
+	    dimensions. If `dims` is not provided by any of the means 
+	    mentioned above, default dimension names are 
+	    given `x0`, `x1`, ...`xn`, where n is the number of 
+	    dimensions.
+
+	dtype : optional, data type, passed to np.array() 
+	copy : optional, passed to np.array()
+
+	**kwargs : metadata 
+	
+	    NOTE: metadata passed this way cannot have name already taken by other 
+	    parameters such as "values", "axes", "dims", "dtype" or "copy".
+
+	Examples:
+	---------
+
+	Basic:
+
+	>>> DimArray([[1,2,3],[4,5,6]]) # automatic labelling
+	dimarray: 6 non-null elements (0 null)
+	dimensions: 'x0', 'x1'
+	0 / x0 (2): 0 to 1
+	1 / x1 (3): 0 to 2
+	array([[1, 2, 3],
+	       [4, 5, 6]])
+
+	>>> DimArray([[1,2,3],[4,5,6]], dims=['items','time'])  # axis names only
+	dimarray: 6 non-null elements (0 null)
+	dimensions: 'items', 'time'
+	0 / items (2): 0 to 1
+	1 / time (3): 0 to 2
+	array([[1, 2, 3],
+	       [4, 5, 6]])
+
+	>>> DimArray([[1,2,3],[4,5,6]], axes=[list("ab"), np.arange(1950,1953)]) # axis values only
+	dimarray: 6 non-null elements (0 null)
+	dimensions: 'x0', 'x1'
+	0 / x0 (2): a to b
+	1 / x1 (3): 1950 to 1952
+	array([[1, 2, 3],
+	       [4, 5, 6]])
+
+	More general case:
+
+	>>> a = DimArray([[1,2,3],[4,5,6]], axes=[list("ab"), np.arange(1950,1953)], dims=['items','time']) 
+	>>> b = DimArray([[1,2,3],[4,5,6]], axes=[('items',list("ab")), ('time',np.arange(1950,1953))])
+	>>> c = DimArray([[1,2,3],[4,5,6]], {'items':list("ab"), 'time':np.arange(1950,1953)}) # here dims can be omitted because shape = (2, 3)
+	>>> np.all(a == b) and np.all(a == c)
+	True
+	>>> a
+	dimarray: 6 non-null elements (0 null)
+	dimensions: 'items', 'time'
+	0 / items (2): a to b
+	1 / time (3): 1950 to 1952
+	array([[1, 2, 3],
+	       [4, 5, 6]])
+
+	Empty data
+
+	>>> a = DimArray(axes=[('items',list("ab")), ('time',np.arange(1950,1953))])
+
+	Metadata
+
+	>>> a = DimArray([[1,2,3],[4,5,6]], name='test', units='none') 
+	
         """
         # check if attached to values (e.g. DimArray object)
         if hasattr(values, "axes") and axes is None:
@@ -667,19 +701,18 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     repeat = _reshape.repeat
     newaxis = _reshape.newaxis
     squeeze = _reshape.squeeze
-    group = _reshape.group
     flatten = _reshape.flatten
-    ungroup = _reshape.ungroup
     reshape = _reshape.reshape
     transpose = _reshape.transpose
-    swapaxes = _reshape.swapaxes
     broadcast = _reshape.broadcast
     groupby = _reshape.groupby
+    swapaxes = _reshape.swapaxes
+    group = _reshape.group
+    ungroup = _reshape.ungroup
     
     @property
     def T(self):
         return self.transpose()
-
 
     #
     # REINDEXING 

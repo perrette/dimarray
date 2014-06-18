@@ -759,10 +759,14 @@ def groupby(self, *dims):
     """ group by one or several variables along which stat functions can be applied
 
     parameters:
+    -----------
         *dims: variable list of dims to keep, all others are flattened
 
     returns:
+    --------
         GroupBy object
+
+    Note: this method is experimental and may change in the future
 
     Examples:
     ---------

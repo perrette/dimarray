@@ -1,5 +1,5 @@
-Comparisons with other packages:
---------------------------------
+Comparisons with other packages
+-------------------------------
 
 - **pandas**
             ...is an excellent package for low-dimensional data analysis, 

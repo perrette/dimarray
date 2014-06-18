@@ -1,8 +1,9 @@
 documentation
 =============
 
-.. .. automodule:: dimarray
-..      :members:
+.. toctree::
+   :maxdepth: 2
 
 .. autoclass:: dimarray.DimArray
-    :members:
+   :members: reindex_axis, reset_axis
+   :undoc-members:
