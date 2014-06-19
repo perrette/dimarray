@@ -2,9 +2,9 @@ import sys
 from warnings import warn
 import numpy as np
 import dimarray as da
-from dimarray.testing import testmod, MyTestResults
+from testing import testmod, MyTestResults
 
-def indexing():
+def doctest_indexing():
     """ Various indexing tests in addition to what's in the doc
 
 Get Items:
@@ -174,17 +174,17 @@ def test_operations():
     assert np.all(a*a == a**2)
     assert np.all((a - a.values) == a - a)
 
-def main(**kwargs):
+def run_doctest(**kwargs):
 
-    import metadata as metadata
-    import dimarraycls
-    import axes as axes
-    import indexing
-    import reshape
-    import transform
-    import missingvalues as missingvalues 
-    import operation
-    import align as align
+    from dimarray.core import metadata as metadata
+    from dimarray.core import dimarraycls
+    from dimarray.core import axes as axes
+    from dimarray.core import indexing
+    from dimarray.core import reshape
+    from dimarray.core import transform
+    from dimarray.core import missingvalues as missingvalues 
+    from dimarray.core import operation
+    from dimarray.core import align as align
 
     test = MyTestResults(0, 0)
 
@@ -197,7 +197,7 @@ def main(**kwargs):
     test += testmod(missingvalues, **kwargs)
     test += testmod(operation, **kwargs)
     test += testmod(align, **kwargs)
-    test += testmod(sys.modules[__name__], **kwargs)
+    test += testmod(sys.modules[__name__], **kwargs) # test present module
 
     #test += test_transform()
     #test += test_operations()
@@ -205,4 +205,4 @@ def main(**kwargs):
     return test
 
 if __name__ == "__main__":
-    main()
+    run_doctest()

@@ -1,16 +1,14 @@
 from warnings import warn
 
 import dimarray
-import dimarray.core.tests
-import dimarray.io.tests
-import dimarray.lib.tests
-
-from dimarray.testing import testmod, testfile, MyTestResults
+from tests import test_core, test_io, test_lib
 
 from dimarray import core
 from dimarray import io
 from dimarray import dataset
 from dimarray import lib
+
+from testing import testmod, testfile, MyTestResults
 
 # The geo module is experimental and involves additional packages
 try:
@@ -26,13 +24,12 @@ def main(**kwargs):
     """
     """
     test = MyTestResults(0, 0)
-    test += core.tests.main(**kwargs)
-    io.tests.main(**kwargs)
-    if geo_success: test += geo.tests.main(**kwargs)
+    test += test_core()
+
     test += testmod(dimarray, **kwargs) 
     test += testmod(dataset, **kwargs)   
+    if geo_success: test += geo.tests.main(**kwargs)
     #testmod(lib, **kwargs)
-    lib.tests.main(**kwargs)
     try:
         test += testfile('README.rst')
     except IOError:

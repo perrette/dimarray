@@ -7,7 +7,7 @@ from warnings import warn
 import numpy as np
 
 import dimarray  as da
-from dimarray.testing import testmod
+from testing import testmod
 from dimarray import DimArray, summary_nc, read_nc
 
 curdir = os.path.dirname(__file__)
@@ -31,8 +31,6 @@ def test_ncio():
     for k in ds:
         assert(np.all(ds[k] == data[k]))
 
-    doctest.run_docstring_examples(da.io.nc._createVariable, globs=globals())
-
 
 #def _main(**kwargs):
 #    """ go to testdata and make sure the "test.nc" file exist
@@ -42,6 +40,11 @@ def test_ncio():
 #    res = testmod(nc, **kwargs)
 #    os.chdir(curdir) # come back to current directory
 #    return res
+
+def run_doctests():
+    """ run a few doctests
+    """ 
+    return doctest.run_docstring_examples(da.io.nc._createVariable, globs=globals())
 
 def main(**kw):
     try:
