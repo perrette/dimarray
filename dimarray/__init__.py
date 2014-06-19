@@ -15,7 +15,7 @@ from lib import *
 from dimarray.version import version as __version__
 
 try:
-    from io.nc import read as read_nc, summary as summary_nc, write as write_nc, read_dimensions as read_nc_axes
+    from io.nc import read_nc, summary_nc, write_nc #, read_nc_axes
     _ncio = True
 
 except ImportError:

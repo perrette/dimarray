@@ -11,7 +11,7 @@ import numpy as np
 from dimarray.dataset import Dataset, concatenate_ds, stack_ds
 from dimarray.core import DimArray, Axis, Axes
 
-__all__ = ['read','summary', 'write', 'read_dimensions']
+__all__ = ['read_nc','summary_nc', 'write_nc', 'read_dimensions']
 
 
 #
@@ -50,7 +50,7 @@ _doc_write_modes = """Several write modes are available:
         'a+': append if file is present, otherwise create"""
 
 
-def summary(fname):
+def summary_nc(fname):
     print(_summary_repr(fname))
 
 def _summary_repr(fname):
@@ -75,13 +75,13 @@ def _summary_repr(fname):
 
     #attr = _read_attributes(f, name):
 
-def read(f, nms=None, *args, **kwargs):
+def read_nc(f, nms=None, *args, **kwargs):
     """  Read one or several variables from one or several netCDF file
 
     Parameters:
     ----------
     f : file name or buffer or regular expression
-    nms, optional : variable name(s) to read: list or str
+    nms, optional : variable name(s) to read_nc: list or str
 
     *indexing parameters similar to `take` are accepted:
     %s
@@ -190,7 +190,7 @@ def read(f, nms=None, *args, **kwargs):
 
     return obj
 
-read.__doc__ = read.__doc__ % _doc_indexing   # format's {} fails because of dictionary syntax in examples {}
+read_nc.__doc__ = read_nc.__doc__ % _doc_indexing   # format's {} fails because of dictionary syntax in examples {}
 
 #
 # read from file
@@ -327,7 +327,7 @@ def _read_variable(f, name, indices=None, axis=0, verbose=False, **kwargs):
 
     return obj
 
-#read.__doc__ += _read_variable.__doc__
+#read_nc.__doc__ += _read_variable.__doc__
 
 def _read_dataset(f, nms=None, **kwargs):
     """ Read several (or all) variable from a netCDF file
@@ -445,10 +445,10 @@ def _read_multinc(fnames, nms=None, axis=None, keys=None, align=False, concatena
 ##
 ## write to file
 ##
-def write(f, obj=None, *args, **kwargs):
+def write_nc(f, obj=None, *args, **kwargs):
     """  Write DimArray or Dataset to file or Create Empty netCDF file
 
-    Parameters depend on object to write:
+    Parameters depend on object to write_nc:
 
     ### Create Empty netCDF file  ###
     {axes}
@@ -634,7 +634,7 @@ _write_dataset.__doc__ = _write_dataset.__doc__.format(netCDF4=_doc_write_nc, in
 _write_variable.__doc__ = _write_variable.__doc__.format(netCDF4=_doc_write_nc, indexing=_doc_indexing_write, write_modes=_doc_write_modes)
 _createVariable.__doc__ = _createVariable.__doc__.format(netCDF4=_doc_write_nc, write_modes=_doc_write_modes)
 
-write.__doc__ = write.__doc__.format(dimarray=_write_variable.__doc__, dataset=_write_dataset.__doc__, axes=_createVariable.__doc__)
+write_nc.__doc__ = write_nc.__doc__.format(dimarray=_write_variable.__doc__, dataset=_write_dataset.__doc__, axes=_createVariable.__doc__)
 
 
 def _check_dimensions(f, axes, **verb):
