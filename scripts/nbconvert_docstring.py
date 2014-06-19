@@ -1,6 +1,8 @@
 """ A custom script to convert a notebook to docstring examples
 """
+#!/usr/bin/python
 import sys
+#import pypandoc
 from os.path import basename
 from process_notebook import filter_cells, read_nb
 
@@ -28,11 +30,31 @@ def main():
                 output_lines.extend(output['text'])
 
             text.extend(code_lines) # add code lines
+            text.append('\n')
             text.extend(output_lines) # add code lines
 
         # add markdown cells
         elif cell['cell_type'] == 'markdown':
-            text.extend(cell['source'])
+
+            md = cell['source']
+            text.extend(md)
+
+            # convert to markdornw to rst? long and make things worse
+            #rst = [pypandoc.convert(m, 'rst', format='markdown') for m in md]
+            #text.extend(rst)
+
+        # parse headers 
+        elif cell['cell_type'] == 'heading': 
+
+            title = cell['source'][0] # assume one line only
+            lev = cell['level']
+            symbols = ['=', '-', '~', '_', '+', '#'] # title symbols?
+            offset = 1 # start at heading level 1
+            sym = symbols[lev-offset]
+
+            text.append(title)
+            text.append('\n')
+            text.append(sym*len(title))
 
     # write note rst to file
     with open(nm2, 'w') as f:
