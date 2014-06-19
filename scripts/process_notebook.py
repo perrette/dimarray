@@ -1,6 +1,20 @@
 #!/usr/bin/python
+""" Process notebook
 
+Usage:
+  process_notebook.py INPUT OUTPUT [--toc] [--title TITLE | --between C1,C2]
+  process_notebook.py INPUT -i [--toc] [--title TITLE | --between C1,C2]
+
+Options:
+  -h --help         Show this screen.
+  -i --inplace      Inplace modification of the notebook
+  --toc             Generate Table of Content
+  --section         Extract a section by title
+  --between         Extract a section by cell number
+"""
+import sys
 import json
+from docopt import docopt
 
 def read_nb(fname):
     f = open(fname)
@@ -102,10 +116,7 @@ def replace_toc(nb, toc, FLAG):
     i, cell = get_toc_cell(nb, FLAG)
     cell['source'] = "\n".join([FLAG]+toc)
 
-def main(test=False):
-
-    nb = read_nb(fname='dimarray.ipynb')
-
+def update_toc(nb):
     # Create a table of content
     headings, levels = get_headings(nb)
     toc = create_toc(headings, levels, minlev=1)
@@ -113,10 +124,115 @@ def main(test=False):
 
     # Update TOC cell
     replace_toc(nb, toc, FLAG='### Table of Content')
-    if test:
-	write_nb(nb, fname='dimarray_test.ipynb')
+    return nb
+
+def extract_section_by_cells(nb, l1=None, l2=None):
+    """
+    """
+    active = False
+    if l1 is None:
+        active = True
+
+    # now just go throught the cells and extract the relevant ones
+    cells = []
+    for cell in nb['worksheets'][0]['cells']:
+        if 'prompt_number' not in cell.keys():
+            no = ''
+        else:
+            no = cell['prompt_number']
+
+        # start copying?
+        if not active and no == l1:
+            active = True
+        #else:
+        #    print "no=",no,"and l1=",l1
+
+        # copy cell if active
+        if active:
+            cells.append(cell)
+
+        # stop copying?
+        if l2 is not None and active and no == l2:
+            active = False
+            break
+
+    if len(cells) == 0:
+        import ipdb
+        ipdb.set_trace()
+
+    # update cells
+    nb['worksheets'][0]['cells'] = cells
+
+    return nb
+
+def extract_section_by_title(nb, title):
+    """ extract a section from a notebook, using title
+    """
+    active = False
+
+    # now just go throught the cells and extract the relevant ones
+    cells = []
+    for cell in nb['worksheets'][0]['cells']:
+
+        # stop copying? when a heading of same level is reached
+        if active and cell['cell_type'] == 'heading' and cell['level'] == level:
+            active = False
+            break
+
+        # start copying?
+        if cell['cell_type'] == 'heading' and not active:
+            searching = title.strip().lower()
+            found = cell['source'][0].strip().lower()
+            if searching==found and not active:
+                active = True
+                level = cell['level']
+                print 'found title', title.strip(), ' with level', level
+            #else:
+            #    print 'searching:',searching, 'found:',found
+
+        # copy cell if active
+        if active:
+            cells.append(cell)
+
+    if len(cells) == 0:
+        import ipdb
+        ipdb.set_trace()
+
+    # update cells
+    nb['worksheets'][0]['cells'] = cells
+
+    return nb
+
+def main():
+
+    arguments = docopt(__doc__)
+    #print(arguments)
+    #sys.exit()
+
+    # File name
+    nm_in = arguments['INPUT']
+
+    if arguments['--inplace']:
+        nm_out = nm_in
     else:
-	write_nb(nb, fname='dimarray.ipynb')
+        nm_out = arguments['OUTPUT']
+
+    nb = read_nb(fname=nm_in)
+
+    # Extract a section?
+    if arguments['--title']:
+        nb = extract_section_by_title(nb, arguments['TITLE'])
+
+    elif arguments['--between']:
+        C1, C2 = [int(c) for c in arguments['C1,C2'].split(',')]
+        nb = extract_section_by_cells(nb, C1, C2)
+
+    # update TOC ?
+    if arguments['--toc']:
+        nb = update_toc(nb)
+
+    write_nb(nb, fname=nm_out)
+    print 'Notebook written to', nm_out
 
 if __name__ == '__main__':
     main()
