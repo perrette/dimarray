@@ -18,6 +18,7 @@ def broadcast_arrays(*arrays):
     Examples:
     ---------
     Just as numpy's broadcast_arrays:
+    >>> import dimarray as da
     >>> x = da.array([[1,2,3]])
     >>> y = da.array([[1],[2],[3]])
     >>> da.broadcast_arrays(x, y)
@@ -107,7 +108,8 @@ def align_dims(*arrays):
 
     Examples:
     ---------
-
+    >>> import dimarray as da
+    >>> import numpy as np
     >>> x = da.DimArray(np.arange(2), dims=('x0',))
     >>> y = da.DimArray(np.arange(3), dims=('x1',))
     >>> da.align_dims(x, y)
@@ -144,6 +146,7 @@ def align_axes(*arrays):
 
     Examples:
     ---------
+    >>> from dimarray import DimArray
     >>> a = DimArray([0,1,2],axes=[[0,1,2]])
     >>> b = DimArray([2,3],axes=[[2,3]])
     >>> align_axes(a, b)
@@ -267,6 +270,7 @@ def stack(arrays, axis=None, keys=None, align=False):
 
     Examples:
     ---------
+    >>> from dimarray import DimArray
     >>> a = DimArray([1,2,3])
     >>> b = DimArray([11,22,33])
     >>> stack([a, b], axis='stackdim', keys=['a','b'])
@@ -335,6 +339,7 @@ def concatenate(arrays, axis=0, check_other_axes=True):
     ---------
 
     1-D
+    >>> from dimarray import DimArray
     >>> a = DimArray([1,2,3], axes=[['a','b','c']])
     >>> b = DimArray([4,5,6], axes=[['d','e','f']])
     >>> concatenate((a, b))
@@ -439,6 +444,7 @@ def aggregate(arrays, check_overlap=True):
 
     Examples:
     ---------
+    >>> from dimarray import DimArray
     >>> a = DimArray([[1.,2,3]],axes=[('line',[0]), ('col',['a','b','c'])])
     >>> b = DimArray([[4],[5]], axes=[('line',[1,2]), ('col',['d'])])
     >>> c = DimArray([[22]], axes=[('line',[2]), ('col',['b'])])

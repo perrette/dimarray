@@ -22,6 +22,7 @@ def percentile(a, pct, axis=0, newaxis=None, out=None, overwrite_input=False):
 
     Examples:
     ---------
+    >>> from dimarray import DimArray
     >>> np.random.seed(0) # for reproductibility of results
     >>> a = DimArray(np.random.randn(1000), dims=['sample'])
     >>> percentile(a, 50)
@@ -69,8 +70,9 @@ def quantile(a, q, axis=0, newaxis=None, out=None, overwrite_input=False):
     ---------
     percentile
 
-    Example:
-    -------
+    Examples:
+    ---------
+    >>> from dimarray import DimArray
     >>> np.random.seed(0) # for reproductibility of results
     >>> a = DimArray(np.random.randn(1000), dims=['sample'])
     >>> quantile(a, [0.5, 0.95])

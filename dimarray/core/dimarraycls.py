@@ -360,6 +360,7 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         Examples: 
         ---------
         (da.array is an alias for DimArray.from_kw)
+        >>> import dimarray as da
         >>> a = da.DimArray.from_kw([[1,2,3],[4,5,6]], items=list("ab"), time=np.arange(1950,1953)) # here dims can be omitted because shape = (2, 3)
         >>> b = da.DimArray.from_kw([[1,2,3],[4,5,6]], ['items','time'], items=list("ab"), time=np.arange(1950,1953)) # here dims can be omitted because shape = (2, 3)
         >>> c = da.DimArray([[1,2,3],[4,5,6]], {'items':list("ab"), 'time':np.arange(1950,1953)}) # here dims can be omitted because shape = (2, 3)
@@ -1358,6 +1359,7 @@ def array(data, *args, **kwargs):
     ---------
 
     From a list:
+    >>> import dimarray as da
     >>> a = DimArray([1,2,3])
     >>> da.array([a, 2*a]) # if keys not provided, default is 0, 1
     dimarray: 6 non-null elements (0 null)

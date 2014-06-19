@@ -117,4 +117,24 @@ array([[ 4.,  3.],
        [ 2.,  0.],
        [ 3.,  4.],
        [ 6.,  6.]])
-    """
+
+"""
+import pytest
+from dimarray import DimArray
+import numpy as np
+
+@pytest.fixture
+def v():
+    return DimArray([[1,2],[3,4],[5,6],[7,8]], labels=[["a","b","c","d"], [10.,20.]], dims=['x0','x1'], dtype=float) 
+
+def test_take(v):
+    a = v[:,10]
+    b = v.take(10, axis=1)
+    c = v.take(10, axis='x1')
+    d = v.take({'x1':10}) # dict
+    e = v.take((slice(None),10)) # tuple
+
+    assert np.all(a==b)
+    assert np.all(a==c) 
+    assert np.all(a==d) 
+    assert np.all(a==e)

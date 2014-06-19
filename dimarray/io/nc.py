@@ -6,6 +6,7 @@ from collections import OrderedDict as odict
 import warnings
 import netCDF4 as nc
 import numpy as np
+import dimarray as da
 #from geo.data.index import to_slice, _slice3D
 
 from dimarray.dataset import Dataset, concatenate_ds, stack_ds
@@ -127,28 +128,60 @@ def read_nc(f, nms=None, *args, **kwargs):
 
     Examples:
     ---------
-    >>> data = read_nc('test.nc')  # load full file
-    >>> data = read_nc('test.nc','dynsealevel') # only one variable
-    >>> data = read_nc('test.nc','dynsealevel', indices={"time":slice(2000,2100), "lon":slice(50,70), "lat":42})  # load only a chunck of the data
-    >>> data = read_nc('test.nc','dynsealevel', indices={"lat":42}, tol=0.1)  # select a latitude slice with a float tolerance of 0.1
+    >>> import os
+    >>> from dimarray import read_nc, get_datadir
 
+    Single netCDF file
+    ~~~~~~~~~~~~~~~~~~
+    >>> ncfile = os.path.join(get_datadir(), 'cmip5.CSIRO-Mk3-6-0.nc')
 
-    Multi-files:
-    
-    Read variable 'tg' across multiple files (experiments outputs).
+    >>> data = read_nc(ncfile)  # load full file
+    >>> data
+    Dataset of 2 variables
+    dimensions: 'time', 'scenario'
+    0 / time (451): 1850 to 2300
+    1 / scenario (5): historical to rcp85
+    tsl: ('time', 'scenario')
+    temp: ('time', 'scenario')
+    >>> data = read_nc(ncfile,'temp') # only one variable
+    >>> data = read_nc(ncfile,'temp', indices={"time":slice(2000,2100), "scenario":"rcp45"})  # load only a chunck of the data
+    >>> data = read_nc(ncfile,'temp', indices={"time":1950.3}, tol=0.5)  #  approximate matching, adjust tolerance
+    >>> data = read_nc(ncfile,'temp', indices={"time":-1}, indexing='position')  #  integer position indexing
+
+    Multiple files
+    ~~~~~~~~~~~~~~
+    Read variable 'temp' across multiple files (representing various climate models)
     In this case the variable is a time series, whose length may 
-    vary across experiments (thus align=True is passed)
+    vary across experiments (thus align=True is passed to reindex axes before stacking)
 
-    >>> tg = da.read_nc('RCP*/OUT/history.nc', 'tg', align=True, axis='scenario')
+    >>> direc = get_datadir()
+    >>> temp = da.read_nc(direc+'/cmip5.*.nc', 'temp', align=True, axis='model')
 
-    A new 'scenario' axis is created labeled with file names. It is then 
+    A new 'model' axis is created labeled with file names. It is then 
     possible to rename it more appropriately, e.g. keeping only the part
     directly relevant to identify the experiment:
     
-    >>> tg.scenario[:] = [x.replace('/OUT/history.nc','') for x in tg.scenario]
+    >>> getmodel = lambda x: os.path.basename(x).split('.')[1] # extract model name from path
+    >>> temp.reset_axis(getmodel, axis='model', inplace=True) # would return a copy if inplace is not specified
+    >>> temp
+    dimarray: 9114 non-null elements (6671 null)
+    dimensions: 'model', 'time', 'scenario'
+    0 / model (7): IPSL-CM5A-LR to CSIRO-Mk3-6-0
+    1 / time (451): 1850 to 2300
+    2 / scenario (5): historical to rcp85
+    array(...)
+    
+    This works on datasets as well:
 
-    If the experiments did represent various time slices (e.g. 10 time slices),
-    one would have indicated the existing dimension 'time' instead of 'scenario'
+    >>> ds = da.read_nc(direc+'/cmip5.*.nc', align=True, axis='model')
+    >>> ds.reset_axis(getmodel, axis='model')
+    Dataset of 2 variables
+    dimensions: 'model', 'time', 'scenario'
+    0 / model (7): IPSL-CM5A-LR to CSIRO-Mk3-6-0
+    1 / time (451): 1850 to 2300
+    2 / scenario (5): historical to rcp85
+    tsl: ('model', 'time', 'scenario')
+    temp: ('model', 'time', 'scenario')
     """
     # check for regular expression
     if type(f) is str:
@@ -698,7 +731,7 @@ def _scan_var(f, v, **verb):
     return dims, shape
 
 
-def _check_file(f, mode='r', verbose=True, format='NETCDF4'):
+def _check_file(f, mode='r', verbose=False, format='NETCDF4'):
     """ open a netCDF4 file
 
     mode: changed from original 'r','w','r' & clobber option:

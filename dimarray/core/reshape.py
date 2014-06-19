@@ -21,6 +21,7 @@ def broadcast(self, other):
     --------
     Create some dummy data:
     # ...create some dummy data:
+    >>> import dimarray as da
     >>> lon = np.linspace(10, 30, 2)
     >>> lat = np.linspace(10, 50, 3)
     >>> time = np.arange(1950,1955)
@@ -92,6 +93,9 @@ def transpose(self, *dims):
     ---------
     reshape, group, ungroup, newaxis
 
+    Examples:
+    ---------
+    >>> import dimarray as da
     >>> a = da.DimArray(np.zeros((2,3)), ['x0','x1'])
     >>> a          
     dimarray: 6 non-null elements (0 null)
@@ -139,6 +143,7 @@ def swapaxes(a, axis1, axis2):
 
     Examples:
     ---------
+    >>> from dimarray import DimArray
     >>> a = DimArray(np.arange(2*3*4).reshape(2,3,4))
     >>> a.dims
     ('x0', 'x1', 'x2')
@@ -184,6 +189,7 @@ def repeat(self, values, axis=None):
 
     Examples:
     --------
+    >>> import dimarray as da
     >>> a = da.DimArray(np.arange(3), labels = [[1950., 1951., 1952.]], dims=('time',))
     >>> a2d = a.newaxis('lon', pos=1) # lon is now singleton dimension
 
@@ -264,6 +270,7 @@ def newaxis(self, name, values=None, pos=0):
 
     Examples:
     ---------
+    >>> from dimarray import DimArray
     >>> a = DimArray([1,2])
     >>> a
     dimarray: 2 non-null elements (0 null)
@@ -317,6 +324,9 @@ def newaxis(self, name, values=None, pos=0):
 def squeeze(self, axis=None):
     """ Analogous to numpy, but also allows axis name
 
+    Examples:
+    ---------
+    >>> import dimarray as da
     >>> a = da.DimArray([[[1,2,3]]])
     >>> a
     dimarray: 3 non-null elements (0 null)
@@ -382,6 +392,7 @@ def reshape(self, *newdims, **kwargs):
 
     Examples:
     ---------
+    >>> from dimarray import DimArray
     >>> a = DimArray([7,8])
     >>> a
     dimarray: 2 non-null elements (0 null)
@@ -521,9 +532,9 @@ def group(self, *dims, **kwargs):
     ---------
     reshape, transpose
 
-    Example:
+    Examples:
     --------
-
+    >>> import dimarray as da
     >>> np.random.seed(0)
     >>> values = np.arange(2*3*4).reshape(2,3,4)
     >>> v = da.array_kw(values, time=[1950,1955], lat=np.linspace(-90,90,3), lon=np.linspace(-180,180,4))
@@ -651,6 +662,7 @@ def flatten(self):
 
     Examples:
     ---------
+    >>> from dimarray import DimArray
     >>> a = DimArray([[1,2,3],[4,5,6]])
     >>> a
     dimarray: 6 non-null elements (0 null)
@@ -770,6 +782,7 @@ def groupby(self, *dims):
 
     Examples:
     ---------
+    >>> from dimarray import DimArray
     >>> a = DimArray([[1,2,3],[4,5,6]], [('x',[1,2]), ('items',['a','b','c'])])
     >>> a = a.newaxis('y',4) # add an axis of length 4
     >>> a.groupby('items').mean()

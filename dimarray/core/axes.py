@@ -367,6 +367,9 @@ class Axis(object):
         >>> ax = Axis([1,2,3],'x0')
         >>> ax.is_numeric()
         True
+        >>> ax = Axis([1.,2.,3.],'x0')
+        >>> ax.is_numeric()
+        True
         >>> ax = Axis(['a','b','c'],'x0')
         >>> ax.is_numeric()
         False
@@ -380,12 +383,15 @@ class Axis(object):
     def is_numeric(self):
         """ numeric type?
         """
-        return self.values.dtype in (np.dtype(int), np.dtype(long), np.dtype(float))
-        #try:
-        #    self.values[0] + 1
-        #    return True
-        #except:
-        #    return False
+	syms = [int,long,float,'int32', 'float32','int64','float64']
+	numtypes = [np.dtype(sym) for sym in syms]
+	return self.values.dtype in numtypes
+	# Or could use something more general like:
+        # try:
+        #     self.values[0] + 1
+        #     return True
+        # except:
+        #     return False
 
     def __eq__(self, other):
         #return hasattr(other, "name") and hasattr(other, "values") and np.all(other.values == self.values) and self.name == other.name
@@ -1310,6 +1316,7 @@ class LocatorAxes(object):
     def __call__(self, indices, axis=0, **opt):
         """ Convert to N-D tuple
 
+        >>> import dimarray as da
         >>> a = da.array(np.arange(2*3*4).reshape(2,3,4))
         >>> b = a.group('x1','x2')
         >>> c = b.take((0,1), axis=1)

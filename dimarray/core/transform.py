@@ -79,7 +79,9 @@ def apply_along_axis(obj, func, axis=None, skipna=False, args=(), **kwargs):
     - DimArray, or scalar 
 
     Examples:
-    >>> a = DimArray([[0,1],[2,3.]])
+    ---------
+    >>> import dimarray as da
+    >>> a = da.DimArray([[0,1],[2,3.]])
     >>> b = a.copy()
     >>> b[0,0] = np.nan
     >>> c = da.stack([a,b],keys=['a','b'],axis='items')
@@ -392,6 +394,7 @@ def diff(obj, axis=-1, scheme="backward", keepaxis=False, n=1):
     ---------
 
     Create some example data
+    >>> import dimarray as da
     >>> v = da.DimArray([1,2,3,4], ('time', np.arange(1950,1954)), dtype=float)
     >>> s = v.cumsum()
     >>> s 

@@ -193,6 +193,7 @@ def take(obj, indices, axis=0, indexing="values", tol=TOLERANCE, keepdims=False,
     Examples:
     ---------
 
+    >>> from dimarray import DimArray
     >>> v = DimArray([[1,2,3],[4,5,6]], axes=[["a","b"], [10.,20.,30.]], dims=['d0','d1'], dtype=float) 
     >>> v
     dimarray: 6 non-null elements (0 null)
@@ -352,10 +353,11 @@ def take(obj, indices, axis=0, indexing="values", tol=TOLERANCE, keepdims=False,
 
     indices = _fill_ellipsis(indices, obj.ndim)
 
-    try:
-        indices_numpy = obj.axes.loc(indices, axis=axis, position_index=(indexing == "position"), keepdims=keepdims, tol=tol)
-    except IndexError, msg:
-        raise IndexError(msg)
+    indices_numpy = obj.axes.loc(indices, axis=axis, position_index=(indexing == "position"), keepdims=keepdims, tol=tol)
+    #try:
+    #    indices_numpy = obj.axes.loc(indices, axis=axis, position_index=(indexing == "position"), keepdims=keepdims, tol=tol)
+    #except IndexError, msg:
+    #    raise IndexError(msg)
 
     # broadcast array-indices & integers, numpy's classical
     if broadcast_arrays:
@@ -370,6 +372,7 @@ def _take_broadcast(a, indices):
 
     Examples:
     ---------
+    >>> import dimarray as da
     >>> a = da.zeros(shape=(3,4,5,6))
     >>> a[:,[0, 1],:,2].shape
     (2, 3, 5)
@@ -523,7 +526,7 @@ def put(obj, val, indices=None, axis=0, indexing="values", tol=TOLERANCE, conver
 
     Examples:
     ---------
-
+    >>> from dimarray import DimArray
     >>> a = DimArray(np.zeros((2,2)), [('d0',['a','b']), ('d1',[10.,20.])])
 
     Index by values
@@ -834,6 +837,7 @@ def reindex_axis(self, values, axis=0, method='exact', repna=True, fill_value=np
     ---------
 
     Basic reindexing: fill missing values with NaN
+    >>> import dimarray as da
     >>> a = da.DimArray([1,2,3],('x0', [1,2,3]))
     >>> b = da.DimArray([3,4],('x0',[1,3]))
     >>> b.reindex_axis([1,2,3])
@@ -934,7 +938,7 @@ def reindex_like(self, other, method='exact', **kwargs):
 
     Example:
     --------
-
+    >>> import dimarray as da
     >>> b = da.DimArray([3,4],('x0',[1,3]))
     >>> c = da.DimArray([[1,2,3], [1,2,3]],[('x1',["a","b"]),('x0',[1, 2, 3])])
     >>> b.reindex_like(c, method='interp')
@@ -972,6 +976,7 @@ def sort_axis(a, axis=0, key=None):
     Examples:
     ---------
     Basic
+    >>> from dimarray import DimArray
     >>> a = DimArray([10,20,30], labels=[2, 0, 1])
     >>> a
     dimarray: 3 non-null elements (0 null)

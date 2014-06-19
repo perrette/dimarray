@@ -13,7 +13,7 @@ def _isnan(a, na=np.nan):
 
 def is_boolean_array(value):
     """ 
-
+    >>> from dimarray import DimArray
     >>> a = DimArray([1,2,3])
     >>> is_boolean_array(a)
     False
@@ -46,7 +46,7 @@ def setna(a, value, na=np.nan, inplace=False):
 
     value: the values to set to na
     na: the replacement value (default np.nan)
-
+    >>> from dimarray import DimArray
     >>> a = DimArray([1,2,-99])
     >>> a.setna(-99)
     dimarray: 2 non-null elements (1 null)
@@ -75,6 +75,7 @@ def setna(a, value, na=np.nan, inplace=False):
 
 def fillna(a, value, inplace=False, na=np.nan):
     """
+    >>> from dimarray import DimArray
     >>> a = DimArray([1,2,np.nan])
     >>> a.fillna(-99)
     dimarray: 3 non-null elements (0 null)
@@ -95,6 +96,7 @@ def dropna(a, axis=0, minvalid=None, na=np.nan):
     ---------
 
     1-Dimension
+    >>> from dimarray import DimArray
     >>> a = DimArray([1.,2,3],('time',[1950, 1955, 1960]))
     >>> a.ix[1] = np.nan
     >>> a
