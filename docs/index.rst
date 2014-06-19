@@ -5,6 +5,8 @@
 
 .. toctree::
 
+.. .. include:: README
+
 Concept
 =======
 A `numpy` array with labelled axes and dimensions, in the spirit of 
@@ -25,10 +27,10 @@ supported, and conserved via slicing and along-axis transformations.
 
    installation.rst
    getting_started.rst
+   by_topic/index.rst
    comparison.rst
-   documentation.rst
-   modules.rst   
    examples.rst
+..   modules.rst   
 
 Further development
 ===================
