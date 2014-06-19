@@ -631,11 +631,13 @@ def _createVariable(f, name, axes, dims=None, dtype=float, verbose=False, mode='
 
     Examples:
     ---------
-    >>> da.write_nc('test3.nc','myvar', axes=[[1,2,3,4],['a','b','c']], dims=['dim1', 'dim2'], mode='w')
+    >>> tmpdir = getfixture('tmpdir').strpath # some temporary directory (py.test)
+    >>> outfile = os.path.join(tmpdir, 'test.nc')
+    >>> da.write_nc(outfile,'myvar', axes=[[1,2,3,4],['a','b','c']], dims=['dim1', 'dim2'], mode='w')
     >>> a = da.array([11, 22, 33, 44], axes=[[1, 2, 3, 4]], dims=('dim1',)) # some array slice 
-    >>> da.write_nc('test3.nc', a, 'myvar', indices='b', axis='dim2') 
-    >>> da.write_nc('test3.nc', [111,222,333,444], 'myvar', indices='a', axis='dim2') 
-    >>> da.read_nc('test3.nc','myvar')
+    >>> da.write_nc(outfile, a, 'myvar', indices='b', axis='dim2') 
+    >>> da.write_nc(outfile, [111,222,333,444], 'myvar', indices='a', axis='dim2') 
+    >>> da.read_nc(outfile,'myvar')
     dimarray: 8 non-null elements (4 null)
     dimensions: 'dim1', 'dim2'
     0 / dim1 (4): 1 to 4

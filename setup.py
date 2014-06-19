@@ -17,6 +17,7 @@ class MyTests(TestCommand):
 
     def initialize_options(self):
         TestCommand.initialize_options(self)
+        #self.pytest_args = ['--doctest-modules','--doctest-glob="*rst"']
         self.pytest_args = []
 
         # remove pyc files before testing ?
@@ -31,16 +32,8 @@ class MyTests(TestCommand):
     def run_tests(self):
         #import here, cause outside the eggs aren't loaded
         import pytest
-	from tests.testing import run_doctests, testfile
         errno = pytest.main(self.pytest_args)
-
-        # doctest
-        errno_doc = run_doctests()
-
-        # readme file
-        errno_rm = testfile('README.rst').failed
-
-        sys.exit(errno+errno_doc+errno_rm)
+        sys.exit(errno)
 
 
 with open('README.rst') as file:

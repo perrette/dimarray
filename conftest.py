@@ -2,6 +2,7 @@ import dimarray as da
 import pytest
 
 collect_ignore = ["setup.py", "dist", "build", "tests/testing.py", "tests/test_mpl.py"]
+collect_ignore.append('docs/dimarray.rst')
 
 try:
     import netCDF4

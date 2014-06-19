@@ -188,7 +188,6 @@ array([[[  2. ,   2. ,   2. ],
         [ 40. ,  50. ,  60. ]]])
 
 
-
 Note a shorter way of obtaining the above, if the only desired result is
 to align axes, would have been to use the **``stack``** method (see interactive help).
 
