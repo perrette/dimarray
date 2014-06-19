@@ -2,7 +2,7 @@ import sys
 from warnings import warn
 import numpy as np
 import dimarray as da
-from testing import testmod, MyTestResults
+from testing import MyDocTest
 
 def doctest_indexing():
     """ Various indexing tests in addition to what's in the doc
@@ -135,8 +135,6 @@ def test_transform():
     except AssertionError, msg:
         warn("pandas test failed {}".format(msg))
 
-
-    
 def test_diff():
     np.random.seed(0)
     v = da.DimArray(np.random.randn(5,7), {'time':np.arange(1950,1955), 'lat':np.linspace(-90,90,7)})
@@ -169,40 +167,15 @@ def test_vs_pandas():
 def test_operations():
     a = da.DimArray([[1,2,3],[3,4,5]],dims=('x0','x1'))
     assert np.all(a == a)
-    assert np.all(a+22 == a + np.ones(a.shape)*2)
+    assert np.all(a+2 == a + np.ones(a.shape)*2)
     assert np.all(a+a == a*2)
     assert np.all(a*a == a**2)
     assert np.all((a - a.values) == a - a)
 
-def run_doctest(**kwargs):
-
-    from dimarray.core import metadata as metadata
-    from dimarray.core import dimarraycls
-    from dimarray.core import axes as axes
-    from dimarray.core import indexing
-    from dimarray.core import reshape
-    from dimarray.core import transform
-    from dimarray.core import missingvalues as missingvalues 
-    from dimarray.core import operation
-    from dimarray.core import align as align
-
-    test = MyTestResults(0, 0)
-
-    test += testmod(metadata, **kwargs)
-    test += testmod(dimarraycls, **kwargs)
-    test += testmod(axes, **kwargs)
-    test += testmod(indexing, **kwargs)
-    test += testmod(transform, **kwargs)
-    test += testmod(reshape, **kwargs)
-    test += testmod(missingvalues, **kwargs)
-    test += testmod(operation, **kwargs)
-    test += testmod(align, **kwargs)
-    test += testmod(sys.modules[__name__], **kwargs) # test present module
-
-    #test += test_transform()
-    #test += test_operations()
-
-    return test
+def main(**kwargs):
+    import pytest
+    pytest.main() # unit test above
+    MyDocTest(__name__).testmod()
 
 if __name__ == "__main__":
-    run_doctest()
+    main()

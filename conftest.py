@@ -1,8 +1,15 @@
 import dimarray as da
 
-collect_ignore = ["build", "tests/test_mpl.py"]
+collect_ignore = ["build", "tests/testing.py", "tests/test_mpl.py"]
+
+try:
+    import netCDF4
+except ImportError:
+    # netCDF4 module is not present
+    collect_ignore.append('dimarray/io/nc.py')
 
 # test on python version before executing this file
+
 #if sys.version_info[0] > 2:
 #        collect_ignore.append("pkg/module_py2.py")
 

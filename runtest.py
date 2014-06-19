@@ -3,8 +3,7 @@ import sys, os
 import pytest
 import dimarray  # imported now so that no new version becomes imported
 
-import tests.doctests as _doctests
-from tests.testing import testmod, MyTestResults
+from tests.testing import main as run_doctests, testfile
 
 # remove pyc files before testing: find . -name "*.pyc" -exec rm {} \;
 
@@ -18,11 +17,9 @@ from tests.testing import testmod, MyTestResults
 res = pytest.main()
 
 # then check docstrings
-test = _doctests.main()
+test = run_doctests.main()
 
-## and the old docstrings
-#sys.path.append('tests')
-#import olddocs 
-#test += testmod(olddocs)
+# test readme
+test += testfile('README.rst')
 
 test.summary()

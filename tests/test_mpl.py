@@ -1,3 +1,5 @@
+""" informal module to test
+"""
 import dimarray as da
 import matplotlib.pyplot as plt
 import numpy as np

@@ -93,6 +93,7 @@ class MyDocTest(object):
     """
     tested_modules = odict() # keep individual tested modules
     result = MyTestResults(0, 0) # start at 0
+    exclude = [] # modules to exclude from recursive search
 
     def __init__(self, module):
         self.module = module
@@ -119,11 +120,12 @@ class MyDocTest(object):
 
     def recursive_testmod(self):
         self.testmod() # test current module
-        for name, mod in _get_submodules(self.module):
+        for shortname, mod in _get_submodules(self.module):
 
-            if name in self.tested_modules:
-                print 'module already tested', mod.__name__
-                continue
+            name = mod.__name__
+
+            if name in self.exclude: continue 
+            if name in self.tested_modules: continue
 
             MyDocTest(mod).recursive_testmod()
 
@@ -137,15 +139,24 @@ class MyDocTest(object):
         return cls.result.summary()
 
 def main():
-    MyDocTest(dimarray).recursive_testmod() # recursive testing starting at dimarray
-    #MyDocTest(dimarray).recursive_testmod() # recursive testing starting at dimarray
+    
+    # all modules imported under dimarray will be tested for docstring
 
-    print "dimarray's doctest"
+    # The geo module is experimental and involves additional packages
+    try:
+        import dimarray.geo
+        geo_success = True
+
+    except ImportError, msg:
+        warn("could not import geo, probably because of missing packages:\n{}".format(msg))
+        geo_success = False
+
+    MyDocTest.exclude = ['dimarray.io.nc'] # cannot test it for now because some netCDF files do not exist
+    MyDocTest(dimarray).recursive_testmod() # recursive testing starting at dimarray
     MyDocTest.summary()
 
-    # Also test on 
-    #totest = ['doctests', 'olddocs', 'test_core', 'testing', 'test_io', 'test_mpl', 'test_operations']
-    totest = ['doctests', 'olddocs', 'test_core', 'testing', 'test_io', 'test_mpl', 'test_operations']
+    # Additional tests
+    totest = ['olddocs', 'test_core', 'testing', 'test_io', 'test_mpl', 'test_operations']
     for nm in totest:
         m = import_module(nm)
         MyDocTest(m).testmod()
