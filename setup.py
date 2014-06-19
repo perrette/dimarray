@@ -7,17 +7,52 @@ which is under the BSD license
 import os, sys
 import re
 from setuptools import setup
+from setuptools.command.test import test as TestCommand 
+#import dimarray  # just checking
+
+class MyTests(TestCommand):
+    """ from http://pytest.org/latest/goodpractises.html
+    """
+    user_options = [('pytest-args=', 'a', "Arguments to pass to py.test")]
+
+    def initialize_options(self):
+        TestCommand.initialize_options(self)
+        self.pytest_args = []
+
+        # remove pyc files before testing ?
+        # find . -name "*.pyc" -exec rm {} \;
+
+
+    def finalize_options(self):
+        TestCommand.finalize_options(self)
+        self.test_args = []
+        self.test_suite = True
+
+    def run_tests(self):
+        #import here, cause outside the eggs aren't loaded
+        import pytest
+        from tests.testing import run_doctests, testfile
+        errno = pytest.main(self.pytest_args)
+
+        # doctest
+        errno_doc = run_doctests()
+
+        # readme file
+        errno_rm = testfile('README.rst').failed
+
+        sys.exit(errno+errno_doc+errno_rm)
+
 
 with open('README.rst') as file:
-        long_description = file.read()
+    long_description = file.read()
 
 #
 # Track version after pandas' setup.py
 #
 MAJOR = 0
 MINOR = 1
-MICRO = 8
-ISRELEASED = True
+MICRO = 7
+ISRELEASED = False
 VERSION = '%d.%d.%d' % (MAJOR, MINOR, MICRO)
 QUALIFIER = ''
 
@@ -68,7 +103,6 @@ else:
 #
 #
 #
-
 setup(name='dimarray',
       version=FULLVERSION,
       author='Mahe Perrette',
@@ -83,11 +117,13 @@ setup(name='dimarray',
       url='https://github.com/perrette/dimarray',
       license = "BSD 3-Clause",
       install_requires = ["numpy>=1.7"],
+      tests_require = ["pytest"],
       extras_require = {
 	  "ncio": ["netCDF4>=1.0.6"],
 	  "pandas": ["pandas>=0.11.0"],
 	  "plotting": ["matplotlib>=1.1", "pandas>=0.11.0"],
-	  }
+	  },
+      cmdclass = {'test':MyTests},
       )
 
 def write_version_py(filename=None):
@@ -108,4 +144,3 @@ short_version = '%s'
 # Write version.py to dimarray
 if write_version:
     write_version_py()
-

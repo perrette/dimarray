@@ -2,7 +2,6 @@ import sys
 from warnings import warn
 import numpy as np
 import dimarray as da
-from testing import MyDocTest
 
 def doctest_indexing():
     """ Various indexing tests in addition to what's in the doc
@@ -174,6 +173,7 @@ def test_operations():
 
 def main(**kwargs):
     import pytest
+    from doctesting import MyDocTest
     pytest.main() # unit test above
     MyDocTest(__name__).testmod()
 

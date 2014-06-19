@@ -1,4 +1,8 @@
-""" Test setup
+""" This module contains a few class to make testing docstrings easier (mostly docstring test)
+
+It handles recursive searching of modules and running doctest on them (minus those in EXCLUDE list)
+and provide an addition list of modules to test (INCLUDE list).
+In fact this could almost all be controlled by 
 """
 import doctest
 import os.path, pkgutil
@@ -9,36 +13,10 @@ from collections import OrderedDict as odict
 
 import dimarray
 
-#from dimarray.core import metadata, core, axes, _indexing as indexing, _transform as transform, _reshape as reshape
-
-class MyTestResults(doctest.TestResults):
-    """ test results that can be summed
-    """
-    maxfailed = 5   # maximum number of failed test before which it stops
-
-    def __add__(self, other):
-	assert isinstance(other, doctest.TestResults), "can only sum TestResults instances"
-	test = self.__class__(self.failed + other.failed, self.attempted + other.attempted)
-        #print 'attempted add (self:{}, other:{}, res:{})'.format(self.attempted, other.attempted, test.attempted) # debug
-        self.check()
-        return test
-
-    def __radd__(self, other):
-	return self + other
-
-    def check(self):
-	if self.failed > self.maxfailed:
-	    raise Exception("Number of failed test {} exceeds max tolerated limit {}".format(self.failed, self.maxfailed))
-
-    def summary(self):
-        """ summary of tests
-        """
-        print "============================="
-        print "Failed   : {}\nAttempted: {}".format(self.failed, self.attempted)
-        print "============================="
-        if self.failed > 0:
-            print ">>>>>>>>> Failed Tests"
-
+# Global variables, now defined in conftest
+MAXFAILED = 5
+ECLUDE = []
+INCLUDE = []  # for inclusion of the following modules in docstring test
 
 def get_globals(m=None):
     """ 
@@ -74,6 +52,38 @@ def testfile(fname, globs=None, **kwargs):
 
     print "...DOCTEST:",fname
     return doctest.testfile(fname, module_relative=False, **kwargs)
+
+
+#
+# Class to aggregate results of various tests and stop when too many have failed
+#
+class MyTestResults(doctest.TestResults):
+    """ test results that can be summed
+    """
+    maxfailed = MAXFAILED   # maximum number of failed test before which it stops
+
+    def __add__(self, other):
+	assert isinstance(other, doctest.TestResults), "can only sum TestResults instances"
+	test = self.__class__(self.failed + other.failed, self.attempted + other.attempted)
+        #print 'attempted add (self:{}, other:{}, res:{})'.format(self.attempted, other.attempted, test.attempted) # debug
+        self.check()
+        return test
+
+    def __radd__(self, other):
+	return self + other
+
+    def check(self):
+	if self.failed > self.maxfailed:
+	    raise Exception("Number of failed test {} exceeds max tolerated limit {}".format(self.failed, self.maxfailed))
+
+    def summary(self):
+        """ summary of tests
+        """
+        print "============================="
+        print "Failed   : {}\nAttempted: {}".format(self.failed, self.attempted)
+        print "============================="
+        if self.failed > 0:
+            print ">>>>>>>>> Failed Tests"
 
 
 #
@@ -138,7 +148,11 @@ class MyDocTest(object):
             print cls.tested_modules
         return cls.result.summary()
 
-def main():
+#
+#
+#
+
+def run_doctests():
     
     # all modules imported under dimarray will be tested for docstring
 
@@ -151,18 +165,21 @@ def main():
         warn("could not import geo, probably because of missing packages:\n{}".format(msg))
         geo_success = False
 
-    MyDocTest.exclude = ['dimarray.io.nc'] # cannot test it for now because some netCDF files do not exist
+    MyDocTest.exclude = EXCLUDE # cannot test it for now because some netCDF files do not exist
     MyDocTest(dimarray).recursive_testmod() # recursive testing starting at dimarray
     MyDocTest.summary()
 
     # Additional tests
-    totest = ['olddocs', 'test_core', 'testing', 'test_io', 'test_mpl', 'test_operations']
-    for nm in totest:
+    for nm in INCLUDE:
+        #m = import_module('.'+nm, 'tests')
         m = import_module(nm)
         MyDocTest(m).testmod()
 
     print "Including tests directory"
     MyDocTest.summary()
 
+    return MyDocTest.result.failed  # return failed tests
+
+
 if __name__ == '__main__':
-    main()
+    run_doctests()

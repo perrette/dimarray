@@ -1,22 +1,29 @@
 """ Test module for nc
 """
 import os
-import doctest
 from warnings import warn
-
+import pytest
 import numpy as np
 
 import dimarray  as da
-from testing import testmod
 from dimarray import DimArray, summary_nc, read_nc
 
 curdir = os.path.dirname(__file__)
-testdata = os.path.join(curdir, 'testdata')
 
-def test_ncio():
+@pytest.fixture
+def get_dataset():
+    datasets = os.path.join(curdir, os.path.pardir, 'datasets') # parent directory
+    assert os.path.exists(datasets), 'datasets directory not found'
+    return datasets
+
+# use tmpdir fixture
+#def test_ncio(): 
+def test_ncio(tmpdir): 
+
+    fname = tmpdir.join("test.nc").strpath # have test.nc in some temporary directory
+
     a = DimArray([1,2], dims='xx0')
     b = DimArray([3,4,5], dims='xx1')
-    fname = os.path.join(testdata, "test.nc")
     a.write_nc(fname,"a", mode='w')
     b.write_nc(fname,"b", mode='a')
     try:
@@ -30,21 +37,6 @@ def test_ncio():
     ds = da.Dataset(a=a, b=b)
     for k in ds:
         assert(np.all(ds[k] == data[k]))
-
-
-#def _main(**kwargs):
-#    """ go to testdata and make sure the "test.nc" file exist
-#    """
-#    curdir = os.path.abspath(os.getcwd()) # current directory
-#    os.chdir(testdata) # change to testdata
-#    res = testmod(nc, **kwargs)
-#    os.chdir(curdir) # come back to current directory
-#    return res
-
-def run_doctests():
-    """ run a few doctests
-    """ 
-    return doctest.run_docstring_examples(da.io.nc._createVariable, globs=globals())
 
 def main(**kw):
     try:
