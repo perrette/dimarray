@@ -4,8 +4,10 @@ It handles recursive searching of modules and running doctest on them (minus tho
 and provide an addition list of modules to test (INCLUDE list).
 In fact this could almost all be controlled by 
 """
+import os
+from os.path import dirname, join, abspath, basename
+from glob import glob
 import doctest
-import os.path, pkgutil
 import inspect
 from types import ModuleType
 from importlib import import_module
@@ -13,10 +15,11 @@ from collections import OrderedDict as odict
 
 import dimarray
 
-# Global variables, now defined in conftest
+# TO BE SET IN conftest.py
 MAXFAILED = 5
-ECLUDE = []
 INCLUDE = []  # for inclusion of the following modules in docstring test
+EXCLUDE = ['dimarray.io.nc', 'test_mpl']
+#tests.testing.EXCLUDE = ['dimarray.io.nc.py']  # module to exclude in recursive searching
 
 def get_globals(m=None):
     """ 
@@ -152,6 +155,18 @@ class MyDocTest(object):
 #
 #
 
+def find_files(root='.', ext='.py'):
+    """ return all files with a specific pattern
+    """
+    # list of directory and filenames
+    for dirname,dirnames,filenames in os.walk(root):
+
+        print dirname
+        for f in filenames:
+            if not f.endswith(ext): 
+                continue
+	    yield f
+
 def run_doctests():
     
     # all modules imported under dimarray will be tested for docstring
@@ -170,10 +185,24 @@ def run_doctests():
     MyDocTest.summary()
 
     # Additional tests
+    curdir = join(abspath(dirname(__file__)))
+    INCLUDE = find_files(root=curdir, ext='.py')
     for nm in INCLUDE:
-        #m = import_module('.'+nm, 'tests')
-        m = import_module(nm)
+	nm = nm.replace('.py','')
+	nm = nm.replace('/','.')
+        if nm in EXCLUDE: continue
+	#print "TO IMPO", nm
+        try:
+            m = import_module('.'+nm, 'tests')
+        except:
+            m = import_module(nm)
         MyDocTest(m).testmod()
+
+    INCLUDErst = glob(curdir+'/*.rst') # all files present
+    INCLUDEtxt = glob(curdir+'/*.txt') # all files present
+    for nm in INCLUDErst+INCLUDEtxt:
+        test = testfile(nm)
+        MyDocTest.results += test # update global tracker of test results
 
     print "Including tests directory"
     MyDocTest.summary()

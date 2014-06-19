@@ -31,7 +31,7 @@ class MyTests(TestCommand):
     def run_tests(self):
         #import here, cause outside the eggs aren't loaded
         import pytest
-        from tests.testing import run_doctests, testfile
+	from tests.testing import run_doctests, testfile
         errno = pytest.main(self.pytest_args)
 
         # doctest
