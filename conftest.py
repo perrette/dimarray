@@ -1,5 +1,6 @@
 import dimarray as da
 import pytest
+import numpy as np
 
 collect_ignore = ["setup.py", "dist", "build", "tests/testing.py", "tests/test_mpl.py"]
 collect_ignore.append('docs/dimarray.rst')
@@ -20,16 +21,13 @@ def pytest_assertrepr_compare(op, left, right):
     if (isinstance(left, da.DimArray) or isinstance(left, np.ndarray)) and (isinstance(right, da.DimArray) or isinstance(right, np.ndarray)):
     #and op == "==":
 
-	res = ['Comparing {} and {} instances:'.format(type(left).__name__, type(right).__name__)] \
+	return ['Comparing {} and {} instances:'.format(type(left).__name__, type(right).__name__)] \
 		+ [''] \
 		+ repr(left).split('\n') \
 		+ ['']  \
 		+ [' :: does not compare with :: ']  \
 		+ ['']  \
 		+ repr(right).split('\n')
-
-    return res
-
 
 ## does not seem to work
 ## # provide fixture when running doctest (equivalent of doctest globs= parameter)
