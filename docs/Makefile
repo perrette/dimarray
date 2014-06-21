@@ -5,7 +5,7 @@
 SPHINXOPTS    =
 SPHINXBUILD   = sphinx-build
 PAPER         =
-BUILDDIR      = _build
+BUILDDIR      = ../gh-pages/html
 
 # hack to compute ipython notebooks to rst format
 IPYNBDIR      = notebooks
