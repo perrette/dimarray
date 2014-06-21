@@ -38,7 +38,7 @@ Indexing now works on axes
 >>> a['b', 1970]
 6.0
 
-Or can just be done _a la numpy_, via integer index:
+Or can just be done **a la numpy**, via integer index:
 
 >>> a.ix[0, -1]
 3.0
@@ -52,6 +52,7 @@ dimensions: 'variable'
 array([ 2.,  5.])
 
 But never stays very far from `pandas`:
+
 >>> a.to_pandas()
 time      1950  1960  1970
 variable                  
