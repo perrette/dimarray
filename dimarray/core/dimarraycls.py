@@ -47,15 +47,14 @@ class DimArray(object):
 
     Methods
     -------
-    mean, median, max, sum, diff, ...: most common along-axis numpy methods
-
     broadcast : repeat array to match target dimensions
     reindex_like : re-index like another dimarray / axes instance
     reindex_axis : re-index / interpolate an axis
     reset_axis : reset axis / change axis values & metadata
 
-    reshape : flexible reshape method by (group of) axis names
-    group, ungroup : flatten/inflate along particular sets of dimensions
+    reshape 
+    group : flatten particular sets of dimensions
+    ungroup : inflate back
     swapaxes : swap two axes, e.g. a.swapaxes(0, 'x1') 
     transpose, squeeze : similar to ndarray's methods
 
@@ -66,10 +65,13 @@ class DimArray(object):
 
     write_nc : write DimArray to netCDF file
 
-    plot, pcolor, contourf, contour : plotting methods
+    plot
+    pcolor
+    contourf
+    contour
 
-    Note 
-    ----
+    Notes
+    -----
     see interactive help for a full listing of methods with doc
 
     See Also

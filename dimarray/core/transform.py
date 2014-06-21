@@ -10,6 +10,8 @@ from axes import Axis, Axes, GroupedAxis
 # Some general documention which is used in several methods
 #
 
+__all__ = []
+
 _doc_axis = """
 axis: axis along which to apply the tranform. 
       Can be given as axis position (`int`), as axis name (`str`), as a 
@@ -59,9 +61,7 @@ See Also
 # Actual transforms
 #
 
-#@format_doc(skipna=_doc_skipna, axis=_doc_axis.format(default_axis="None"))
-def apply_along_axis(obj, func, axis=None, skipna=False, args=(), **kwargs):
-    """ Apply along-axis numpy method to DimArray
+_doc = apply_along_axis = """ Apply along-axis numpy method to DimArray
 
     apply_along_axis(obj, ...)
     Where ... are the parameters below:
@@ -118,6 +118,9 @@ def apply_along_axis(obj, func, axis=None, skipna=False, args=(), **kwargs):
     array([[ nan,   1.],
            [  2.,   3.]])
     """
+
+#@format_doc(skipna=_doc_skipna, axis=_doc_axis.format(default_axis="None"))
+def apply_along_axis(obj, func, axis=None, skipna=False, args=(), **kwargs):
 
     # Deal with `axis` parameter, whether `int`, `str` or `tuple`
     obj, idx, name = _deal_with_axis(obj, axis)

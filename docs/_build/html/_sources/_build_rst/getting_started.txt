@@ -189,11 +189,14 @@ the netCDF4 package. If netCDF4 is installed (much recommanded), a dataset can e
 
 
 >>> import dimarray as da
->>> da.read_nc('test.nc', 'incomplete_timeseries')
-dimarray: 2 non-null elements (1 null)
-dimensions: 'time'
-0 / time (3): 1950 to 1952
-array([  4.,  nan,   5.])
+>>> da.read_nc('test.nc', 'combined_data')
+dimarray: 6 non-null elements (0 null)
+dimensions: 'year', 'season'
+0 / year (3): 1950 to 1970
+1 / season (2): winter to summer
+array([[  0,   0],
+       [ 10, 100],
+       [ 20, 200]])
 
 ..  _Reshaping_arrays:
 

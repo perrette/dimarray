@@ -937,7 +937,7 @@ def _reindex_axes(self, axes, **kwargs):
     return obj
 
 def reindex_like(self, other, method='exact', **kwargs):
-    """ reindex like another axis
+    """ reindex_like : re-index like another dimarray / axes instance
 
     Notes
     -----

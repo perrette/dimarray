@@ -13,11 +13,11 @@ from tools import is_DimArray
 # Broadcast
 #
 def broadcast(self, other):
-    """ broadcast the array along a set of axes by repeating it as necessay
+    """ repeat array to match target dimensions
 
     Parameters
     ----------
-    other             : DimArray or Axes objects or ordered Dictionary of axis values
+    other : DimArray or Axes objects or ordered Dictionary of axis values
 
     Returns
     -------
