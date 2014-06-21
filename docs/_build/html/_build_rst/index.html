@@ -1,0 +1,192 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Documentation &mdash; dimarray 0.1.7.dev-62ca5fa documentation</title>
+    
+    <link rel="stylesheet" href="../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0.1.7.dev-62ca5fa',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="dimarray 0.1.7.dev-62ca5fa documentation" href="../index.html" />
+    <link rel="next" title="DimArray: data structure and attributes" href="data_structure.html" />
+    <link rel="prev" title="Installation" href="../installation.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="data_structure.html" title="DimArray: data structure and attributes"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="../installation.html" title="Installation"
+             accesskey="P">previous</a> |</li>
+        <li><a href="../index.html">dimarray 0.1.7.dev-62ca5fa documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="documentation">
+<h1>Documentation<a class="headerlink" href="#documentation" title="Permalink to this headline">¶</a></h1>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="data_structure.html">DimArray: data structure and attributes</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="data_structure.html#values-and-axes">values and axes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="data_structure.html#numpy-like-attributes">numpy-like attributes</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting started</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="getting_started.html#define-a-dimarray">define a dimarray</a></li>
+<li class="toctree-l2"><a class="reference internal" href="getting_started.html#data-structure">data structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="getting_started.html#numpy-like-attributes">numpy-like attributes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="getting_started.html#indexing">indexing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="getting_started.html#transformation">transformation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="getting_started.html#data-alignment-automatic-broadcasting-and-reindexing">data alignment: automatic broadcasting and reindexing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="getting_started.html#dataset">Dataset</a></li>
+<li class="toctree-l2"><a class="reference internal" href="getting_started.html#netcdf-reading-and-writing">NetCDF reading and writing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="getting_started.html#reshaping-arrays">Reshaping arrays</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="indexing.html">Indexing</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="indexing.html#basics-integer-array-slice">Basics: integer, array, slice</a></li>
+<li class="toctree-l2"><a class="reference internal" href="indexing.html#modify-array-values">Modify array values</a></li>
+<li class="toctree-l2"><a class="reference internal" href="indexing.html#take-and-put-methods">take and put methods</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="z_dimarray.html">Old documentation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="z_dimarray.html#getting-started">Getting started</a></li>
+<li class="toctree-l2"><a class="reference internal" href="z_dimarray.html#under-the-hood">Under the hood</a></li>
+<li class="toctree-l2"><a class="reference internal" href="z_dimarray.html#axis-object">Axis object</a></li>
+<li class="toctree-l2"><a class="reference internal" href="z_dimarray.html#alternative-definitions-of-a-dimarray">Alternative definitions of a DimArray</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="z_dimarray.html#automatic-naming">Automatic naming</a></li>
+<li class="toctree-l3"><a class="reference internal" href="z_dimarray.html#key-word-arguments">Key-word arguments</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="z_dimarray.html#indexing">Indexing</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="z_dimarray.html#basics-integer-array-slice">Basics: integer, array, slice</a></li>
+<li class="toctree-l3"><a class="reference internal" href="z_dimarray.html#modify-array-values">Modify array values</a></li>
+<li class="toctree-l3"><a class="reference internal" href="z_dimarray.html#take-and-put-methods">take and put methods</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="z_dimarray.html#operations">Operations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="z_dimarray.html#along-axis-transformations">Along-axis transformations</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="z_dimarray.html#just-like-numpy-use-axis-name">Just like numpy. Use axis name !</a></li>
+<li class="toctree-l3"><a class="reference internal" href="z_dimarray.html#missing-values">Missing values</a></li>
+<li class="toctree-l3"><a class="reference internal" href="z_dimarray.html#weighted-mean-experimental">Weighted mean [experimental]</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="z_dimarray.html#modify-array-shape">Modify array shape</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="z_dimarray.html#transpose">transpose</a></li>
+<li class="toctree-l3"><a class="reference internal" href="z_dimarray.html#swapaxes">swapaxes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="z_dimarray.html#group-and-ungroup-experimental">group and ungroup [experimental]</a></li>
+<li class="toctree-l3"><a class="reference internal" href="z_dimarray.html#reshape-experimental">reshape [experimental]</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="z_dimarray.html#broadcast-dimensions">broadcast dimensions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="z_dimarray.html#reindexing-align-axes">Reindexing: align axes</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="z_dimarray.html#reindex-axis">reindex_axis</a></li>
+<li class="toctree-l3"><a class="reference internal" href="z_dimarray.html#reindex-like">reindex_like</a></li>
+<li class="toctree-l3"><a class="reference internal" href="z_dimarray.html#interpolation">Interpolation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="z_dimarray.html#align-axes">align_axes</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="z_dimarray.html#stack-and-concatenate-arrays">Stack and concatenate arrays</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="z_dimarray.html#concatenate-arrays-along-existing-axis">concatenate arrays along existing axis</a></li>
+<li class="toctree-l3"><a class="reference internal" href="z_dimarray.html#stack-arrays-along-new-axis">stack arrays along new axis</a></li>
+<li class="toctree-l3"><a class="reference internal" href="z_dimarray.html#broadcast-and-stack-arrays">broadcast and stack arrays</a></li>
+<li class="toctree-l3"><a class="reference internal" href="z_dimarray.html#aggregate-arrays-of-varying-dimensions-experimental">aggregate arrays of varying dimensions [Experimental]</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="z_dimarray.html#dataset">Dataset</a></li>
+<li class="toctree-l2"><a class="reference internal" href="z_dimarray.html#netcdf-i-o">NetCDF I/O</a></li>
+<li class="toctree-l2"><a class="reference internal" href="z_dimarray.html#experimental-features">Experimental Features</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="z_dimarray.html#metadata">Metadata</a></li>
+<li class="toctree-l3"><a class="reference internal" href="z_dimarray.html#compatibility-with-pandas-and-larry">Compatibility with pandas and larry</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="z_dimarray.html#doctest-framework">doctest framework</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="../installation.html"
+                        title="previous chapter">Installation</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="data_structure.html"
+                        title="next chapter">DimArray: data structure and attributes</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="../_sources/_build_rst/index.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="data_structure.html" title="DimArray: data structure and attributes"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="../installation.html" title="Installation"
+             >previous</a> |</li>
+        <li><a href="../index.html">dimarray 0.1.7.dev-62ca5fa documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2014, Mahe Perrette.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.1.
+    </div>
+  </body>
+</html>

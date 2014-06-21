@@ -1,0 +1,200 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>DimArray: data structure and attributes &mdash; dimarray 0.1.7.dev-62ca5fa documentation</title>
+    
+    <link rel="stylesheet" href="../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0.1.7.dev-62ca5fa',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="dimarray 0.1.7.dev-62ca5fa documentation" href="../index.html" />
+    <link rel="up" title="Documentation" href="index.html" />
+    <link rel="next" title="Getting started" href="getting_started.html" />
+    <link rel="prev" title="Documentation" href="index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="getting_started.html" title="Getting started"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="Documentation"
+             accesskey="P">previous</a> |</li>
+        <li><a href="../index.html">dimarray 0.1.7.dev-62ca5fa documentation</a> &raquo;</li>
+          <li><a href="index.html" accesskey="U">Documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="dimarray-data-structure-and-attributes">
+<span id="data-structure"></span><h1>DimArray: data structure and attributes<a class="headerlink" href="#dimarray-data-structure-and-attributes" title="Permalink to this headline">¶</a></h1>
+<p>Let&#8217;s use this dimarray as example:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">dimarray</span> <span class="kn">import</span> <span class="n">DimArray</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">a</span> <span class="o">=</span> <span class="n">DimArray</span><span class="p">([[</span><span class="mf">1.</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">],</span> <span class="p">[</span><span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">6</span><span class="p">]],</span> <span class="n">axes</span><span class="o">=</span><span class="p">[[</span><span class="s">&#39;a&#39;</span><span class="p">,</span> <span class="s">&#39;b&#39;</span><span class="p">],</span> <span class="p">[</span><span class="mi">1950</span><span class="p">,</span> <span class="mi">1960</span><span class="p">,</span> <span class="mi">1970</span><span class="p">]],</span> <span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="s">&#39;variable&#39;</span><span class="p">,</span> <span class="s">&#39;time&#39;</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">a</span>
+<span class="go">dimarray: 6 non-null elements (0 null)</span>
+<span class="go">dimensions: &#39;variable&#39;, &#39;time&#39;</span>
+<span class="go">0 / variable (2): a to b</span>
+<span class="go">1 / time (3): 1950 to 1970</span>
+<span class="go">array([[ 1.,  2.,  3.],</span>
+<span class="go">       [ 4.,  5.,  6.]])</span>
+</pre></div>
+</div>
+<div class="section" id="values-and-axes">
+<span id="id1"></span><h2>values and axes<a class="headerlink" href="#values-and-axes" title="Permalink to this headline">¶</a></h2>
+<p>Array data are stored in a <cite>values</cite> <strong>attribute</strong>:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">a</span><span class="o">.</span><span class="n">values</span>
+<span class="go">array([[ 1.,  2.,  3.],</span>
+<span class="go">       [ 4.,  5.,  6.]])</span>
+</pre></div>
+</div>
+<p>while its axes are stored in <cite>axes</cite>:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">a</span><span class="o">.</span><span class="n">axes</span>
+<span class="go">dimensions: &#39;variable&#39;, &#39;time&#39;</span>
+<span class="go">0 / variable (2): a to b</span>
+<span class="go">1 / time (3): 1950 to 1970</span>
+</pre></div>
+</div>
+<p>An axis is the equivalent of pandas&#8217;s index, except that it always has a name. Each axis can be accessed by its rank or its name:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">ax0</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>         <span class="c"># &quot;variable&quot; axis by rank</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ax0</span>
+<span class="go">variable (2): a to b</span>
+</pre></div>
+</div>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">ax1</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">axes</span><span class="p">[</span><span class="s">&#39;time&#39;</span><span class="p">]</span>    <span class="c"># &quot;time&quot; axis by name</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ax1</span>
+<span class="go">time (3): 1950 to 1970</span>
+</pre></div>
+</div>
+<p>Name and values can be accessed as expected.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">ax1</span><span class="o">.</span><span class="n">name</span>
+<span class="go">&#39;time&#39;</span>
+</pre></div>
+</div>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">ax1</span><span class="o">.</span><span class="n">values</span>
+<span class="go">array([1950, 1960, 1970])</span>
+</pre></div>
+</div>
+<p>In many cases (like plotting) you just want the values, so for convenience you can just access them as a DimArray attribute via axis name (as long as the name is not a protected DimArray attribute):</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">a</span><span class="o">.</span><span class="n">time</span>
+<span class="go">array([1950, 1960, 1970])</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="numpy-like-attributes">
+<span id="id2"></span><h2>numpy-like attributes<a class="headerlink" href="#numpy-like-attributes" title="Permalink to this headline">¶</a></h2>
+<p>Numpy-like attributes <cite>dtype</cite>, <cite>shape</cite>, <cite>size</cite> or <cite>ndim</cite> are defined, and are not augmented with <cite>dims</cite> and <cite>labels</cite></p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">a</span><span class="o">.</span><span class="n">shape</span>
+<span class="go">(2, 3)</span>
+</pre></div>
+</div>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">a</span><span class="o">.</span><span class="n">dims</span>      <span class="c"># grab axis names (the dimensions)</span>
+<span class="go">(&#39;variable&#39;, &#39;time&#39;)</span>
+</pre></div>
+</div>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span> <span class="n">a</span><span class="o">.</span><span class="n">labels</span>   <span class="c"># grab axis values</span>
+<span class="go">(array([&#39;a&#39;, &#39;b&#39;], dtype=object), array([1950, 1960, 1970]))</span>
+</pre></div>
+</div>
+<p>while dimensions are located in an <cite>axes</cite> attribute, an <cite>Axes</cite> instance</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">a</span><span class="o">.</span><span class="n">axes</span>
+<span class="go">dimensions: &#39;variable&#39;, &#39;time&#39;</span>
+<span class="go">0 / variable (2): grl to ant</span>
+<span class="go">1 / time (3): 1950 to 1970</span>
+</pre></div>
+</div>
+<p>Individual axes can be accessed as well, which are <cite>Axis</cite> instances.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">DimArray: data structure and attributes</a><ul>
+<li><a class="reference internal" href="#values-and-axes">values and axes</a></li>
+<li><a class="reference internal" href="#numpy-like-attributes">numpy-like attributes</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="index.html"
+                        title="previous chapter">Documentation</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="getting_started.html"
+                        title="next chapter">Getting started</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="../_sources/_build_rst/data_structure.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="getting_started.html" title="Getting started"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="Documentation"
+             >previous</a> |</li>
+        <li><a href="../index.html">dimarray 0.1.7.dev-62ca5fa documentation</a> &raquo;</li>
+          <li><a href="index.html" >Documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2014, Mahe Perrette.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.1.
+    </div>
+  </body>
+</html>

@@ -1,0 +1,1460 @@
+
+
+#dimarray documentation
+
+Download dimarray on [github](https://github.com/perrette/dimarray/) or just take a look at this notebook on [nbviewer](http://nbviewer.ipython.org/github/perrette/dimarray/blob/master/dimarray.ipynb)
+
+### Table of Content
+- [Get started](#Get-started)
+- [Under the hood](#Under-the-hood)
+    - [Axis object](#Axis-object)
+    - [Alternative definitions of a DimArray](#Alternative-definitions-of-a-DimArray)
+        - [Automatic naming](#Automatic-naming)
+        - [Key-word arguments](#Key-word-arguments)
+    - [Indexing](#Indexing)
+        - [Basics: integer, array, slice](#Basics:-integer,-array,-slice)
+        - [Modify array values](#Modify-array-values)
+        - [take and put methods](#take-and-put-methods)
+    - [Operations](#Operations)
+    - [Along-axis transformations](#Along-axis-transformations)
+        - [Just like numpy. Use axis name !](#Just-like-numpy.-Use-axis-name-!)
+        - [Missing values](#Missing-values)
+        - [Weighted mean [experimental]](#Weighted-mean-[experimental])
+    - [Modify array shape](#Modify-array-shape)
+        - [transpose](#transpose)
+        - [swapaxes](#swapaxes)
+        - [group and ungroup [experimental]](#group-and-ungroup-[experimental])
+        - [reshape [experimental]](#reshape-[experimental])
+    - [broadcast dimensions](#broadcast-dimensions)
+    - [Reindexing: align axes](#Reindexing:-align-axes)
+        - [reindex_axis](#reindex_axis)
+        - [reindex_like](#reindex_like)
+        - [Interpolation](#Interpolation)
+        - [align_axes](#align_axes)
+    - [Stack and concatenate arrays](#Stack-and-concatenate-arrays)
+        - [concatenate arrays along existing axis](#concatenate-arrays-along-existing-axis)
+        - [stack arrays along new axis](#stack-arrays-along-new-axis)
+        - [aggregate arrays of varying dimensions [Experimental]](#aggregate-arrays-of-varying-dimensions-[Experimental])
+    - [Dataset](#Dataset)
+    - [NetCDF I/O](#NetCDF-I/O)
+    - [Experimental Features](#Experimental-Features)
+        - [Metadata](#Metadata)
+        - [Compatibility with pandas and larry](#Compatibility-with-pandas-and-larry)
+    - [doctest framework](#doctest-framework)
+
+Get started
+===========
+
+A **``DimArray``** can be defined just like a numpy array, with
+additional information about its axes, which can be given
+via `axes` and `dims` parameters.
+
+>>> from dimarray import DimArray, Dataset
+
+
+>>> a = DimArray(values=[[1,2,3],[4,5,6.]], axes=[["a","b"], [0,1,2]], dims=['dim0','dim1']) 
+>>> a
+dimarray: 6 non-null elements (0 null)
+dimensions: 'dim0', 'dim1'
+0 / dim0 (2): a to b
+1 / dim1 (3): 0 to 2
+array([[ 1.,  2.,  3.],
+       [ 4.,  5.,  6.]])
+
+Array data are stored in a `values` **attribute**:
+
+>>> a.values
+array([[ 1.,  2.,  3.],
+       [ 4.,  5.,  6.]])
+
+and axis names and values can be accessed straightforwardly, just like `shape` and `ndim`:
+
+>>> a.dims 
+('dim0', 'dim1')
+
+>>> a.labels   # same as (a.dim0, a.dim1)
+(array(['a', 'b'], dtype=object), array([0, 1, 2]))
+
+**Indexing** works on labels just as expected, including `slice` and boolean array.
+
+>>> a['b', 1]
+5.0
+
+but integer-index is always possible via `ix` toogle between `labels`- and `position`-based indexing:
+
+>>> a.ix[1, 1]
+5.0
+
+Numpy **transformations** are defined, and now accept axis name:
+
+>>> a.mean(axis='dim0')
+dimarray: 3 non-null elements (0 null)
+dimensions: 'dim1'
+0 / dim1 (3): 0 to 2
+array([ 2.5,  3.5,  4.5])
+
+and can ignore **missing values (nans)** if asked to:
+
+>>> import numpy as np
+
+
+>>> a['a',2] = np.nan
+>>> a
+dimarray: 5 non-null elements (1 null)
+dimensions: 'dim0', 'dim1'
+0 / dim0 (2): a to b
+1 / dim1 (3): 0 to 2
+array([[  1.,   2.,  nan],
+       [  4.,   5.,   6.]])
+
+>>> a.mean(axis='dim0', skipna=True)
+dimarray: 3 non-null elements (0 null)
+dimensions: 'dim1'
+0 / dim1 (3): 0 to 2
+array([ 2.5,  3.5,  6. ])
+
+Having axis name and axis values allow on-the-fly **axis alignment** and
+**dimension broadcasting** in basic operations (addition, etc...),
+so that rules can be defined for nearly every sequence of operands.
+
+Let's define some axes on dimensions `time` and `items`, using the tuple form (name, values)
+
+>>> time = ('time', [1950, 1951, 1952])
+>>> incomplete_time = ('time', [1950, 1952])
+>>> items = ('items', ['a','b'])
+
+
+see how two arrays with different time indices align, and how the missing year in the second array is replaced by nan:
+
+>>> timeseries = DimArray([1,2,3], time)
+>>> incomplete_timeseries = DimArray([4, 5], incomplete_time)
+>>> timeseries + incomplete_timeseries
+dimarray: 2 non-null elements (1 null)
+dimensions: 'time'
+0 / time (3): 1950 to 1952
+array([  5.,  nan,   8.])
+
+If one of the operands lacks a dimension, it is automatically repeated (broadcast) to match the other operand's shape. In this example, an array of weights is fixed in time, whereas the data to be weighted changes at each time step. 
+
+>>> data = DimArray([[1,2,3],[40,50,60]], [items, time])
+>>> weights = DimArray([2, 0.5], items)
+>>> 
+>>> data * weights
+dimarray: 6 non-null elements (0 null)
+dimensions: 'items', 'time'
+0 / items (2): a to b
+1 / time (3): 1950 to 1952
+array([[  2.,   4.,   6.],
+       [ 20.,  25.,  30.]])
+
+As a commodity, the **`Dataset`** class is an ordered dictionary of DimArrays which also maintains axis aligment
+
+>>> dataset = Dataset({'data':data, 'weights':weights,'incomplete_timeseries':incomplete_timeseries})
+>>> dataset
+Dataset of 3 variables
+dimensions: 'items', 'time'
+0 / items (2): a to b
+1 / time (3): 1950 to 1952
+weights: ('items',)
+incomplete_timeseries: ('time',)
+data: ('items', 'time')
+
+It is one step away from creating a new DimArray from these various arrays, by broadcasting dimensions as needed:
+
+>>> dataset.to_array(axis='variables')
+dimarray: 16 non-null elements (2 null)
+dimensions: 'variables', 'items', 'time'
+0 / variables (3): weights to data
+1 / items (2): a to b
+2 / time (3): 1950 to 1952
+array([[[  2. ,   2. ,   2. ],
+        [  0.5,   0.5,   0.5]],
+<BLANKLINE>
+       [[  4. ,   nan,   5. ],
+        [  4. ,   nan,   5. ]],
+<BLANKLINE>
+       [[  1. ,   2. ,   3. ],
+        [ 40. ,  50. ,  60. ]]])
+
+Note a shorter way of obtaining the above, if the only desired result is to align axes, would have been to use the **`stack`** method (see interactive help).
+
+A natural I/O format for such an array is netCDF, common in geophysics, which rely on
+the netCDF4 package. If netCDF4 is installed (much recommanded), a dataset can easily read and write to the netCDF format:
+
+>>> dataset.write_nc('test.nc', mode='w')
+
+
+>>> import dimarray as da
+>>> da.read_nc('test.nc', 'incomplete_timeseries')
+dimarray: 2 non-null elements (1 null)
+dimensions: 'time'
+0 / time (3): 1950 to 1952
+array([  4.,  nan,   5.])
+
+Additional novelty includes methods to reshaping an array in easy ways, very useful for high-dimensional data analysis.
+
+>>> large_array = da.array(np.arange(2*2*5*2).reshape(2,2,5,2), dims=('A','B','C','D'))
+>>> small_array = large_array.group('A','B').group('C','D')  # same as reshape('A,B','C,D')
+>>> small_array
+dimarray: 40 non-null elements (0 null)
+dimensions: 'A,B', 'C,D'
+0 / A,B (4): (0, 0) to (1, 1)
+1 / C,D (10): (0, 0) to (4, 1)
+array([[ 0,  1,  2,  3,  4,  5,  6,  7,  8,  9],
+       [10, 11, 12, 13, 14, 15, 16, 17, 18, 19],
+       [20, 21, 22, 23, 24, 25, 26, 27, 28, 29],
+       [30, 31, 32, 33, 34, 35, 36, 37, 38, 39]])
+
+And for things that pandas does better, such as pretty printing, I/O to many formats, and low-dimensional data analysis, just use the **`to_pandas`** method (see reverse **`from_pandas`**):
+
+>>> print small_array.to_pandas()
+C     0       1       2       3       4    
+D     0   1   0   1   0   1   0   1   0   1
+A B                                        
+0 0   0   1   2   3   4   5   6   7   8   9
+  1  10  11  12  13  14  15  16  17  18  19
+1 0  20  21  22  23  24  25  26  27  28  29
+  1  30  31  32  33  34  35  36  37  38  39
+
+
+Under the hood
+==============
+
+Axis object
+-----------
+
+Under the hood, information about axis names and values are stored under an `axes` attribute, for consistency with numpy and pandas. It is a custom list of __`Axis`__ objects:
+
+>>> a.axes
+dimensions: 'dim0', 'dim1'
+0 / dim0 (2): a to b
+1 / dim1 (3): 0 to 2
+
+>>> ax = a.axes[0]  # by integer position
+>>> ax = a.axes['dim0'] # by axis name (for pythonistas: list with overloaded __getitem__ property)
+>>> ax
+dim0 (2): a to b
+
+An __`Axis`__ object itself has `name` and `values` attributes:
+
+>>> ax.name
+'dim0'
+
+>>> ax.values
+array(['a', 'b'], dtype=object)
+
+Alternative definitions of a DimArray
+-------------------------------------
+
+It can be passed directly via the `axes=` parameter to initialize a DimArray, or be passed as a list of tuples (`axis name`, `axis values`):
+
+>>> a = DimArray([[1,2,3],[4,5,6]], axes=[("dim0",[4,"a"]), ("dim1", [0,1,2])]) 
+>>> a
+dimarray: 6 non-null elements (0 null)
+dimensions: 'dim0', 'dim1'
+0 / dim0 (2): 4 to a
+1 / dim1 (3): 0 to 2
+array([[1, 2, 3],
+       [4, 5, 6]])
+
+In another world (like in R), one could also have chosen `dims` instead of `axes`. `numpy` has decided otherwise and was followed by `pandas`, so `dimarray` will just stick to it to reduce confusion. 
+
+The convention chosen in `dimarray` is to refer to axis names as `dims`  (for dimensions) and to axis values as `labels`. This choice may seem a bit arbitrary, and to a certain extent it is, but it also has some internal logics. In particular, `dimensions` in the physical sense of the term refers to things with units, such time or space dimensions. A dimension is more like a fundamental property of an axis. It is conserved by indexing or slicing along an axis, and it determines whether two axes can be aligned or concatenated. `labels` may be more awkward when actually thinking about axis `values`, but it makes full sense when realizing that axis values serve as labelling the elements of an array elements. There is even a handy package whose name is drawn from it (`larry`, for labelled array). 
+
+
+Well, in the hope it makes some sense to you, let's go on.
+
+Automatic naming
+~~~~~~~~~~~~~~~~
+
+Note that if any of `axes=`, `dims=` or `labels=` is omitted, dimarray proceeds to automatic naming / labelling, using np.arange() for axis values, and "x0", "x1" etc... for axis names:
+
+>>> a = DimArray(values=[[1,2,3],[4,5,6]], dims=['dim1','dim1']) # axis values defined as np.arange()
+>>> a.labels
+(array([0, 1]), array([0, 1, 2]))
+
+>>> a = DimArray(values=[[1,2,3],[4,5,6]], labels=[['a','b'],[1,2,3]]) # axis values defined as np.arange()
+>>> a.dims
+('x0', 'x1')
+
+As a convenience for the 1-D case when axis name is less relevant, the brackets on `labels` can be omitted, with or without keywords:
+
+
+>>> a = DimArray(values=[1,6], labels=['a', 'b']) 
+>>> a = DimArray([1,6], ['a', 'b']) 
+>>> a
+dimarray: 2 non-null elements (0 null)
+dimensions: 'x0'
+0 / x0 (2): a to b
+array([1, 6])
+
+Key-word arguments
+~~~~~~~~~~~~~~~~~~
+
+Other convenience include the definition of da.array as alias for da.DimArray and da.array_kw as alias for DimArray.from_kw. The latter accepts axes as keyword arguments. But beware, as it cannot recover the order of axes unless it can be guessed from the array shape (i.e. all dimensions have different sizes).
+
+>>> a = da.array_kw([[1,2,3],[4,5,6]], labels=['a','b'], time=[2000,2001,2002])
+>>> a
+dimarray: 6 non-null elements (0 null)
+dimensions: 'labels', 'time'
+0 / labels (2): a to b
+1 / time (3): 2000 to 2002
+array([[1, 2, 3],
+       [4, 5, 6]])
+
+Indexing
+--------
+
+>>> import numpy as np
+>>> import dimarray as da
+>>> from dimarray import DimArray
+
+
+Basics: integer, array, slice
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+There are various ways of indexing a DimArray, and all follow numpy's rules, except that in the default behaviour indices refer to axis values and not to position on the axis, in contrast to numpy. 
+
+>>> from dimarray import DimArray
+>>> import numpy as np
+
+
+>>> v = DimArray([[1,2],[3,4],[5,6],[7,8]], labels=[["a","b","c","d"], [10.,20.]], dims=['x0','x1'], dtype=float) 
+>>> v
+dimarray: 8 non-null elements (0 null)
+dimensions: 'x0', 'x1'
+0 / x0 (4): a to d
+1 / x1 (2): 10.0 to 20.0
+array([[ 1.,  2.],
+       [ 3.,  4.],
+       [ 5.,  6.],
+       [ 7.,  8.]])
+
+>>> v['a',20]  # extract a single item
+2.0
+
+The `ix` attrubutes is the pendant for position (integer) indexing (and exclusively so !). It is therefore similar to indexing on the `values` attribute, except that it returns a new DimArray, where v.values[...] would return a numpy ndarray.
+
+>>> v.ix[0,:]
+dimarray: 2 non-null elements (0 null)
+dimensions: 'x1'
+0 / x1 (2): 10.0 to 20.0
+array([ 1.,  2.])
+
+Note that the last element of slices is INCLUDED, contrary to numpy's position indexing. Step argument is always intrepreted as an integer.
+
+>>> v['a':'c',10]  # 'c' is INCLUDED
+dimarray: 3 non-null elements (0 null)
+dimensions: 'x0'
+0 / x0 (3): a to c
+array([ 1.,  3.,  5.])
+
+>>> v[['a','c'],10]  # it is possible to provide a list
+dimarray: 2 non-null elements (0 null)
+dimensions: 'x0'
+0 / x0 (2): a to c
+array([ 1.,  5.])
+
+>>> v[v.x0 != 'b',10]  # boolean indexing is also fine
+dimarray: 3 non-null elements (0 null)
+dimensions: 'x0'
+0 / x0 (3): a to d
+array([ 1.,  5.,  7.])
+
+If several array-like indices are provided, they are broadcast into a single shape (like numpy does), and values are extracted along the corresponding line. 
+
+>>> v[['a','c'],[10,20]]  # it is possible to provide a list
+dimarray: 2 non-null elements (0 null)
+dimensions: 'x0,x1'
+0 / x0,x1 (2): ('a', '10.0') to ('c', '20.0')
+array([ 1.,  6.])
+
+This is in contrast to matlab or pandas, which use box-like indexing, along each dimension independently. This can be achieved with the `box` attribute:
+
+>>> v.box[['a','c'],[10,20]]  # indexing on each dimension, individually
+dimarray: 4 non-null elements (0 null)
+dimensions: 'x0', 'x1'
+0 / x0 (2): a to c
+1 / x1 (2): 10.0 to 20.0
+array([[ 1.,  2.],
+       [ 5.,  6.]])
+
+Modify array values
+~~~~~~~~~~~~~~~~~~~
+
+All the above can be used to change array values, consistently with what you would expect. A few examples:
+
+>>> v[:] = 0
+>>> v['d'] = 1
+>>> v['b', 10] = 2
+>>> v.box[['a','c'],[10,20]] = 3
+>>> v[['a','c'],[10,20]] = 4
+>>> v.values[-1] = 5 # last element to 5 
+>>> v.ix[-1] = 6
+>>> v
+dimarray: 8 non-null elements (0 null)
+dimensions: 'x0', 'x1'
+0 / x0 (4): a to d
+1 / x1 (2): 10.0 to 20.0
+array([[ 4.,  3.],
+       [ 2.,  0.],
+       [ 3.,  4.],
+       [ 6.,  6.]])
+
+take and put methods
+~~~~~~~~~~~~~~~~~~~~
+
+These two methods are the machinery to accessing and modifying items in the examples above.
+They may be useful to use directly for generic programming. 
+They are similar to numpy methods of the same name, but also work in multiple dimensions.
+In particular, they both take dictionary, tuples and boolean arrays as `indices` argument.
+
+>>> v = DimArray([[1,2],[3,4],[5,6],[7,8]], labels=[["a","b","c","d"], [10.,20.]], dims=['x0','x1'], dtype=float) 
+
+
+>>> a = v[:,10]
+>>> b = v.take(10, axis=1)
+>>> c = v.take(10, axis='x1')
+>>> d = v.take({'x1':10}) # dict
+>>> e = v.take((slice(None),10)) # tuple
+>>> assert(np.all(a==b) and np.all(a==b) and np.all(a==c) and np.all(a==d) and np.all(a==e))
+>>> a
+dimarray: 4 non-null elements (0 null)
+dimensions: 'x0'
+0 / x0 (4): a to d
+array([ 1.,  3.,  5.,  7.])
+
+The two latter forms, `tuple` or `dict`, allow performing multi-indexing. Array broadcasting is controlled by "broadcast_arrays" parameter.
+
+>>> v.take({'x0':['a','b'], 'x1':[10, 20]}) 
+dimarray: 2 non-null elements (0 null)
+dimensions: 'x0,x1'
+0 / x0,x1 (2): ('a', '10.0') to ('b', '20.0')
+array([ 1.,  4.])
+
+>>> v.take({'x0':['a','b'], 'x1':[10, 20]}, broadcast_arrays=False)  #  same as v.box[['a','b'],[10, 20]]
+dimarray: 4 non-null elements (0 null)
+dimensions: 'x0', 'x1'
+0 / x0 (2): a to b
+1 / x1 (2): 10.0 to 20.0
+array([[ 1.,  2.],
+       [ 3.,  4.]])
+
+The 'indexing' parameter can be set to `position` (same as `ix`) instead of `values`
+
+>>> v.take(0, axis=1, indexing='position')
+dimarray: 4 non-null elements (0 null)
+dimensions: 'x0'
+0 / x0 (4): a to d
+array([ 1.,  3.,  5.,  7.])
+
+Note the `put` command returns a copy by default (`inplace=` can be passed as True, though).
+
+>>> v.put(-99, indices=10, axis='x1')
+dimarray: 8 non-null elements (0 null)
+dimensions: 'x0', 'x1'
+0 / x0 (4): a to d
+1 / x1 (2): 10.0 to 20.0
+array([[-99.,   2.],
+       [-99.,   4.],
+       [-99.,   6.],
+       [-99.,   8.]])
+
+Operations
+----------
+
+Most operations working in numpy should work with a DimArray, otherwise please file a bug report ! Additionally, automatic axis alignment and dimension broadcasting is performed, see [Get started](#Get-started) section.
+
+a = da.array([[1,2,3],[3,4,5]],dims=('x0','x1'))
+a + 2
+a / 2    # True division, returning a float in all cases
+a // 2   # floor division
+a * 2
+a ** 2
+a += 2
+a + a
+a - a
+a / a
+a // a
+a * a 
+a ** a
+a == a
+
+Along-axis transformations
+--------------------------
+
+Just like numpy. Use axis name !
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Most numpy transformations are built in. Let's create some random data to try it out:
+
+>>> np.random.seed(0)
+>>> values = np.round(np.random.rand(4,3)*10)
+>>> time = 'time', np.arange(1950,1954) 
+>>> lat = 'lat', np.linspace(-90,90,3)
+>>> v = da.DimArray(values, axes=[time, lat])
+>>> v
+dimarray: 12 non-null elements (0 null)
+dimensions: 'time', 'lat'
+0 / time (4): 1950 to 1953
+1 / lat (3): -90.0 to 90.0
+array([[  5.,   7.,   6.],
+       [  5.,   4.,   6.],
+       [  4.,   9.,  10.],
+       [  4.,   8.,   5.]])
+
+In axis-reduction operations, not providing the axis results in the operation being applied to the flattened array, following numpy's rule:
+
+>>> v.sum() # sum over all axes
+73.0
+
+To perform the operation along an axis, it must be indicated by an integer (axis rank) or - new in dimarray - by a string (axis name):
+
+>>> v.sum(axis=0) # sum over first axis
+>>> v.sum(axis='time') # named axis
+dimarray: 3 non-null elements (0 null)
+dimensions: 'lat'
+0 / lat (3): -90.0 to 90.0
+array([ 18.,  28.,  27.])
+
+All axis-reduction transformations, following numpy:
+
+>>> # sum, product
+>>> v.sum()
+>>> v.prod()
+>>> 
+>>> # moments
+>>> v.mean() 
+>>> v.var() 
+>>> v.std() 
+>>> 
+>>> # median, min, max, peak-to-peak
+>>> v.median() 
+>>> v.min() 
+>>> v.max() 
+>>> v.ptp() 
+>>> 
+>>> # argmin, argmax: locate the minimum and maximum of an array
+>>> v.argmin() 
+>>> v.argmax() 
+>>> 
+>>> # determine if all or any of the elements are True (or non-zero)
+>>> v.all() 
+>>> v.any()
+True
+
+In `dimarray`, the `argmin` and `argmax` functions return axis value instead of axis position.
+
+>>> v.argmin() 
+(1951, 0.0)
+
+...which is consistent with indexing on axis values:
+
+>>> v[v.argmin()], v.min() 
+(4.0, 4.0)
+
+The along axis version works similarly:
+
+>>> date_min = v.argmin(axis='time') 
+>>> date_min
+dimarray: 3 non-null elements (0 null)
+dimensions: 'lat'
+0 / lat (3): -90.0 to 90.0
+array([1952, 1951, 1953])
+
+>>> v[date_min, v.lat]  # this makes use of array-broadcasting when indexing with two arrays
+dimarray: 3 non-null elements (0 null)
+dimensions: 'time,lat'
+0 / time,lat (3): (1952.0, -90.0) to (1953.0, 90.0)
+array([ 4.,  4.,  5.])
+
+Operations that accumulate along an axis are also implemented, by default along the last axis, consistently with numpy. Let's use a simpler 1-D example here.
+
+>>> v = da.DimArray(np.arange(1,5), time, dtype=float)
+>>> v
+dimarray: 4 non-null elements (0 null)
+dimensions: 'time'
+0 / time (4): 1950 to 1953
+array([ 1.,  2.,  3.,  4.])
+
+>>> v.cumprod()
+>>> v.cumsum()
+dimarray: 4 non-null elements (0 null)
+dimensions: 'time'
+0 / time (4): 1950 to 1953
+array([  1.,   3.,   6.,  10.])
+
+A new `diff` method comes with `dimarray`, which reduces axis size by one, by default (and by default `diff` operates along the last axis, like `cumsum`).
+
+>>> s = v.cumsum()
+
+
+>>> s.diff()
+dimarray: 3 non-null elements (0 null)
+dimensions: 'time'
+0 / time (3): 1951 to 1953
+array([ 2.,  3.,  4.])
+
+The `keepaxis=` parameter fills array with `nan` where necessary to keep the axis unchanged. Default is backward differencing: `diff[i] = v[i] - v[i-1]`.
+
+>>> s.diff(keepaxis=True)
+dimarray: 3 non-null elements (1 null)
+dimensions: 'time'
+0 / time (4): 1950 to 1953
+array([ nan,   2.,   3.,   4.])
+
+But other schemes are available to control how the new axis is defined: `backward` (default), `forward` and even `centered`
+
+>>> s.diff(keepaxis=True, scheme="forward") # diff[i] = v[i+1] - v[i]
+dimarray: 3 non-null elements (1 null)
+dimensions: 'time'
+0 / time (4): 1950 to 1953
+array([  2.,   3.,   4.,  nan])
+
+The `keepaxis=True` option is invalid with the `centered` scheme, since every axis value is modified by definition:
+
+>>> s.diff(axis='time', scheme='centered')
+dimarray: 3 non-null elements (0 null)
+dimensions: 'time'
+0 / time (3): 1950.5 to 1952.5
+array([ 2.,  3.,  4.])
+
+Missing values
+~~~~~~~~~~~~~~
+
+`dimarray` treats `nan` as missing values, which can be skipped in transformations by passing skipna=True. Note that `nan` is has a `float` type so it cannot be assigned to an integer array.
+
+>>> import numpy as np
+>>> import dimarray as da
+
+
+>>> a = da.DimArray([[1,2,3],[4,5,6]], dtype=float)
+>>> a[1,2] = np.nan
+>>> a
+dimarray: 5 non-null elements (1 null)
+dimensions: 'x0', 'x1'
+0 / x0 (2): 0 to 1
+1 / x1 (3): 0 to 2
+array([[  1.,   2.,   3.],
+       [  4.,   5.,  nan]])
+
+>>> a.mean(axis=0)
+dimarray: 2 non-null elements (1 null)
+dimensions: 'x1'
+0 / x1 (3): 0 to 2
+array([ 2.5,  3.5,  nan])
+
+>>> a.mean(axis=0, skipna=True)
+dimarray: 3 non-null elements (0 null)
+dimensions: 'x1'
+0 / x1 (3): 0 to 2
+array([ 2.5,  3.5,  3. ])
+
+A few other methods exist but are experimental. They are mere aliases for classical `a[np.isnan[a]] = value` syntax, but automatically coerce integer type to float, and perform a copy by default. This could also be useful in the future to define a missing value flag other than `nan`, for example when working with integer array.
+
+>>> a.fillna(99)
+dimarray: 6 non-null elements (0 null)
+dimensions: 'x0', 'x1'
+0 / x0 (2): 0 to 1
+1 / x1 (3): 0 to 2
+array([[  1.,   2.,   3.],
+       [  4.,   5.,  99.]])
+
+`setna` can also be provided with a list of values (or boolean arrays) to set to nan:
+
+>>> b = a.setna([1,4])
+>>> b
+dimarray: 3 non-null elements (3 null)
+dimensions: 'x0', 'x1'
+0 / x0 (2): 0 to 1
+1 / x1 (3): 0 to 2
+array([[ nan,   2.,   3.],
+       [ nan,   5.,  nan]])
+
+More interestingly, the `dropna` methods helps getting rid of nans arising in grouping operations, similarly to `pandas`:
+
+>>> b.dropna(axis=1)
+dimarray: 2 non-null elements (0 null)
+dimensions: 'x0', 'x1'
+0 / x0 (2): 0 to 1
+1 / x1 (1): 1 to 1
+array([[ 2.],
+       [ 5.]])
+
+But in some cases, you are still ok with a certain number of nans, but want to have a minimum of 1 or more valid values:
+
+>>> b.dropna(axis=1, minvalid=1)  # minimum number of valid values, equivalent to `how="all"` in pandas
+dimarray: 3 non-null elements (1 null)
+dimensions: 'x0', 'x1'
+0 / x0 (2): 0 to 1
+1 / x1 (2): 1 to 2
+array([[  2.,   3.],
+       [  5.,  nan]])
+
+Weighted mean [experimental]
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Each axis can have a `weights` attribute. If not None, it will be automatically used when computing mean, var, std
+
+>>> a = da.DimArray(np.arange(5))
+>>> a
+dimarray: 5 non-null elements (0 null)
+dimensions: 'x0'
+0 / x0 (5): 0 to 4
+array([0, 1, 2, 3, 4])
+
+The mean as you'd expect:
+
+>>> a.mean()  #  standard mean
+2.0
+
+Now adding the weight parameter:
+
+>>> a.axes[0].weights = [0, 0, 0, 1, 0]
+>>> a.mean()
+3.0
+
+Note it is preserved via indexing 
+
+>>> a.ix[-3:].axes[0].weights
+array([0, 1, 0])
+
+Also possible as a function:
+
+>>> a.axes[0].weights = lambda x: x**2
+>>> a.mean()
+3.3333333333333335
+
+Modify array shape
+------------------
+
+Basic numpy methods to modify array dimensions are implemented in dimarray, with some additional functionality allowed by named dimensions.
+
+**Methods overview**: `newaxis`, `squeeze`, `transpose`, `swapaxes`, `flatten`, `group`, `ungroup`, `reshape`
+
+transpose
+~~~~~~~~~
+
+Transpose, just like its numpy equivalent, permutes dimensions, but in dimarray it can be provided with axis names instead of just axis position.
+
+>>> a = DimArray([[1,2,3],[3,4,5]],dims=('x0','x1'))
+>>> a.transpose()
+>>> a.T
+dimarray: 6 non-null elements (0 null)
+dimensions: 'x1', 'x0'
+0 / x1 (3): 0 to 2
+1 / x0 (2): 0 to 1
+array([[1, 3],
+       [2, 4],
+       [3, 5]])
+
+>>> a = DimArray([[[1,2,3],[3,4,5]]],dims=('x2','x0','x1'))
+>>> a.transpose('x1','x2','x0')
+dimarray: 6 non-null elements (0 null)
+dimensions: 'x1', 'x2', 'x0'
+0 / x1 (3): 0 to 2
+1 / x2 (1): 0 to 0
+2 / x0 (2): 0 to 1
+array([[[1, 3]],
+
+       [[2, 4]],
+
+       [[3, 5]]])
+
+swapaxes
+~~~~~~~~
+
+Sometimes it is only useful to have on dimension in the first position, for example to make indexing easier. 
+`swapaxes` is a more general method of swapping two axes, but it can achieve that operation nicely (more useful with more than 2 dimensions!):
+
+>>> a = DimArray([[1,2,3],[3,4,5]],dims=('x0','x1'))
+>>> a.swapaxes('x1',0)
+dimarray: 6 non-null elements (0 null)
+dimensions: 'x1', 'x0'
+0 / x1 (3): 0 to 2
+1 / x0 (2): 0 to 1
+array([[1, 3],
+       [2, 4],
+       [3, 5]])
+
+group and ungroup [experimental]
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+As a new, experimental feature, it is possible to flatten (group) or any subset of dimensions. Corresponding axes are converted in GroupedAxis objects. 
+
+>>> v = da.array_kw(np.arange(2*3*4).reshape(2,3,4), time=[1950,1955], lat=np.linspace(-90,90,3), lon=np.linspace(-180,180,4))
+>>> v
+dimarray: 24 non-null elements (0 null)
+dimensions: 'time', 'lat', 'lon'
+0 / time (2): 1950 to 1955
+1 / lat (3): -90.0 to 90.0
+2 / lon (4): -180.0 to 180.0
+array([[[ 0,  1,  2,  3],
+        [ 4,  5,  6,  7],
+        [ 8,  9, 10, 11]],
+
+       [[12, 13, 14, 15],
+        [16, 17, 18, 19],
+        [20, 21, 22, 23]]])
+
+Flatten a set of dimensions:
+
+>>> w = v.group(('lat','lon'))
+>>> w
+dimarray: 24 non-null elements (0 null)
+dimensions: 'time', 'lat,lon'
+0 / time (2): 1950 to 1955
+1 / lat,lon (12): (-90.0, -180.0) to (90.0, 180.0)
+array([[ 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11],
+       [12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]])
+
+Along-axis transformations use that feature and can group any subset of axes prior to the operation:
+
+>>> v.mean(axis=('lat','lon'))
+dimarray: 2 non-null elements (0 null)
+dimensions: 'time'
+0 / time (2): 1950 to 1955
+array([  5.5,  17.5])
+
+Any grouped axis can be reshaped back to full n-d array via **`ungroup`**
+
+>>> w.ungroup()
+dimarray: 24 non-null elements (0 null)
+dimensions: 'time', 'lat', 'lon'
+0 / time (2): 1950 to 1955
+1 / lat (3): -90.0 to 90.0
+2 / lon (4): -180.0 to 180.0
+array([[[ 0,  1,  2,  3],
+        [ 4,  5,  6,  7],
+        [ 8,  9, 10, 11]],
+
+       [[12, 13, 14, 15],
+        [16, 17, 18, 19],
+        [20, 21, 22, 23]]])
+
+reshape [experimental]
+~~~~~~~~~~~~~~~~~~~~~~
+
+`reshape` is similar but not the same as numpy ndarray's `reshape`. It takes only axis names as parameters. It is a high-level function that combine `newaxis`, `squeeze`, `group` and `ungroup` to reshape the array. It differs from numpy in that it cannot "break" an existing dimension (unless it is a GroupedAxis). Provided with the parameter `transpose=True`, it also performs transpose as needed to match the required shape. 
+
+Here an example where high-dimensional data is converted into a pandas' DataFrame for displaying result of a sensitivity analysis. GroupedAxis are converted into MultiIndex before passing to pandas.
+
+>>> large_array = da.array(np.arange(2*2*5*2).reshape(2,2,5,2), dims=('A','B','C','D'))
+>>> large_array.reshape('A,B','C,D').to_pandas()
+C     0       1       2       3       4    
+D     0   1   0   1   0   1   0   1   0   1
+A B                                        
+0 0   0   1   2   3   4   5   6   7   8   9
+  1  10  11  12  13  14  15  16  17  18  19
+1 0  20  21  22  23  24  25  26  27  28  29
+  1  30  31  32  33  34  35  36  37  38  39
+
+broadcast dimensions
+--------------------
+
+Let's play with dimensions, by considering the three dimensions below:
+
+>>> lon = np.linspace(10, 30, 2)
+>>> lat = np.linspace(10, 50, 3)
+>>> time = np.arange(1950,1955)
+
+
+we can define a timeseries and a time-varying map
+
+>>> timeseries = DimArray([1,2,3,4,5], [('time',time)])
+>>> timeseries
+dimarray: 5 non-null elements (0 null)
+dimensions: 'time'
+0 / time (5): 1950 to 1954
+array([1, 2, 3, 4, 5])
+
+>>> cube = da.zeros([('lon', lon), ('lat',lat), ('time',time)])  
+>>> cube  # doctest: +ELLIPSIS
+dimarray: 30 non-null elements (0 null)
+dimensions: 'lon', 'lat', 'time'
+0 / lon (2): 10.0 to 30.0
+1 / lat (3): 10.0 to 50.0
+2 / time (5): 1950 to 1954
+array([[[ 0.,  0.,  0.,  0.,  0.],
+        [ 0.,  0.,  0.,  0.,  0.],
+        [ 0.,  0.,  0.,  0.,  0.]],
+
+       [[ 0.,  0.,  0.,  0.,  0.],
+        [ 0.,  0.,  0.,  0.,  0.],
+        [ 0.,  0.,  0.,  0.,  0.]]])
+
+Suppose we want to repeat the timeseries so that it matches `cube` dimension. **`newaxis`** is a handy method for that. Starting with lon:
+
+>>> timeseries.newaxis('lon', cube.lon)
+dimarray: 10 non-null elements (0 null)
+dimensions: 'lon', 'time'
+0 / lon (2): 10.0 to 30.0
+1 / time (5): 1950 to 1954
+array([[1, 2, 3, 4, 5],
+       [1, 2, 3, 4, 5]])
+
+And then one could add the remaining dimension. A more automatic way of doing the same thing is via the `broadcast`, method, which could also have been called `broadcast_like`:
+
+>>> timeseries.broadcast(cube) 
+dimarray: 30 non-null elements (0 null)
+dimensions: 'lon', 'lat', 'time'
+0 / lon (2): 10.0 to 30.0
+1 / lat (3): 10.0 to 50.0
+2 / time (5): 1950 to 1954
+array([[[1, 2, 3, 4, 5],
+        [1, 2, 3, 4, 5],
+        [1, 2, 3, 4, 5]],
+
+       [[1, 2, 3, 4, 5],
+        [1, 2, 3, 4, 5],
+        [1, 2, 3, 4, 5]]])
+
+It is also possible to proceed to broadcasting on a sequence of arrays, via `broadcast_arrays` method:
+
+>>> x = da.DimArray(np.arange(2), dims=('x0',))
+>>> y = da.DimArray(np.arange(3), dims=('x1',))
+>>> da.broadcast_arrays(x, y)
+[dimarray: 6 non-null elements (0 null)
+ dimensions: 'x0', 'x1'
+ 0 / x0 (2): 0 to 1
+ 1 / x1 (3): 0 to 2
+ array([[0, 0, 0],
+        [1, 1, 1]]), dimarray: 6 non-null elements (0 null)
+ dimensions: 'x0', 'x1'
+ 0 / x0 (2): 0 to 1
+ 1 / x1 (3): 0 to 2
+ array([[0, 1, 2],
+        [0, 1, 2]])]
+
+But as we will see in the next sections, you will not have to use these methods very often since broadcasting is done automatically when performing operations.
+
+Reindexing: align axes
+----------------------
+
+Reindexing is the action of shrinking or extending an array to match a new index, in some ways similar to interpolation, except that by default, the new index has to be present, or it is filled with NaN. Actual interpolation is performed by passing `method="nearest"` or `method="interp"` parameter.
+
+reindex_axis
+~~~~~~~~~~~~
+
+>>> a = da.DimArray([3,4],[('x0',[1,3])])
+>>> a.reindex_axis([1,2,3])
+dimarray: 2 non-null elements (1 null)
+dimensions: 'x0'
+0 / x0 (3): 1 to 3
+array([  3.,  nan,   4.])
+
+Also works with string indices
+
+>>> b = da.DimArray([1,2,3],[('x0', ['a','b','c'])])
+>>> b.reindex_axis(['b','d'])
+dimarray: 1 non-null elements (1 null)
+dimensions: 'x0'
+0 / x0 (2): b to d
+array([  2.,  nan])
+
+reindex_like
+~~~~~~~~~~~~
+
+Same as reindex_axis, except that the new axes are searched for in another array.
+
+>>> c = da.DimArray([[1,2,3], [4,5,6]],[('x0',["a","b"]),('x1',[1, 2, 3])])
+>>> c.reindex_like(b)
+dimarray: 6 non-null elements (3 null)
+dimensions: 'x0', 'x1'
+0 / x0 (3): a to c
+1 / x1 (3): 1 to 3
+array([[  1.,   2.,   3.],
+       [  4.,   5.,   6.],
+       [ nan,  nan,  nan]])
+
+Interpolation
+~~~~~~~~~~~~~
+
+The `method=` parameter can be passed to `reindex_axis` and `reindex_like` with values "nearest" and "interp" to proceed to nearest and linear interpolation.
+
+>>> # Can also reindex in "interp" mode
+>>> a.reindex_axis([0,1,2,3], method='interp')
+>>> #c.reindex_like(b, method='interp')
+dimarray: 3 non-null elements (1 null)
+dimensions: 'x0'
+0 / x0 (4): 0 to 3
+array([ nan,  3. ,  3.5,  4. ])
+
+>>> import numpy as np
+>>> import dimarray as da
+>>> time=np.linspace(1950,1955,8)
+>>> v = da.array_kw(np.cos(time), time=time)
+>>> w = da.reindex_axis(v, np.linspace(1948,1957,10), axis='time', method='interp')
+>>> x = v.reindex_axis(np.linspace(1948,1957,10), axis='time', method='nearest')
+
+
+>>> import matplotlib.pyplot as plt
+>>> %matplotlib inline
+>>> plt.clf()
+>>> plt.plot(v.time, v.values, 's-', label='original')
+>>> plt.plot(w.time, w.values, 'o-', label='interp')
+>>> #plt.plot(w1.time, w.values, 'o--', color='k', label='interp')
+>>> plt.plot(x.time, x.values, '*-',label='nearest')
+>>> plt.legend(loc='upper left')
+<matplotlib.legend.Legend at 0x7f5542f88f90><matplotlib.figure.Figure at 0x7f5547c90790>
+
+align_axes
+~~~~~~~~~~
+
+It is also possible to proceed to axis alignment on a sequence of arrays (not in interpolation mode!):
+
+>>> # align axes
+>>> x = da.DimArray([1,2,3],('x0',[1,2,3]))
+>>> y = da.DimArray([3,4],('x0',[2,4]))
+>>> da.align_axes(x, y)
+[dimarray: 3 non-null elements (1 null)
+ dimensions: 'x0'
+ 0 / x0 (4): 1 to 4
+ array([  1.,   2.,   3.,  nan]), dimarray: 2 non-null elements (2 null)
+ dimensions: 'x0'
+ 0 / x0 (4): 1 to 4
+ array([ nan,   3.,  nan,   4.])]
+
+Stack and concatenate arrays
+----------------------------
+
+concatenate arrays along existing axis
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+>>> a = da.DimArray([[1.,2,3]],axes=[('line',[1]), ('col',['a','b','c'])])
+>>> b = da.DimArray([[4,5,6],[7,8,9]], axes=[('line',[2,3]), ('col',['a','b','c'])])
+>>> da.concatenate((a,b), axis=0)
+dimarray: 9 non-null elements (0 null)
+dimensions: 'line', 'col'
+0 / line (3): 1 to 3
+1 / col (3): a to c
+array([[ 1.,  2.,  3.],
+       [ 4.,  5.,  6.],
+       [ 7.,  8.,  9.]])
+
+stack arrays along new axis
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+>>> a = da.DimArray([10,20,30])
+>>> da.stack({'a':a, '2*a':2*a}, axis='items')   # dictionary
+>>> da.stack([a, 2*a], keys=['a','2*a'], axis='items')  # list
+dimarray: 6 non-null elements (0 null)
+dimensions: 'items', 'x0'
+0 / items (2): a to 2*a
+1 / x0 (3): 0 to 2
+array([[10, 20, 30],
+       [20, 40, 60]])
+
+with axis alignment
+
+>>> a = da.DimArray([10,20,30], ('x0',[0, 1, 2]))
+>>> b = da.DimArray([1,2,3], ('x0', [1,2,3]))
+>>> da.stack([a,b], keys=['a','b'], align=True) 
+dimarray: 6 non-null elements (2 null)
+dimensions: 'unnamed', 'x0'
+0 / unnamed (2): a to b
+1 / x0 (4): 0 to 3
+array([[ 10.,  20.,  30.,  nan],
+       [ nan,   1.,   2.,   3.]])
+
+broadcast and stack arrays
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If the arrays to join also need to be broadcast prior concatenation, da.array comes in handy
+
+>>> a = da.DimArray([10,20,30], ('x0',[0, 1, 2]))
+>>> c = da.DimArray([1,2,3], ('x1', [1,2,3]))
+>>> da.array([a,c], keys=['a','c']) 
+dimarray: 18 non-null elements (0 null)
+dimensions: 'unnamed', 'x0', 'x1'
+0 / unnamed (2): a to c
+1 / x0 (3): 0 to 2
+2 / x1 (3): 1 to 3
+array([[[10, 10, 10],
+        [20, 20, 20],
+        [30, 30, 30]],
+
+       [[ 1,  2,  3],
+        [ 1,  2,  3],
+        [ 1,  2,  3]]])
+
+aggregate arrays of varying dimensions [Experimental]
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Here a nice example of puzzle filling (values in the output array indicate the order of insertion):
+
+>>> a = da.DimArray([[1.,2,3]],axes=[('line',[1]), ('col',['a','b','c'])])
+>>> b = da.DimArray([[4],[5]], axes=[('line',[2,3]), ('col',['d'])])
+>>> c = da.DimArray([[6]], axes=[('line',[2]), ('col',['b'])])
+>>> d = da.DimArray([-7], axes=[('line',[4])])
+>>> da.aggregate((a,b,c,d))
+dimarray: 10 non-null elements (6 null)
+dimensions: 'line', 'col'
+0 / line (4): 1 to 4
+1 / col (4): a to d
+array([[  1.,   2.,   3.,  nan],
+       [ nan,   6.,  nan,   4.],
+       [ nan,  nan,  nan,   5.],
+       [ -7.,  -7.,  -7.,  -7.]])
+
+Risk of overlapping checked. In case of overlapping of a valid and an invalid value, keep the valid one
+
+>>> a = da.DimArray([[1.,2,3]],axes=[('line',[1]), ('col',['a','b','c'])])
+>>> e = da.DimArray([[np.nan],[5]], axes=[('line',[1,2]), ('col',['b'])])
+>>> da.aggregate((a,e)) # does not overwrite `2` at location (1, 'b')
+dimarray: 4 non-null elements (2 null)
+dimensions: 'line', 'col'
+0 / line (2): 1 to 2
+1 / col (3): a to c
+array([[  1.,   2.,   3.],
+       [ nan,   5.,  nan]])
+
+But any loss of data (overlap between two valid values) is prevented by raising an exception:
+
+>>> a = da.DimArray([[1.,2,3]],axes=[('line',[1]), ('col',['a','b','c'])])
+>>> e = da.DimArray([[4],[5]], axes=[('line',[1,2]), ('col',['b'])])
+>>> try:
+>>>     da.aggregate((a,e))
+>>> except Exception, msg:
+>>>     print msg
+Overlapping arrays: set check_overlap to False to suppress this error.
+
+
+Unless specified otherwise with `check_overlap=False` (will also speedup the operation)
+
+>>> da.aggregate((a,e), check_overlap=False)
+dimarray: 4 non-null elements (2 null)
+dimensions: 'line', 'col'
+0 / line (2): 1 to 2
+1 / col (3): a to c
+array([[  1.,   4.,   3.],
+       [ nan,   5.,  nan]])
+
+Dataset
+-------
+
+A dataset is an ordered dictionary of DimArray objects
+
+>>> time = "time",np.arange(1950,1952)
+>>> lat = "lat",np.linspace(-90,90,3)
+>>> 
+>>> data = da.Dataset()
+>>> data['timeseries'] = da.array(np.arange(2), time)
+>>> data['greenland'] = da.array(np.arange(2*3).reshape(2,3), [time, lat])
+>>> data['antarctica'] = data['greenland']*2
+>>> data
+Dataset of 3 variables
+dimensions: 'time', 'lat'
+0 / time (2): 1950 to 1951
+1 / lat (3): -90.0 to 90.0
+timeseries: ('time',)
+greenland: ('time', 'lat')
+antarctica: ('time', 'lat')
+
+Which can be exported to a Dimarray, along the default axis `items`:
+
+>>> a = data.to_array()
+>>> a
+dimarray: 18 non-null elements (0 null)
+dimensions: 'unnamed', 'time', 'lat'
+0 / unnamed (3): timeseries to antarctica
+1 / time (2): 1950 to 1951
+2 / lat (3): -90.0 to 90.0
+array([[[ 0,  0,  0],
+        [ 1,  1,  1]],
+<BLANKLINE>
+       [[ 0,  1,  2],
+        [ 3,  4,  5]],
+<BLANKLINE>
+       [[ 0,  2,  4],
+        [ 6,  8, 10]]])
+
+Note that the timeseries dimension has been broadcast to the same shape as others (by repeating its values along the `lat` axis):
+
+>>> a['timeseries']
+dimarray: 6 non-null elements (0 null)
+dimensions: 'time', 'lat'
+0 / time (2): 1950 to 1951
+1 / lat (3): -90.0 to 90.0
+array([[0, 0, 0],
+       [1, 1, 1]])
+
+NetCDF I/O
+----------
+
+A dataset is the natural object for I/O into the netCDF format:
+
+>>> data.write_nc('test.nc', 'w')
+
+
+Reading the data back is easy:
+
+>>> ds = da.read_nc('test.nc')
+>>> ds
+read from test.nc
+Dataset of 3 variables
+dimensions: 'time', 'lat'
+0 / time (2): 1950 to 1951
+1 / lat (3): -90.0 to 90.0
+antarctica: ('time', 'lat')
+greenland: ('time', 'lat')
+timeseries: ('time',)
+
+Single variables can be read as well:
+
+>>> da.read_nc('test.nc','greenland')
+dimarray: 6 non-null elements (0 null)
+dimensions: 'time', 'lat'
+0 / time (2): 1950 to 1951
+1 / lat (3): -90.0 to 90.0
+array([[0, 1, 2],
+       [3, 4, 5]])
+
+Or even portions of a variable (that's what makes netCDF useful compared to just HDF I/O), especially for very large datasets.
+
+>>> b = da.read_nc('test.nc','greenland', 1951, axis='time')
+>>> b
+dimarray: 3 non-null elements (0 null)
+dimensions: 'lat'
+0 / lat (3): -90.0 to 90.0
+array([3, 4, 5])
+
+Note that read_nc follows the same rules as `take`, except that multi-index arrays apply for each dimension individually (broadcast_array=False), reflecting netCDF design and underlying netCDF4 module.
+It is also possible to write a single array, by indicating its name (unless it has a `name` attribute different from None). Note the default mode is to append a variable to existing dataset.
+
+>>> a.write_nc('test.nc',name='array')
+
+
+The content of a netCDF file can also be checked without reading the actual variables (only the axes), useful for large variables:
+
+>>> # checking
+>>> da.summary_nc("test.nc")
+test.nc:
+-------
+Dataset of 4 variables
+dimensions: 'time', 'lat', 'unnamed'
+0 / time (2): 1950 to 1951
+1 / lat (3): -90.0 to 90.0
+2 / unnamed (3): timeseries to antarctica
+timeseries: (u'time',)
+greenland: (u'time', u'lat')
+antarctica: (u'time', u'lat')
+array: (u'unnamed', u'time', u'lat')
+
+
+Experimental Features
+---------------------
+
+Metadata
+~~~~~~~~
+
+`DimArray` and `Axis` objects, support metadata. They can be passed by keyword arguments to DimArray (not via da.array_kw or DimArray.from_kw NOTE: may remove this functionality), or afterwards:
+
+>>> a = DimArray([[1,2,3],[4,5,6]])
+>>> a.name='myname'
+>>> a.units='myunits'
+
+
+>>> ax = a.axes[0]
+>>> ax.units = "meters"
+
+
+metadata are conserved by slicing and along-axis transformation, but are lost with any other transformation
+
+>>> a[:].units
+'myunits'
+
+>>> ax[:].units
+'meters'
+
+Compatibility with pandas and larry
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+>>> a = da.array(np.arange(2*3).reshape(2,3), [('items',np.array(['greenland','antarctica'])), ('xx',[2,3,4])])
+>>> a
+dimarray: 6 non-null elements (0 null)
+dimensions: 'items', 'xx'
+0 / items (2): greenland to antarctica
+1 / xx (3): 2 to 4
+array([[0, 1, 2],
+       [3, 4, 5]])
+
+>>> df = a.to_pandas()
+>>> df
+xx          2  3  4
+items              
+greenland   0  1  2
+antarctica  3  4  5
+
+>>> da.from_pandas(df)
+dimarray: 6 non-null elements (0 null)
+dimensions: 'items', 'xx'
+0 / items (2): greenland to antarctica
+1 / xx (3): 2 to 4
+array([[0, 1, 2],
+       [3, 4, 5]])
+
+>>> a.to_larry()
+label_0
+    greenland
+    antarctica
+label_1
+    2
+    3
+    4
+x
+array([[0, 1, 2],
+       [3, 4, 5]])
+
+doctest framework
+-----------------
+
+All docstring are tested for bugs with the `doctest` module. Additional tests are underway (but not there yet) to make things more systematic.
+
+>>> import dimarray.tests as tests
+>>> #import dimarray.tests as tests
+>>> tests.main()
+>>> #run test.test_all()
+
+
+============================
+TEST dimarray.core.metadata
+============================
+
+
+
+
+============================
+TEST dimarray.core.dimarraycls
+============================
+
+
+
+
+============================
+TEST dimarray.core.axes
+============================
+
+
+
+
+============================
+TEST dimarray.core.indexing
+============================
+
+
+
+
+============================
+TEST dimarray.core.transform
+============================
+
+
+
+
+============================
+TEST dimarray.core.reshape
+============================
+
+
+
+
+============================
+TEST dimarray.core.missingvalues
+============================
+
+
+
+
+============================
+TEST dimarray.core.operation
+============================
+
+
+
+
+============================
+TEST dimarray.core.align
+============================
+
+
+
+
+============================
+TEST dimarray.core.tests
+============================
+
+
+read from dimarray/io/testdata/test.nc
+
+
+============================
+TEST dimarray.geo.geoarray
+============================
+
+
+
+
+============================
+TEST dimarray.geo.region
+============================
+
+
+
+
+============================
+TEST dimarray.geo.transform
+============================
+
+
+
+
+============================
+TEST dimarray.geo.grid
+============================
+
+
+
+
+============================
+TEST dimarray.geo.decorators
+============================
+
+
+
+
+============================
+TEST dimarray
+============================
+
+
+
+
+============================
+TEST dimarray.dataset
+============================
+
+
+
+
+============================
+TEST dimarray.lib.transform
+============================
+
+
+
+
+============================
+TEST dimarray.lib.stats
+============================
+
+
+
+
+============================
+TEST README.rst
+============================
+
+
+dimarray/io/tests.py:25: UserWarning: writing as NETCDF3_CLASSIC failed (known bug on 64bits systems): RuntimeError(u'NetCDF: Not a valid data type or _FillValue type mismatch',)
+  warn("writing as NETCDF3_CLASSIC failed (known bug on 64bits systems): {msg}".format(msg=repr(msg)))

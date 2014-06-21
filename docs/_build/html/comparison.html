@@ -1,0 +1,168 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Comparisons with other packages &mdash; dimarray 0.1.7.dev-62ca5fa documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.1.7.dev-62ca5fa',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="dimarray 0.1.7.dev-62ca5fa documentation" href="index.html" />
+    <link rel="next" title="Examples" href="examples.html" />
+    <link rel="prev" title="Old documentation" href="_build_rst/z_dimarray.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="examples.html" title="Examples"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="_build_rst/z_dimarray.html" title="Old documentation"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">dimarray 0.1.7.dev-62ca5fa documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="comparisons-with-other-packages">
+<h1>Comparisons with other packages<a class="headerlink" href="#comparisons-with-other-packages" title="Permalink to this headline">¶</a></h1>
+<ul>
+<li><dl class="first docutils">
+<dt><strong>pandas</strong></dt>
+<dd><p class="first last">...is an excellent package for low-dimensional data analysis,
+with many I/O features, but is mostly limited to 2 dimensions (DataFrame),
+or up to 4 dimensions (Panel, Panel4D). <cite>dimarray</cite> includes
+some of the nice <cite>pandas</cite> features, such as indexing on axis values,
+automatic axis alignment, intuitive string representation,
+or a parameter to ignore nans in axis reduction operations.
+<cite>dimarray</cite> extends these functionalities to any number
+of dimensions. In general, <cite>dimarray</cite> is designed to be more consistent with
+<cite>numpy</cite>&#8216;s ndarray, whereas <cite>pandas</cite> is somewhat between a dictionary and
+a numpy array. One consequence is that standard indexing with <cite>[]</cite> can be
+multi-dimensional, another is that iteration is on sub-arrays and not on
+axis values (the keys). <cite>dimarray</cite> comes with <cite>to_pandas</cite> and <cite>from_pandas</cite>
+methods to use the most of each of the packages (also supports <cite>MultiIndex</cite>
+via the equivalent <cite>GroupedAxis</cite> object). For convenience, a <cite>plot</cite>
+method is defined in <cite>dimarray</cite> as an alias for to_pandas().plot().</p>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt><strong>larry</strong></dt>
+<dd><p class="first last">...was pioneer as labelled array, it skips nans in along-axis transforms
+and comes with a wealth of built-in methods. It seems to do a very good job but does
+not offer as many features as <cite>dimarray</cite> or <cite>pandas</cite> as far as indexing
+is concerned. For example it does not
+support naming dimensions and does not support indexing on axis values
+(but provides <cite>get</cite> method for single element access). Still, from the
+structure (array-like), <cite>dimarray</cite> is closer to larry than to pandas.</p>
+</dd>
+</dl>
+</li>
+</ul>
+<p>Compared with these two pacakges, <cite>dimarray</cite> adds the possibility of passing axis
+name to the various methods, instead of simply axis rank. Having a focus on dimension
+names and axis values instead of axis rank and position of elements along an axis
+is a strong feature of <cite>dimarray</cite>. This applies for
+instance to along-axis operation, <cite>take</cite> and <cite>put</cite> methods, or reshaping operations.
+Additionally, <cite>dimarray</cite> is to my knowledge the only package supporting automatic
+dimension broadcasting for any two operands. This has proven useful to write pretty
+generic code with arrays of various shape which all share a few dimensions <cite>time</cite>,
+<cite>lon</cite>, <cite>lat</cite>, <cite>model</cite>, <cite>scenario</cite>, <cite>sample</cite>, <cite>percentile</cite> and so on.</p>
+<ul>
+<li><dl class="first docutils">
+<dt><strong>iris</strong></dt>
+<dd><p class="first last">...looks like a very powerful package to manipulate geospatial data with
+metadata, netCDF I/O, performing grid transforms etc..., but it is quite a jump
+from numpy&#8217;s <cite>ndarray</cite> and requires a bit of learning.
+In contrast, <cite>dimarray</cite> is more general and intuitive for python users. <cite>dimarray</cite>
+also comes with netCDF I/O capability and may gain a few geospatial features
+(weighted mean for lon/lat, 360 modulo for lon, regridding, etc...) as a subpackage
+<strong>dimarray.geo</strong> &#8211; and why not an interface to <cite>iris</cite>.</p>
+</dd>
+</dl>
+</li>
+</ul>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="_build_rst/z_dimarray.html"
+                        title="previous chapter">Old documentation</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="examples.html"
+                        title="next chapter">Examples</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/comparison.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="examples.html" title="Examples"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="_build_rst/z_dimarray.html" title="Old documentation"
+             >previous</a> |</li>
+        <li><a href="index.html">dimarray 0.1.7.dev-62ca5fa documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2014, Mahe Perrette.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.1.
+    </div>
+  </body>
+</html>
