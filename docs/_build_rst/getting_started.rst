@@ -45,7 +45,7 @@ dimensions: 'variable', 'time'
 0 / variable (2): a to b
 1 / time (3): 1950 to 1970
 
-For more information refer to section on :ref:`data_structure`
+For more information refer to section on :ref:`data_structure` (as well as :py:class:`dimarray.Axis` and :py:class:`dimarray.Axes`)
 
 ..  _numpy-like_attributes:
 
@@ -106,39 +106,40 @@ array([ 2.5,  5. ])
 data alignment: automatic broadcasting and reindexing
 -----------------------------------------------------
 
-Having axis name and axis values allow on-the-fly **axis alignment** and
-**dimension broadcasting** in basic operations (addition, etc...),
-so that rules can be defined for nearly every sequence of operands.
+During an operation, arrays are **automatically re-indexed** to span the 
+same axis domain, with nan filling if needed. 
+This is quite useful when working with partly-overlapping time series or 
+with incomplete sets of items.
 
-Let's define some axes on dimensions `time` and `items`, using the tuple form (name, values)
-
->>> time = ('time', [1950, 1951, 1952])
->>> incomplete_time = ('time', [1950, 1952])
->>> items = ('items', ['a','b'])
-
-
-see how two arrays with different time indices align, and how the missing year in the second array is replaced by nan:
-
->>> timeseries = DimArray([1,2,3], time)
->>> incomplete_timeseries = DimArray([4, 5], incomplete_time)
->>> timeseries + incomplete_timeseries
+>>> yearly_data = DimArray([0, 1, 2], axes=[[1950, 1960, 1970]], dims=['year'])  
+>>> incomplete_yearly_data = DimArray([10, 100], axes=[[1950, 1960]], dims=['year']) # last year 1970 is missing
+>>> yearly_data + incomplete_yearly_data
 dimarray: 2 non-null elements (1 null)
-dimensions: 'time'
-0 / time (3): 1950 to 1952
-array([  5.,  nan,   8.])
+dimensions: 'year'
+0 / year (3): 1950 to 1970
+array([  10.,  101.,   nan])
 
-If one of the operands lacks a dimension, it is automatically repeated (broadcast) to match the other operand's shape. In this example, an array of weights is fixed in time, whereas the data to be weighted changes at each time step. 
+A check is also performed on the dimensions, to ensure consistency of the data.
+If dimensions do not match this is not interpreted as an error but rather as a 
+combination of dimensions. For example, you may want to combine some fixed 
+spatial pattern (such as an EOF) with a time-varying time series (the principal
+component). Or you may want to combine results from a sensitivity analysis
+where several parameters have been varied (one dimension per parameter). 
+Here a minimal example where the above-define annual variable is combined with 
+seasonally-varying data (camping summer and winter prices). 
 
->>> data = DimArray([[1,2,3],[40,50,60]], [items, time])
->>> weights = DimArray([2, 0.5], items)
->>> 
->>> data * weights
+Arrays are said to be **broadcast**: 
+
+>>> seasonal_data = DimArray([10, 100], axes=[['winter','summer']], dims=['season'])
+>>> combined_data = yearly_data * seasonal_data
+>>> combined_data 
 dimarray: 6 non-null elements (0 null)
-dimensions: 'items', 'time'
-0 / items (2): a to b
-1 / time (3): 1950 to 1952
-array([[  2.,   4.,   6.],
-       [ 20.,  25.,  30.]])
+dimensions: 'year', 'season'
+0 / year (3): 1950 to 1970
+1 / season (2): winter to summer
+array([[  0,   0],
+       [ 10, 100],
+       [ 20, 200]])
 
 ..  _Dataset:
 
@@ -147,34 +148,34 @@ Dataset
 
 As a commodity, the **`Dataset`** class is an ordered dictionary of DimArrays which also maintains axis aligment
 
->>> dataset = Dataset({'data':data, 'weights':weights,'incomplete_timeseries':incomplete_timeseries})
+>>> dataset = Dataset({'combined_data':combined_data, 'yearly_data':yearly_data,'seasonal_data':seasonal_data})
 >>> dataset
 Dataset of 3 variables
-dimensions: 'items', 'time'
-0 / items (2): a to b
-1 / time (3): 1950 to 1952
-weights: ('items',)
-incomplete_timeseries: ('time',)
-data: ('items', 'time')
+dimensions: 'season', 'year'
+0 / season (2): winter to summer
+1 / year (3): 1950 to 1970
+seasonal_data: ('season',)
+combined_data: ('year', 'season')
+yearly_data: ('year',)
 
 It is one step away from creating a new DimArray from these various arrays, by broadcasting dimensions as needed:
 
->>> dataset.to_array(axis='variables')
-dimarray: 16 non-null elements (2 null)
-dimensions: 'variables', 'items', 'time'
-0 / variables (3): weights to data
-1 / items (2): a to b
-2 / time (3): 1950 to 1952
-array([[[  2. ,   2. ,   2. ],
-        [  0.5,   0.5,   0.5]],
+>>> dataset.to_array(axis='variable')
+dimarray: 18 non-null elements (0 null)
+dimensions: 'variable', 'season', 'year'
+0 / variable (3): seasonal_data to yearly_data
+1 / season (2): winter to summer
+2 / year (3): 1950 to 1970
+array([[[ 10,  10,  10],
+        [100, 100, 100]],
 <BLANKLINE>
-       [[  4. ,   nan,   5. ],
-        [  4. ,   nan,   5. ]],
+       [[  0,  10,  20],
+        [  0, 100, 200]],
 <BLANKLINE>
-       [[  1. ,   2. ,   3. ],
-        [ 40. ,  50. ,  60. ]]])
+       [[  0,   1,   2],
+        [  0,   1,   2]]])
 
-Note a shorter way of obtaining the above, if the only desired result is to align axes, would have been to use the **`stack`** method (see interactive help).
+Note that they are various ways of combining DimArray instances. In many case (when no dimension broadcasting is involved), it is simpler to just use the :py:func:`dimarray.stack` method.
 
 ..  _NetCDF_reading_and_writing:
 

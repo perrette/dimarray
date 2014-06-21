@@ -66,7 +66,7 @@ def apply_along_axis(obj, func, axis=None, skipna=False, args=(), **kwargs):
     apply_along_axis(obj, ...)
     Where ... are the parameters below:
 
-    parameters:
+    Parameters:
     ----------
     - func: numpy function name (`str`)
     - {axis}
@@ -74,7 +74,7 @@ def apply_along_axis(obj, func, axis=None, skipna=False, args=(), **kwargs):
     - args    : variable list of arguments before "axis"
     - kwargs  : variable dict of keyword arguments after "axis"
     
-    returns:
+    Returns:
     --------
     - DimArray, or scalar 
 

@@ -23,10 +23,12 @@ the netCDF4 package. Other formats are under development (HDF5). Metadata are al
 supported, and conserved via slicing and along-axis transformations.
 
 .. toctree::
-   :maxdepth: 3
+   :maxdepth: 1
 
    installation.rst
-   _build_rst/index.rst
+   _build_rst/getting_started.rst
+
+   api_doc.rst
    comparison.rst
    examples.rst
 ..   #:getting_started.rst

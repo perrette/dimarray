@@ -30,6 +30,7 @@ import os
 # ones.
 extensions = [
     'sphinx.ext.autodoc',
+    'sphinx.ext.autosummary',
     'sphinx.ext.doctest',
     'sphinx.ext.intersphinx',
     'sphinx.ext.todo',
@@ -37,6 +38,7 @@ extensions = [
     'sphinx.ext.mathjax',
     'sphinx.ext.ifconfig',
     'sphinx.ext.viewcode',
+    'numpydoc',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -73,7 +75,7 @@ os.chdir(os.path.pardir)
 pipe = subprocess.Popen(["python", "setup.py", "--version"],
                     stdout=subprocess.PIPE)
 (so,serr) = pipe.communicate()
-version = so.strip()
+version = so.strip().split('-')[0] # remove  git-version from the doc
 release = version
 os.chdir('docs') # back to docs dir
 

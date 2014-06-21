@@ -74,6 +74,8 @@ class Descriptor(object):
     """
     def __init__(self, name, default=None):
         """ 
+        Parameters:
+        -----------
         name: name where attribute value is stored
             Warning: must be different from API class attribute
             e.g. prefixed by '_'
@@ -107,16 +109,18 @@ class Descriptor(object):
 class Axis(object):
     """ Axis
 
-    values: numpy array (or list) 
-    name  : name (attribute)
+    Attributes:
+    -----------
+    values : numpy array (or list) 
+    name : name (attribute)
 
-    weights: [None] associated list of weights 
-    modulo: [None] if not None, consider axis values as being defined +/- n*modulo, where n is an integer
+    weights : [None] associated list of weights 
+    modulo : [None] if not None, consider axis values as being defined +/- n*modulo, where n is an integer
             this modify `loc` behaviour only, but does not impose any constraint on actual axis values
 
-    tol: [None], if not None, attempt a nearest neighbour search with specified tolerance
+    tol : [None], if not None, attempt a nearest neighbour search with specified tolerance
 
-    + metadata
+    _metadata : property which returns a dictionary of metadata
     """
     _metadata = MetadataDesc(exclude = ["values", "name"]) # variables which are NOT metadata
 
@@ -126,8 +130,6 @@ class Axis(object):
     modulo = Descriptor('_modulo')
 
     def __init__(self, values, name="", weights=None, modulo=None, dtype=None, _monotonic=None, tol=None, **kwargs):
-        """ 
-        """
         if not name:
             assert hasattr(values, "name"), "unnamed dimension !"
             name = values.name # e.g pandas axis
@@ -178,6 +180,7 @@ class Axis(object):
 	""" do some type checking/conversion before setting new axis values
 
 	Examples:
+        ---------
 	>>> a = Axis([1, 2, 3], name='dummy')
 	>>> a.values
 	array([1, 2, 3])
@@ -264,11 +267,12 @@ class Axis(object):
     def union(self, other):
         """ join two Axis objects
 	
-	Note this removes singletons by default
+        Note:
+        -----
+        This removes singletons by default
 
         Examples:
         ---------
-
         >>> ax1 = Axis([0, 1, 2, 3, 4], name='myaxis')
         >>> ax2 = Axis([-3, 2, 3, 6], name='myaxis')
         >>> ax3 = ax1.union(ax2)
@@ -769,14 +773,14 @@ class Axes(list):
     def reset_axis(self, values=None, axis=0, inplace=False, **kwargs):
 	""" Reset axis values and attributes
 
-	parameters:
+	Parameters:
 	-----------
 	{values}
 	{axis}
 	{inplace}
 	{kwargs}
 
-	returns:
+	Returns:
 	--------
 	Axes instance, or None if inplace is True
 	"""

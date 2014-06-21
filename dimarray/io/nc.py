@@ -80,7 +80,7 @@ def read_nc(f, nms=None, *args, **kwargs):
     """  Read one or several variables from one or several netCDF file
 
     Parameters:
-    ----------
+    -----------
     f : file name or buffer or regular expression
     nms, optional : variable name(s) to read_nc: list or str
 
@@ -481,7 +481,9 @@ def _read_multinc(fnames, nms=None, axis=None, keys=None, align=False, concatena
 def write_nc(f, obj=None, *args, **kwargs):
     """  Write DimArray or Dataset to file or Create Empty netCDF file
 
-    Parameters depend on object to write_nc:
+    Parameters:
+    -----------
+    Expected parameters depend on object to write.
 
     ### Create Empty netCDF file  ###
     {axes}
@@ -551,7 +553,7 @@ def _write_dataset(f, obj, mode='w-', indices=None, axis=0, format=FORMAT, verbo
 def _write_variable(f, obj=None, name=None, mode='a+', format=FORMAT, indices=None, axis=0, verbose=False, **kwargs):
     """ Write DimArray instance to file
 
-    parameters:
+    Parameters:
     -----------
     f      : file name or netCDF file handle
     name   : variable name, optional if `name` attribute already defined.

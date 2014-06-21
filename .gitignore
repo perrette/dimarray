@@ -1,5 +1,7 @@
 dimarray/version.py
 .ipynb_checkpoints
+docs/_build/doctrees
+.pypirc
 
 *.py[cod]
 

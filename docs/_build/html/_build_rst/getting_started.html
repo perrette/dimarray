@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>Getting started &mdash; dimarray 0.1.7.dev-e19df3e documentation</title>
+    <title>Getting started &mdash; dimarray 0.1.7.dev documentation</title>
     
     <link rel="stylesheet" href="../_static/default.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../',
-        VERSION:     '0.1.7.dev-e19df3e',
+        VERSION:     '0.1.7.dev',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -24,10 +24,9 @@
     <script type="text/javascript" src="../_static/underscore.js"></script>
     <script type="text/javascript" src="../_static/doctools.js"></script>
     <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <link rel="top" title="dimarray 0.1.7.dev-e19df3e documentation" href="../index.html" />
-    <link rel="up" title="Documentation" href="index.html" />
-    <link rel="next" title="Indexing" href="indexing.html" />
-    <link rel="prev" title="DimArray: data structure and attributes" href="data_structure.html" /> 
+    <link rel="top" title="dimarray 0.1.7.dev documentation" href="../index.html" />
+    <link rel="next" title="API documentation" href="../api_doc.html" />
+    <link rel="prev" title="Installation" href="../installation.html" /> 
   </head>
   <body>
     <div class="related">
@@ -37,13 +36,15 @@
           <a href="../genindex.html" title="General Index"
              accesskey="I">index</a></li>
         <li class="right" >
-          <a href="indexing.html" title="Indexing"
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../api_doc.html" title="API documentation"
              accesskey="N">next</a> |</li>
         <li class="right" >
-          <a href="data_structure.html" title="DimArray: data structure and attributes"
+          <a href="../installation.html" title="Installation"
              accesskey="P">previous</a> |</li>
-        <li><a href="../index.html">dimarray 0.1.7.dev-e19df3e documentation</a> &raquo;</li>
-          <li><a href="index.html" accesskey="U">Documentation</a> &raquo;</li> 
+        <li><a href="../index.html">dimarray 0.1.7.dev documentation</a> &raquo;</li> 
       </ul>
     </div>  
 
@@ -86,7 +87,7 @@ via <cite>axes</cite> and <cite>dims</cite> parameters.</p>
 <span class="go">1 / time (3): 1950 to 1970</span>
 </pre></div>
 </div>
-<p>For more information refer to section on <a class="reference internal" href="#data-structure"><em>data structure</em></a></p>
+<p>For more information refer to section on <a class="reference internal" href="#data-structure"><em>data structure</em></a> (as well as <a class="reference internal" href="../modules.html#dimarray.Axis" title="dimarray.Axis"><tt class="xref py py-class docutils literal"><span class="pre">dimarray.Axis</span></tt></a> and <a class="reference internal" href="../modules.html#dimarray.Axes" title="dimarray.Axes"><tt class="xref py py-class docutils literal"><span class="pre">dimarray.Axes</span></tt></a>)</p>
 </div>
 <div class="section" id="numpy-like-attributes">
 <span id="id4"></span><h2>numpy-like attributes<a class="headerlink" href="#numpy-like-attributes" title="Permalink to this headline">¶</a></h2>
@@ -140,71 +141,73 @@ via <cite>axes</cite> and <cite>dims</cite> parameters.</p>
 </div>
 <div class="section" id="data-alignment-automatic-broadcasting-and-reindexing">
 <span id="id7"></span><h2>data alignment: automatic broadcasting and reindexing<a class="headerlink" href="#data-alignment-automatic-broadcasting-and-reindexing" title="Permalink to this headline">¶</a></h2>
-<p>Having axis name and axis values allow on-the-fly <strong>axis alignment</strong> and
-<strong>dimension broadcasting</strong> in basic operations (addition, etc...),
-so that rules can be defined for nearly every sequence of operands.</p>
-<p>Let&#8217;s define some axes on dimensions <cite>time</cite> and <cite>items</cite>, using the tuple form (name, values)</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">time</span> <span class="o">=</span> <span class="p">(</span><span class="s">&#39;time&#39;</span><span class="p">,</span> <span class="p">[</span><span class="mi">1950</span><span class="p">,</span> <span class="mi">1951</span><span class="p">,</span> <span class="mi">1952</span><span class="p">])</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">incomplete_time</span> <span class="o">=</span> <span class="p">(</span><span class="s">&#39;time&#39;</span><span class="p">,</span> <span class="p">[</span><span class="mi">1950</span><span class="p">,</span> <span class="mi">1952</span><span class="p">])</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">items</span> <span class="o">=</span> <span class="p">(</span><span class="s">&#39;items&#39;</span><span class="p">,</span> <span class="p">[</span><span class="s">&#39;a&#39;</span><span class="p">,</span><span class="s">&#39;b&#39;</span><span class="p">])</span>
-</pre></div>
-</div>
-<p>see how two arrays with different time indices align, and how the missing year in the second array is replaced by nan:</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">timeseries</span> <span class="o">=</span> <span class="n">DimArray</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">],</span> <span class="n">time</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">incomplete_timeseries</span> <span class="o">=</span> <span class="n">DimArray</span><span class="p">([</span><span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">],</span> <span class="n">incomplete_time</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">timeseries</span> <span class="o">+</span> <span class="n">incomplete_timeseries</span>
+<p>During an operation, arrays are <strong>automatically re-indexed</strong> to span the
+same axis domain, with nan filling if needed.
+This is quite useful when working with partly-overlapping time series or
+with incomplete sets of items.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">yearly_data</span> <span class="o">=</span> <span class="n">DimArray</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="n">axes</span><span class="o">=</span><span class="p">[[</span><span class="mi">1950</span><span class="p">,</span> <span class="mi">1960</span><span class="p">,</span> <span class="mi">1970</span><span class="p">]],</span> <span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="s">&#39;year&#39;</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">incomplete_yearly_data</span> <span class="o">=</span> <span class="n">DimArray</span><span class="p">([</span><span class="mi">10</span><span class="p">,</span> <span class="mi">100</span><span class="p">],</span> <span class="n">axes</span><span class="o">=</span><span class="p">[[</span><span class="mi">1950</span><span class="p">,</span> <span class="mi">1960</span><span class="p">]],</span> <span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="s">&#39;year&#39;</span><span class="p">])</span> <span class="c"># last year 1970 is missing</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">yearly_data</span> <span class="o">+</span> <span class="n">incomplete_yearly_data</span>
 <span class="go">dimarray: 2 non-null elements (1 null)</span>
-<span class="go">dimensions: &#39;time&#39;</span>
-<span class="go">0 / time (3): 1950 to 1952</span>
-<span class="go">array([  5.,  nan,   8.])</span>
+<span class="go">dimensions: &#39;year&#39;</span>
+<span class="go">0 / year (3): 1950 to 1970</span>
+<span class="go">array([  10.,  101.,   nan])</span>
 </pre></div>
 </div>
-<p>If one of the operands lacks a dimension, it is automatically repeated (broadcast) to match the other operand&#8217;s shape. In this example, an array of weights is fixed in time, whereas the data to be weighted changes at each time step.</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">data</span> <span class="o">=</span> <span class="n">DimArray</span><span class="p">([[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">],[</span><span class="mi">40</span><span class="p">,</span><span class="mi">50</span><span class="p">,</span><span class="mi">60</span><span class="p">]],</span> <span class="p">[</span><span class="n">items</span><span class="p">,</span> <span class="n">time</span><span class="p">])</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">weights</span> <span class="o">=</span> <span class="n">DimArray</span><span class="p">([</span><span class="mi">2</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">],</span> <span class="n">items</span><span class="p">)</span>
-<span class="go">&gt;&gt;&gt;</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">data</span> <span class="o">*</span> <span class="n">weights</span>
+<p>A check is also performed on the dimensions, to ensure consistency of the data.
+If dimensions do not match this is not interpreted as an error but rather as a
+combination of dimensions. For example, you may want to combine some fixed
+spatial pattern (such as an EOF) with a time-varying time series (the principal
+component). Or you may want to combine results from a sensitivity analysis
+where several parameters have been varied (one dimension per parameter).
+Here a minimal example where the above-define annual variable is combined with
+seasonally-varying data (camping summer and winter prices).</p>
+<p>Arrays are said to be <strong>broadcast</strong>:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">seasonal_data</span> <span class="o">=</span> <span class="n">DimArray</span><span class="p">([</span><span class="mi">10</span><span class="p">,</span> <span class="mi">100</span><span class="p">],</span> <span class="n">axes</span><span class="o">=</span><span class="p">[[</span><span class="s">&#39;winter&#39;</span><span class="p">,</span><span class="s">&#39;summer&#39;</span><span class="p">]],</span> <span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="s">&#39;season&#39;</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">combined_data</span> <span class="o">=</span> <span class="n">yearly_data</span> <span class="o">*</span> <span class="n">seasonal_data</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">combined_data</span>
 <span class="go">dimarray: 6 non-null elements (0 null)</span>
-<span class="go">dimensions: &#39;items&#39;, &#39;time&#39;</span>
-<span class="go">0 / items (2): a to b</span>
-<span class="go">1 / time (3): 1950 to 1952</span>
-<span class="go">array([[  2.,   4.,   6.],</span>
-<span class="go">       [ 20.,  25.,  30.]])</span>
+<span class="go">dimensions: &#39;year&#39;, &#39;season&#39;</span>
+<span class="go">0 / year (3): 1950 to 1970</span>
+<span class="go">1 / season (2): winter to summer</span>
+<span class="go">array([[  0,   0],</span>
+<span class="go">       [ 10, 100],</span>
+<span class="go">       [ 20, 200]])</span>
 </pre></div>
 </div>
 </div>
 <div class="section" id="dataset">
 <span id="id8"></span><h2>Dataset<a class="headerlink" href="#dataset" title="Permalink to this headline">¶</a></h2>
 <p>As a commodity, the <strong>`Dataset`</strong> class is an ordered dictionary of DimArrays which also maintains axis aligment</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">dataset</span> <span class="o">=</span> <span class="n">Dataset</span><span class="p">({</span><span class="s">&#39;data&#39;</span><span class="p">:</span><span class="n">data</span><span class="p">,</span> <span class="s">&#39;weights&#39;</span><span class="p">:</span><span class="n">weights</span><span class="p">,</span><span class="s">&#39;incomplete_timeseries&#39;</span><span class="p">:</span><span class="n">incomplete_timeseries</span><span class="p">})</span>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">dataset</span> <span class="o">=</span> <span class="n">Dataset</span><span class="p">({</span><span class="s">&#39;combined_data&#39;</span><span class="p">:</span><span class="n">combined_data</span><span class="p">,</span> <span class="s">&#39;yearly_data&#39;</span><span class="p">:</span><span class="n">yearly_data</span><span class="p">,</span><span class="s">&#39;seasonal_data&#39;</span><span class="p">:</span><span class="n">seasonal_data</span><span class="p">})</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">dataset</span>
 <span class="go">Dataset of 3 variables</span>
-<span class="go">dimensions: &#39;items&#39;, &#39;time&#39;</span>
-<span class="go">0 / items (2): a to b</span>
-<span class="go">1 / time (3): 1950 to 1952</span>
-<span class="go">weights: (&#39;items&#39;,)</span>
-<span class="go">incomplete_timeseries: (&#39;time&#39;,)</span>
-<span class="go">data: (&#39;items&#39;, &#39;time&#39;)</span>
+<span class="go">dimensions: &#39;season&#39;, &#39;year&#39;</span>
+<span class="go">0 / season (2): winter to summer</span>
+<span class="go">1 / year (3): 1950 to 1970</span>
+<span class="go">seasonal_data: (&#39;season&#39;,)</span>
+<span class="go">combined_data: (&#39;year&#39;, &#39;season&#39;)</span>
+<span class="go">yearly_data: (&#39;year&#39;,)</span>
 </pre></div>
 </div>
 <p>It is one step away from creating a new DimArray from these various arrays, by broadcasting dimensions as needed:</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">dataset</span><span class="o">.</span><span class="n">to_array</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="s">&#39;variables&#39;</span><span class="p">)</span>
-<span class="go">dimarray: 16 non-null elements (2 null)</span>
-<span class="go">dimensions: &#39;variables&#39;, &#39;items&#39;, &#39;time&#39;</span>
-<span class="go">0 / variables (3): weights to data</span>
-<span class="go">1 / items (2): a to b</span>
-<span class="go">2 / time (3): 1950 to 1952</span>
-<span class="go">array([[[  2. ,   2. ,   2. ],</span>
-<span class="go">        [  0.5,   0.5,   0.5]],</span>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">dataset</span><span class="o">.</span><span class="n">to_array</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="s">&#39;variable&#39;</span><span class="p">)</span>
+<span class="go">dimarray: 18 non-null elements (0 null)</span>
+<span class="go">dimensions: &#39;variable&#39;, &#39;season&#39;, &#39;year&#39;</span>
+<span class="go">0 / variable (3): seasonal_data to yearly_data</span>
+<span class="go">1 / season (2): winter to summer</span>
+<span class="go">2 / year (3): 1950 to 1970</span>
+<span class="go">array([[[ 10,  10,  10],</span>
+<span class="go">        [100, 100, 100]],</span>
 
-<span class="go">       [[  4. ,   nan,   5. ],</span>
-<span class="go">        [  4. ,   nan,   5. ]],</span>
+<span class="go">       [[  0,  10,  20],</span>
+<span class="go">        [  0, 100, 200]],</span>
 
-<span class="go">       [[  1. ,   2. ,   3. ],</span>
-<span class="go">        [ 40. ,  50. ,  60. ]]])</span>
+<span class="go">       [[  0,   1,   2],</span>
+<span class="go">        [  0,   1,   2]]])</span>
 </pre></div>
 </div>
-<p>Note a shorter way of obtaining the above, if the only desired result is to align axes, would have been to use the <strong>`stack`</strong> method (see interactive help).</p>
+<p>Note that they are various ways of combining DimArray instances. In many case (when no dimension broadcasting is involved), it is simpler to just use the <a class="reference internal" href="../modules.html#dimarray.stack" title="dimarray.stack"><tt class="xref py py-func docutils literal"><span class="pre">dimarray.stack()</span></tt></a> method.</p>
 </div>
 <div class="section" id="netcdf-reading-and-writing">
 <span id="id9"></span><h2>NetCDF reading and writing<a class="headerlink" href="#netcdf-reading-and-writing" title="Permalink to this headline">¶</a></h2>
@@ -275,11 +278,11 @@ the netCDF4 package. If netCDF4 is installed (much recommanded), a dataset can e
 </ul>
 
   <h4>Previous topic</h4>
-  <p class="topless"><a href="data_structure.html"
-                        title="previous chapter">DimArray: data structure and attributes</a></p>
+  <p class="topless"><a href="../installation.html"
+                        title="previous chapter">Installation</a></p>
   <h4>Next topic</h4>
-  <p class="topless"><a href="indexing.html"
-                        title="next chapter">Indexing</a></p>
+  <p class="topless"><a href="../api_doc.html"
+                        title="next chapter">API documentation</a></p>
   <h3>This Page</h3>
   <ul class="this-page-menu">
     <li><a href="../_sources/_build_rst/getting_started.txt"
@@ -309,18 +312,20 @@ the netCDF4 package. If netCDF4 is installed (much recommanded), a dataset can e
           <a href="../genindex.html" title="General Index"
              >index</a></li>
         <li class="right" >
-          <a href="indexing.html" title="Indexing"
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../api_doc.html" title="API documentation"
              >next</a> |</li>
         <li class="right" >
-          <a href="data_structure.html" title="DimArray: data structure and attributes"
+          <a href="../installation.html" title="Installation"
              >previous</a> |</li>
-        <li><a href="../index.html">dimarray 0.1.7.dev-e19df3e documentation</a> &raquo;</li>
-          <li><a href="index.html" >Documentation</a> &raquo;</li> 
+        <li><a href="../index.html">dimarray 0.1.7.dev documentation</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer">
         &copy; Copyright 2014, Mahe Perrette.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.1.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
     </div>
   </body>
 </html>
