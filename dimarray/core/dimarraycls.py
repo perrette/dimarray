@@ -686,6 +686,12 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         dimensions: 'x0'
         0 / x0 (2): 0 to 1
         array([ 1.3,  3.1])
+
+        >>> DimArray([-1.3, -3.1]).apply(np.abs)
+        dimarray: 2 non-null elements (0 null)
+        dimensions: 'x0'
+        0 / x0 (2): 0 to 1
+        array([ 1.3,  3.1])
         """
         return self._constructor(func(self.values, *args, **kwargs), self.axes.copy())
 
@@ -1371,12 +1377,11 @@ def array_kw(*args, **kwargs):
 
 
 def array(data, *args, **kwargs):
-    """ initialize DimArray or list of dimarray (EXPERIMENTAL)
+    """ initialize a DimArray by providing axes as key-word arguments
 
     Parameters
     ----------
     data: numpy array-like 
-        call DimArray(data, *args, **kwargs)
         list or dict of DimArray objects ==> call stack(data, *args, **kwargs)
 
     *args: variable-list arguments

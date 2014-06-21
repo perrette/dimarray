@@ -50,10 +50,11 @@ _doc_write_nc = """
 """.strip().format(format=FORMAT)
 
 _doc_write_modes = """Several write modes are available:
-        'w' : write, overwrite if file if present (clobber=True)
-        'w-': create new file, but raise Exception if file is present (clobber=False)
-        'a' : append, raise Exception if file is not present
-        'a+': append if file is present, otherwise create"""
+
+        - 'w' : write, overwrite if file if present (clobber=True)
+        - 'w-': create new file, but raise Exception if file is present (clobber=False)
+        - 'a' : append, raise Exception if file is not present
+        - 'a+': append if file is present, otherwise create"""
 
 
 def summary_nc(fname):
@@ -86,10 +87,11 @@ def read_nc(f, nms=None, *args, **kwargs):
 
     Parameters
     ----------
-    f : `str` or netCDF handle
+    f : str or netCDF handle
         netCDF file to read from or regular expression
-    nms, optional : list or str
-        variable name(s) to read_nc 
+    nms : None or list or str, optional
+        variable name(s) to read
+        default is None
     %s
 
     Returns
@@ -124,11 +126,15 @@ def read_nc(f, nms=None, *args, **kwargs):
        - `align=True` in stack mode in order to align datasets prior to 
        concatenation (re-index axes). 
 
-       - keys, optional: sequence to be passed to stack_ds, if axis is not 
-        part of the dataset
-    align, optional: if True, reindex axis prior to stacking (default to False)
+       - keys: sequence, optional
+            to be passed to stack_ds, if axis is not 
+            part of the dataset
 
-        - concatenate_only, optional: if True, only concatenate along existing 
+        - align: bool, optional
+        if True, reindex axis prior to stacking (default to False)
+
+        - concatenate_only: bool, optional
+            if True, only concatenate along existing 
         axis (and raise error if axis not existing)
 
        Please see help on stack_ds and concatenate_ds for more information
@@ -244,7 +250,8 @@ def read_dimensions(f, name=None, ix=slice(None), verbose=False):
 
     Parameters
     ----------
-    name, optional: variable name
+    name: `str`, optional
+        variable name
 
     Returns
     -------
@@ -424,11 +431,15 @@ def _read_multinc(fnames, nms=None, axis=None, keys=None, align=False, concatena
     ----------
     fnames: list of file names or file handles to be read
     nms: variable names to be read
-    axis, optional: string, dimension along which the files are concatenated 
+    axis: string, optional
+        dimension along which the files are concatenated 
         (created as new dimension if not already existing)
-    keys, optional: sequence to be passed to stack_nc, if axis is not part of the dataset
-    align, optional: if True, reindex axis prior to stacking (default to False)
-    concatenate_only, optional: if True, only concatenate along existing axis (and raise error if axis not existing) 
+    keys: sequence, optional
+        to be passed to stack_nc, if axis is not part of the dataset
+    align: `bool`, optional
+        if True, reindex axis prior to stacking (default to False)
+    concatenate_only: `bool`, optional
+        if True, only concatenate along existing axis (and raise error if axis not existing) 
 
     **kwargs: keyword arguments passed to io.nc._read_variable  (cannot 
     contain 'axis', though, but indices can be passed as a dictionary
@@ -574,9 +585,11 @@ def _write_variable(f, obj=None, name=None, mode='a+', format=FORMAT, indices=No
     Parameters
     ----------
     f      : file name or netCDF file handle
-    name   : variable name, optional if `name` attribute already defined.
-    mode: default 'a+'
-    {write_modes}
+    name   : `str`, optional
+        variable name, optional if `name` attribute already defined.
+    mode: `str`, optional
+        {write_modes}
+        Default mode is 'a+'
 
     {netCDF4}
 
@@ -642,10 +655,12 @@ def _createVariable(f, name, axes, dims=None, dtype=float, verbose=False, mode='
     f: string or netCDF4.Dataset file handle
     name : variable name
     axes : Axes's instance or list of numpy arrays (axis values)
-    dims, optional: dimension names (to be used in combination with axes to create Axes instance)
-    dtype : variable type
-    mode : default is 'a+'
-    {write_modes}
+    dims: sequence, optional
+        dimension names (to be used in combination with axes to create Axes instance)
+    dtype : optional, variable type
+    mode : `str`, optional
+        {write_modes}
+        default is 'a+'
 
     {netCDF4}
 
@@ -764,8 +779,11 @@ def _check_file(f, mode='r', verbose=False, format='NETCDF4'):
     f : file name (str) or netCDF file handle
     mode: changed from original 'r','w','r' & clobber option:
 
-    'r' : read, raise Exception if file is not present 
-    {write_modes}
+    mode : `str`
+        read or write modes
+
+        - 'r': read mode
+        {write_modes}
 
     format: passed to netCDF4.Dataset, only relevatn when mode = 'w', 'w-', 'a+'
         'NETCDF4', 'NETCDF4_CLASSIC', 'NETCDF3_CLASSIC', 'NETCDF3_64BIT'

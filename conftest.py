@@ -3,7 +3,7 @@ import pytest
 import numpy as np
 
 collect_ignore = ["setup.py", "docs/conf.py", "dist", "build", "tests/testing.py", "tests/test_mpl.py"]
-collect_ignore.append('docs/dimarray.rst')
+collect_ignore.append('docs/_build_rst/dimarray.rst')
 
 try:
     import netCDF4

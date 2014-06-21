@@ -63,13 +63,14 @@
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>f</strong> : <cite>str</cite> or netCDF handle</p>
+<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>f</strong> : str or netCDF handle</p>
 <blockquote>
 <div><p>netCDF file to read from or regular expression</p>
 </div></blockquote>
-<p><strong>nms, optional</strong> : list or str</p>
+<p><strong>nms</strong> : None or list or str, optional</p>
 <blockquote>
-<div><p>variable name(s) to read_nc</p>
+<div><p>variable name(s) to read
+default is None</p>
 </div></blockquote>
 <p><strong>indices</strong> : <cite>dict</cite></p>
 <blockquote>
@@ -120,24 +121,33 @@ see DimArray.take for more information.</p>
 <li><cite>align=True</cite> in stack mode in order to align datasets prior to</li>
 </ul>
 <p>concatenation (re-index axes).</p>
-<ul class="simple">
-<li>keys, optional: sequence to be passed to stack_ds, if axis is not</li>
+<ul>
+<li><dl class="first docutils">
+<dt>keys: sequence, optional</dt>
+<dd><p class="first last">to be passed to stack_ds, if axis is not 
+part of the dataset</p>
+</dd>
+</dl>
+</li>
 </ul>
 <blockquote>
-<div><p>part of the dataset</p>
-</div></blockquote>
-</li>
-</ol>
-<p>align, optional: if True, reindex axis prior to stacking (default to False)</p>
-<blockquote>
-<div><blockquote>
 <div><ul class="simple">
-<li>concatenate_only, optional: if True, only concatenate along existing</li>
+<li>align: bool, optional</li>
+</ul>
+<p>if True, reindex axis prior to stacking (default to False)</p>
+<ul>
+<li><dl class="first docutils">
+<dt>concatenate_only: bool, optional</dt>
+<dd><p class="first last">if True, only concatenate along existing</p>
+</dd>
+</dl>
+</li>
 </ul>
 <p>axis (and raise error if axis not existing)</p>
 </div></blockquote>
 <p>Please see help on stack_ds and concatenate_ds for more information</p>
-</div></blockquote>
+</li>
+</ol>
 <p class="rubric">Examples</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">os</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">dimarray</span> <span class="kn">import</span> <span class="n">read_nc</span><span class="p">,</span> <span class="n">get_datadir</span>
@@ -334,130 +344,6 @@ and returns copy instead of views</p>
 </div>
 </dd></dl>
 
-<dl class="function">
-<dt id="dimarray.array">
-<tt class="descclassname">dimarray.</tt><tt class="descname">array</tt><big>(</big><em>data</em>, <em>*args</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#dimarray.array" title="Permalink to this definition">¶</a></dt>
-<dd><p>initialize DimArray or list of dimarray (EXPERIMENTAL)</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>data: numpy array-like</strong></p>
-<blockquote>
-<div><p>call DimArray(data, <a href="#id5"><span class="problematic" id="id6">*</span></a>args, <a href="#id7"><span class="problematic" id="id8">**</span></a>kwargs)
-list or dict of DimArray objects ==&gt; call stack(data, <a href="#id9"><span class="problematic" id="id10">*</span></a>args, <a href="#id11"><span class="problematic" id="id12">**</span></a>kwargs)</p>
-</div></blockquote>
-<p><strong>*args: variable-list arguments</strong></p>
-<p><strong>**kwargs: key-word arguments</strong></p>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><p class="first">DimArray</p>
-<p>if data is an array-like, this call is the same as DimArray(data, <a href="#id13"><span class="problematic" id="id14">*</span></a>args, <a href="#id15"><span class="problematic" id="id16">**</span></a>kwargs)</p>
-<p>if data is a dict, list or tuple, this call is similar to da.stack(data, <a href="#id17"><span class="problematic" id="id18">*</span></a>args, <a href="#id19"><span class="problematic" id="id20">**</span></a>kwargs) but</p>
-<blockquote class="last">
-<div><p>with align=True by default and an additional parameter broadcast=True by default
-This behaviour might change.</p>
-</div></blockquote>
-</td>
-</tr>
-</tbody>
-</table>
-<div class="admonition-see-also admonition seealso">
-<p class="first admonition-title">See also</p>
-<p class="last"><a class="reference internal" href="#dimarray.DimArray" title="dimarray.DimArray"><tt class="xref py py-obj docutils literal"><span class="pre">DimArray</span></tt></a>, <a class="reference internal" href="#dimarray.stack" title="dimarray.stack"><tt class="xref py py-obj docutils literal"><span class="pre">stack</span></tt></a>, <a class="reference internal" href="#dimarray.Dataset.to_array" title="dimarray.Dataset.to_array"><tt class="xref py py-obj docutils literal"><span class="pre">Dataset.to_array</span></tt></a></p>
-</div>
-<p class="rubric">Examples</p>
-<p>From a list:</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">dimarray</span> <span class="kn">as</span> <span class="nn">da</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">a</span> <span class="o">=</span> <span class="n">DimArray</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">])</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">da</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">a</span><span class="p">,</span> <span class="mi">2</span><span class="o">*</span><span class="n">a</span><span class="p">])</span> <span class="c"># if keys not provided, default is 0, 1</span>
-<span class="go">dimarray: 6 non-null elements (0 null)</span>
-<span class="go">dimensions: &#39;unnamed&#39;, &#39;x0&#39;</span>
-<span class="go">0 / unnamed (2): 0 to 1</span>
-<span class="go">1 / x0 (3): 0 to 2</span>
-<span class="go">array([[1, 2, 3],</span>
-<span class="go">       [2, 4, 6]])</span>
-</pre></div>
-</div>
-<p>From a dict, here also with axis alignment, and naming the axis</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">d</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;a&#39;</span><span class="p">:</span><span class="n">DimArray</span><span class="p">([</span><span class="mi">10</span><span class="p">,</span><span class="mi">20</span><span class="p">,</span><span class="mf">30.</span><span class="p">],[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">]),</span> <span class="s">&#39;b&#39;</span><span class="p">:</span><span class="n">DimArray</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mf">3.</span><span class="p">],[</span><span class="mf">1.</span><span class="p">,</span><span class="mf">2.</span><span class="p">,</span><span class="mi">3</span><span class="p">])}</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">a</span> <span class="o">=</span> <span class="n">da</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">keys</span><span class="o">=</span><span class="p">[</span><span class="s">&#39;a&#39;</span><span class="p">,</span><span class="s">&#39;b&#39;</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="s">&#39;items&#39;</span><span class="p">)</span> <span class="c"># keys= just needed to enforce ordering</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">a</span>
-<span class="go">dimarray: 6 non-null elements (2 null)</span>
-<span class="go">dimensions: &#39;items&#39;, &#39;x0&#39;</span>
-<span class="go">0 / items (2): a to b</span>
-<span class="go">1 / x0 (4): 0.0 to 3.0</span>
-<span class="go">array([[ 10.,  20.,  30.,  nan],</span>
-<span class="go">       [ nan,   1.,   2.,   3.]])</span>
-</pre></div>
-</div>
-<p>Concatenate 2-D data</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">a</span> <span class="o">=</span> <span class="n">DimArray</span><span class="p">([[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">],[</span><span class="mi">2</span><span class="p">,</span><span class="mf">3.</span><span class="p">]])</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">b</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">b</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">c</span> <span class="o">=</span> <span class="n">da</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">a</span><span class="p">,</span><span class="n">b</span><span class="p">],</span><span class="n">keys</span><span class="o">=</span><span class="p">[</span><span class="s">&#39;a&#39;</span><span class="p">,</span><span class="s">&#39;b&#39;</span><span class="p">],</span><span class="n">axis</span><span class="o">=</span><span class="s">&#39;items&#39;</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">d</span> <span class="o">=</span> <span class="n">da</span><span class="o">.</span><span class="n">array</span><span class="p">({</span><span class="s">&#39;a&#39;</span><span class="p">:</span><span class="n">a</span><span class="p">,</span><span class="s">&#39;b&#39;</span><span class="p">:</span><span class="n">b</span><span class="p">},</span><span class="n">axis</span><span class="o">=</span><span class="s">&#39;items&#39;</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">c</span><span class="p">)</span> <span class="o">|</span> <span class="p">(</span><span class="n">c</span> <span class="o">==</span> <span class="n">d</span><span class="p">)</span> <span class="p">)</span>
-<span class="go">True</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">c</span>
-<span class="go">dimarray: 7 non-null elements (1 null)</span>
-<span class="go">dimensions: &#39;items&#39;, &#39;x0&#39;, &#39;x1&#39;</span>
-<span class="go">0 / items (2): a to b</span>
-<span class="go">1 / x0 (2): 0 to 1</span>
-<span class="go">2 / x1 (2): 0 to 1</span>
-<span class="go">array([[[  0.,   1.],</span>
-<span class="go">        [  2.,   3.]],</span>
-
-<span class="go">       [[ nan,   1.],</span>
-<span class="go">        [  2.,   3.]]])</span>
-</pre></div>
-</div>
-</dd></dl>
-
-<dl class="function">
-<dt id="dimarray.array_kw">
-<tt class="descclassname">dimarray.</tt><tt class="descname">array_kw</tt><big>(</big><em>*args</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#dimarray.array_kw" title="Permalink to this definition">¶</a></dt>
-<dd><p>Define a Dimarray using keyword arguments for axes</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>*args</strong> : [values, [dims,]]</p>
-<p><strong>**kwargs</strong> : axes as keyword arguments</p>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><p class="first last">DimArray</p>
-</td>
-</tr>
-</tbody>
-</table>
-<p class="rubric">Notes</p>
-<p>The key-word functionality comes at the expense of metadata, which needs to be 
-added after creation of the DimArray object.</p>
-<p>If axes are passed as kwargs, <cite>dims=</cite> also needs to be provided
-or an error will be raised, unless values&#8217;s shape is 
-sufficient to determine ordering (when all axes have different 
-sizes).  This is a consequence of the fact 
-that keyword arguments are <em>not</em> ordered in python (any order
-is lost since kwargs is a dict object)</p>
-<p>Axes passed by keyword arguments cannot have name already taken by other 
-parameters such as &#8220;values&#8221;, &#8220;axes&#8221;, &#8220;dims&#8221;, &#8220;dtype&#8221; or &#8220;copy&#8221;</p>
-<p class="rubric">Examples</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">dimarray</span> <span class="kn">as</span> <span class="nn">da</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">a</span> <span class="o">=</span> <span class="n">da</span><span class="o">.</span><span class="n">array_kw</span><span class="p">([[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">],[</span><span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">6</span><span class="p">]],</span> <span class="n">items</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="s">&quot;ab&quot;</span><span class="p">),</span> <span class="n">time</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">1950</span><span class="p">,</span><span class="mi">1953</span><span class="p">))</span> <span class="c"># here dims can be omitted because shape = (2, 3)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">b</span> <span class="o">=</span> <span class="n">da</span><span class="o">.</span><span class="n">array_kw</span><span class="p">([[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">],[</span><span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">6</span><span class="p">]],</span> <span class="p">[</span><span class="s">&#39;items&#39;</span><span class="p">,</span><span class="s">&#39;time&#39;</span><span class="p">],</span> <span class="n">items</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="s">&quot;ab&quot;</span><span class="p">),</span> <span class="n">time</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">1950</span><span class="p">,</span><span class="mi">1953</span><span class="p">))</span> <span class="c"># here dims can be omitted because shape = (2, 3)</span>
-</pre></div>
-</div>
-<p>This is pretty similar to this other form:</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">c</span> <span class="o">=</span> <span class="n">da</span><span class="o">.</span><span class="n">DimArray</span><span class="p">([[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">],[</span><span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">6</span><span class="p">]],</span> <span class="p">{</span><span class="s">&#39;items&#39;</span><span class="p">:</span><span class="nb">list</span><span class="p">(</span><span class="s">&quot;ab&quot;</span><span class="p">),</span> <span class="s">&#39;time&#39;</span><span class="p">:</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">1950</span><span class="p">,</span><span class="mi">1953</span><span class="p">)})</span> <span class="c"># here dims can be omitted because shape = (2, 3)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">a</span> <span class="o">==</span> <span class="n">b</span><span class="p">)</span> <span class="ow">and</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">a</span> <span class="o">==</span> <span class="n">c</span><span class="p">)</span>
-<span class="go">True</span>
-</pre></div>
-</div>
-<p>But note this would fail if both axes had the same size (would then need to specify the <cite>dims</cite> parameter).</p>
-<p>See also DimArray&#8217;s doc for more examples</p>
-</dd></dl>
-
 </div>
 <dl class="class">
 <dt id="dimarray.DimArray">
@@ -465,7 +351,7 @@ parameters such as &#8220;values&#8221;, &#8220;axes&#8221;, &#8220;dims&#8221;,
 <dd><p>numpy&#8217;s ndarray with labelled dimensions and axes</p>
 <div class="admonition-see-also admonition seealso">
 <p class="first admonition-title">See also</p>
-<p class="last"><a class="reference internal" href="#dimarray.Axes" title="dimarray.Axes"><tt class="xref py py-obj docutils literal"><span class="pre">Axes</span></tt></a>, <a class="reference internal" href="#dimarray.Axis" title="dimarray.Axis"><tt class="xref py py-obj docutils literal"><span class="pre">Axis</span></tt></a>, <tt class="xref py py-obj docutils literal"><span class="pre">GroupedAxis</span></tt>, <a class="reference internal" href="#dimarray.Dataset" title="dimarray.Dataset"><tt class="xref py py-obj docutils literal"><span class="pre">Dataset</span></tt></a>, <a class="reference internal" href="#dimarray.read_nc" title="dimarray.read_nc"><tt class="xref py py-obj docutils literal"><span class="pre">read_nc</span></tt></a>, <a class="reference internal" href="#dimarray.stack" title="dimarray.stack"><tt class="xref py py-obj docutils literal"><span class="pre">stack</span></tt></a>, <a class="reference internal" href="#dimarray.concatenate" title="dimarray.concatenate"><tt class="xref py py-obj docutils literal"><span class="pre">concatenate</span></tt></a>, <a class="reference internal" href="#dimarray.array" title="dimarray.array"><tt class="xref py py-obj docutils literal"><span class="pre">array</span></tt></a>, <a class="reference internal" href="#dimarray.array_kw" title="dimarray.array_kw"><tt class="xref py py-obj docutils literal"><span class="pre">array_kw</span></tt></a></p>
+<p class="last"><a class="reference internal" href="#dimarray.Axes" title="dimarray.Axes"><tt class="xref py py-obj docutils literal"><span class="pre">Axes</span></tt></a>, <a class="reference internal" href="#dimarray.Axis" title="dimarray.Axis"><tt class="xref py py-obj docutils literal"><span class="pre">Axis</span></tt></a>, <tt class="xref py py-obj docutils literal"><span class="pre">GroupedAxis</span></tt>, <a class="reference internal" href="#dimarray.Dataset" title="dimarray.Dataset"><tt class="xref py py-obj docutils literal"><span class="pre">Dataset</span></tt></a>, <a class="reference internal" href="#dimarray.read_nc" title="dimarray.read_nc"><tt class="xref py py-obj docutils literal"><span class="pre">read_nc</span></tt></a>, <a class="reference internal" href="#dimarray.stack" title="dimarray.stack"><tt class="xref py py-obj docutils literal"><span class="pre">stack</span></tt></a>, <a class="reference internal" href="#dimarray.concatenate" title="dimarray.concatenate"><tt class="xref py py-obj docutils literal"><span class="pre">concatenate</span></tt></a>, <a class="reference external" href="http://docs.python.org/library/array.html#array" title="(in Python v2.7)"><tt class="xref py py-obj docutils literal"><span class="pre">array</span></tt></a>, <tt class="xref py py-obj docutils literal"><span class="pre">array_kw</span></tt></p>
 </div>
 <p class="rubric">Notes</p>
 <p>see interactive help for a full listing of methods with doc</p>
@@ -622,7 +508,7 @@ same axis domain, with nan filling if needed</p>
 <tr class="row-odd"><td><a class="reference internal" href="#dimarray.DimArray.ungroup" title="dimarray.DimArray.ungroup"><tt class="xref py py-obj docutils literal"><span class="pre">ungroup</span></tt></a>([axis])</td>
 <td>opposite from group</td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="#dimarray.DimArray.swapaxes" title="dimarray.DimArray.swapaxes"><tt class="xref py py-obj docutils literal"><span class="pre">swapaxes</span></tt></a>(a,&nbsp;axis1,&nbsp;axis2)</td>
+<tr class="row-even"><td><a class="reference internal" href="#dimarray.DimArray.swapaxes" title="dimarray.DimArray.swapaxes"><tt class="xref py py-obj docutils literal"><span class="pre">swapaxes</span></tt></a>(axis1,&nbsp;axis2)</td>
 <td>analogous to numpy&#8217;s swapaxes, but can provide axes by name</td>
 </tr>
 <tr class="row-odd"><td><a class="reference internal" href="#dimarray.DimArray.to_pandas" title="dimarray.DimArray.to_pandas"><tt class="xref py py-obj docutils literal"><span class="pre">to_pandas</span></tt></a>()</td>
@@ -765,14 +651,20 @@ Default to None.</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>f</strong> : file name or netCDF file handle</p>
-<p><strong>name</strong> : variable name, optional if <cite>name</cite> attribute already defined.</p>
-<p><strong>mode: default &#8216;a+&#8217;</strong></p>
-<p><strong>Several write modes are available:</strong></p>
+<p><strong>name</strong> : <cite>str</cite>, optional</p>
 <blockquote>
-<div><p>&#8216;w&#8217; : write, overwrite if file if present (clobber=True)
-&#8216;w-&#8216;: create new file, but raise Exception if file is present (clobber=False)
-&#8216;a&#8217; : append, raise Exception if file is not present
-&#8216;a+&#8217;: append if file is present, otherwise create</p>
+<div><p>variable name, optional if <cite>name</cite> attribute already defined.</p>
+</div></blockquote>
+<p><strong>mode: `str`, optional</strong></p>
+<blockquote>
+<div><p>Several write modes are available:</p>
+<ul class="simple">
+<li>&#8216;w&#8217; : write, overwrite if file if present (clobber=True)</li>
+<li>&#8216;w-&#8216;: create new file, but raise Exception if file is present (clobber=False)</li>
+<li>&#8216;a&#8217; : append, raise Exception if file is not present</li>
+<li>&#8216;a+&#8217;: append if file is present, otherwise create</li>
+</ul>
+<p>Default mode is &#8216;a+&#8217;</p>
 </div></blockquote>
 <p><strong>format</strong> : <cite>str</cite></p>
 <blockquote>
@@ -916,6 +808,27 @@ except along <cite>axis</cite> where the dimension is smaller by <cite>n</cite>.
 <span class="go">dimensions: &#39;time&#39;</span>
 <span class="go">0 / time (3): 1950.5 to 1952.5</span>
 <span class="go">array([ 2.,  3.,  4.])</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="dimarray.DimArray.apply">
+<tt class="descname">apply</tt><big>(</big><em>func</em>, <em>*args</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#dimarray.DimArray.apply" title="Permalink to this definition">¶</a></dt>
+<dd><p>Apply element-wise function to DimArray</p>
+<p class="rubric">Examples</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">DimArray</span><span class="p">([</span><span class="mf">1.29</span><span class="p">,</span> <span class="mf">3.11</span><span class="p">])</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+<span class="go">dimarray: 2 non-null elements (0 null)</span>
+<span class="go">dimensions: &#39;x0&#39;</span>
+<span class="go">0 / x0 (2): 0 to 1</span>
+<span class="go">array([ 1.3,  3.1])</span>
+</pre></div>
+</div>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">DimArray</span><span class="p">([</span><span class="o">-</span><span class="mf">1.3</span><span class="p">,</span> <span class="o">-</span><span class="mf">3.1</span><span class="p">])</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">)</span>
+<span class="go">dimarray: 2 non-null elements (0 null)</span>
+<span class="go">dimensions: &#39;x0&#39;</span>
+<span class="go">0 / x0 (2): 0 to 1</span>
+<span class="go">array([ 1.3,  3.1])</span>
 </pre></div>
 </div>
 </dd></dl>
@@ -1290,14 +1203,16 @@ All dimensions to group have to exist already.</p>
 
 <dl class="method">
 <dt id="dimarray.DimArray.swapaxes">
-<tt class="descname">swapaxes</tt><big>(</big><em>a</em>, <em>axis1</em>, <em>axis2</em><big>)</big><a class="headerlink" href="#dimarray.DimArray.swapaxes" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">swapaxes</tt><big>(</big><em>axis1</em>, <em>axis2</em><big>)</big><a class="headerlink" href="#dimarray.DimArray.swapaxes" title="Permalink to this definition">¶</a></dt>
 <dd><p>analogous to numpy&#8217;s swapaxes, but can provide axes by name</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>a</strong> : DimArray (if used as function), or self (to be ignored) if used as method</p>
-<p><strong>axis1, axis2: `int` or `str`, axes to swap (transpose)</strong></p>
+<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>axis1, axis2</strong> : int or str</p>
+<blockquote>
+<div><p>axes to swap (transpose)</p>
+</div></blockquote>
 </td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><p class="first last">DimArray</p>
@@ -1443,14 +1358,20 @@ All dimensions to group have to exist already.</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>f</strong> : file name or netCDF file handle</p>
-<p><strong>name</strong> : variable name, optional if <cite>name</cite> attribute already defined.</p>
-<p><strong>mode: default &#8216;a+&#8217;</strong></p>
-<p><strong>Several write modes are available:</strong></p>
+<p><strong>name</strong> : <cite>str</cite>, optional</p>
 <blockquote>
-<div><p>&#8216;w&#8217; : write, overwrite if file if present (clobber=True)
-&#8216;w-&#8216;: create new file, but raise Exception if file is present (clobber=False)
-&#8216;a&#8217; : append, raise Exception if file is not present
-&#8216;a+&#8217;: append if file is present, otherwise create</p>
+<div><p>variable name, optional if <cite>name</cite> attribute already defined.</p>
+</div></blockquote>
+<p><strong>mode: `str`, optional</strong></p>
+<blockquote>
+<div><p>Several write modes are available:</p>
+<ul class="simple">
+<li>&#8216;w&#8217; : write, overwrite if file if present (clobber=True)</li>
+<li>&#8216;w-&#8216;: create new file, but raise Exception if file is present (clobber=False)</li>
+<li>&#8216;a&#8217; : append, raise Exception if file is not present</li>
+<li>&#8216;a+&#8217;: append if file is present, otherwise create</li>
+</ul>
+<p>Default mode is &#8216;a+&#8217;</p>
 </div></blockquote>
 <p><strong>format</strong> : <cite>str</cite></p>
 <blockquote>
@@ -1664,11 +1585,13 @@ x.T.contour() # to flip horizontal/vertical axes</p>
 <p><strong>mode</strong> : <cite>str</cite></p>
 <blockquote>
 <div><p>File creation mode. Default is &#8216;w-&#8216;. Set to &#8216;w&#8217; to overwrite any existing file.
-Several write modes are available:
-&#8216;w&#8217; : write, overwrite if file if present (clobber=True)
-&#8216;w-&#8216;: create new file, but raise Exception if file is present (clobber=False)
-&#8216;a&#8217; : append, raise Exception if file is not present
-&#8216;a+&#8217;: append if file is present, otherwise create</p>
+Several write modes are available:</p>
+<ul class="simple">
+<li>&#8216;w&#8217; : write, overwrite if file if present (clobber=True)</li>
+<li>&#8216;w-&#8216;: create new file, but raise Exception if file is present (clobber=False)</li>
+<li>&#8216;a&#8217; : append, raise Exception if file is not present</li>
+<li>&#8216;a+&#8217;: append if file is present, otherwise create</li>
+</ul>
 </div></blockquote>
 <p><strong>format</strong> : <cite>str</cite></p>
 <blockquote>

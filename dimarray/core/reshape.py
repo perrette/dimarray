@@ -143,13 +143,13 @@ def transpose(self, *dims):
     newaxes = [self.axes[i] for i in newshape]
     return self._constructor(result, newaxes)
 
-def swapaxes(a, axis1, axis2):
+def swapaxes(self, axis1, axis2):
     """ analogous to numpy's swapaxes, but can provide axes by name
 
     Parameters
     ----------
-    a        : DimArray (if used as function), or self (to be ignored) if used as method
-    axis1, axis2: `int` or `str`, axes to swap (transpose)
+    axis1, axis2 : int or str
+        axes to swap (transpose)
 
     Returns
     -------
@@ -167,17 +167,17 @@ def swapaxes(a, axis1, axis2):
     >>> b.shape
     (4, 3, 2)
     """
-    pos, _ = a._get_axes_info([axis1, axis2])
+    pos, _ = self._get_axes_info([axis1, axis2])
     axis1, axis2 = pos  # axis positions
     newshape = []
-    for i in range(a.ndim):
+    for i in range(self.ndim):
         if i == axis1:
             newshape.append(axis2)
         elif i == axis2:
             newshape.append(axis1)
         else:
             newshape.append(i)
-    return transpose(a, newshape)
+    return transpose(self, newshape)
 
 #
 # Repeat the array along *existing* axis

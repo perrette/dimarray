@@ -5,11 +5,11 @@ Modules and classes
    :maxdepth: 2
 
 .. automodule:: dimarray
-    :members: read_nc, stack, concatenate, broadcast_arrays, from_pandas, array, array_kw
+    :members: read_nc, stack, concatenate, broadcast_arrays, from_pandas
     :undoc-members:
 
 .. autoclass:: dimarray.DimArray
-    :members: reindex_axis, reset_axis, write_nc, mean, diff, broadcast, reindex_like , reindex_axis, reset_axis, reshape, group, ungroup, swapaxes, transpose, squeeze,  to_pandas, from_pandas, to_dataset, write_nc, plot, pcolor, contourf, contour 
+    :members: reindex_axis, reset_axis, write_nc, mean, diff, apply, broadcast, reindex_like , reindex_axis, reset_axis, reshape, group, ungroup, swapaxes, transpose, squeeze,  to_pandas, from_pandas, to_dataset, write_nc, plot, pcolor, contourf, contour 
     :undoc-members:
 ..   :members: reindex_axis, reset_axis, write_nc, mean, median, max, sum, diff,  broadcast, reindex_like , reindex_axis, reset_axis, reshape, group, ungroup, swapaxes, transpose, squeeze,  to_pandas, from_pandas, to_dataset, write_nc, plot, pcolor, contourf, contour 
 
