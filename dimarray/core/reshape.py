@@ -27,6 +27,7 @@ def broadcast(self, other):
     --------
     Create some dummy data:
     # ...create some dummy data:
+
     >>> import dimarray as da
     >>> lon = np.linspace(10, 30, 2)
     >>> lat = np.linspace(10, 50, 3)
@@ -40,6 +41,7 @@ def broadcast(self, other):
     2 / time (5): 1950 to 1954
 
     # ...broadcast timeseries to 3D data
+
     >>> ts3D = ts.broadcast(cube) #  lat x lon x time
     >>> ts3D
     dimarray: 30 non-null elements (0 null)
@@ -589,6 +591,7 @@ def group(self, *dims, **kwargs):
     True
 
     But be careful, the order matter !
+
     >>> v.group(('lon','lat'), insert=1)
     dimarray: 24 non-null elements (0 null)
     dimensions: 'time', 'lon,lat'
@@ -598,6 +601,7 @@ def group(self, *dims, **kwargs):
            [12, 16, 20, 13, 17, 21, 14, 18, 22, 15, 19, 23]])
 
     Useful to average over a group of dimensions:
+
     >>> v.group(('lon','lat'), insert=0).mean(axis=0)
     dimarray: 2 non-null elements (0 null)
     dimensions: 'time'
@@ -605,6 +609,7 @@ def group(self, *dims, **kwargs):
     array([  5.5,  17.5])
 
     is equivalent to:
+
     >>> v.mean(axis=('lon','lat')) 
     dimarray: 2 non-null elements (0 null)
     dimensions: 'time'

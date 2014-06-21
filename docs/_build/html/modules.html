@@ -63,56 +63,31 @@
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>f</strong> : file name or buffer or regular expression</p>
-<p><strong>nms, optional</strong> : variable name(s) to read_nc: list or str</p>
-<p><strong>*indexing parameters similar to `take` are accepted:</strong></p>
-<p><strong>indices</strong> : dict, provide indices or slice to extract {nm1:val1}</p>
-<p><strong>indexing</strong> : str, &#8216;values&#8217; (default) or &#8216;position&#8217; (integer position) similarly to <cite>take</cite></p>
-<p><strong>tol</strong> : None or float, floating point tolerance when indexing float-arrays</p>
+<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>f</strong> : <cite>str</cite> or netCDF handle</p>
 <blockquote>
-<div><p>(default to None for exact match)</p>
+<div><p>netCDF file to read from or regular expression</p>
 </div></blockquote>
-<p><strong>*additional keyword arguments depend on whether one or several files, one or several variables are required for reading (see below)</strong></p>
+<p><strong>nms, optional</strong> : list or str</p>
+<blockquote>
+<div><p>variable name(s) to read_nc</p>
+</div></blockquote>
+<p><strong>indices</strong> : <cite>dict</cite></p>
+<blockquote>
+<div><p>provide indices or slice to extract {nm1:val1}</p>
+</div></blockquote>
+<p><strong>indexing</strong> : <cite>str</cite></p>
+<blockquote>
+<div><p>&#8216;values&#8217; (default) or &#8216;position&#8217; (integer position) similarly to <cite>take</cite></p>
+</div></blockquote>
+<p><strong>tol</strong> : None or float</p>
+<blockquote>
+<div><p>floating point tolerance when indexing float-arrays (default to None for exact match)</p>
+</div></blockquote>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><p class="first">DimArray or Dataset, depending on whether a (single) variable name is passed as argument (nms) or not</p>
-<p>Several cases:</p>
-<ol class="loweralpha">
-<li><p class="first">Single file</p>
-<blockquote>
-<div><p><a href="#id1"><span class="problematic" id="id2">*</span></a>args, <a href="#id3"><span class="problematic" id="id4">**</span></a>kwargs are passed to DimArray.take
-It includes: indices=, axis=, indexing=, position=, tol=</p>
-<p>Please see help on <cite>Dimarray.take</cite> for more information.</p>
-</div></blockquote>
-</li>
-<li><p class="first">Several files</p>
-<blockquote>
-<div><p>same keywords arguments are allowed except except for:</p>
-<ul class="simple">
-<li><cite>axis</cite> now has another meaning. It is not used for indexing but to</li>
-</ul>
-<p>pick the record dimension (in case of concatenate) or the new dimension 
-along which to join the datasets (in case of stack). 
-Note that indexing is still possible via <cite>indices=</cite> (in dictionary form)
-see DimArray.take for more information.
-- <cite>align=True</cite> in stack mode in order to align datasets prior to 
-concatenation (re-index axes). 
-- keys, optional: sequence to be passed to stack_ds, if axis is not</p>
-<blockquote>
-<div><p>part of the dataset</p>
-</div></blockquote>
-</div></blockquote>
-</li>
-</ol>
-<p>align, optional: if True, reindex axis prior to stacking (default to False)</p>
+<tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><p class="first"><strong>obj</strong> : DimArray or Dataset</p>
 <blockquote class="last">
-<div><blockquote>
-<div><ul class="simple">
-<li>concatenate_only, optional: if True, only concatenate along existing</li>
-</ul>
-<p>axis (and raise error if axis not existing)</p>
-</div></blockquote>
-<p>Please see help on stack_ds and concatenate_ds for more information</p>
+<div><p>depending on whether a (single) variable name is passed as argument (nms) or not</p>
 </div></blockquote>
 </td>
 </tr>
@@ -122,6 +97,47 @@ concatenation (re-index axes).
 <p class="first admonition-title">See also</p>
 <p class="last"><tt class="xref py py-obj docutils literal"><span class="pre">summary_nc</span></tt>, <tt class="xref py py-obj docutils literal"><span class="pre">take</span></tt>, <a class="reference internal" href="#dimarray.stack" title="dimarray.stack"><tt class="xref py py-obj docutils literal"><span class="pre">stack</span></tt></a>, <a class="reference internal" href="#dimarray.concatenate" title="dimarray.concatenate"><tt class="xref py py-obj docutils literal"><span class="pre">concatenate</span></tt></a>, <tt class="xref py py-obj docutils literal"><span class="pre">stack_ds</span></tt>, <tt class="xref py py-obj docutils literal"><span class="pre">concatenate_ds</span></tt>, <a class="reference internal" href="#dimarray.DimArray.write_nc" title="dimarray.DimArray.write_nc"><tt class="xref py py-obj docutils literal"><span class="pre">DimArray.write_nc</span></tt></a>, <a class="reference internal" href="#dimarray.Dataset.write_nc" title="dimarray.Dataset.write_nc"><tt class="xref py py-obj docutils literal"><span class="pre">Dataset.write_nc</span></tt></a></p>
 </div>
+<p class="rubric">Notes</p>
+<p>indexing parameters similar to <cite>take</cite> are accepted:
+additional keyword arguments depend on whether one or several files, one or several variables are required for reading (see below)</p>
+<p>Several cases:</p>
+<ol class="loweralpha">
+<li><p class="first">Single file</p>
+<p><a href="#id1"><span class="problematic" id="id2">*</span></a>args, <a href="#id3"><span class="problematic" id="id4">**</span></a>kwargs are passed to DimArray.take
+It includes: indices=, axis=, indexing=, position=, tol=</p>
+<p>Please see help on <cite>Dimarray.take</cite> for more information.</p>
+</li>
+<li><p class="first">Several files</p>
+<p>same keywords arguments are allowed except except for:</p>
+<ul class="simple">
+<li><cite>axis</cite> now has another meaning. It is not used for indexing but to</li>
+</ul>
+<p>pick the record dimension (in case of concatenate) or the new dimension 
+along which to join the datasets (in case of stack). 
+Note that indexing is still possible via <cite>indices=</cite> (in dictionary form)
+see DimArray.take for more information.</p>
+<ul class="simple">
+<li><cite>align=True</cite> in stack mode in order to align datasets prior to</li>
+</ul>
+<p>concatenation (re-index axes).</p>
+<ul class="simple">
+<li>keys, optional: sequence to be passed to stack_ds, if axis is not</li>
+</ul>
+<blockquote>
+<div><p>part of the dataset</p>
+</div></blockquote>
+</li>
+</ol>
+<p>align, optional: if True, reindex axis prior to stacking (default to False)</p>
+<blockquote>
+<div><blockquote>
+<div><ul class="simple">
+<li>concatenate_only, optional: if True, only concatenate along existing</li>
+</ul>
+<p>axis (and raise error if axis not existing)</p>
+</div></blockquote>
+<p>Please see help on stack_ds and concatenate_ds for more information</p>
+</div></blockquote>
 <p class="rubric">Examples</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">os</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">dimarray</span> <span class="kn">import</span> <span class="n">read_nc</span><span class="p">,</span> <span class="n">get_datadir</span>
@@ -245,29 +261,30 @@ directly relevant to identify the experiment:</p>
 </dl>
 </div>
 <p class="rubric">Examples</p>
-<p>1-D
-&gt;&gt;&gt; from dimarray import DimArray
-&gt;&gt;&gt; a = DimArray([1,2,3], axes=[[&#8216;a&#8217;,&#8217;b&#8217;,&#8217;c&#8217;]])
-&gt;&gt;&gt; b = DimArray([4,5,6], axes=[[&#8216;d&#8217;,&#8217;e&#8217;,&#8217;f&#8217;]])
-&gt;&gt;&gt; concatenate((a, b))
-dimarray: 6 non-null elements (0 null)
-dimensions: &#8216;x0&#8217;
-0 / x0 (6): a to f
-array([1, 2, 3, 4, 5, 6])</p>
-<p>2-D
-&gt;&gt;&gt; a = DimArray([[1,2,3],[11,22,33]])
-&gt;&gt;&gt; b = DimArray([[4,5,6],[44,55,66]])
-&gt;&gt;&gt; concatenate((a, b), axis=0)
-dimarray: 12 non-null elements (0 null)
-dimensions: &#8216;x0&#8217;, &#8216;x1&#8217;
-0 / x0 (4): 0 to 1
-1 / x1 (3): 0 to 2
-array([[ 1,  2,  3],</p>
-<blockquote>
-<div>[11, 22, 33],
-[ 4,  5,  6],
-[44, 55, 66]])</div></blockquote>
-<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">concatenate</span><span class="p">((</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="s">&#39;x1&#39;</span><span class="p">)</span>
+<p>1-D</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">dimarray</span> <span class="kn">import</span> <span class="n">DimArray</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">a</span> <span class="o">=</span> <span class="n">DimArray</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">],</span> <span class="n">axes</span><span class="o">=</span><span class="p">[[</span><span class="s">&#39;a&#39;</span><span class="p">,</span><span class="s">&#39;b&#39;</span><span class="p">,</span><span class="s">&#39;c&#39;</span><span class="p">]])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">b</span> <span class="o">=</span> <span class="n">DimArray</span><span class="p">([</span><span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">6</span><span class="p">],</span> <span class="n">axes</span><span class="o">=</span><span class="p">[[</span><span class="s">&#39;d&#39;</span><span class="p">,</span><span class="s">&#39;e&#39;</span><span class="p">,</span><span class="s">&#39;f&#39;</span><span class="p">]])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">concatenate</span><span class="p">((</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">))</span>
+<span class="go">dimarray: 6 non-null elements (0 null)</span>
+<span class="go">dimensions: &#39;x0&#39;</span>
+<span class="go">0 / x0 (6): a to f</span>
+<span class="go">array([1, 2, 3, 4, 5, 6])</span>
+</pre></div>
+</div>
+<p>2-D</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">a</span> <span class="o">=</span> <span class="n">DimArray</span><span class="p">([[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">],[</span><span class="mi">11</span><span class="p">,</span><span class="mi">22</span><span class="p">,</span><span class="mi">33</span><span class="p">]])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">b</span> <span class="o">=</span> <span class="n">DimArray</span><span class="p">([[</span><span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">6</span><span class="p">],[</span><span class="mi">44</span><span class="p">,</span><span class="mi">55</span><span class="p">,</span><span class="mi">66</span><span class="p">]])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">concatenate</span><span class="p">((</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="go">dimarray: 12 non-null elements (0 null)</span>
+<span class="go">dimensions: &#39;x0&#39;, &#39;x1&#39;</span>
+<span class="go">0 / x0 (4): 0 to 1</span>
+<span class="go">1 / x1 (3): 0 to 2</span>
+<span class="go">array([[ 1,  2,  3],</span>
+<span class="go">       [11, 22, 33],</span>
+<span class="go">       [ 4,  5,  6],</span>
+<span class="go">       [44, 55, 66]])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">concatenate</span><span class="p">((</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="s">&#39;x1&#39;</span><span class="p">)</span>
 <span class="go">dimarray: 12 non-null elements (0 null)</span>
 <span class="go">dimensions: &#39;x0&#39;, &#39;x1&#39;</span>
 <span class="go">0 / x0 (2): 0 to 1</span>
@@ -295,26 +312,150 @@ and returns copy instead of views</p>
 </tbody>
 </table>
 <p class="rubric">Examples</p>
-<p>Just as numpy&#8217;s broadcast_arrays:
-&gt;&gt;&gt; import dimarray as da
-&gt;&gt;&gt; x = da.array([[1,2,3]])
-&gt;&gt;&gt; y = da.array([[1],[2],[3]])
-&gt;&gt;&gt; da.broadcast_arrays(x, y)
-[dimarray: 9 non-null elements (0 null)
-dimensions: &#8216;x0&#8217;, &#8216;x1&#8217;
-0 / x0 (3): 0 to 2
-1 / x1 (3): 0 to 2
-array([[1, 2, 3],</p>
+<p>Just as numpy&#8217;s broadcast_arrays:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">dimarray</span> <span class="kn">as</span> <span class="nn">da</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">x</span> <span class="o">=</span> <span class="n">da</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">]])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">y</span> <span class="o">=</span> <span class="n">da</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mi">1</span><span class="p">],[</span><span class="mi">2</span><span class="p">],[</span><span class="mi">3</span><span class="p">]])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">da</span><span class="o">.</span><span class="n">broadcast_arrays</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+<span class="go">[dimarray: 9 non-null elements (0 null)</span>
+<span class="go">dimensions: &#39;x0&#39;, &#39;x1&#39;</span>
+<span class="go">0 / x0 (3): 0 to 2</span>
+<span class="go">1 / x1 (3): 0 to 2</span>
+<span class="go">array([[1, 2, 3],</span>
+<span class="go">       [1, 2, 3],</span>
+<span class="go">       [1, 2, 3]]), dimarray: 9 non-null elements (0 null)</span>
+<span class="go">dimensions: &#39;x0&#39;, &#39;x1&#39;</span>
+<span class="go">0 / x0 (3): 0 to 2</span>
+<span class="go">1 / x1 (3): 0 to 2</span>
+<span class="go">array([[1, 1, 1],</span>
+<span class="go">       [2, 2, 2],</span>
+<span class="go">       [3, 3, 3]])]</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="dimarray.array">
+<tt class="descclassname">dimarray.</tt><tt class="descname">array</tt><big>(</big><em>data</em>, <em>*args</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#dimarray.array" title="Permalink to this definition">¶</a></dt>
+<dd><p>initialize DimArray or list of dimarray (EXPERIMENTAL)</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>data: numpy array-like</strong></p>
 <blockquote>
-<div>[1, 2, 3],
-[1, 2, 3]]), dimarray: 9 non-null elements (0 null)</div></blockquote>
-<p>dimensions: &#8216;x0&#8217;, &#8216;x1&#8217;
-0 / x0 (3): 0 to 2
-1 / x1 (3): 0 to 2
-array([[1, 1, 1],</p>
-<blockquote>
-<div>[2, 2, 2],
-[3, 3, 3]])]</div></blockquote>
+<div><p>call DimArray(data, <a href="#id5"><span class="problematic" id="id6">*</span></a>args, <a href="#id7"><span class="problematic" id="id8">**</span></a>kwargs)
+list or dict of DimArray objects ==&gt; call stack(data, <a href="#id9"><span class="problematic" id="id10">*</span></a>args, <a href="#id11"><span class="problematic" id="id12">**</span></a>kwargs)</p>
+</div></blockquote>
+<p><strong>*args: variable-list arguments</strong></p>
+<p><strong>**kwargs: key-word arguments</strong></p>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><p class="first">DimArray</p>
+<p>if data is an array-like, this call is the same as DimArray(data, <a href="#id13"><span class="problematic" id="id14">*</span></a>args, <a href="#id15"><span class="problematic" id="id16">**</span></a>kwargs)</p>
+<p>if data is a dict, list or tuple, this call is similar to da.stack(data, <a href="#id17"><span class="problematic" id="id18">*</span></a>args, <a href="#id19"><span class="problematic" id="id20">**</span></a>kwargs) but</p>
+<blockquote class="last">
+<div><p>with align=True by default and an additional parameter broadcast=True by default
+This behaviour might change.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition-see-also admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="last"><a class="reference internal" href="#dimarray.DimArray" title="dimarray.DimArray"><tt class="xref py py-obj docutils literal"><span class="pre">DimArray</span></tt></a>, <a class="reference internal" href="#dimarray.stack" title="dimarray.stack"><tt class="xref py py-obj docutils literal"><span class="pre">stack</span></tt></a>, <a class="reference internal" href="#dimarray.Dataset.to_array" title="dimarray.Dataset.to_array"><tt class="xref py py-obj docutils literal"><span class="pre">Dataset.to_array</span></tt></a></p>
+</div>
+<p class="rubric">Examples</p>
+<p>From a list:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">dimarray</span> <span class="kn">as</span> <span class="nn">da</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">a</span> <span class="o">=</span> <span class="n">DimArray</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">da</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">a</span><span class="p">,</span> <span class="mi">2</span><span class="o">*</span><span class="n">a</span><span class="p">])</span> <span class="c"># if keys not provided, default is 0, 1</span>
+<span class="go">dimarray: 6 non-null elements (0 null)</span>
+<span class="go">dimensions: &#39;unnamed&#39;, &#39;x0&#39;</span>
+<span class="go">0 / unnamed (2): 0 to 1</span>
+<span class="go">1 / x0 (3): 0 to 2</span>
+<span class="go">array([[1, 2, 3],</span>
+<span class="go">       [2, 4, 6]])</span>
+</pre></div>
+</div>
+<p>From a dict, here also with axis alignment, and naming the axis</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">d</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;a&#39;</span><span class="p">:</span><span class="n">DimArray</span><span class="p">([</span><span class="mi">10</span><span class="p">,</span><span class="mi">20</span><span class="p">,</span><span class="mf">30.</span><span class="p">],[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">]),</span> <span class="s">&#39;b&#39;</span><span class="p">:</span><span class="n">DimArray</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mf">3.</span><span class="p">],[</span><span class="mf">1.</span><span class="p">,</span><span class="mf">2.</span><span class="p">,</span><span class="mi">3</span><span class="p">])}</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">a</span> <span class="o">=</span> <span class="n">da</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">keys</span><span class="o">=</span><span class="p">[</span><span class="s">&#39;a&#39;</span><span class="p">,</span><span class="s">&#39;b&#39;</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="s">&#39;items&#39;</span><span class="p">)</span> <span class="c"># keys= just needed to enforce ordering</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">a</span>
+<span class="go">dimarray: 6 non-null elements (2 null)</span>
+<span class="go">dimensions: &#39;items&#39;, &#39;x0&#39;</span>
+<span class="go">0 / items (2): a to b</span>
+<span class="go">1 / x0 (4): 0.0 to 3.0</span>
+<span class="go">array([[ 10.,  20.,  30.,  nan],</span>
+<span class="go">       [ nan,   1.,   2.,   3.]])</span>
+</pre></div>
+</div>
+<p>Concatenate 2-D data</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">a</span> <span class="o">=</span> <span class="n">DimArray</span><span class="p">([[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">],[</span><span class="mi">2</span><span class="p">,</span><span class="mf">3.</span><span class="p">]])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">b</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">b</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">c</span> <span class="o">=</span> <span class="n">da</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">a</span><span class="p">,</span><span class="n">b</span><span class="p">],</span><span class="n">keys</span><span class="o">=</span><span class="p">[</span><span class="s">&#39;a&#39;</span><span class="p">,</span><span class="s">&#39;b&#39;</span><span class="p">],</span><span class="n">axis</span><span class="o">=</span><span class="s">&#39;items&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">d</span> <span class="o">=</span> <span class="n">da</span><span class="o">.</span><span class="n">array</span><span class="p">({</span><span class="s">&#39;a&#39;</span><span class="p">:</span><span class="n">a</span><span class="p">,</span><span class="s">&#39;b&#39;</span><span class="p">:</span><span class="n">b</span><span class="p">},</span><span class="n">axis</span><span class="o">=</span><span class="s">&#39;items&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">c</span><span class="p">)</span> <span class="o">|</span> <span class="p">(</span><span class="n">c</span> <span class="o">==</span> <span class="n">d</span><span class="p">)</span> <span class="p">)</span>
+<span class="go">True</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">c</span>
+<span class="go">dimarray: 7 non-null elements (1 null)</span>
+<span class="go">dimensions: &#39;items&#39;, &#39;x0&#39;, &#39;x1&#39;</span>
+<span class="go">0 / items (2): a to b</span>
+<span class="go">1 / x0 (2): 0 to 1</span>
+<span class="go">2 / x1 (2): 0 to 1</span>
+<span class="go">array([[[  0.,   1.],</span>
+<span class="go">        [  2.,   3.]],</span>
+
+<span class="go">       [[ nan,   1.],</span>
+<span class="go">        [  2.,   3.]]])</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="dimarray.array_kw">
+<tt class="descclassname">dimarray.</tt><tt class="descname">array_kw</tt><big>(</big><em>*args</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#dimarray.array_kw" title="Permalink to this definition">¶</a></dt>
+<dd><p>Define a Dimarray using keyword arguments for axes</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>*args</strong> : [values, [dims,]]</p>
+<p><strong>**kwargs</strong> : axes as keyword arguments</p>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><p class="first last">DimArray</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>The key-word functionality comes at the expense of metadata, which needs to be 
+added after creation of the DimArray object.</p>
+<p>If axes are passed as kwargs, <cite>dims=</cite> also needs to be provided
+or an error will be raised, unless values&#8217;s shape is 
+sufficient to determine ordering (when all axes have different 
+sizes).  This is a consequence of the fact 
+that keyword arguments are <em>not</em> ordered in python (any order
+is lost since kwargs is a dict object)</p>
+<p>Axes passed by keyword arguments cannot have name already taken by other 
+parameters such as &#8220;values&#8221;, &#8220;axes&#8221;, &#8220;dims&#8221;, &#8220;dtype&#8221; or &#8220;copy&#8221;</p>
+<p class="rubric">Examples</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">dimarray</span> <span class="kn">as</span> <span class="nn">da</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">a</span> <span class="o">=</span> <span class="n">da</span><span class="o">.</span><span class="n">array_kw</span><span class="p">([[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">],[</span><span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">6</span><span class="p">]],</span> <span class="n">items</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="s">&quot;ab&quot;</span><span class="p">),</span> <span class="n">time</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">1950</span><span class="p">,</span><span class="mi">1953</span><span class="p">))</span> <span class="c"># here dims can be omitted because shape = (2, 3)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">b</span> <span class="o">=</span> <span class="n">da</span><span class="o">.</span><span class="n">array_kw</span><span class="p">([[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">],[</span><span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">6</span><span class="p">]],</span> <span class="p">[</span><span class="s">&#39;items&#39;</span><span class="p">,</span><span class="s">&#39;time&#39;</span><span class="p">],</span> <span class="n">items</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="s">&quot;ab&quot;</span><span class="p">),</span> <span class="n">time</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">1950</span><span class="p">,</span><span class="mi">1953</span><span class="p">))</span> <span class="c"># here dims can be omitted because shape = (2, 3)</span>
+</pre></div>
+</div>
+<p>This is pretty similar to this other form:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">c</span> <span class="o">=</span> <span class="n">da</span><span class="o">.</span><span class="n">DimArray</span><span class="p">([[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">],[</span><span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">6</span><span class="p">]],</span> <span class="p">{</span><span class="s">&#39;items&#39;</span><span class="p">:</span><span class="nb">list</span><span class="p">(</span><span class="s">&quot;ab&quot;</span><span class="p">),</span> <span class="s">&#39;time&#39;</span><span class="p">:</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">1950</span><span class="p">,</span><span class="mi">1953</span><span class="p">)})</span> <span class="c"># here dims can be omitted because shape = (2, 3)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">a</span> <span class="o">==</span> <span class="n">b</span><span class="p">)</span> <span class="ow">and</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">a</span> <span class="o">==</span> <span class="n">c</span><span class="p">)</span>
+<span class="go">True</span>
+</pre></div>
+</div>
+<p>But note this would fail if both axes had the same size (would then need to specify the <cite>dims</cite> parameter).</p>
+<p>See also DimArray&#8217;s doc for more examples</p>
 </dd></dl>
 
 </div>
@@ -324,7 +465,7 @@ array([[1, 1, 1],</p>
 <dd><p>numpy&#8217;s ndarray with labelled dimensions and axes</p>
 <div class="admonition-see-also admonition seealso">
 <p class="first admonition-title">See also</p>
-<p class="last"><a class="reference internal" href="#dimarray.Axes" title="dimarray.Axes"><tt class="xref py py-obj docutils literal"><span class="pre">Axes</span></tt></a>, <a class="reference internal" href="#dimarray.Axis" title="dimarray.Axis"><tt class="xref py py-obj docutils literal"><span class="pre">Axis</span></tt></a>, <tt class="xref py py-obj docutils literal"><span class="pre">GroupedAxis</span></tt>, <a class="reference internal" href="#dimarray.Dataset" title="dimarray.Dataset"><tt class="xref py py-obj docutils literal"><span class="pre">Dataset</span></tt></a>, <a class="reference internal" href="#dimarray.read_nc" title="dimarray.read_nc"><tt class="xref py py-obj docutils literal"><span class="pre">read_nc</span></tt></a>, <a class="reference internal" href="#dimarray.stack" title="dimarray.stack"><tt class="xref py py-obj docutils literal"><span class="pre">stack</span></tt></a>, <a class="reference internal" href="#dimarray.concatenate" title="dimarray.concatenate"><tt class="xref py py-obj docutils literal"><span class="pre">concatenate</span></tt></a></p>
+<p class="last"><a class="reference internal" href="#dimarray.Axes" title="dimarray.Axes"><tt class="xref py py-obj docutils literal"><span class="pre">Axes</span></tt></a>, <a class="reference internal" href="#dimarray.Axis" title="dimarray.Axis"><tt class="xref py py-obj docutils literal"><span class="pre">Axis</span></tt></a>, <tt class="xref py py-obj docutils literal"><span class="pre">GroupedAxis</span></tt>, <a class="reference internal" href="#dimarray.Dataset" title="dimarray.Dataset"><tt class="xref py py-obj docutils literal"><span class="pre">Dataset</span></tt></a>, <a class="reference internal" href="#dimarray.read_nc" title="dimarray.read_nc"><tt class="xref py py-obj docutils literal"><span class="pre">read_nc</span></tt></a>, <a class="reference internal" href="#dimarray.stack" title="dimarray.stack"><tt class="xref py py-obj docutils literal"><span class="pre">stack</span></tt></a>, <a class="reference internal" href="#dimarray.concatenate" title="dimarray.concatenate"><tt class="xref py py-obj docutils literal"><span class="pre">concatenate</span></tt></a>, <a class="reference internal" href="#dimarray.array" title="dimarray.array"><tt class="xref py py-obj docutils literal"><span class="pre">array</span></tt></a>, <a class="reference internal" href="#dimarray.array_kw" title="dimarray.array_kw"><tt class="xref py py-obj docutils literal"><span class="pre">array_kw</span></tt></a></p>
 </div>
 <p class="rubric">Notes</p>
 <p>see interactive help for a full listing of methods with doc</p>
@@ -387,25 +528,28 @@ array([[1, 1, 1],</p>
 </pre></div>
 </div>
 <p>During an operation, arrays are automatically re-indexed to span the 
-same axis domain, with nan filling if needed
-&gt;&gt;&gt; a = DimArray([0, 1], axes = [[0, 1]])
-&gt;&gt;&gt; b = DimArray([0,1,2], axes = [[0, 1, 2]])
-&gt;&gt;&gt; a+b
-dimarray: 2 non-null elements (1 null)
-dimensions: &#8216;x0&#8217;
-0 / x0 (3): 0 to 2
-array([  0.,   2.,  nan])</p>
-<p>Dimensions are factored (broadcast) when performing an operation
-&gt;&gt;&gt; a = DimArray([0, 1], dims=(&#8216;x0&#8217;,))
-&gt;&gt;&gt; b = DimArray([0, 1, 2], dims=(&#8216;x1&#8217;,))
-&gt;&gt;&gt; a+b
-dimarray: 6 non-null elements (0 null)
-dimensions: &#8216;x0&#8217;, &#8216;x1&#8217;
-0 / x0 (2): 0 to 1
-1 / x1 (3): 0 to 2
-array([[0, 1, 2],</p>
-<blockquote>
-<div>[1, 2, 3]])</div></blockquote>
+same axis domain, with nan filling if needed</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">a</span> <span class="o">=</span> <span class="n">DimArray</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">axes</span> <span class="o">=</span> <span class="p">[[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">b</span> <span class="o">=</span> <span class="n">DimArray</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">],</span> <span class="n">axes</span> <span class="o">=</span> <span class="p">[[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">]])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">a</span><span class="o">+</span><span class="n">b</span>
+<span class="go">dimarray: 2 non-null elements (1 null)</span>
+<span class="go">dimensions: &#39;x0&#39;</span>
+<span class="go">0 / x0 (3): 0 to 2</span>
+<span class="go">array([  0.,   2.,  nan])</span>
+</pre></div>
+</div>
+<p>Dimensions are factored (broadcast) when performing an operation</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">a</span> <span class="o">=</span> <span class="n">DimArray</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">dims</span><span class="o">=</span><span class="p">(</span><span class="s">&#39;x0&#39;</span><span class="p">,))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">b</span> <span class="o">=</span> <span class="n">DimArray</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="n">dims</span><span class="o">=</span><span class="p">(</span><span class="s">&#39;x1&#39;</span><span class="p">,))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">a</span><span class="o">+</span><span class="n">b</span>
+<span class="go">dimarray: 6 non-null elements (0 null)</span>
+<span class="go">dimensions: &#39;x0&#39;, &#39;x1&#39;</span>
+<span class="go">0 / x0 (2): 0 to 1</span>
+<span class="go">1 / x1 (3): 0 to 2</span>
+<span class="go">array([[0, 1, 2],</span>
+<span class="go">       [1, 2, 3]])</span>
+</pre></div>
+</div>
 <p class="rubric">Attributes</p>
 <table border="1" class="longtable docutils">
 <colgroup>
@@ -526,70 +670,64 @@ array([[0, 1, 2],</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>- values</strong> : array-like or Axis: new axis values</p>
+<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>values</strong> : array-like or Axis: new axis values</p>
+<p><strong>axis</strong> : axis number or name</p>
+<p><strong>method</strong> : &#8220;exact&#8221; (default), &#8220;nearest&#8221;, &#8220;interp&#8221;</p>
+<p><strong>repna</strong> : if False, raise error when an axis value is not present</p>
 <blockquote>
-<div><ul>
-<li><p class="first">axis   : axis number or name</p>
-</li>
-<li><p class="first">method : &#8220;exact&#8221; (default), &#8220;nearest&#8221;, &#8220;interp&#8221;</p>
-</li>
-<li><dl class="first docutils">
-<dt>repna: if False, raise error when an axis value is not present </dt>
-<dd><p class="first last">otherwise just replace with NaN. Defaulf is True</p>
-</dd>
-</dl>
-</li>
-<li><p class="first">fill_value: value to use instead of missing data</p>
-</li>
-<li><p class="first">tol: re-index with a particular tolerance (can be longer)</p>
-</li>
-<li><dl class="first docutils">
-<dt>use_pandas, optional: bool <span class="classifier-delimiter">:</span> <span class="classifier">if True (the default), convert to pandas for re-indexing </span></dt>
-<dd><p class="first last">If any special option (method, tol) is set or if modulo axes are present 
+<div><p>otherwise just replace with NaN. Defaulf is True</p>
+</div></blockquote>
+<p><strong>fill_value: value to use instead of missing data</strong></p>
+<p><strong>tol: re-index with a particular tolerance (can be longer)</strong></p>
+<p><strong>use_pandas, optional: bool</strong> : if True (the default), convert to pandas for re-indexing</p>
+<blockquote>
+<div><p>If any special option (method, tol) is set or if modulo axes are present 
 or, of course, if pandas is not installed,
 this option is set to False by default.</p>
-</dd>
-</dl>
-</li>
-</ul>
 </div></blockquote>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><ul class="first last simple">
-<li>DimArray</li>
-</ul>
+<tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><p class="first last">dimarray: DimArray instance</p>
 </td>
 </tr>
 </tbody>
 </table>
 <p class="rubric">Examples</p>
-<p>Basic reindexing: fill missing values with NaN
-&gt;&gt;&gt; import dimarray as da
-&gt;&gt;&gt; a = da.DimArray([1,2,3],(&#8216;x0&#8217;, [1,2,3]))
-&gt;&gt;&gt; b = da.DimArray([3,4],(&#8216;x0&#8217;,[1,3]))
-&gt;&gt;&gt; b.reindex_axis([1,2,3])
-dimarray: 2 non-null elements (1 null)
-dimensions: &#8216;x0&#8217;
-0 / x0 (3): 1 to 3
-array([  3.,  nan,   4.])</p>
-<p>Or replace with anything else, like -9999
-&gt;&gt;&gt; b.reindex_axis([1,2,3], fill_value=-9999)
-dimarray: 3 non-null elements (0 null)
-dimensions: &#8216;x0&#8217;
-0 / x0 (3): 1 to 3
-array([    3, -9999,     4])</p>
-<p>&#8220;nearest&#8221; mode
-&gt;&gt;&gt; b.reindex_axis([0,1,2,3], method=&#8217;nearest&#8217;) # out-of-bound to NaN
-dimarray: 3 non-null elements (1 null)
-dimensions: &#8216;x0&#8217;
-0 / x0 (4): 0 to 3
-array([ nan,   3.,   3.,   4.])</p>
-<p>&#8220;interp&#8221; mode
-&gt;&gt;&gt; b.reindex_axis([0,1,2,3], method=&#8217;interp&#8217;) # out-of-bound to NaN
-dimarray: 3 non-null elements (1 null)
-dimensions: &#8216;x0&#8217;
-0 / x0 (4): 0 to 3
-array([ nan,  3. ,  3.5,  4. ])</p>
+<p>Basic reindexing: fill missing values with NaN</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">dimarray</span> <span class="kn">as</span> <span class="nn">da</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">a</span> <span class="o">=</span> <span class="n">da</span><span class="o">.</span><span class="n">DimArray</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">],(</span><span class="s">&#39;x0&#39;</span><span class="p">,</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">]))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">b</span> <span class="o">=</span> <span class="n">da</span><span class="o">.</span><span class="n">DimArray</span><span class="p">([</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">],(</span><span class="s">&#39;x0&#39;</span><span class="p">,[</span><span class="mi">1</span><span class="p">,</span><span class="mi">3</span><span class="p">]))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">b</span><span class="o">.</span><span class="n">reindex_axis</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">])</span>
+<span class="go">dimarray: 2 non-null elements (1 null)</span>
+<span class="go">dimensions: &#39;x0&#39;</span>
+<span class="go">0 / x0 (3): 1 to 3</span>
+<span class="go">array([  3.,  nan,   4.])</span>
+</pre></div>
+</div>
+<p>Or replace with anything else, like -9999</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">b</span><span class="o">.</span><span class="n">reindex_axis</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">],</span> <span class="n">fill_value</span><span class="o">=-</span><span class="mi">9999</span><span class="p">)</span>
+<span class="go">dimarray: 3 non-null elements (0 null)</span>
+<span class="go">dimensions: &#39;x0&#39;</span>
+<span class="go">0 / x0 (3): 1 to 3</span>
+<span class="go">array([    3, -9999,     4])</span>
+</pre></div>
+</div>
+<p>&#8220;nearest&#8221; mode</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">b</span><span class="o">.</span><span class="n">reindex_axis</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">],</span> <span class="n">method</span><span class="o">=</span><span class="s">&#39;nearest&#39;</span><span class="p">)</span> <span class="c"># out-of-bound to NaN</span>
+<span class="go">dimarray: 3 non-null elements (1 null)</span>
+<span class="go">dimensions: &#39;x0&#39;</span>
+<span class="go">0 / x0 (4): 0 to 3</span>
+<span class="go">array([ nan,   3.,   3.,   4.])</span>
+</pre></div>
+</div>
+<p>&#8220;interp&#8221; mode</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">b</span><span class="o">.</span><span class="n">reindex_axis</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">],</span> <span class="n">method</span><span class="o">=</span><span class="s">&#39;interp&#39;</span><span class="p">)</span> <span class="c"># out-of-bound to NaN</span>
+<span class="go">dimarray: 3 non-null elements (1 null)</span>
+<span class="go">dimensions: &#39;x0&#39;</span>
+<span class="go">0 / x0 (4): 0 to 3</span>
+<span class="go">array([ nan,  3. ,  3.5,  4. ])</span>
+</pre></div>
+</div>
 </dd></dl>
 
 <dl class="method">
@@ -636,19 +774,21 @@ Default to None.</p>
 &#8216;a&#8217; : append, raise Exception if file is not present
 &#8216;a+&#8217;: append if file is present, otherwise create</p>
 </div></blockquote>
-<p><strong>format</strong> : netCDF file format. Default is &#8216;NETCDF4&#8217; (only accounted for during file creation)</p>
-<p><strong>zlib</strong> : Enable zlib compression if True. Default is False (no compression).</p>
-<p><strong>complevel</strong> : integer between 1 and 9 describing the level of compression desired. Ignored if zlib=False.</p>
-<p><strong>**kwargs</strong> : Any additional keyword arguments accepted by <cite>netCDF4.Dataset.CreateVariable</cite></p>
-<p><strong>See the netCDF4-python module documentation for more information about the use</strong></p>
-<p><strong>of keyword arguments to write_nc.</strong></p>
-<p><strong>*indexing parameters similar to `DimArray.put` and `DimArray.take` are accepted,</strong></p>
-<p><strong>in order to insert elements in a pre-defined netCDF variable:</strong></p>
-<p><strong>indices</strong> : dict, provide indices or slice to extract {nm1:val1}</p>
-<p><strong>indexing</strong> : str, &#8216;values&#8217; (default) or &#8216;position&#8217; (integer position) similarly to <cite>take</cite></p>
-<p><strong>tol</strong> : None or float, floating point tolerance when indexing float-arrays</p>
+<p><strong>format</strong> : <cite>str</cite></p>
+<blockquote>
+<div><p>netCDF file format. Default is &#8216;NETCDF4&#8217; (only accounted for during file creation)</p>
+</div></blockquote>
+<p><strong>zlib</strong> : <cite>bool</cite></p>
+<blockquote>
+<div><p>Enable zlib compression if True. Default is False (no compression).</p>
+</div></blockquote>
+<p><strong>complevel</strong> : <cite>int</cite></p>
+<blockquote>
+<div><p>integer between 1 and 9 describing the level of compression desired. Ignored if zlib=False.</p>
+</div></blockquote>
+<p><strong>**kwargs</strong> : key-word arguments</p>
 <blockquote class="last">
-<div><p>(default to None for exact match)</p>
+<div><p>Any additional keyword arguments accepted by <cite>netCDF4.Dataset.CreateVariable</cite></p>
 </div></blockquote>
 </td>
 </tr>
@@ -662,7 +802,7 @@ Default to None.</p>
 
 <dl class="method">
 <dt id="dimarray.DimArray.mean">
-<tt class="descname">mean</tt><big>(</big><em>obj</em>, <em>axis=None</em>, <em>skipna=False</em>, <em>weights='axis'</em>, <em>dtype=None</em>, <em>out=None</em><big>)</big><a class="headerlink" href="#dimarray.DimArray.mean" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">mean</tt><big>(</big><em>axis=None</em>, <em>skipna=False</em>, <em>weights='axis'</em>, <em>dtype=None</em>, <em>out=None</em><big>)</big><a class="headerlink" href="#dimarray.DimArray.mean" title="Permalink to this definition">¶</a></dt>
 <dd><p>mean over an axis or group of axes, possibly weighted</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -686,7 +826,7 @@ whether they have a not-None weight attribute</p>
 
 <dl class="method">
 <dt id="dimarray.DimArray.diff">
-<tt class="descname">diff</tt><big>(</big><em>obj</em>, <em>axis=-1</em>, <em>scheme='backward'</em>, <em>keepaxis=False</em>, <em>n=1</em><big>)</big><a class="headerlink" href="#dimarray.DimArray.diff" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">diff</tt><big>(</big><em>axis=-1</em>, <em>scheme='backward'</em>, <em>keepaxis=False</em>, <em>n=1</em><big>)</big><a class="headerlink" href="#dimarray.DimArray.diff" title="Permalink to this definition">¶</a></dt>
 <dd><p>Analogous to numpy&#8217;s diff</p>
 <blockquote>
 <div><p>Calculate the n-th order discrete difference along given axis.</p>
@@ -735,39 +875,49 @@ except along <cite>axis</cite> where the dimension is smaller by <cite>n</cite>.
 </tbody>
 </table>
 <p class="rubric">Examples</p>
-<p>Create some example data
-&gt;&gt;&gt; import dimarray as da
-&gt;&gt;&gt; v = da.DimArray([1,2,3,4], (&#8216;time&#8217;, np.arange(1950,1954)), dtype=float)
-&gt;&gt;&gt; s = v.cumsum()
-&gt;&gt;&gt; s 
-dimarray: 4 non-null elements (0 null)
-dimensions: &#8216;time&#8217;
-0 / time (4): 1950 to 1953
-array([  1.,   3.,   6.,  10.])</p>
-<p><cite>diff</cite> reduces axis size by one, by default
-&gt;&gt;&gt; s.diff()
-dimarray: 3 non-null elements (0 null)
-dimensions: &#8216;time&#8217;
-0 / time (3): 1951 to 1953
-array([ 2.,  3.,  4.])</p>
-<p>The <cite>keepaxis=</cite> parameter fills array with <cite>nan</cite> where necessary to keep the axis unchanged. Default is backward differencing: <cite>diff[i] = v[i] - v[i-1]</cite>.
-&gt;&gt;&gt; s.diff(keepaxis=True)
-dimarray: 3 non-null elements (1 null)
-dimensions: &#8216;time&#8217;
-0 / time (4): 1950 to 1953
-array([ nan,   2.,   3.,   4.])</p>
-<p>But other schemes are available to control how the new axis is defined: <cite>backward</cite> (default), <cite>forward</cite> and even <cite>centered</cite>
-&gt;&gt;&gt; s.diff(keepaxis=True, scheme=&#8221;forward&#8221;) # diff[i] = v[i+1] - v[i]
-dimarray: 3 non-null elements (1 null)
-dimensions: &#8216;time&#8217;
-0 / time (4): 1950 to 1953
-array([  2.,   3.,   4.,  nan])</p>
-<p>The <cite>keepaxis=True</cite> option is invalid with the <cite>centered</cite> scheme, since every axis value is modified by definition:
-&gt;&gt;&gt; s.diff(axis=&#8217;time&#8217;, scheme=&#8217;centered&#8217;)
-dimarray: 3 non-null elements (0 null)
-dimensions: &#8216;time&#8217;
-0 / time (3): 1950.5 to 1952.5
-array([ 2.,  3.,  4.])</p>
+<p>Create some example data</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">dimarray</span> <span class="kn">as</span> <span class="nn">da</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">v</span> <span class="o">=</span> <span class="n">da</span><span class="o">.</span><span class="n">DimArray</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">],</span> <span class="p">(</span><span class="s">&#39;time&#39;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">1950</span><span class="p">,</span><span class="mi">1954</span><span class="p">)),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">s</span> <span class="o">=</span> <span class="n">v</span><span class="o">.</span><span class="n">cumsum</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">s</span> 
+<span class="go">dimarray: 4 non-null elements (0 null)</span>
+<span class="go">dimensions: &#39;time&#39;</span>
+<span class="go">0 / time (4): 1950 to 1953</span>
+<span class="go">array([  1.,   3.,   6.,  10.])</span>
+</pre></div>
+</div>
+<p><cite>diff</cite> reduces axis size by one, by default</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">s</span><span class="o">.</span><span class="n">diff</span><span class="p">()</span>
+<span class="go">dimarray: 3 non-null elements (0 null)</span>
+<span class="go">dimensions: &#39;time&#39;</span>
+<span class="go">0 / time (3): 1951 to 1953</span>
+<span class="go">array([ 2.,  3.,  4.])</span>
+</pre></div>
+</div>
+<p>The <cite>keepaxis=</cite> parameter fills array with <cite>nan</cite> where necessary to keep the axis unchanged. Default is backward differencing: <cite>diff[i] = v[i] - v[i-1]</cite>.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">s</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">keepaxis</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="go">dimarray: 3 non-null elements (1 null)</span>
+<span class="go">dimensions: &#39;time&#39;</span>
+<span class="go">0 / time (4): 1950 to 1953</span>
+<span class="go">array([ nan,   2.,   3.,   4.])</span>
+</pre></div>
+</div>
+<p>But other schemes are available to control how the new axis is defined: <cite>backward</cite> (default), <cite>forward</cite> and even <cite>centered</cite></p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">s</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">keepaxis</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">scheme</span><span class="o">=</span><span class="s">&quot;forward&quot;</span><span class="p">)</span> <span class="c"># diff[i] = v[i+1] - v[i]</span>
+<span class="go">dimarray: 3 non-null elements (1 null)</span>
+<span class="go">dimensions: &#39;time&#39;</span>
+<span class="go">0 / time (4): 1950 to 1953</span>
+<span class="go">array([  2.,   3.,   4.,  nan])</span>
+</pre></div>
+</div>
+<p>The <cite>keepaxis=True</cite> option is invalid with the <cite>centered</cite> scheme, since every axis value is modified by definition:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">s</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="s">&#39;time&#39;</span><span class="p">,</span> <span class="n">scheme</span><span class="o">=</span><span class="s">&#39;centered&#39;</span><span class="p">)</span>
+<span class="go">dimarray: 3 non-null elements (0 null)</span>
+<span class="go">dimensions: &#39;time&#39;</span>
+<span class="go">0 / time (3): 1950.5 to 1952.5</span>
+<span class="go">array([ 2.,  3.,  4.])</span>
+</pre></div>
+</div>
 </dd></dl>
 
 <dl class="method">
@@ -786,43 +936,38 @@ array([ 2.,  3.,  4.])</p>
 </table>
 <p class="rubric">Examples</p>
 <p>Create some dummy data:
-# ...create some dummy data:
-&gt;&gt;&gt; import dimarray as da
-&gt;&gt;&gt; lon = np.linspace(10, 30, 2)
-&gt;&gt;&gt; lat = np.linspace(10, 50, 3)
-&gt;&gt;&gt; time = np.arange(1950,1955)
-&gt;&gt;&gt; ts = da.DimArray.from_kw(np.arange(5), time=time)
-&gt;&gt;&gt; cube = da.DimArray.from_kw(np.zeros((3,2,5)), lon=lon, lat=lat, time=time)  # lat x lon x time
-&gt;&gt;&gt; cube.axes  
-dimensions: &#8216;lat&#8217;, &#8216;lon&#8217;, &#8216;time&#8217;
-0 / lat (3): 10.0 to 50.0
-1 / lon (2): 10.0 to 30.0
-2 / time (5): 1950 to 1954</p>
-<p># ...broadcast timeseries to 3D data
-&gt;&gt;&gt; ts3D = ts.broadcast(cube) #  lat x lon x time
-&gt;&gt;&gt; ts3D
-dimarray: 30 non-null elements (0 null)
-dimensions: &#8216;lat&#8217;, &#8216;lon&#8217;, &#8216;time&#8217;
-0 / lat (3): 10.0 to 50.0
-1 / lon (2): 10.0 to 30.0
-2 / time (5): 1950 to 1954
-array([[[0, 1, 2, 3, 4],</p>
-<blockquote>
-<div>[0, 1, 2, 3, 4]],</div></blockquote>
-<dl class="docutils">
-<dt>&lt;BLANKLINE&gt;</dt>
-<dd><dl class="first last docutils">
-<dt>[[0, 1, 2, 3, 4],</dt>
-<dd>[0, 1, 2, 3, 4]],</dd>
-</dl>
-</dd>
-<dt>&lt;BLANKLINE&gt;</dt>
-<dd><dl class="first last docutils">
-<dt>[[0, 1, 2, 3, 4],</dt>
-<dd>[0, 1, 2, 3, 4]]])</dd>
-</dl>
-</dd>
-</dl>
+# ...create some dummy data:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">dimarray</span> <span class="kn">as</span> <span class="nn">da</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">lon</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">30</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">lat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">50</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">time</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">1950</span><span class="p">,</span><span class="mi">1955</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ts</span> <span class="o">=</span> <span class="n">da</span><span class="o">.</span><span class="n">DimArray</span><span class="o">.</span><span class="n">from_kw</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">5</span><span class="p">),</span> <span class="n">time</span><span class="o">=</span><span class="n">time</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">cube</span> <span class="o">=</span> <span class="n">da</span><span class="o">.</span><span class="n">DimArray</span><span class="o">.</span><span class="n">from_kw</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">3</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">5</span><span class="p">)),</span> <span class="n">lon</span><span class="o">=</span><span class="n">lon</span><span class="p">,</span> <span class="n">lat</span><span class="o">=</span><span class="n">lat</span><span class="p">,</span> <span class="n">time</span><span class="o">=</span><span class="n">time</span><span class="p">)</span>  <span class="c"># lat x lon x time</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">cube</span><span class="o">.</span><span class="n">axes</span>  
+<span class="go">dimensions: &#39;lat&#39;, &#39;lon&#39;, &#39;time&#39;</span>
+<span class="go">0 / lat (3): 10.0 to 50.0</span>
+<span class="go">1 / lon (2): 10.0 to 30.0</span>
+<span class="go">2 / time (5): 1950 to 1954</span>
+</pre></div>
+</div>
+<p># ...broadcast timeseries to 3D data</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">ts3D</span> <span class="o">=</span> <span class="n">ts</span><span class="o">.</span><span class="n">broadcast</span><span class="p">(</span><span class="n">cube</span><span class="p">)</span> <span class="c">#  lat x lon x time</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ts3D</span>
+<span class="go">dimarray: 30 non-null elements (0 null)</span>
+<span class="go">dimensions: &#39;lat&#39;, &#39;lon&#39;, &#39;time&#39;</span>
+<span class="go">0 / lat (3): 10.0 to 50.0</span>
+<span class="go">1 / lon (2): 10.0 to 30.0</span>
+<span class="go">2 / time (5): 1950 to 1954</span>
+<span class="go">array([[[0, 1, 2, 3, 4],</span>
+<span class="go">        [0, 1, 2, 3, 4]],</span>
+
+<span class="go">       [[0, 1, 2, 3, 4],</span>
+<span class="go">        [0, 1, 2, 3, 4]],</span>
+
+<span class="go">       [[0, 1, 2, 3, 4],</span>
+<span class="go">        [0, 1, 2, 3, 4]]])</span>
+</pre></div>
+</div>
 </dd></dl>
 
 <dl class="method">
@@ -852,70 +997,64 @@ array([[[0, 1, 2, 3, 4],</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>- values</strong> : array-like or Axis: new axis values</p>
+<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>values</strong> : array-like or Axis: new axis values</p>
+<p><strong>axis</strong> : axis number or name</p>
+<p><strong>method</strong> : &#8220;exact&#8221; (default), &#8220;nearest&#8221;, &#8220;interp&#8221;</p>
+<p><strong>repna</strong> : if False, raise error when an axis value is not present</p>
 <blockquote>
-<div><ul>
-<li><p class="first">axis   : axis number or name</p>
-</li>
-<li><p class="first">method : &#8220;exact&#8221; (default), &#8220;nearest&#8221;, &#8220;interp&#8221;</p>
-</li>
-<li><dl class="first docutils">
-<dt>repna: if False, raise error when an axis value is not present </dt>
-<dd><p class="first last">otherwise just replace with NaN. Defaulf is True</p>
-</dd>
-</dl>
-</li>
-<li><p class="first">fill_value: value to use instead of missing data</p>
-</li>
-<li><p class="first">tol: re-index with a particular tolerance (can be longer)</p>
-</li>
-<li><dl class="first docutils">
-<dt>use_pandas, optional: bool <span class="classifier-delimiter">:</span> <span class="classifier">if True (the default), convert to pandas for re-indexing </span></dt>
-<dd><p class="first last">If any special option (method, tol) is set or if modulo axes are present 
+<div><p>otherwise just replace with NaN. Defaulf is True</p>
+</div></blockquote>
+<p><strong>fill_value: value to use instead of missing data</strong></p>
+<p><strong>tol: re-index with a particular tolerance (can be longer)</strong></p>
+<p><strong>use_pandas, optional: bool</strong> : if True (the default), convert to pandas for re-indexing</p>
+<blockquote>
+<div><p>If any special option (method, tol) is set or if modulo axes are present 
 or, of course, if pandas is not installed,
 this option is set to False by default.</p>
-</dd>
-</dl>
-</li>
-</ul>
 </div></blockquote>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><ul class="first last simple">
-<li>DimArray</li>
-</ul>
+<tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><p class="first last">dimarray: DimArray instance</p>
 </td>
 </tr>
 </tbody>
 </table>
 <p class="rubric">Examples</p>
-<p>Basic reindexing: fill missing values with NaN
-&gt;&gt;&gt; import dimarray as da
-&gt;&gt;&gt; a = da.DimArray([1,2,3],(&#8216;x0&#8217;, [1,2,3]))
-&gt;&gt;&gt; b = da.DimArray([3,4],(&#8216;x0&#8217;,[1,3]))
-&gt;&gt;&gt; b.reindex_axis([1,2,3])
-dimarray: 2 non-null elements (1 null)
-dimensions: &#8216;x0&#8217;
-0 / x0 (3): 1 to 3
-array([  3.,  nan,   4.])</p>
-<p>Or replace with anything else, like -9999
-&gt;&gt;&gt; b.reindex_axis([1,2,3], fill_value=-9999)
-dimarray: 3 non-null elements (0 null)
-dimensions: &#8216;x0&#8217;
-0 / x0 (3): 1 to 3
-array([    3, -9999,     4])</p>
-<p>&#8220;nearest&#8221; mode
-&gt;&gt;&gt; b.reindex_axis([0,1,2,3], method=&#8217;nearest&#8217;) # out-of-bound to NaN
-dimarray: 3 non-null elements (1 null)
-dimensions: &#8216;x0&#8217;
-0 / x0 (4): 0 to 3
-array([ nan,   3.,   3.,   4.])</p>
-<p>&#8220;interp&#8221; mode
-&gt;&gt;&gt; b.reindex_axis([0,1,2,3], method=&#8217;interp&#8217;) # out-of-bound to NaN
-dimarray: 3 non-null elements (1 null)
-dimensions: &#8216;x0&#8217;
-0 / x0 (4): 0 to 3
-array([ nan,  3. ,  3.5,  4. ])</p>
+<p>Basic reindexing: fill missing values with NaN</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">dimarray</span> <span class="kn">as</span> <span class="nn">da</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">a</span> <span class="o">=</span> <span class="n">da</span><span class="o">.</span><span class="n">DimArray</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">],(</span><span class="s">&#39;x0&#39;</span><span class="p">,</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">]))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">b</span> <span class="o">=</span> <span class="n">da</span><span class="o">.</span><span class="n">DimArray</span><span class="p">([</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">],(</span><span class="s">&#39;x0&#39;</span><span class="p">,[</span><span class="mi">1</span><span class="p">,</span><span class="mi">3</span><span class="p">]))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">b</span><span class="o">.</span><span class="n">reindex_axis</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">])</span>
+<span class="go">dimarray: 2 non-null elements (1 null)</span>
+<span class="go">dimensions: &#39;x0&#39;</span>
+<span class="go">0 / x0 (3): 1 to 3</span>
+<span class="go">array([  3.,  nan,   4.])</span>
+</pre></div>
+</div>
+<p>Or replace with anything else, like -9999</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">b</span><span class="o">.</span><span class="n">reindex_axis</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">],</span> <span class="n">fill_value</span><span class="o">=-</span><span class="mi">9999</span><span class="p">)</span>
+<span class="go">dimarray: 3 non-null elements (0 null)</span>
+<span class="go">dimensions: &#39;x0&#39;</span>
+<span class="go">0 / x0 (3): 1 to 3</span>
+<span class="go">array([    3, -9999,     4])</span>
+</pre></div>
+</div>
+<p>&#8220;nearest&#8221; mode</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">b</span><span class="o">.</span><span class="n">reindex_axis</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">],</span> <span class="n">method</span><span class="o">=</span><span class="s">&#39;nearest&#39;</span><span class="p">)</span> <span class="c"># out-of-bound to NaN</span>
+<span class="go">dimarray: 3 non-null elements (1 null)</span>
+<span class="go">dimensions: &#39;x0&#39;</span>
+<span class="go">0 / x0 (4): 0 to 3</span>
+<span class="go">array([ nan,   3.,   3.,   4.])</span>
+</pre></div>
+</div>
+<p>&#8220;interp&#8221; mode</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">b</span><span class="o">.</span><span class="n">reindex_axis</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">],</span> <span class="n">method</span><span class="o">=</span><span class="s">&#39;interp&#39;</span><span class="p">)</span> <span class="c"># out-of-bound to NaN</span>
+<span class="go">dimarray: 3 non-null elements (1 null)</span>
+<span class="go">dimensions: &#39;x0&#39;</span>
+<span class="go">0 / x0 (4): 0 to 3</span>
+<span class="go">array([ nan,  3. ,  3.5,  4. ])</span>
+</pre></div>
+</div>
 </dd></dl>
 
 <dl class="method">
@@ -1105,27 +1244,32 @@ All dimensions to group have to exist already.</p>
 <span class="go">True</span>
 </pre></div>
 </div>
-<p>But be careful, the order matter !
-&gt;&gt;&gt; v.group((&#8216;lon&#8217;,&#8217;lat&#8217;), insert=1)
-dimarray: 24 non-null elements (0 null)
-dimensions: &#8216;time&#8217;, &#8216;lon,lat&#8217;
-0 / time (2): 1950 to 1955
-1 / lon,lat (12): (-180.0, -90.0) to (180.0, 90.0)
-array([[ 0,  4,  8,  1,  5,  9,  2,  6, 10,  3,  7, 11],</p>
-<blockquote>
-<div>[12, 16, 20, 13, 17, 21, 14, 18, 22, 15, 19, 23]])</div></blockquote>
-<p>Useful to average over a group of dimensions:
-&gt;&gt;&gt; v.group((&#8216;lon&#8217;,&#8217;lat&#8217;), insert=0).mean(axis=0)
-dimarray: 2 non-null elements (0 null)
-dimensions: &#8216;time&#8217;
-0 / time (2): 1950 to 1955
-array([  5.5,  17.5])</p>
-<p>is equivalent to:
-&gt;&gt;&gt; v.mean(axis=(&#8216;lon&#8217;,&#8217;lat&#8217;)) 
-dimarray: 2 non-null elements (0 null)
-dimensions: &#8216;time&#8217;
-0 / time (2): 1950 to 1955
-array([  5.5,  17.5])</p>
+<p>But be careful, the order matter !</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">v</span><span class="o">.</span><span class="n">group</span><span class="p">((</span><span class="s">&#39;lon&#39;</span><span class="p">,</span><span class="s">&#39;lat&#39;</span><span class="p">),</span> <span class="n">insert</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="go">dimarray: 24 non-null elements (0 null)</span>
+<span class="go">dimensions: &#39;time&#39;, &#39;lon,lat&#39;</span>
+<span class="go">0 / time (2): 1950 to 1955</span>
+<span class="go">1 / lon,lat (12): (-180.0, -90.0) to (180.0, 90.0)</span>
+<span class="go">array([[ 0,  4,  8,  1,  5,  9,  2,  6, 10,  3,  7, 11],</span>
+<span class="go">       [12, 16, 20, 13, 17, 21, 14, 18, 22, 15, 19, 23]])</span>
+</pre></div>
+</div>
+<p>Useful to average over a group of dimensions:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">v</span><span class="o">.</span><span class="n">group</span><span class="p">((</span><span class="s">&#39;lon&#39;</span><span class="p">,</span><span class="s">&#39;lat&#39;</span><span class="p">),</span> <span class="n">insert</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="go">dimarray: 2 non-null elements (0 null)</span>
+<span class="go">dimensions: &#39;time&#39;</span>
+<span class="go">0 / time (2): 1950 to 1955</span>
+<span class="go">array([  5.5,  17.5])</span>
+</pre></div>
+</div>
+<p>is equivalent to:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">v</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="p">(</span><span class="s">&#39;lon&#39;</span><span class="p">,</span><span class="s">&#39;lat&#39;</span><span class="p">))</span> 
+<span class="go">dimarray: 2 non-null elements (0 null)</span>
+<span class="go">dimensions: &#39;time&#39;</span>
+<span class="go">0 / time (2): 1950 to 1955</span>
+<span class="go">array([  5.5,  17.5])</span>
+</pre></div>
+</div>
 </dd></dl>
 
 <dl class="method">
@@ -1246,9 +1390,21 @@ array([  5.5,  17.5])</p>
 <dl class="classmethod">
 <dt id="dimarray.DimArray.from_pandas">
 <em class="property">classmethod </em><tt class="descname">from_pandas</tt><big>(</big><em>data</em>, <em>dims=None</em><big>)</big><a class="headerlink" href="#dimarray.DimArray.from_pandas" title="Permalink to this definition">¶</a></dt>
-<dd><p>Initialize a DimArray from pandas
-data: pandas object (Series, DataFrame, Panel, Panel4D)
-dims, optional: dimension (axis) names, otherwise look at ax.name for ax in data.axes</p>
+<dd><p>Initialize a DimArray from pandas</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>data</strong> : pandas object (Series, DataFrame, Panel, Panel4D)</p>
+<p><strong>dims, optional</strong> : dimension (axis) names, otherwise look at ax.name for ax in data.axes</p>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><p class="first last"><strong>a</strong> : DimArray instance</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Examples</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">pandas</span> <span class="kn">as</span> <span class="nn">pd</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">s</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">([</span><span class="mi">3</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">6</span><span class="p">],</span> <span class="n">index</span><span class="o">=</span><span class="p">[</span><span class="s">&#39;a&#39;</span><span class="p">,</span><span class="s">&#39;b&#39;</span><span class="p">,</span><span class="s">&#39;c&#39;</span><span class="p">])</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">s</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s">&#39;dim0&#39;</span>
@@ -1259,15 +1415,17 @@ dims, optional: dimension (axis) names, otherwise look at ax.name for ax in data
 <span class="go">array([3, 5, 6])</span>
 </pre></div>
 </div>
-<p>Also work with Multi-Index
-&gt;&gt;&gt; panel = pd.Panel(np.arange(2*3*4).reshape(2,3,4))
-&gt;&gt;&gt; b = panel.to_frame() # pandas&#8217; method to convert Panel to DataFrame via MultiIndex
-&gt;&gt;&gt; DimArray.from_pandas(b)    # doctest: +SKIP
-dimarray: 24 non-null elements (0 null)
-dimensions: &#8216;major,minor&#8217;, &#8216;x1&#8217;
-0 / major,minor (12): (0, 0) to (2, 3)
-1 / x1 (2): 0 to 1
-...</p>
+<p>Also work with Multi-Index</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">panel</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Panel</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="mi">3</span><span class="o">*</span><span class="mi">4</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">b</span> <span class="o">=</span> <span class="n">panel</span><span class="o">.</span><span class="n">to_frame</span><span class="p">()</span> <span class="c"># pandas&#39; method to convert Panel to DataFrame via MultiIndex</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">DimArray</span><span class="o">.</span><span class="n">from_pandas</span><span class="p">(</span><span class="n">b</span><span class="p">)</span>    
+<span class="go">dimarray: 24 non-null elements (0 null)</span>
+<span class="go">dimensions: &#39;major,minor&#39;, &#39;x1&#39;</span>
+<span class="go">0 / major,minor (12): (0, 0) to (2, 3)</span>
+<span class="go">1 / x1 (2): 0 to 1</span>
+<span class="gp">... </span> 
+</pre></div>
+</div>
 </dd></dl>
 
 <dl class="method">
@@ -1294,19 +1452,21 @@ dimensions: &#8216;major,minor&#8217;, &#8216;x1&#8217;
 &#8216;a&#8217; : append, raise Exception if file is not present
 &#8216;a+&#8217;: append if file is present, otherwise create</p>
 </div></blockquote>
-<p><strong>format</strong> : netCDF file format. Default is &#8216;NETCDF4&#8217; (only accounted for during file creation)</p>
-<p><strong>zlib</strong> : Enable zlib compression if True. Default is False (no compression).</p>
-<p><strong>complevel</strong> : integer between 1 and 9 describing the level of compression desired. Ignored if zlib=False.</p>
-<p><strong>**kwargs</strong> : Any additional keyword arguments accepted by <cite>netCDF4.Dataset.CreateVariable</cite></p>
-<p><strong>See the netCDF4-python module documentation for more information about the use</strong></p>
-<p><strong>of keyword arguments to write_nc.</strong></p>
-<p><strong>*indexing parameters similar to `DimArray.put` and `DimArray.take` are accepted,</strong></p>
-<p><strong>in order to insert elements in a pre-defined netCDF variable:</strong></p>
-<p><strong>indices</strong> : dict, provide indices or slice to extract {nm1:val1}</p>
-<p><strong>indexing</strong> : str, &#8216;values&#8217; (default) or &#8216;position&#8217; (integer position) similarly to <cite>take</cite></p>
-<p><strong>tol</strong> : None or float, floating point tolerance when indexing float-arrays</p>
+<p><strong>format</strong> : <cite>str</cite></p>
+<blockquote>
+<div><p>netCDF file format. Default is &#8216;NETCDF4&#8217; (only accounted for during file creation)</p>
+</div></blockquote>
+<p><strong>zlib</strong> : <cite>bool</cite></p>
+<blockquote>
+<div><p>Enable zlib compression if True. Default is False (no compression).</p>
+</div></blockquote>
+<p><strong>complevel</strong> : <cite>int</cite></p>
+<blockquote>
+<div><p>integer between 1 and 9 describing the level of compression desired. Ignored if zlib=False.</p>
+</div></blockquote>
+<p><strong>**kwargs</strong> : key-word arguments</p>
 <blockquote class="last">
-<div><p>(default to None for exact match)</p>
+<div><p>Any additional keyword arguments accepted by <cite>netCDF4.Dataset.CreateVariable</cite></p>
 </div></blockquote>
 </td>
 </tr>
@@ -1497,28 +1657,34 @@ x.T.contour() # to flip horizontal/vertical axes</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>f</strong> : netCDF file name.</p>
-<p><strong>mode</strong> : File creation mode. Default is &#8216;w-&#8216;. Set to &#8216;w&#8217; to overwrite any existing file.</p>
-<p><strong>Several write modes are available:</strong></p>
+<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>f</strong> : <cite>str</cite> or netCDF handle</p>
 <blockquote>
-<div><p>&#8216;w&#8217; : write, overwrite if file if present (clobber=True)
+<div><p>netCDF file to write to</p>
+</div></blockquote>
+<p><strong>mode</strong> : <cite>str</cite></p>
+<blockquote>
+<div><p>File creation mode. Default is &#8216;w-&#8216;. Set to &#8216;w&#8217; to overwrite any existing file.
+Several write modes are available:
+&#8216;w&#8217; : write, overwrite if file if present (clobber=True)
 &#8216;w-&#8216;: create new file, but raise Exception if file is present (clobber=False)
 &#8216;a&#8217; : append, raise Exception if file is not present
 &#8216;a+&#8217;: append if file is present, otherwise create</p>
 </div></blockquote>
-<p><strong>format</strong> : netCDF file format. Default is &#8216;NETCDF4&#8217; (only accounted for during file creation)</p>
-<p><strong>zlib</strong> : Enable zlib compression if True. Default is False (no compression).</p>
-<p><strong>complevel</strong> : integer between 1 and 9 describing the level of compression desired. Ignored if zlib=False.</p>
-<p><strong>**kwargs</strong> : Any additional keyword arguments accepted by <cite>netCDF4.Dataset.CreateVariable</cite></p>
-<p><strong>See the netCDF4-python module documentation for more information about the use</strong></p>
-<p><strong>of keyword arguments to write_nc.</strong></p>
-<p><strong>*indexing parameters similar to `DimArray.put` and `DimArray.take` are accepted,</strong></p>
-<p><strong>in order to insert elements in a pre-defined netCDF variable:</strong></p>
-<p><strong>indices</strong> : dict, provide indices or slice to extract {nm1:val1}</p>
-<p><strong>indexing</strong> : str, &#8216;values&#8217; (default) or &#8216;position&#8217; (integer position) similarly to <cite>take</cite></p>
-<p><strong>tol</strong> : None or float, floating point tolerance when indexing float-arrays</p>
+<p><strong>format</strong> : <cite>str</cite></p>
+<blockquote>
+<div><p>netCDF file format. Default is &#8216;NETCDF4&#8217; (only accounted for during file creation)</p>
+</div></blockquote>
+<p><strong>zlib</strong> : <cite>bool</cite></p>
+<blockquote>
+<div><p>Enable zlib compression if True. Default is False (no compression).</p>
+</div></blockquote>
+<p><strong>complevel</strong> : <cite>int</cite></p>
+<blockquote>
+<div><p>integer between 1 and 9 describing the level of compression desired. Ignored if zlib=False.</p>
+</div></blockquote>
+<p><strong>**kwargs</strong> : key-word arguments</p>
 <blockquote class="last">
-<div><p>(default to None for exact match)</p>
+<div><p>Any additional keyword arguments accepted by <cite>netCDF4.Dataset.CreateVariable</cite></p>
 </div></blockquote>
 </td>
 </tr>

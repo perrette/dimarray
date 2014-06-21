@@ -63,16 +63,50 @@
 </div>
 <div class="section" id="requires">
 <h2>Requires<a class="headerlink" href="#requires" title="Permalink to this headline">¶</a></h2>
-<ul class="simple">
-<li>numpy</li>
-<li>netCDF4 (optional) :  for netCDF I/O, found at <a class="reference external" href="https://code.google.com/p/netcdf4-python/">https://code.google.com/p/netcdf4-python/</a>)</li>
-<li>matplotlib (optional) : for plotting (for now plot command also requires pandas)</li>
-<li>pandas (optional) :  to_pandas() and from_pandas() methods, plot()</li>
+<ul>
+<li><p class="first">python2.7</p>
+</li>
+<li><p class="first">numpy</p>
+</li>
+<li><p class="first">netCDF4 (optional) :  for netCDF I/O</p>
+<blockquote>
+<div><p>repository: <a class="reference external" href="https://github.com/Unidata/netcdf4-python">https://github.com/Unidata/netcdf4-python</a></p>
+<dl class="docutils">
+<dt>From source:</dt>
+<dd><p class="first last">the documentation can be found there: <a class="reference external" href="http://unidata.github.io/netcdf4-python/">http://unidata.github.io/netcdf4-python/</a>
+Basically you need to install HDF5 and netCDF4 libraries on your system before
+using pip or your favorite package manager.</p>
+</dd>
+</dl>
+<p>This can be annoying to install HDF5 and netCDF4 from source.
+Using the anaconda package from continuum analytics save time
+(That is the only one I tried, but it possibly also
+works with Enthought, xyPython or some other pre-compiled version of python)
+With conda (the package manager shipped with - but kind of independent from - anaconda)
+it is enough to do a simple:</p>
+<blockquote>
+<div><p>conda install netCDF4</p>
+</div></blockquote>
+</div></blockquote>
+</li>
+<li><p class="first">matplotlib (optional) : for plotting (for now plot command also requires pandas)</p>
+</li>
+<li><p class="first">pandas (optional) :  to_pandas() and from_pandas() methods, plot()</p>
+</li>
 </ul>
 </div>
 <div class="section" id="id1">
 <h2>Installation<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
-<p>sudo python setup.py install</p>
+<p>Download the latest version from github and extract from archive
+Then from the dimarray repository type:</p>
+<blockquote>
+<div>python setup.py install</div></blockquote>
+<p>Alternatively, you can use pip to download and install the version from pypi (could be slightly out-of-date):</p>
+<blockquote>
+<div>pip install dimarray</div></blockquote>
+<p>or with conda:</p>
+<blockquote>
+<div>conda install dimarray</div></blockquote>
 </div>
 </div>
 

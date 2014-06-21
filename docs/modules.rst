@@ -5,7 +5,7 @@ Modules and classes
    :maxdepth: 2
 
 .. automodule:: dimarray
-    :members: read_nc, stack, concatenate, broadcast_arrays
+    :members: read_nc, stack, concatenate, broadcast_arrays, from_pandas, array, array_kw
     :undoc-members:
 
 .. autoclass:: dimarray.DimArray

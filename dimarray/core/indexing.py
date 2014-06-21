@@ -206,6 +206,7 @@ def take(obj, indices, axis=0, indexing="values", tol=TOLERANCE, keepdims=False,
            [ 4.,  5.,  6.]])
 
     Indexing via axis values (default)
+
     >>> a = v[:,10]   # python slicing method
     >>> a
     dimarray: 2 non-null elements (0 null)
@@ -219,12 +220,14 @@ def take(obj, indices, axis=0, indexing="values", tol=TOLERANCE, keepdims=False,
     True
 
     Indexing via integer index (indexing="position" or `ix` property)
+
     >>> np.all(v.ix[:,0] == v[:,10])
     True
     >>> np.all(v.take(0, axis="d1", indexing="position") == v.take(10, axis="d1"))
     True
 
     Multi-dimensional indexing
+
     >>> v["a", 10]  # also work with string axis
     1.0
     >>> v.take(('a',10))  # multi-dimensional, tuple
@@ -233,6 +236,7 @@ def take(obj, indices, axis=0, indexing="values", tol=TOLERANCE, keepdims=False,
     1.0
 
     Take a list of indices
+
     >>> a = v[:,[10,20]] # also work with a list of index
     >>> a
     dimarray: 4 non-null elements (0 null)
@@ -246,6 +250,7 @@ def take(obj, indices, axis=0, indexing="values", tol=TOLERANCE, keepdims=False,
     True
 
     Take a slice:
+
     >>> c = v[:,10:20] # axis values: slice includes last element
     >>> c
     dimarray: 4 non-null elements (0 null)
@@ -266,12 +271,14 @@ def take(obj, indices, axis=0, indexing="values", tol=TOLERANCE, keepdims=False,
            [ 4.]])
 
     Keep dimensions 
+
     >>> a = v[["a"]]
     >>> b = v.take("a",keepdims=True)
     >>> np.all(a == b)
     True
 
     tolerance parameter to achieve "nearest neighbour" search
+
     >>> v.take(12, axis="d1", tol=5)
     dimarray: 2 non-null elements (0 null)
     dimensions: 'd0'
@@ -279,6 +286,7 @@ def take(obj, indices, axis=0, indexing="values", tol=TOLERANCE, keepdims=False,
     array([ 1.,  4.])
 
     # Matlab like multi-indexing
+
     >>> v = DimArray(np.arange(2*3*4).reshape(2,3,4))
     >>> v.box[[0,1],:,[0,0,0]].shape
     (2, 3, 3)
@@ -320,6 +328,7 @@ def take(obj, indices, axis=0, indexing="values", tol=TOLERANCE, keepdims=False,
     array([[4, 5]])
 
     Ommit `indices` parameter when putting a DimArray
+
     >>> a = DimArray([0,1,2,3,4], ['a','b','c','d','e'])
     >>> b = DimArray([5,6], ['c','d'])
     >>> a.put(b)
@@ -329,6 +338,7 @@ def take(obj, indices, axis=0, indexing="values", tol=TOLERANCE, keepdims=False,
     array([0, 1, 5, 6, 4])
 
     Ellipsis (only one supported)
+
     >>> a = DimArray(np.arange(2*3*4*5).reshape(2,3,4,5))
     >>> a[0,...,0].shape
     (3, 4)
@@ -532,6 +542,7 @@ def put(obj, val, indices=None, axis=0, indexing="values", tol=TOLERANCE, conver
     >>> a = DimArray(np.zeros((2,2)), [('d0',['a','b']), ('d1',[10.,20.])])
 
     Index by values
+
     >>> b = a.put(1, indices={'d0': 'b'})
     >>> b
     dimarray: 4 non-null elements (0 null)
@@ -550,6 +561,7 @@ def put(obj, val, indices=None, axis=0, indexing="values", tol=TOLERANCE, conver
            [ 2.,  2.]])
 
     Index by position
+
     >>> b = a.put(3, indices=1, axis='d1', indexing="position")
     >>> b
     dimarray: 4 non-null elements (0 null)
@@ -569,6 +581,7 @@ def put(obj, val, indices=None, axis=0, indexing="values", tol=TOLERANCE, conver
 
 
     Multi-dimension, multi-index
+
     >>> b = a.put(5, indices={'d0':'b', 'd1':[10.]})
     >>> b
     dimarray: 4 non-null elements (0 null)
@@ -587,9 +600,11 @@ def put(obj, val, indices=None, axis=0, indexing="values", tol=TOLERANCE, conver
            [ 6.,  4.]])
 
     Inplace
+
     >>> a.put(6, indices={'d0':'b', 'd1':[10.]}, inplace=True)
 
     Multi-Index tests (not straightforward to get matlab-like behaviour)
+
     >>> big = DimArray(np.zeros((2,3,4,5)))
     >>> indices = {'x0':0 ,'x1':[2,1],'x3':[1,4]}
     >>> sub = big.take(indices, broadcast_arrays=False)*0
@@ -822,26 +837,26 @@ def reindex_axis(self, values, axis=0, method='exact', repna=True, fill_value=np
 
     Parameters
     ----------
-        - values : array-like or Axis: new axis values
-        - axis   : axis number or name
-        - method : "exact" (default), "nearest", "interp" 
-        - repna: if False, raise error when an axis value is not present 
-                       otherwise just replace with NaN. Defaulf is True
-        - fill_value: value to use instead of missing data
-        - tol: re-index with a particular tolerance (can be longer)
-        - use_pandas, optional: bool : if True (the default), convert to pandas for re-indexing 
-            If any special option (method, tol) is set or if modulo axes are present 
-            or, of course, if pandas is not installed,
-            this option is set to False by default.
+    values : array-like or Axis: new axis values
+    axis : axis number or name
+    method : "exact" (default), "nearest", "interp" 
+    repna : if False, raise error when an axis value is not present 
+                 otherwise just replace with NaN. Defaulf is True
+    fill_value: value to use instead of missing data
+    tol: re-index with a particular tolerance (can be longer)
+    use_pandas, optional: bool : if True (the default), convert to pandas for re-indexing 
+      If any special option (method, tol) is set or if modulo axes are present 
+      or, of course, if pandas is not installed,
+      this option is set to False by default.
 
     Returns
     -------
-        - DimArray
+    dimarray: DimArray instance
 
     Examples
     --------
-
     Basic reindexing: fill missing values with NaN
+
     >>> import dimarray as da
     >>> a = da.DimArray([1,2,3],('x0', [1,2,3]))
     >>> b = da.DimArray([3,4],('x0',[1,3]))
@@ -852,6 +867,7 @@ def reindex_axis(self, values, axis=0, method='exact', repna=True, fill_value=np
     array([  3.,  nan,   4.])
 
     Or replace with anything else, like -9999
+
     >>> b.reindex_axis([1,2,3], fill_value=-9999)
     dimarray: 3 non-null elements (0 null)
     dimensions: 'x0'
@@ -859,6 +875,7 @@ def reindex_axis(self, values, axis=0, method='exact', repna=True, fill_value=np
     array([    3, -9999,     4])
 
     "nearest" mode
+
     >>> b.reindex_axis([0,1,2,3], method='nearest') # out-of-bound to NaN
     dimarray: 3 non-null elements (1 null)
     dimensions: 'x0'
@@ -866,6 +883,7 @@ def reindex_axis(self, values, axis=0, method='exact', repna=True, fill_value=np
     array([ nan,   3.,   3.,   4.])
 
     "interp" mode
+
     >>> b.reindex_axis([0,1,2,3], method='interp') # out-of-bound to NaN
     dimarray: 3 non-null elements (1 null)
     dimensions: 'x0'

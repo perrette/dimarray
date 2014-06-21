@@ -217,9 +217,14 @@ array([[ 0,  1,  2,  3,  4,  5,  6,  7,  8,  9],
        [20, 21, 22, 23, 24, 25, 26, 27, 28, 29],
        [30, 31, 32, 33, 34, 35, 36, 37, 38, 39]])
 
-And for things that pandas does better, such as pretty printing, I/O to many formats, and low-dimensional data analysis, just use the **`to_pandas`** method (see reverse **`from_pandas`**):
+..  _interfacing_with_pandas:
 
->>> print small_array.to_pandas()
+interfacing with pandas
+-----------------------
+
+For things that pandas does better, such as pretty printing, I/O to many formats, and low-dimensional data analysis, just use the :py:meth:`dimarray.DimArray.to_pandas` method
+
+>>> small_array.to_pandas()
 C     0       1       2       3       4    
 D     0   1   0   1   0   1   0   1   0   1
 A B                                        
@@ -227,3 +232,15 @@ A B
   1  10  11  12  13  14  15  16  17  18  19
 1 0  20  21  22  23  24  25  26  27  28  29
   1  30  31  32  33  34  35  36  37  38  39
+
+And :py:meth:`dimarray.DimArray.from_pandas` works to convert pandas objects to `DimArray` (also supports `MultiIndex`):
+
+>>> import pandas as pd
+>>> s = pd.DataFrame([[1,2],[3,4]], index=['a','b'], columns=[1950, 1960])
+>>> da.from_pandas(s)
+dimarray: 4 non-null elements (0 null)
+dimensions: 'x0', 'x1'
+0 / x0 (2): a to b
+1 / x1 (2): 1950 to 1960
+array([[1, 2],
+       [3, 4]])

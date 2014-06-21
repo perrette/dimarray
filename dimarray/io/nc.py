@@ -19,27 +19,32 @@ __all__ = ['read_nc','summary_nc', 'write_nc', 'read_dimensions']
 # some common piece of documentation
 #
 _doc_indexing = """
-    indices : dict, provide indices or slice to extract {nm1:val1}
-    indexing : str, 'values' (default) or 'position' (integer position) similarly to `take`
-    tol : None or float, floating point tolerance when indexing float-arrays 
-          (default to None for exact match) 
+    indices : `dict`
+        provide indices or slice to extract {nm1:val1}
+    indexing : `str`
+        'values' (default) or 'position' (integer position) similarly to `take`
+    tol : None or float
+       floating point tolerance when indexing float-arrays (default to None for exact match) 
 """.strip()
 
 _doc_indexing_write = """
-    *indexing parameters similar to `DimArray.put` and `DimArray.take` are accepted,
-    in order to insert elements in a pre-defined netCDF variable:
-
     {take} 
 """.format(take=_doc_indexing).strip()
 
 FORMAT='NETCDF4'
 
 _doc_write_nc = """ 
-    format : netCDF file format. Default is '{format}' (only accounted for during file creation)
-    zlib : Enable zlib compression if True. Default is False (no compression).
-    complevel : integer between 1 and 9 describing the level of compression desired. Ignored if zlib=False.
-    **kwargs : Any additional keyword arguments accepted by `netCDF4.Dataset.CreateVariable`
+    format : `str`
+        netCDF file format. Default is '{format}' (only accounted for during file creation)
+    zlib : `bool`
+        Enable zlib compression if True. Default is False (no compression).
+    complevel : `int`
+        integer between 1 and 9 describing the level of compression desired. Ignored if zlib=False.
+    **kwargs : key-word arguments
+        Any additional keyword arguments accepted by `netCDF4.Dataset.CreateVariable`
     
+    Notes:
+    ------
     See the netCDF4-python module documentation for more information about the use
     of keyword arguments to write_nc.
 """.strip().format(format=FORMAT)
@@ -81,17 +86,21 @@ def read_nc(f, nms=None, *args, **kwargs):
 
     Parameters
     ----------
-    f : file name or buffer or regular expression
-    nms, optional : variable name(s) to read_nc: list or str
-
-    *indexing parameters similar to `take` are accepted:
+    f : `str` or netCDF handle
+        netCDF file to read from or regular expression
+    nms, optional : list or str
+        variable name(s) to read_nc 
     %s
-
-    *additional keyword arguments depend on whether one or several files, one or several variables are required for reading (see below)
 
     Returns
     -------
-    DimArray or Dataset, depending on whether a (single) variable name is passed as argument (nms) or not
+    obj : DimArray or Dataset
+        depending on whether a (single) variable name is passed as argument (nms) or not
+
+    Notes
+    -----
+    indexing parameters similar to `take` are accepted:
+    additional keyword arguments depend on whether one or several files, one or several variables are required for reading (see below)
 
     Several cases:
 
@@ -111,11 +120,14 @@ def read_nc(f, nms=None, *args, **kwargs):
        along which to join the datasets (in case of stack). 
        Note that indexing is still possible via `indices=` (in dictionary form)
        see DimArray.take for more information.
+
        - `align=True` in stack mode in order to align datasets prior to 
        concatenation (re-index axes). 
+
        - keys, optional: sequence to be passed to stack_ds, if axis is not 
         part of the dataset
     align, optional: if True, reindex axis prior to stacking (default to False)
+
         - concatenate_only, optional: if True, only concatenate along existing 
         axis (and raise error if axis not existing)
 
@@ -525,10 +537,12 @@ def _write_dataset(f, obj, mode='w-', indices=None, axis=0, format=FORMAT, verbo
 
     Parameters
     ----------
-    f : netCDF file name.
+    f : `str` or netCDF handle
+        netCDF file to write to
 
-    mode : File creation mode. Default is 'w-'. Set to 'w' to overwrite any existing file.
-    {write_modes}
+    mode : `str`
+        File creation mode. Default is 'w-'. Set to 'w' to overwrite any existing file.
+        {write_modes}
 
     {netCDF4}
 
@@ -683,7 +697,8 @@ def _check_dimensions(f, axes, **verb):
 
     Parameters
     ----------
-    f : file handle or string
+    f : `str` or netCDF handle
+        netCDF file to write to
     axes: list of Axis objects
     **verb: passed to _check_file (e.g. verbose=False)
     """

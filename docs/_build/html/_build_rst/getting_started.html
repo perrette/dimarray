@@ -27,7 +27,7 @@
     <script type="text/javascript" src="../_static/doctools.js"></script>
     <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <link rel="top" title="dimarray 0.1.7.dev documentation" href="../index.html" />
-    <link rel="next" title="API documentation" href="../api_doc.html" />
+    <link rel="next" title="Documentation" href="../api_doc.html" />
     <link rel="prev" title="Installation" href="../installation.html" /> 
   </head>
   <body>
@@ -41,7 +41,7 @@
           <a href="../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
         <li class="right" >
-          <a href="../api_doc.html" title="API documentation"
+          <a href="../api_doc.html" title="Documentation"
              accesskey="N">next</a> |</li>
         <li class="right" >
           <a href="../installation.html" title="Installation"
@@ -246,8 +246,11 @@ the netCDF4 package. If netCDF4 is installed (much recommanded), a dataset can e
 <span class="go">       [30, 31, 32, 33, 34, 35, 36, 37, 38, 39]])</span>
 </pre></div>
 </div>
-<p>And for things that pandas does better, such as pretty printing, I/O to many formats, and low-dimensional data analysis, just use the <strong>`to_pandas`</strong> method (see reverse <strong>`from_pandas`</strong>):</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="k">print</span> <span class="n">small_array</span><span class="o">.</span><span class="n">to_pandas</span><span class="p">()</span>
+</div>
+<div class="section" id="interfacing-with-pandas">
+<span id="id11"></span><h2>interfacing with pandas<a class="headerlink" href="#interfacing-with-pandas" title="Permalink to this headline">¶</a></h2>
+<p>For things that pandas does better, such as pretty printing, I/O to many formats, and low-dimensional data analysis, just use the <a class="reference internal" href="../modules.html#dimarray.DimArray.to_pandas" title="dimarray.DimArray.to_pandas"><tt class="xref py py-meth docutils literal"><span class="pre">dimarray.DimArray.to_pandas()</span></tt></a> method</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">small_array</span><span class="o">.</span><span class="n">to_pandas</span><span class="p">()</span>
 <span class="go">C     0       1       2       3       4</span>
 <span class="go">D     0   1   0   1   0   1   0   1   0   1</span>
 <span class="go">A B</span>
@@ -255,6 +258,18 @@ the netCDF4 package. If netCDF4 is installed (much recommanded), a dataset can e
 <span class="go">  1  10  11  12  13  14  15  16  17  18  19</span>
 <span class="go">1 0  20  21  22  23  24  25  26  27  28  29</span>
 <span class="go">  1  30  31  32  33  34  35  36  37  38  39</span>
+</pre></div>
+</div>
+<p>And <a class="reference internal" href="../modules.html#dimarray.DimArray.from_pandas" title="dimarray.DimArray.from_pandas"><tt class="xref py py-meth docutils literal"><span class="pre">dimarray.DimArray.from_pandas()</span></tt></a> works to convert pandas objects to <cite>DimArray</cite> (also supports <cite>MultiIndex</cite>):</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">pandas</span> <span class="kn">as</span> <span class="nn">pd</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">s</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">([[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">],[</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">]],</span> <span class="n">index</span><span class="o">=</span><span class="p">[</span><span class="s">&#39;a&#39;</span><span class="p">,</span><span class="s">&#39;b&#39;</span><span class="p">],</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="mi">1950</span><span class="p">,</span> <span class="mi">1960</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">da</span><span class="o">.</span><span class="n">from_pandas</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+<span class="go">dimarray: 4 non-null elements (0 null)</span>
+<span class="go">dimensions: &#39;x0&#39;, &#39;x1&#39;</span>
+<span class="go">0 / x0 (2): a to b</span>
+<span class="go">1 / x1 (2): 1950 to 1960</span>
+<span class="go">array([[1, 2],</span>
+<span class="go">       [3, 4]])</span>
 </pre></div>
 </div>
 </div>
@@ -278,6 +293,7 @@ the netCDF4 package. If netCDF4 is installed (much recommanded), a dataset can e
 <li><a class="reference internal" href="#dataset">Dataset</a></li>
 <li><a class="reference internal" href="#netcdf-reading-and-writing">NetCDF reading and writing</a></li>
 <li><a class="reference internal" href="#reshaping-arrays">Reshaping arrays</a></li>
+<li><a class="reference internal" href="#interfacing-with-pandas">interfacing with pandas</a></li>
 </ul>
 </li>
 </ul>
@@ -287,7 +303,7 @@ the netCDF4 package. If netCDF4 is installed (much recommanded), a dataset can e
                         title="previous chapter">Installation</a></p>
   <h4>Next topic</h4>
   <p class="topless"><a href="../api_doc.html"
-                        title="next chapter">API documentation</a></p>
+                        title="next chapter">Documentation</a></p>
   <h3>This Page</h3>
   <ul class="this-page-menu">
     <li><a href="../_sources/_build_rst/getting_started.txt"
@@ -320,7 +336,7 @@ the netCDF4 package. If netCDF4 is installed (much recommanded), a dataset can e
           <a href="../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
         <li class="right" >
-          <a href="../api_doc.html" title="API documentation"
+          <a href="../api_doc.html" title="Documentation"
              >next</a> |</li>
         <li class="right" >
           <a href="../installation.html" title="Installation"

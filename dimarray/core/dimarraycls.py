@@ -78,6 +78,7 @@ class DimArray(object):
     --------
     Axes, Axis, GroupedAxis, Dataset
     read_nc, stack, concatenate
+    array, array_kw
 
     Examples
     --------
@@ -139,6 +140,7 @@ class DimArray(object):
 
     During an operation, arrays are automatically re-indexed to span the 
     same axis domain, with nan filling if needed
+
     >>> a = DimArray([0, 1], axes = [[0, 1]])
     >>> b = DimArray([0,1,2], axes = [[0, 1, 2]])
     >>> a+b
@@ -148,6 +150,7 @@ class DimArray(object):
     array([  0.,   2.,  nan])
 
     Dimensions are factored (broadcast) when performing an operation
+
     >>> a = DimArray([0, 1], dims=('x0',))
     >>> b = DimArray([0, 1, 2], dims=('x1',))
     >>> a+b
@@ -337,39 +340,7 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 
     @classmethod
     def from_kw(cls, *args, **kwargs):
-        """ Alternative definition of a Dimarray which allow keyword arguments 
-        in addition to other methods, but at the expense of metadata and other parameters
-
-        *args : [values, [dims,]]
-        **kwargs        : axes as keyword arguments
-
-        Notes
-        -----
-
-        The key-word functionality comes at the expense of metadata, which needs to be 
-        added after creation of the DimArray object.
-
-        If axes as passed as kwargs, also needs to be provided
-        or an error will be raised, unless values's shape is 
-        sufficient to determine ordering (when all axes have different 
-        sizes).  This is a consequence of the fact 
-        that keyword arguments are *not* ordered in python (any order
-        is lost since kwargs is a dict object)
-
-        Axes passed by keyword arguments cannot have name already taken by other 
-        parameters such as "values", "axes", "dims", "dtype" or "copy"
-
-        Examples 
-        --------
-        (da.array is an alias for DimArray.from_kw)
-        >>> import dimarray as da
-        >>> a = da.DimArray.from_kw([[1,2,3],[4,5,6]], items=list("ab"), time=np.arange(1950,1953)) # here dims can be omitted because shape = (2, 3)
-        >>> b = da.DimArray.from_kw([[1,2,3],[4,5,6]], ['items','time'], items=list("ab"), time=np.arange(1950,1953)) # here dims can be omitted because shape = (2, 3)
-        >>> c = da.DimArray([[1,2,3],[4,5,6]], {'items':list("ab"), 'time':np.arange(1950,1953)}) # here dims can be omitted because shape = (2, 3)
-        >>> np.all(a == b) and np.all(a == c)
-        True
-
-        See also DimArray's doc for more examples
+        """ See array_kw for the doc
         """
         if len(args) == 0:
             values = None
@@ -993,8 +964,18 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     @classmethod
     def from_pandas(cls, data, dims=None):
         """ Initialize a DimArray from pandas
-        data: pandas object (Series, DataFrame, Panel, Panel4D)
-        dims, optional: dimension (axis) names, otherwise look at ax.name for ax in data.axes
+
+        Parameters
+        ----------
+        data : pandas object (Series, DataFrame, Panel, Panel4D)
+        dims, optional : dimension (axis) names, otherwise look at ax.name for ax in data.axes
+
+        Returns
+        -------
+        a : DimArray instance
+
+        Examples
+        --------
 
         >>> import pandas as pd
         >>> s = pd.Series([3,5,6], index=['a','b','c'])
@@ -1006,6 +987,7 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         array([3, 5, 6])
 
         Also work with Multi-Index
+
         >>> panel = pd.Panel(np.arange(2*3*4).reshape(2,3,4))
         >>> b = panel.to_frame() # pandas' method to convert Panel to DataFrame via MultiIndex
         >>> DimArray.from_pandas(b)    # doctest: +SKIP
@@ -1336,7 +1318,48 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 DimArray.reset_axis.__func__.__doc__ = DimArray.reset_axis.__func__.__doc__.format(**_doc_reset_axis)
 
 def array_kw(*args, **kwargs):
-    """ alias for DimArray.from_kw
+    """ Define a Dimarray using keyword arguments for axes
+
+    Parameters
+    ----------
+    *args : [values, [dims,]]
+    **kwargs        : axes as keyword arguments
+
+    Returns
+    -------
+    DimArray
+
+    Notes
+    -----
+    The key-word functionality comes at the expense of metadata, which needs to be 
+    added after creation of the DimArray object.
+
+    If axes are passed as kwargs, `dims=` also needs to be provided
+    or an error will be raised, unless values's shape is 
+    sufficient to determine ordering (when all axes have different 
+    sizes).  This is a consequence of the fact 
+    that keyword arguments are *not* ordered in python (any order
+    is lost since kwargs is a dict object)
+
+    Axes passed by keyword arguments cannot have name already taken by other 
+    parameters such as "values", "axes", "dims", "dtype" or "copy"
+
+    Examples 
+    --------
+
+    >>> import dimarray as da
+    >>> a = da.array_kw([[1,2,3],[4,5,6]], items=list("ab"), time=np.arange(1950,1953)) # here dims can be omitted because shape = (2, 3)
+    >>> b = da.array_kw([[1,2,3],[4,5,6]], ['items','time'], items=list("ab"), time=np.arange(1950,1953)) # here dims can be omitted because shape = (2, 3)
+
+    This is pretty similar to this other form:
+
+    >>> c = da.DimArray([[1,2,3],[4,5,6]], {'items':list("ab"), 'time':np.arange(1950,1953)}) # here dims can be omitted because shape = (2, 3)
+    >>> np.all(a == b) and np.all(a == c)
+    True
+
+    But note this would fail if both axes had the same size (would then need to specify the `dims` parameter).
+
+    See also DimArray's doc for more examples
 
     See also:
     ---------
@@ -1344,7 +1367,7 @@ def array_kw(*args, **kwargs):
     """
     return DimArray.from_kw(*args, **kwargs)
 
-array_kw.__doc__ = DimArray.from_kw.__doc__
+#array_kw.__doc__ = DimArray.from_kw.__doc__
 
 
 def array(data, *args, **kwargs):
@@ -1352,10 +1375,12 @@ def array(data, *args, **kwargs):
 
     Parameters
     ----------
-    data: numpy array-like ==> call DimArray(data, *args, **kwargs)
-          list or dict of DimArray objects ==> call stack(data, *args, **kwargs)
+    data: numpy array-like 
+        call DimArray(data, *args, **kwargs)
+        list or dict of DimArray objects ==> call stack(data, *args, **kwargs)
 
-    *args, **kwargs: variable argument for DimArray or stack
+    *args: variable-list arguments
+    **kwargs: key-word arguments
 
     Returns
     -------
@@ -1374,6 +1399,7 @@ def array(data, *args, **kwargs):
     --------
 
     From a list:
+
     >>> import dimarray as da
     >>> a = DimArray([1,2,3])
     >>> da.array([a, 2*a]) # if keys not provided, default is 0, 1
@@ -1385,6 +1411,7 @@ def array(data, *args, **kwargs):
            [2, 4, 6]])
 
     From a dict, here also with axis alignment, and naming the axis
+
     >>> d = {'a':DimArray([10,20,30.],[0,1,2]), 'b':DimArray([1,2,3.],[1.,2.,3])}
     >>> a = da.array(d, keys=['a','b'], axis='items') # keys= just needed to enforce ordering
     >>> a
@@ -1396,6 +1423,7 @@ def array(data, *args, **kwargs):
            [ nan,   1.,   2.,   3.]])
 
     Concatenate 2-D data
+
     >>> a = DimArray([[0,1],[2,3.]])
     >>> b = a.copy()
     >>> b[0,0] = np.nan

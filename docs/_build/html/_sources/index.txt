@@ -22,17 +22,17 @@ A natural I/O format for such an array is netCDF, common in geophysics, which re
 the netCDF4 package. Other formats are under development (HDF5). Metadata are also 
 supported, and conserved via slicing and along-axis transformations.
 
+Documentation
+=============
+
 .. toctree::
    :maxdepth: 1
 
    installation.rst
    _build_rst/getting_started.rst
-
    api_doc.rst
-   comparison.rst
    examples.rst
-..   #:getting_started.rst
-..   modules.rst   
+   comparison.rst
 
 Further development
 ===================

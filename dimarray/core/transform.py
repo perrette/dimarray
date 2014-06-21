@@ -63,7 +63,7 @@ See Also
 
 _doc = apply_along_axis = """ Apply along-axis numpy method to DimArray
 
-    apply_along_axis(obj, ...)
+    apply_along_axis(self, ...)
     Where ... are the parameters below:
 
     Parameters
@@ -120,10 +120,10 @@ _doc = apply_along_axis = """ Apply along-axis numpy method to DimArray
     """
 
 #@format_doc(skipna=_doc_skipna, axis=_doc_axis.format(default_axis="None"))
-def apply_along_axis(obj, func, axis=None, skipna=False, args=(), **kwargs):
+def apply_along_axis(self, func, axis=None, skipna=False, args=(), **kwargs):
 
     # Deal with `axis` parameter, whether `int`, `str` or `tuple`
-    obj, idx, name = _deal_with_axis(obj, axis)
+    obj, idx, name = _deal_with_axis(self, axis)
 
     # Apply numpy function, dealing with NaNs
     result = _apply_along_axis(obj.values, func, axis=idx, skipna=skipna, args=(), **kwargs)
@@ -314,7 +314,7 @@ def cumprod(a, axis=-1, skipna=False):
 #
 @format_doc(default_axis="None")
 @format_doc(axis=_doc_axis, skipna=_doc_skipna)
-def argmin(obj, axis=None, skipna=False):
+def argmin(self, axis=None, skipna=False):
     """ similar to numpy's argmin, but return axis values instead of integer position
 
     Parameters
@@ -322,7 +322,7 @@ def argmin(obj, axis=None, skipna=False):
     {axis}
     {skipna}
     """
-    obj, idx, name = _deal_with_axis(obj, axis)
+    obj, idx, name = _deal_with_axis(self, axis)
     res = apply_along_axis(obj, 'argmin', axis=idx, skipna=skipna)
 
     # along axis: single axis value
@@ -337,7 +337,7 @@ def argmin(obj, axis=None, skipna=False):
 
 @format_doc(default_axis="None")
 @format_doc(axis=_doc_axis, skipna=_doc_skipna)
-def argmax(obj, axis=None, skipna=False):
+def argmax(self, axis=None, skipna=False):
     """ similar to numpy's argmax, but return axis values instead of integer position
 
     Parameters
@@ -345,7 +345,7 @@ def argmax(obj, axis=None, skipna=False):
     {axis}
     {skipna}
     """
-    obj, idx, name = _deal_with_axis(obj, axis)
+    obj, idx, name = _deal_with_axis(self, axis)
     res = apply_along_axis(obj, 'argmax', axis=idx, skipna=skipna)
 
     # along axis: single axis value
@@ -364,7 +364,7 @@ def argmax(obj, axis=None, skipna=False):
 
 @format_doc(default_axis=-1)
 @format_doc(axis=_doc_axis)
-def diff(obj, axis=-1, scheme="backward", keepaxis=False, n=1):
+def diff(self, axis=-1, scheme="backward", keepaxis=False, n=1):
     """ Analogous to numpy's diff
 
     Calculate the n-th order discrete difference along given axis.
@@ -399,6 +399,7 @@ def diff(obj, axis=-1, scheme="backward", keepaxis=False, n=1):
     --------
 
     Create some example data
+
     >>> import dimarray as da
     >>> v = da.DimArray([1,2,3,4], ('time', np.arange(1950,1954)), dtype=float)
     >>> s = v.cumsum()
@@ -409,6 +410,7 @@ def diff(obj, axis=-1, scheme="backward", keepaxis=False, n=1):
     array([  1.,   3.,   6.,  10.])
 
     `diff` reduces axis size by one, by default
+
     >>> s.diff()
     dimarray: 3 non-null elements (0 null)
     dimensions: 'time'
@@ -416,6 +418,7 @@ def diff(obj, axis=-1, scheme="backward", keepaxis=False, n=1):
     array([ 2.,  3.,  4.])
 
     The `keepaxis=` parameter fills array with `nan` where necessary to keep the axis unchanged. Default is backward differencing: `diff[i] = v[i] - v[i-1]`.
+
     >>> s.diff(keepaxis=True)
     dimarray: 3 non-null elements (1 null)
     dimensions: 'time'
@@ -423,6 +426,7 @@ def diff(obj, axis=-1, scheme="backward", keepaxis=False, n=1):
     array([ nan,   2.,   3.,   4.])
 
     But other schemes are available to control how the new axis is defined: `backward` (default), `forward` and even `centered`
+
     >>> s.diff(keepaxis=True, scheme="forward") # diff[i] = v[i+1] - v[i]
     dimarray: 3 non-null elements (1 null)
     dimensions: 'time'
@@ -430,6 +434,7 @@ def diff(obj, axis=-1, scheme="backward", keepaxis=False, n=1):
     array([  2.,   3.,   4.,  nan])
 
     The `keepaxis=True` option is invalid with the `centered` scheme, since every axis value is modified by definition:
+
     >>> s.diff(axis='time', scheme='centered')
     dimarray: 3 non-null elements (0 null)
     dimensions: 'time'
@@ -438,11 +443,11 @@ def diff(obj, axis=-1, scheme="backward", keepaxis=False, n=1):
     """
     # If `axis` is None (operations on the flattened array), just returns the numpy array
     if axis is None:
-        return np.diff(obj.values, n=n, axis=None)
+        return np.diff(self.values, n=n, axis=None)
 
     # Deal with `axis` parameter, whether `int`, `str` or `tuple`
     # possibly grouping dimensions if axis is tuple
-    obj, idx, name = _deal_with_axis(obj, axis)
+    obj, idx, name = _deal_with_axis(self, axis)
 
     # Recursive call if n > 1
     if n > 1:
@@ -544,7 +549,7 @@ def _append_nans(result, axis, first=False):
 # Define weighted mean/std/var
 #
 
-def weighted_mean(obj, axis=None, skipna=False, weights='axis', dtype=None, out=None):
+def weighted_mean(self, axis=None, skipna=False, weights='axis', dtype=None, out=None):
     """ mean over an axis or group of axes, possibly weighted 
 
     Parameters
@@ -561,18 +566,18 @@ def weighted_mean(obj, axis=None, skipna=False, weights='axis', dtype=None, out=
     """
     # Proceed to a weighted mean
     if weights is not None and weights is not False:
-        weights = obj.get_weights(weights, axis=axis, fill_nans=skipna)
+        weights = self.get_weights(weights, axis=axis, fill_nans=skipna)
 
     # if no weights, just apply numpy's mean
     if weights is None or weights is False:
-        return apply_along_axis(obj, "mean", axis=axis, skipna=skipna, out=out, dtype=dtype)
+        return apply_along_axis(self, "mean", axis=axis, skipna=skipna, out=out, dtype=dtype)
 
     # weighted mean
-    sum_values = apply_along_axis(obj*weights, "sum", axis=axis, skipna=skipna)
+    sum_values = apply_along_axis(self*weights, "sum", axis=axis, skipna=skipna)
     sum_weights = apply_along_axis(weights, "sum", axis=axis, skipna=skipna)
     return sum_values / (sum_weights + 0.)
 
-def weighted_var(obj, axis=None, skipna=False, weights="axis", ddof=0, dtype=None, out=None):
+def weighted_var(self, axis=None, skipna=False, weights="axis", ddof=0, dtype=None, out=None):
     """ standard deviation over an axis or group of axes, possibly weighted 
 
     Parameters
@@ -592,18 +597,18 @@ def weighted_var(obj, axis=None, skipna=False, weights="axis", ddof=0, dtype=Non
     """
     # Proceed to a weighted var
     if weights is not None and weights is not False:
-        weights = obj.get_weights(weights, axis=axis, fill_nans=skipna)
+        weights = self.get_weights(weights, axis=axis, fill_nans=skipna)
 
     # if no weights, just apply numpy's var
     if weights is None or weights is False:
-        return apply_along_axis(obj, "var", axis=axis, skipna=skipna, ddof=ddof, dtype=dtype, out=out)
+        return apply_along_axis(self, "var", axis=axis, skipna=skipna, ddof=ddof, dtype=dtype, out=out)
 
     # weighted mean
-    mean = obj.mean(axis=axis, skipna=skipna, weights=weights, dtype=dtype, out=out)
-    dev = (obj-mean)**2
+    mean = self.mean(axis=axis, skipna=skipna, weights=weights, dtype=dtype, out=out)
+    dev = (self-mean)**2
     return dev.mean(axis=axis, skipna=skipna, weights=weights, dtype=dtype, out=out)
 
-def weighted_std(obj, *args, **kwargs):
+def weighted_std(self, *args, **kwargs):
     """ alias for a.var()**0.5: see `var` method for doc
     """
-    return obj.var(*args, **kwargs)**0.5
+    return self.var(*args, **kwargs)**0.5

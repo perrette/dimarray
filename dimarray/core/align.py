@@ -24,6 +24,7 @@ def broadcast_arrays(*arrays):
     Examples
     --------
     Just as numpy's broadcast_arrays:
+
     >>> import dimarray as da
     >>> x = da.array([[1,2,3]])
     >>> y = da.array([[1],[2],[3]])
@@ -165,6 +166,7 @@ def align_axes(*arrays):
     array([ nan,  nan,   2.,   3.])]
 
     Also work on multi-dimensional arrays
+     
     >>> a = DimArray([0,1], axes=[[0,1]]) # on 'x0' only
     >>> b = DimArray([[0,1],[2,3.],[4.,5.]], axes=[[0,1,2],[1,2]]) # one more element along the 1st dimension, 2nd dimension ignored
     >>> align_axes(a, b)
@@ -345,6 +347,7 @@ def concatenate(arrays, axis=0, check_other_axes=True):
     --------
 
     1-D
+
     >>> from dimarray import DimArray
     >>> a = DimArray([1,2,3], axes=[['a','b','c']])
     >>> b = DimArray([4,5,6], axes=[['d','e','f']])
@@ -355,6 +358,7 @@ def concatenate(arrays, axis=0, check_other_axes=True):
     array([1, 2, 3, 4, 5, 6])
 
     2-D
+
     >>> a = DimArray([[1,2,3],[11,22,33]])
     >>> b = DimArray([[4,5,6],[44,55,66]])
     >>> concatenate((a, b), axis=0)
@@ -468,6 +472,7 @@ def aggregate(arrays, check_overlap=True):
            [-99., -99., -99., -99.]])
 
     But beware of overlapping arrays. The following will raise an error:
+
     >>> a = DimArray([[1.,2,3]],axes=[('line',[0]), ('col',['a','b','c'])])
     >>> b = DimArray([[4],[5]], axes=[('line',[0,1]), ('col',['b'])])
     >>> try:
@@ -477,6 +482,7 @@ def aggregate(arrays, check_overlap=True):
     Overlapping arrays: set check_overlap to False to suppress this error.
 
     Can set check_overlap to False to let it happen anyway (the latter array wins)
+
     >>> aggregate((a,b), check_overlap=False)  
     dimarray: 4 non-null elements (2 null)
     dimensions: 'line', 'col'
@@ -486,6 +492,7 @@ def aggregate(arrays, check_overlap=True):
            [ nan,   5.,  nan]])
 
     Note that if NaNs are present on overlapping, the valid data are kept
+
     >>> a = DimArray([[1.,2,3]],axes=[('line',[1]), ('col',['a','b','c'])])
     >>> b = DimArray([[np.nan],[5]], axes=[('line',[1,2]), ('col',['b'])])
     >>> aggregate((a,b)) # does not overwrite `2` at location (1, 'b')
