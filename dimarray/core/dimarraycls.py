@@ -26,8 +26,8 @@ __all__ = ["DimArray", "array"]
 class DimArray(object):
     """ numpy's ndarray with labelled dimensions and axes
 
-    Attributes:
-    -----------
+    Attributes
+    ----------
     values : `ndarray`
     axes : `Axes` instance
         This is a custom list of axes.
@@ -68,17 +68,17 @@ class DimArray(object):
 
     plot, pcolor, contourf, contour : plotting methods
 
-    Note: 
-    -----
+    Note 
+    ----
     see interactive help for a full listing of methods with doc
 
-    See Also:
-    ---------
+    See Also
+    --------
     Axes, Axis, GroupedAxis, Dataset
     read_nc, stack, concatenate
 
-    Examples:
-    ---------
+    Examples
+    --------
 
     >>> a = DimArray([[1.,2,3], [4,5,6]], axes=[['grl', 'ant'], [1950, 1960, 1970]], dims=['variable', 'time']) 
     >>> a
@@ -166,8 +166,8 @@ class DimArray(object):
     def __init__(self, values=None, axes=None, dims=None, labels=None, copy=False, dtype=None, _indexing=None, _indexing_broadcast=None, **kwargs):
         """ Initialize a DimArray instance
 
-	Parameters:
-	-----------
+	Parameters
+	----------
 
 	values : numpy-like array, or DimArray instance
 		  If `values` is not provided, will initialize an empty array 
@@ -204,8 +204,8 @@ class DimArray(object):
 	    NOTE: metadata passed this way cannot have name already taken by other 
 	    parameters such as "values", "axes", "dims", "dtype" or "copy".
 
-	Examples:
-	---------
+	Examples
+	--------
 
 	Basic:
 
@@ -341,8 +341,8 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         *args : [values, [dims,]]
         **kwargs        : axes as keyword arguments
 
-        Notes:
-        ------
+        Notes
+        -----
 
         The key-word functionality comes at the expense of metadata, which needs to be 
         added after creation of the DimArray object.
@@ -357,8 +357,8 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         Axes passed by keyword arguments cannot have name already taken by other 
         parameters such as "values", "axes", "dims", "dtype" or "copy"
 
-        Examples: 
-        ---------
+        Examples 
+        --------
         (da.array is an alias for DimArray.from_kw)
         >>> import dimarray as da
         >>> a = da.DimArray.from_kw([[1,2,3],[4,5,6]], items=list("ab"), time=np.arange(1950,1953)) # here dims can be omitted because shape = (2, 3)
@@ -523,10 +523,12 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     def _get_axis_info(self, axis):
         """ axis position and name
 
-        input  : 
+        Parameters
+        ----------
             axis: `int` or `str` or None
 
-        returns: 
+        Returns
+        -------
             idx        : `int`, axis position
             name: `str` or None, axis name
         """
@@ -548,12 +550,12 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     def _get_axes_info(self, axes):
         """ return axis (dimension) positions AND names from a sequence of axis (dimension) positions OR names
 
-        input:
-        ------
+        Parameters
+        ----------
             axes: sequence of str or int, representing axis (dimension) 
                 names or positions, possibly mixed up.
 
-        output:
+        Returns
         -------
             pos          : list of `int` indicating dimension's rank in the array
             names : list of dimension names
@@ -567,14 +569,18 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     def get_weights(self, weights=None, axis=None, fill_nans=True):
         """ Weights associated to each array element
         
-        optional arguments: 
+        Parameters
+        ----------
             weights: (numpy)array-like of weights, taken from axes if None or "axis" or "axes"
             axis   : int or str, if None a N-D weight is created
 
-        return:
+        Returns
+        -------
             weights: DimArray of weights, or None
 
-        NOTE: this function is used by `mean`, `std` and `var`
+        Notes
+        -----
+        this function is used by `mean`, `std` and `var`
         """
         # make sure weights is a nd-array
         if weights is not None:
@@ -700,8 +706,8 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     def apply(self, func, *args, **kwargs):
         """ Apply element-wise function to DimArray
 
-        Examples:
-        ---------
+        Examples
+        --------
         >>> DimArray([1.29, 3.11]).apply(np.round, 1)
         dimarray: 2 non-null elements (0 null)
         dimensions: 'x0'
@@ -1234,10 +1240,12 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         return pc
 
     def pcolor(self, *args, **kwargs):
-        """ Plot a quadrilateral mesh. Wraps matplotlib pcolormesh().
+        """ Plot a quadrilateral mesh. 
+        
+        Wraps matplotlib pcolormesh().
         See pcolormesh documentation in matplotlib for accepted keyword arguments.
         
-        Examples:
+        Examples
         --------
         x = DimArray(np.zeros([100,40]))
         x.pcolor()
@@ -1252,10 +1260,12 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         return self._plot2D(plt.pcolormesh, *args, **kwargs)
 
     def contourf(self, *args, **kwargs):
-        """ Plot filled 2-D contours. Wraps matplotlib contourf().
+        """ Plot filled 2-D contours. 
+        
+        Wraps matplotlib contourf().
         See contourf documentation in matplotlib for accepted keyword arguments.
         
-        Examples:
+        Examples
         --------
         x = DimArray(np.zeros([100,40]))
         x[:50,:20] = 1.
@@ -1270,10 +1280,12 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         return self._plot2D(plt.contourf, *args, **kwargs)
 
     def contour(self, *args, **kwargs):
-        """ Plot 2-D contours. Wraps matplotlib contour().
+        """ Plot 2-D contours. 
+        
+        Wraps matplotlib contour().
         See contour documentation in matplotlib for accepted keyword arguments.
         
-        Examples:
+        Examples
         --------
         x = DimArray(np.zeros([100,40]))
         x[:50,:20] = 1.
@@ -1291,15 +1303,15 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     def reset_axis(self, values=None, axis=0, inplace=False, **kwargs):
 	""" Reset axis values and attributes
 
-	parameters:
-	-----------
+	Parameters
+	----------
 	{values}
 	{axis}
 	{inplace}
 	{kwargs}
 
-	returns:
-	--------
+	Returns
+	-------
 	DimArray instance, or None if inplace is True
 	"""
 	axes = self.axes.reset_axis(values, axis, inplace=inplace, **kwargs)
@@ -1325,6 +1337,7 @@ def array_kw(*args, **kwargs):
     """ alias for DimArray.from_kw
 
     See also:
+    ---------
     DimArray.from_kw
     """
     return DimArray.from_kw(*args, **kwargs)
@@ -1335,15 +1348,15 @@ array_kw.__doc__ = DimArray.from_kw.__doc__
 def array(data, *args, **kwargs):
     """ initialize DimArray or list of dimarray (EXPERIMENTAL)
 
-    parameters:
-    -----------
+    Parameters
+    ----------
     data: numpy array-like ==> call DimArray(data, *args, **kwargs)
           list or dict of DimArray objects ==> call stack(data, *args, **kwargs)
 
     *args, **kwargs: variable argument for DimArray or stack
 
-    returns:
-    --------
+    Returns
+    -------
     DimArray
 
     if data is an array-like, this call is the same as DimArray(data, *args, **kwargs)
@@ -1351,12 +1364,12 @@ def array(data, *args, **kwargs):
 	with align=True by default and an additional parameter broadcast=True by default
 	This behaviour might change.
 
-    See also:
-    ---------
+    See also
+    --------
     DimArray, stack, Dataset.to_array
 
-    Examples:
-    ---------
+    Examples
+    --------
 
     From a list:
     >>> import dimarray as da
@@ -1463,8 +1476,8 @@ def empty(axes=None, dims=None, shape=None, dtype=float):
            [ 3.,  3.,  3.]])
     >>> b = empty(dims=('time','items'), shape=(2, 3))
 
-    See also:
-    ---------
+    See also
+    --------
     empty_like, ones, zeros, nans
     """
     axes = Axes._init(axes, dims=dims, shape=shape)
@@ -1479,8 +1492,8 @@ def empty(axes=None, dims=None, shape=None, dtype=float):
 def empty_like(a, dtype=None):
     """ alias for empty(a.axes, dtype=a.dtype)
 
-    See also:
-    ---------
+    See also
+    --------
     empty, ones_like, zeros_like, nans_like
 
     >>> a = empty([('time',[2000,2001]),('items',['a','b','c'])])
@@ -1561,7 +1574,9 @@ def zeros_like(a, dtype=None):
 
 def hasnan(a):
     """ fast way of checking wether an array has nans
-    input:
+
+    Parameters
+    ----------
      a: numpy array
 
     WARNING: if a is a not a numpy array, min will depend on the default behaviour 

@@ -44,6 +44,8 @@ def isnan(a, na=np.nan):
 def setna(a, value, na=np.nan, inplace=False):
     """ set a value as missing
 
+    Parameters
+    ----------
     value: the values to set to na
     na: the replacement value (default np.nan)
     >>> from dimarray import DimArray
@@ -88,12 +90,14 @@ def fillna(a, value, inplace=False, na=np.nan):
 def dropna(a, axis=0, minvalid=None, na=np.nan):
     """ drop nans along an axis
 
+    Parameters
+    ----------
     axis: axis position or name or list of names
     minvalid, optional: min number of valid point in each slice along axis values
         by default all the points
 
-    Examples:
-    ---------
+    Examples
+    --------
 
     1-Dimension
     >>> from dimarray import DimArray

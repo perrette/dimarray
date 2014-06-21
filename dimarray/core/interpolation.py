@@ -11,10 +11,16 @@ from axes import Axes, Axis
 def interp(obj, indices, axis=0, method="linear", repna=False):
     """ 1-D interpolation of a DimArray along one or several (sequentially) axes
 
+    Parameters
+    ----------
     indices: array-like or dict
     axis, optional : axis name or position
     method: "nearest", "linear"
     repna: if True, replace out-of-bound values by NaN instead of raising an error
+
+    Returns
+    -------
+    DimArray
     """
     kw = obj._get_keyword_indices(indices, axis)
     for k in kw:

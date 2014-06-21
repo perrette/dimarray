@@ -27,8 +27,8 @@ skipna: If True, treat NaN as missing values (either using MaskedArray or,
 
 _doc_numpy = """ Analogous to numpy's {func}
 
-Signature: 
-----------
+Signature
+---------
 
 {func}(..., axis=None, skipna=False, ...)
 
@@ -42,15 +42,15 @@ with modified behaviour of the `axis` parameter and an additional
 `...` stands for any other parameters required by the function, and depends
 on the particular function being called 
 
-Returns:
---------
+Returns
+-------
 DimArray, or numpy array or scalar (e.g. in some cases if `axis` is None)
 
 See help on numpy.{func} or numpy.ma.{func} for other parameters 
 and more information.
 
-See Also:
----------
+See Also
+--------
 `apply_along_axis`: is called by this method
 `to_MaskedArray`: is used if skipna is True
 """.format(axis=_doc_axis, skipna=_doc_skipna, func="{func}")
@@ -66,20 +66,20 @@ def apply_along_axis(obj, func, axis=None, skipna=False, args=(), **kwargs):
     apply_along_axis(obj, ...)
     Where ... are the parameters below:
 
-    Parameters:
+    Parameters
     ----------
-    - func: numpy function name (`str`)
-    - {axis}
-    - {skipna}
-    - args    : variable list of arguments before "axis"
-    - kwargs  : variable dict of keyword arguments after "axis"
+    func : numpy function name (`str`)
+    {axis}
+    {skipna}
+    args : variable list of arguments before "axis"
+    kwargs : variable dict of keyword arguments after "axis"
     
-    Returns:
-    --------
-    - DimArray, or scalar 
+    Returns
+    -------
+    DimArray, or scalar 
 
-    Examples:
-    ---------
+    Examples
+    --------
     >>> import dimarray as da
     >>> a = da.DimArray([[0,1],[2,3.]])
     >>> b = a.copy()
@@ -228,11 +228,13 @@ def _to_MaskedArray(values):
 def _deal_with_axis(obj, axis):
     """ deal with the `axis` parameter 
 
-    input:
+    Parameters
+    ----------
         obj: DimArray object
         axis: `int` or `str` or `tuple` or None
 
-    return:
+    Returns
+    -------
         newobj: reshaped obj if axis is tuple otherwise obj
         idx   : axis index
         name  : axis name
@@ -312,8 +314,8 @@ def cumprod(a, axis=-1, skipna=False):
 def argmin(obj, axis=None, skipna=False):
     """ similar to numpy's argmin, but return axis values instead of integer position
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     {axis}
     {skipna}
     """
@@ -335,8 +337,8 @@ def argmin(obj, axis=None, skipna=False):
 def argmax(obj, axis=None, skipna=False):
     """ similar to numpy's argmax, but return axis values instead of integer position
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     {axis}
     {skipna}
     """
@@ -390,8 +392,8 @@ def diff(obj, axis=-1, scheme="backward", keepaxis=False, n=1):
         The `n` order differences. The shape of the output is the same as `a`
         except along `axis` where the dimension is smaller by `n`.
 
-    Examples:
-    ---------
+    Examples
+    --------
 
     Create some example data
     >>> import dimarray as da
@@ -542,17 +544,17 @@ def _append_nans(result, axis, first=False):
 def weighted_mean(obj, axis=None, skipna=False, weights='axis', dtype=None, out=None):
     """ mean over an axis or group of axes, possibly weighted 
 
-    parameters:
+    Parameters
     ----------
-        - axis    : int, str, tuple: axis or group of axes to apply the transform on
-        - skipna  : remove nans prior to transformation?
-        - weights : if weights, perform a weighted mean (see get_weights method)
+    axis    : int, str, tuple: axis or group of axes to apply the transform on
+    skipna  : remove nans prior to transformation?
+    weights : if weights, perform a weighted mean (see get_weights method)
                     the default behaviour ("axis") is too look in individual axes 
                     whether they have a not-None weight attribute
     
-    returns:
-    --------
-        - DimArray or scalar, consistently with ndarray behaviour
+    Returns
+    -------
+    DimArray or scalar, consistently with ndarray behaviour
     """
     # Proceed to a weighted mean
     if weights is not None and weights is not False:
@@ -570,20 +572,20 @@ def weighted_mean(obj, axis=None, skipna=False, weights='axis', dtype=None, out=
 def weighted_var(obj, axis=None, skipna=False, weights="axis", ddof=0, dtype=None, out=None):
     """ standard deviation over an axis or group of axes, possibly weighted 
 
-    parameters:
+    Parameters
     ----------
-        - axis    : int, str, tuple: axis or group of axes to apply the transform on
-        - skipna  : remove nans prior to transformation?
-        - weights : if weights, perform a weighted var (see get_weights method)
-                    the default behaviour ("axis") is too look in individual axes 
-                    whether they have a not-None weight attribute
-        - ddof    : "Delta Degrees of Freedom": the divisor used in the calculation is
-                    ``N - ddof``, where ``N`` represents the number of elements. By default `ddof` is zero.
-                    Note ddof is ignored when weights are used
+    axis    : int, str, tuple: axis or group of axes to apply the transform on
+    skipna  : remove nans prior to transformation?
+    weights : if weights, perform a weighted var (see get_weights method)
+              the default behaviour ("axis") is too look in individual axes 
+              whether they have a not-None weight attribute
+    ddof    : "Delta Degrees of Freedom": the divisor used in the calculation is
+              ``N - ddof``, where ``N`` represents the number of elements. By default `ddof` is zero.
+              Note ddof is ignored when weights are used
     
-    returns:
-    --------
-        - DimArray or scalar, consistently with ndarray behaviour
+    Returns
+    -------
+    DimArray or scalar, consistently with ndarray behaviour
     """
     # Proceed to a weighted var
     if weights is not None and weights is not False:

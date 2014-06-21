@@ -157,7 +157,8 @@ def size(self):
 def take(obj, indices, axis=0, indexing="values", tol=TOLERANCE, keepdims=False, broadcast_arrays=True, mode='raise'):
     """ Retrieve values from a DimArray
 
-    input:
+    Parameters
+    ----------
 
         - self or obj: DimArray (ignore this parameter if accessed as bound method)
         - indices  : int or list or slice (single-dimensional indices)
@@ -187,11 +188,12 @@ def take(obj, indices, axis=0, indexing="values", tol=TOLERANCE, keepdims=False,
         - mode: "raise", "clip", "wrap"
             analogous to numpy.ndarray.take's mode parameter, only valid (for now) if indexing is 'position'
 
-    output:
+    Returns
+    -------
         - DimArray object or python built-in type, consistently with numpy slicing
 
-    Examples:
-    ---------
+    Examples
+    --------
 
     >>> from dimarray import DimArray
     >>> v = DimArray([[1,2,3],[4,5,6]], axes=[["a","b"], [10.,20.,30.]], dims=['d0','d1'], dtype=float) 
@@ -370,8 +372,8 @@ def take(obj, indices, axis=0, indexing="values", tol=TOLERANCE, keepdims=False,
 def _take_broadcast(a, indices):
     """ broadcast array-indices & integers, numpy's classical
 
-    Examples:
-    ---------
+    Examples
+    --------
     >>> import dimarray as da
     >>> a = da.zeros(shape=(3,4,5,6))
     >>> a[:,[0, 1],:,2].shape
@@ -508,8 +510,8 @@ def _put(obj, val_, indices_numpy_, inplace=False, convert=False):
 def put(obj, val, indices=None, axis=0, indexing="values", tol=TOLERANCE, convert=False, inplace=False, broadcast_arrays=True):
     """ Put new values into DimArray (inplace)
 
-    parameters:
-    -----------
+    Parameters
+    ----------
     obj: DimArray (do not provide if method bound to class instance)
     val: value to put in: scalar or array-like with appropriate shape or DimArray
     indices, optional: see `take` for indexing rules. indices may be omitted if 
@@ -520,12 +522,12 @@ def put(obj, val, indices=None, axis=0, indexing="values", tol=TOLERANCE, conver
     inplace: True
     broadcast_arrays: See documentation on `take`.
 
-    returns:
-    --------
+    Returns
+    -------
     None: (inplace modification)
 
-    Examples:
-    ---------
+    Examples
+    --------
     >>> from dimarray import DimArray
     >>> a = DimArray(np.zeros((2,2)), [('d0',['a','b']), ('d1',[10.,20.])])
 
@@ -676,8 +678,6 @@ def take_na(obj, indices, axis=0, indexing="values", tol=TOLERANCE, keepdims=Fal
 
     additional parameters:
     na : replacement value, by default np.nan
-
-    Examples:
     """
     #assert not broadcast_arrays, "check potential problem with array broadcasting"
     assert indexing in ("position", "values"), "invalid mode: "+repr(indexing)
@@ -703,9 +703,12 @@ def take_na(obj, indices, axis=0, indexing="values", tol=TOLERANCE, keepdims=Fal
 def _filter_bad_indices(multi_index, dims):
     """ replace NaN indices by zeros
 
-    input:
+    Parameters
+    ----------
         multi_index: tuple of `int` or `slice` objects
-    output:
+
+    Returns
+    -------
         indices_nanfree: same as multi_index with NaNs replaced with 0
         indices_mask: multi-index of NaNs for the sliced array
         bad_ix: `dict` of `bool` 1-D arrays to indicate the locations of bad indices
@@ -817,7 +820,8 @@ def _filter_bad_indices(multi_index, dims):
 def reindex_axis(self, values, axis=0, method='exact', repna=True, fill_value=np.nan, tol=TOLERANCE, use_pandas=None):
     """ reindex an array along an axis
 
-    Input:
+    Parameters
+    ----------
         - values : array-like or Axis: new axis values
         - axis   : axis number or name
         - method : "exact" (default), "nearest", "interp" 
@@ -830,11 +834,12 @@ def reindex_axis(self, values, axis=0, method='exact', repna=True, fill_value=np
             or, of course, if pandas is not installed,
             this option is set to False by default.
 
-    Output:
+    Returns
+    -------
         - DimArray
 
-    Examples:
-    ---------
+    Examples
+    --------
 
     Basic reindexing: fill missing values with NaN
     >>> import dimarray as da
@@ -934,9 +939,11 @@ def _reindex_axes(self, axes, **kwargs):
 def reindex_like(self, other, method='exact', **kwargs):
     """ reindex like another axis
 
-    note: only reindex axes which are present in other
+    Notes
+    -----
+    only reindex axes which are present in other
 
-    Example:
+    Examples
     --------
     >>> import dimarray as da
     >>> b = da.DimArray([3,4],('x0',[1,3]))
@@ -959,8 +966,8 @@ def reindex_like(self, other, method='exact', **kwargs):
 def sort_axis(a, axis=0, key=None):
     """ sort an axis 
 
-    parameters:
-    -----------
+    Parameters
+    ----------
     a : DimArray (this argument is pre-assigned when using as bound method)
     axis, optional: axis by position (int) or name (str) (default: 0)
     key, optional: function that is called on each axis label and 
@@ -969,12 +976,12 @@ def sort_axis(a, axis=0, key=None):
         such as a dictionary.
         If None (the default), axis label is used for sorting.
 
-    returns:
+    Returns
     --------
     sorted: new DimArray with sorted axis
 
-    Examples:
-    ---------
+    Examples
+    --------
     Basic
     >>> from dimarray import DimArray
     >>> a = DimArray([10,20,30], labels=[2, 0, 1])

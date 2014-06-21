@@ -98,8 +98,8 @@ class Dataset(odict):
     def __setitem__(self, key, val):
         """ Make sure the object is a DimArray with appropriate axes
 
-        Tests:
-        -----
+        Examples
+        --------
 #        >>> axes = Axes.from_tuples(('time',[1, 2, 3]))
         >>> ds = Dataset()
         >>> ds
@@ -209,19 +209,15 @@ class Dataset(odict):
     def take(self, indices, axis=0, raise_error=True, **kwargs):
         """ analogous to DimArray's take, but for each DimArray of the Dataset
 
-        parameters:
-        -----------
+        Parameters
+        ----------
         indices: scalar, or array-like, or slice
         axis: axis name (str)
         raise_error: raise an error if a variable does not have the desired dimension
         **kwargs: arguments passed to the axis locator, similar to `take`, such as `indexing` or `keepdims`
 
-        parameters:
-        -----------
-
-
-        Examples:
-        ---------
+        Examples
+        --------
         >>> a = DimArray([1,2,3], axes=('time', [1950, 1951, 1952]))
         >>> b = DimArray([11,22,33], axes=('time', [1951, 1952, 1953]))
         >>> ds = Dataset(a=a, b=b)
@@ -293,8 +289,8 @@ class Dataset(odict):
     def mean(self, axis=0, **kwargs):
         """ Apply transformantion on every variable of the Dataset
 
-        Examples:
-        ---------
+        Examples
+        --------
         >>> a = DimArray([1,2,3], axes=('time', [1950, 1951, 1952]))
         >>> b = DimArray([[11,22,33],[44,55,66]], axes=[('items',['a','b']), ('time', [1950, 1951, 1952])])
         >>> ds = Dataset(a=a, b=b)
@@ -341,19 +337,19 @@ class Dataset(odict):
     def reset_axis(self, values=None, axis=0, inplace=False, **kwargs):
         """ Reset axis values and attributes in all dimarrays present in the dataset
 
-        parameters:
-        -----------
+        Parameters
+        ----------
         {values}
         {axis}
         {inplace}
         {kwargs}
 
-        returns:
-        --------
+        Returns
+        -------
         Dataset instance, or None if inplace is True
 
-        Examples:
-        ---------
+        Examples
+        --------
         >>> ds = Dataset()
         >>> ds['a'] = da.zeros(shape=(3,))  # some dimarray with dimension 'x0'
         >>> ds['b'] = da.zeros(shape=(3,4)) # dimensions 'x0', 'x1'
@@ -449,23 +445,23 @@ def _get_list_arrays(data, keys):
 def stack_ds(datasets, axis, keys=None, align=False):
     """ stack dataset along a new dimension
 
-    parameters:
+    Parameters
     ----------
     datasets: sequence or dict of datasets
     axis: str, new dimension along which to stack the dataset 
     keys, optional: stack axis values, useful if dataset is a sequence, or a non-ordered dictionary
     align, optional: if True, align axes (via reindexing) prior to stacking
 
-    returns:
-    --------
+    Returns
+    -------
     stacked dataset
 
-    See Also:
-    ---------
+    See Also
+    --------
     concatenate_ds
 
-    Examples:
-    ---------
+    Examples
+    --------
     >>> a = DimArray([1,2,3], dims=('dima',))
     >>> b = DimArray([11,22], dims=('dimb',))
     >>> ds = Dataset({'a':a,'b':b}) # dataset of 2 variables from an experiment
@@ -513,23 +509,23 @@ def stack_ds(datasets, axis, keys=None, align=False):
 def concatenate_ds(datasets, axis=0):
     """ concatenate two datasets along an existing dimension
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     datasets: sequence of datasets 
     axis: axis along which to concatenate
 
-    Returns:
-    --------
+    Returns
+    -------
     joint Dataset along axis
 
     NOTE: will raise an error if variables are there which do not contain the required dimension
 
-    See Also:
-    ---------
+    See Also
+    --------
     stack_ds
 
-    Examples:
-    ---------
+    Examples
+    --------
     >>> a = da.zeros(axes=[list('abc')], dims=('x0',))  # 1-D DimArray
     >>> b = da.zeros(axes=[list('abc'), [1,2]], dims=('x0','x1')) # 2-D DimArray
     >>> ds = Dataset({'a':a,'b':b}) # dataset of 2 variables from an experiment

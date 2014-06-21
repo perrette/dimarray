@@ -74,16 +74,16 @@ class Descriptor(object):
     """
     def __init__(self, name, default=None):
         """ 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         name: name where attribute value is stored
             Warning: must be different from API class attribute
             e.g. prefixed by '_'
 
         default: default value of the attribute name
 
-        Examples:
-        ---------
+        Examples
+        --------
         class A:
             tol = Descriptor('_tol') 
         """
@@ -109,8 +109,8 @@ class Descriptor(object):
 class Axis(object):
     """ Axis
 
-    Attributes:
-    -----------
+    Attributes
+    ----------
     values : numpy array (or list) 
     name : name (attribute)
 
@@ -179,8 +179,8 @@ class Axis(object):
     def __setitem__(self, item, value):
 	""" do some type checking/conversion before setting new axis values
 
-	Examples:
-        ---------
+	Examples
+        --------
 	>>> a = Axis([1, 2, 3], name='dummy')
 	>>> a.values
 	array([1, 2, 3])
@@ -214,13 +214,13 @@ class Axis(object):
     def reset(self, values=None, inplace=False, **kwargs):
 	""" Reset axis values and attributes
 
-	parameters:
-	-----------
+	Parameters
+	----------
 	{values}
 	{inplace}
 	{kwargs}
 
-	returns:
+	Returns
 	-------
 	Axis instance, or None if inplace is True
 	"""
@@ -267,12 +267,12 @@ class Axis(object):
     def union(self, other):
         """ join two Axis objects
 	
-        Note:
+        Notes
         -----
         This removes singletons by default
 
-        Examples:
-        ---------
+        Examples
+        --------
         >>> ax1 = Axis([0, 1, 2, 3, 4], name='myaxis')
         >>> ax2 = Axis([-3, 2, 3, 6], name='myaxis')
         >>> ax3 = ax1.union(ax2)
@@ -773,15 +773,15 @@ class Axes(list):
     def reset_axis(self, values=None, axis=0, inplace=False, **kwargs):
 	""" Reset axis values and attributes
 
-	Parameters:
-	-----------
+	Parameters
+	----------
 	{values}
 	{axis}
 	{inplace}
 	{kwargs}
 
-	Returns:
-	--------
+	Returns
+	-------
 	Axes instance, or None if inplace is True
 	"""
 	axis = self.get_idx(axis)
@@ -994,11 +994,13 @@ class LocatorAxis(object):
     def __call__(self, ix, **kwargs):
         """ general wrapper method
         
-        input:
+        Parameters
+        ----------
             ix: int, list, slice, tuple (on integer index or axis values)
             **kwargs: see help on LocatorAxis
 
-        return:
+        Returns
+        -------
             `int`, list of `int` or slice of `int`
         
         """
@@ -1053,9 +1055,13 @@ class LocatorAxis(object):
     def slice(self, slice_, include_last=True):
         """ Return a slice_ object
 
+        Parameters
+        ----------
         slice_            : slice or tuple 
         include_last: include last element 
 
+        Notes
+        -----
         Note bound checking is automatically done via "locate" mode
         This is in contrast with slicing in numpy arrays.
         """
@@ -1096,8 +1102,8 @@ class ObjLocator(LocatorAxis):
 class NumLocator(LocatorAxis):
     """ Locator for axis of integers or floats to be treated as numbers (with tolerance parameters)
 
-    Examples:
-    ---------
+    Examples
+    --------
     >>> values = np.arange(1950.,2000.)
     >>> values  # doctest: +ELLIPSIS
     array([ 1950., ... 1999.])

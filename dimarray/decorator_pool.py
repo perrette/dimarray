@@ -31,15 +31,15 @@ def many(func):
 def apply_multiindex(obj, function, ix, args=(), **kwargs):
     """ decorator to make a function work with multi-indices, by chained call
 
-    parameters:
-    -----------
+    Parameters
+    ----------
     obj: DimArray object
     function: function to be chained-called
     ix: indices, tuple or dict
     *args: variable arguments to function
     **kwargs: keyword arguments to function
 
-    result:
+    Returns
     -------
     DimArray object or scalar
     """

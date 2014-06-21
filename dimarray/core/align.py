@@ -13,10 +13,16 @@ def broadcast_arrays(*arrays):
     but with looser requirements on input shape
     and returns copy instead of views
 
+    Parameters
+    ----------
     arrays: variable list of DimArrays
 
-    Examples:
-    ---------
+    Returns
+    -------
+    list of DimArrays
+
+    Examples
+    --------
     Just as numpy's broadcast_arrays:
     >>> import dimarray as da
     >>> x = da.array([[1,2,3]])
@@ -106,8 +112,8 @@ def align_dims(*arrays):
     
     Method: inserting singleton axes at the right place and transpose where needed.
 
-    Examples:
-    ---------
+    Examples
+    --------
     >>> import dimarray as da
     >>> import numpy as np
     >>> x = da.DimArray(np.arange(2), dims=('x0',))
@@ -144,8 +150,8 @@ def align_dims(*arrays):
 def align_axes(*arrays):
     """ align axes of a list of DimArray arrays by reindexing
 
-    Examples:
-    ---------
+    Examples
+    --------
     >>> from dimarray import DimArray
     >>> a = DimArray([0,1,2],axes=[[0,1,2]])
     >>> b = DimArray([2,3],axes=[[2,3]])
@@ -253,23 +259,23 @@ def _check_stack_axis(axis, dims, default='unnamed'):
 def stack(arrays, axis=None, keys=None, align=False):
     """ stack arrays along a new dimension (raise error if already existing)
 
-    parameters:
+    Parameters
     ----------
     arrays: sequence or dict of arrays
     axis, optional: str, new dimension along which to stack the array
     keys, optional: stack axis values, useful if array is a sequence, or a non-ordered dictionary
     align, optional: if True, align axes prior to stacking (Default to False)
 
-    returns:
-    --------
+    Returns
+    -------
     DimArray: joint array
 
-    Sea Also:
-    ---------
+    See Also
+    --------
     concatenate: join arrays along an existing dimension
 
-    Examples:
-    ---------
+    Examples
+    --------
     >>> from dimarray import DimArray
     >>> a = DimArray([1,2,3])
     >>> b = DimArray([11,22,33])
@@ -322,21 +328,21 @@ def stack(arrays, axis=None, keys=None, align=False):
 def concatenate(arrays, axis=0, check_other_axes=True):
     """ concatenate several DimArrays
 
-    Parameters:
+    Parameters
     -----------
     arrays: list of DimArrays
     axis  : axis along which to concatenate
 
-    Returns:
-    --------
+    Returns
+    -------
     concatenated DimArray 
 
-    Sea Also:
-    ---------
+    See Also
+    --------
     stack: join arrays along a new dimension
 
-    Examples:
-    ---------
+    Examples
+    --------
 
     1-D
     >>> from dimarray import DimArray
@@ -424,7 +430,8 @@ def concatenate_axes(axes):
 def aggregate(arrays, check_overlap=True):
     """ like a multi-dimensional concatenate
 
-    input:
+    Parameters
+    ----------
         arrays: sequence of DimArrays
 
         check_overlap, optional: if True, check that arrays do not overlap (to avoid data loss)
@@ -437,13 +444,14 @@ def aggregate(arrays, check_overlap=True):
             arrays for a well-tested problems, if the valid-nan selection is not 
             required.
 
-    Note:
+    Notes
+    -----
         Probably a bad idea to have duplicate axis values (not tested)
 
     TODO: add support for missing values other than np.nan
 
-    Examples:
-    ---------
+    Examples
+    --------
     >>> from dimarray import DimArray
     >>> a = DimArray([[1.,2,3]],axes=[('line',[0]), ('col',['a','b','c'])])
     >>> b = DimArray([[4],[5]], axes=[('line',[1,2]), ('col',['d'])])

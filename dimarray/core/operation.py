@@ -9,13 +9,15 @@ from tools import is_DimArray
 def operation(func, o1, o2, reindex=True, broadcast=True, constructor=None):
     """ operation on LaxArray objects
 
-    input:
+    Parameters
+    ----------
         func        : operator
         o1            : LHS operand: DimArray
         o2            : RHS operand: at least: be convertible by np.array())
         align, optional: if True, use pandas to align the axes
 
-    output:
+    Returns
+    -------
         values: array values
         dims : dimension names
     """

@@ -23,10 +23,12 @@ def pandas_obj(values, *axes):
 def ndindex(indices, pos):
     """ return the N-D index from an along-axis index
 
-    inputs:
+    Parameters
+    ----------
         indices: `int` or `list` or `slice`
         pos : axis position
-    returns:
+    Returns
+    -------
         tuple
     """
     return (slice(None),)*pos + np.index_exp[indices]

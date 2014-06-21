@@ -72,12 +72,14 @@ def apply_recursive(obj, dims, fun, *args, **kwargs):
 def interp1d_numpy(obj, values=None, axis=0, left=np.nan, right=np.nan):
     """ interpolate along one axis: wrapper around numpy's interp
 
-    input:
+    Parameters
+    ----------
         obj : DimArray
         newaxis_values: 1d array, or Axis object
         newaxis_name, optional: `str` (axis name), required if newaxis is an array
 
-    output:
+    Returns
+    -------
         interpolated data (n-d)
     """
     newaxis = Axis(values, axis)
@@ -106,12 +108,14 @@ def interp1d(obj, values=None, axis=0, order=1, **kwargs):
 def interp2d(obj, newaxes, dims=None, order=1):
     """ bilinear interpolation: wrapper around mpl_toolkits.basemap.interp
 
-    input:
+    Parameters
+    ----------
         obj : DimArray
         newaxes: list of Axis object, or list of 1d arrays
         dims, optional: list of str (axis names), required if newaxes is a list of arrays
 
-    output:
+    Returns
+    -------
         interpolated data (n-d)
     """
 

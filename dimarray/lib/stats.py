@@ -6,8 +6,8 @@ import dimarray as da
 def percentile(a, pct, axis=0, newaxis=None, out=None, overwrite_input=False):
     """ calculate percentile along an axis
 
-    parameters:
-    -----------
+    Parameters
+    ----------
     pct: float, percentile or sequence of percentiles (0< <100)
     axis, optional, default 0: axis along which to compute percentiles
     newaxis, optional: name of the new percentile axis, if more than one pct. 
@@ -16,12 +16,12 @@ def percentile(a, pct, axis=0, newaxis=None, out=None, overwrite_input=False):
 
     out, overwrite_input: passed to numpy's percentile method (see documentation)
 
-    outputs:
-    --------
+    Returns
+    -------
     pctiles: DimArray or scalar whose required axis has been reduced or replaced by percentiles
 
-    Examples:
-    ---------
+    Examples
+    --------
     >>> from dimarray import DimArray
     >>> np.random.seed(0) # for reproductibility of results
     >>> a = DimArray(np.random.randn(1000), dims=['sample'])
@@ -59,19 +59,21 @@ def percentile(a, pct, axis=0, newaxis=None, out=None, overwrite_input=False):
 
 def quantile(a, q, axis=0, newaxis=None, out=None, overwrite_input=False):
     """ Same as percentile, but provide quantiles instead 
-    
-    parameters: same as percentile, except than pct is replaced by q:
-    -----------
+
+    Parameters 
+    ----------
     q: quantile(s): must be between 0 and 1 instead of 0 and 100
+    *args, **kwargs: same as percentile, except than pct is replaced by q
+    
 
     See help on percentile for full documentation.
 
-    See Also:
-    ---------
+    See Also
+    --------
     percentile
 
-    Examples:
-    ---------
+    Examples
+    --------
     >>> from dimarray import DimArray
     >>> np.random.seed(0) # for reproductibility of results
     >>> a = DimArray(np.random.randn(1000), dims=['sample'])
