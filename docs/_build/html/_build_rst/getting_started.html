@@ -99,7 +99,7 @@ via <cite>axes</cite> and <cite>dims</cite> parameters.</p>
 <span class="go">(&#39;variable&#39;, &#39;time&#39;)</span>
 </pre></div>
 </div>
-<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span> <span class="n">a</span><span class="o">.</span><span class="n">labels</span>   <span class="c"># grab axis values</span>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">a</span><span class="o">.</span><span class="n">labels</span>   <span class="c"># grab axis values</span>
 <span class="go">(array([&#39;a&#39;, &#39;b&#39;], dtype=object), array([1950, 1960, 1970]))</span>
 </pre></div>
 </div>
@@ -196,16 +196,14 @@ so that rules can be defined for nearly every sequence of operands.</p>
 <span class="go">2 / time (3): 1950 to 1952</span>
 <span class="go">array([[[  2. ,   2. ,   2. ],</span>
 <span class="go">        [  0.5,   0.5,   0.5]],</span>
+
+<span class="go">       [[  4. ,   nan,   5. ],</span>
+<span class="go">        [  4. ,   nan,   5. ]],</span>
+
+<span class="go">       [[  1. ,   2. ,   3. ],</span>
+<span class="go">        [ 40. ,  50. ,  60. ]]])</span>
 </pre></div>
 </div>
-<blockquote>
-<div><dl class="docutils">
-<dt>[[  4. ,   nan,   5. ],</dt>
-<dd>[  4. ,   nan,   5. ]],</dd>
-<dt>[[  1. ,   2. ,   3. ],</dt>
-<dd>[ 40. ,  50. ,  60. ]]])</dd>
-</dl>
-</div></blockquote>
 <p>Note a shorter way of obtaining the above, if the only desired result is to align axes, would have been to use the <strong>`stack`</strong> method (see interactive help).</p>
 </div>
 <div class="section" id="netcdf-reading-and-writing">

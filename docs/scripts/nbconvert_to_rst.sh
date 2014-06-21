@@ -19,7 +19,7 @@ echo "             " >> $indexfile
 
 for file in $NOTEBOOKDIR/*ipynb ; do
     # skip files starting with _
-    firstletter=`echo $file | cut -c1`
+    firstletter=`basename $file | cut -c1`
     if [ $firstletter == '_' ] ; then
 	continue
     fi

@@ -74,14 +74,14 @@ Numpy-like attributes `dtype`, `shape`, `size` or `ndim` are defined, and are no
 >>> a.dims      # grab axis names (the dimensions)
 ('variable', 'time')
 
->>>  a.labels   # grab axis values
+>>> a.labels   # grab axis values
 (array(['a', 'b'], dtype=object), array([1950, 1960, 1970]))
 
 while dimensions are located in an `axes` attribute, an `Axes` instance
 
 >>> a.axes
 dimensions: 'variable', 'time'
-0 / variable (2): grl to ant
+0 / variable (2): a to b
 1 / time (3): 1950 to 1970
 
 Individual axes can be accessed as well, which are `Axis` instances.

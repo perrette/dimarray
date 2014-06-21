@@ -52,6 +52,11 @@ def main():
             code_lines = ['>>> ' + code for code in cell['input']]
             output_lines = []
             for output in cell['outputs']:
+                
+                # replace with blankline for doctest
+                for i, line in enumerate(output['text']):
+                    if line == '\n':
+                        output['text'][i] = "<BLANKLINE>\n" 
                 output_lines.extend(output['text'])
 
             text.extend(code_lines) # add code lines

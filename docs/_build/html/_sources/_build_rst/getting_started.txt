@@ -60,7 +60,7 @@ Numpy-like attributes `dtype`, `shape`, `size` or `ndim` are defined, and are no
 >>> a.dims      # grab axis names (the dimensions)
 ('variable', 'time')
 
->>>  a.labels   # grab axis values
+>>> a.labels   # grab axis values
 (array(['a', 'b'], dtype=object), array([1950, 1960, 1970]))
 
 ..  _indexing_:
@@ -167,10 +167,10 @@ dimensions: 'variables', 'items', 'time'
 2 / time (3): 1950 to 1952
 array([[[  2. ,   2. ,   2. ],
         [  0.5,   0.5,   0.5]],
-
+<BLANKLINE>
        [[  4. ,   nan,   5. ],
         [  4. ,   nan,   5. ]],
-
+<BLANKLINE>
        [[  1. ,   2. ,   3. ],
         [ 40. ,  50. ,  60. ]]])
 
