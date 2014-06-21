@@ -26,10 +26,10 @@ supported, and conserved via slicing and along-axis transformations.
    :maxdepth: 3
 
    installation.rst
-   getting_started.rst
-   by_topic/index.rst
+   _build_rst/index.rst
    comparison.rst
    examples.rst
+..   #:getting_started.rst
 ..   modules.rst   
 
 Further development

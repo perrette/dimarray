@@ -1,23 +1,48 @@
-""" A custom script to convert a notebook to docstring examples
+""" Convert a notebook to docstring examples (rst-like)
+
+Usage:
+    nbconvert_docstring.py <notebook.ipynb> [ <text.rst> ]
+
+Options:
+    -h --help   : display this help
 """
 #!/usr/bin/python
 import sys
 #import pypandoc
-from os.path import basename
+from os.path import basename, splitext
 from process_notebook import filter_cells, read_nb
+import docopt
+
+def make_label(title):
+    """ label for future reference
+    """
+    return '..  _'+title.replace(' ','_').replace(':','_')+':'
 
 def main():
-    if len(sys.argv) == 1:
-        raise Exception('must provide notebook name as argument')
-    nm = sys.argv[1]
-    if len(sys.argv) >= 3:
-        nm2 = sys.argv[2]
-    else:
-        nm2 = basename(nm.replace('.ipynb','.rst'))
+
+    args = docopt.docopt(__doc__)
+
+    nm = args['<notebook.ipynb>']
+    nm2 = args['<text.rst>']
+
+    filename = splitext(basename(nm))[0] # all but the extension
+
+    if nm2 is None:
+         nm2 = basename(nm.replace('.ipynb','.rst'))
 
     nb = read_nb(nm)
 
-    text = []
+    label =  '..  _'+filename+':'  # page label
+
+    header = """
+.. This file was generated automatically from the ipython notebook:
+.. {notebook}
+.. To modify this file, edit the source notebook and execute "make rst" 
+    """.format(notebook=nm).strip()
+
+    text = [header + '\n\n'] 
+    text += [label + '\n'] # add a label to allow hyperlinks
+
     for cell in nb['worksheets'][0]['cells']:
         text.append('\n\n') # new line
 
@@ -51,6 +76,14 @@ def main():
             symbols = ['=', '-', '~', '_', '+', '#'] # title symbols?
             offset = 1 # start at heading level 1
             sym = symbols[lev-offset]
+
+            #add a label to the title, with file name and title separated by '_', 
+            # and whitespace also replaced by '_'
+            # do not put a label on level 1 (top) title since this would interfere with page label
+            if lev != 1:
+                label = make_label(title)+'\n'
+                text.append(label)
+                text.append('\n')
 
             text.append(title)
             text.append('\n')
