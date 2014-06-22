@@ -1,6 +1,9 @@
 dimarray/version.py
+dimarray/datasets/unzipped
+
 .ipynb_checkpoints
 docs/_build/doctrees
+
 .pypirc
 
 *.py[cod]

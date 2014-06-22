@@ -17,10 +17,12 @@ Modules and classes
    :members: to_array, write_nc, reset_axis
    :undoc-members:
 
+..
 .. autoclass:: dimarray.Axis
 ..    :members:
 ..    :undoc-members:
 
+..
 .. autoclass:: dimarray.Axes
 ..    :members:
 ..    :undoc-members:

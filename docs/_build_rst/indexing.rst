@@ -2,7 +2,7 @@
 .. notebooks/indexing.ipynb
 .. To modify this file, edit the source notebook and execute "make rst"
 
-..  _indexing:
+..  _page_indexing:
 
 
 Indexing

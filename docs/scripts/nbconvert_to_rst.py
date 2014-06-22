@@ -32,7 +32,7 @@ def main():
 
     nb = read_nb(nm)
 
-    label =  '..  _'+filename+':'  # page label
+    label =  '..  _page_'+filename+':'  # page label
 
     header = """
 .. This file was generated automatically from the ipython notebook:

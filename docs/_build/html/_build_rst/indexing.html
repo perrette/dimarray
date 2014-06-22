@@ -8,7 +8,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>Indexing &mdash; dimarray 0.1.7.dev documentation</title>
+    <title>Indexing &mdash; dimarray 0.1.8.dev documentation</title>
     
     <link rel="stylesheet" href="../_static/default.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
@@ -16,7 +16,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../',
-        VERSION:     '0.1.7.dev',
+        VERSION:     '0.1.8.dev',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -26,10 +26,7 @@
     <script type="text/javascript" src="../_static/underscore.js"></script>
     <script type="text/javascript" src="../_static/doctools.js"></script>
     <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <link rel="top" title="dimarray 0.1.7.dev documentation" href="../index.html" />
-    <link rel="up" title="Documentation" href="../api_doc.html" />
-    <link rel="next" title="Alternative definitions of a DimArray" href="dimarray.html" />
-    <link rel="prev" title="DimArray: data structure and attributes" href="data_structure.html" /> 
+    <link rel="top" title="dimarray 0.1.8.dev documentation" href="../index.html" /> 
   </head>
   <body>
     <div class="related">
@@ -41,14 +38,7 @@
         <li class="right" >
           <a href="../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="right" >
-          <a href="dimarray.html" title="Alternative definitions of a DimArray"
-             accesskey="N">next</a> |</li>
-        <li class="right" >
-          <a href="data_structure.html" title="DimArray: data structure and attributes"
-             accesskey="P">previous</a> |</li>
-        <li><a href="../index.html">dimarray 0.1.7.dev documentation</a> &raquo;</li>
-          <li><a href="../api_doc.html" accesskey="U">Documentation</a> &raquo;</li> 
+        <li><a href="../index.html">dimarray 0.1.8.dev documentation</a> &raquo;</li> 
       </ul>
     </div>  
 
@@ -58,7 +48,7 @@
           <div class="body">
             
   <div class="section" id="indexing">
-<span id="id1"></span><h1>Indexing<a class="headerlink" href="#indexing" title="Permalink to this headline">¶</a></h1>
+<span id="page-indexing"></span><h1>Indexing<a class="headerlink" href="#indexing" title="Permalink to this headline">¶</a></h1>
 <p>Let&#8217;s first define an array to test indexing</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">dimarray</span> <span class="kn">import</span> <span class="n">DimArray</span>
 </pre></div>
@@ -76,7 +66,7 @@
 </pre></div>
 </div>
 <div class="section" id="basics-integer-array-slice">
-<span id="id2"></span><h2>Basics: integer, array, slice<a class="headerlink" href="#basics-integer-array-slice" title="Permalink to this headline">¶</a></h2>
+<span id="id1"></span><h2>Basics: integer, array, slice<a class="headerlink" href="#basics-integer-array-slice" title="Permalink to this headline">¶</a></h2>
 <p>There are various ways of indexing a DimArray, and all follow numpy&#8217;s rules, except that in the default behaviour indices refer to axis values and not to position on the axis, in contrast to numpy.</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">v</span><span class="p">[</span><span class="s">&#39;a&#39;</span><span class="p">,</span><span class="mi">20</span><span class="p">]</span>  <span class="c"># extract a single item</span>
 <span class="go">2.0</span>
@@ -132,7 +122,7 @@
 </div>
 </div>
 <div class="section" id="modify-array-values">
-<span id="id3"></span><h2>Modify array values<a class="headerlink" href="#modify-array-values" title="Permalink to this headline">¶</a></h2>
+<span id="id2"></span><h2>Modify array values<a class="headerlink" href="#modify-array-values" title="Permalink to this headline">¶</a></h2>
 <p>All the above can be used to change array values, consistently with what you would expect.</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">v</span>
 <span class="go">dimarray: 8 non-null elements (0 null)</span>
@@ -147,7 +137,7 @@
 </div>
 </div>
 <div class="section" id="take-and-put-methods">
-<span id="id4"></span><h2>take and put methods<a class="headerlink" href="#take-and-put-methods" title="Permalink to this headline">¶</a></h2>
+<span id="id3"></span><h2>take and put methods<a class="headerlink" href="#take-and-put-methods" title="Permalink to this headline">¶</a></h2>
 <p>These two methods are the machinery to accessing and modifying items in the examples above.
 They may be useful to use directly for generic programming.
 They are similar to numpy methods of the same name, but also work in multiple dimensions.
@@ -225,12 +215,6 @@ In particular, they both take dictionary, tuples and boolean arrays as <cite>ind
 </li>
 </ul>
 
-  <h4>Previous topic</h4>
-  <p class="topless"><a href="data_structure.html"
-                        title="previous chapter">DimArray: data structure and attributes</a></p>
-  <h4>Next topic</h4>
-  <p class="topless"><a href="dimarray.html"
-                        title="next chapter">Alternative definitions of a DimArray</a></p>
   <h3>This Page</h3>
   <ul class="this-page-menu">
     <li><a href="../_sources/_build_rst/indexing.txt"
@@ -262,14 +246,7 @@ In particular, they both take dictionary, tuples and boolean arrays as <cite>ind
         <li class="right" >
           <a href="../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="right" >
-          <a href="dimarray.html" title="Alternative definitions of a DimArray"
-             >next</a> |</li>
-        <li class="right" >
-          <a href="data_structure.html" title="DimArray: data structure and attributes"
-             >previous</a> |</li>
-        <li><a href="../index.html">dimarray 0.1.7.dev documentation</a> &raquo;</li>
-          <li><a href="../api_doc.html" >Documentation</a> &raquo;</li> 
+        <li><a href="../index.html">dimarray 0.1.8.dev documentation</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer">

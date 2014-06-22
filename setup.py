@@ -45,7 +45,7 @@ with open('README.rst') as file:
 MAJOR = 0
 MINOR = 1
 MICRO = 8
-ISRELEASED = True
+ISRELEASED = False
 VERSION = '%d.%d.%d' % (MAJOR, MINOR, MICRO)
 QUALIFIER = ''
 
@@ -93,6 +93,11 @@ if not ISRELEASED:
 else:
     FULLVERSION += QUALIFIER
 
+
+# get netcdf datafiles
+datafiles = [(root, [os.path.join(root, f) for f in files])
+            for root, dirs, files in os.walk('dimarray/datasets/data')]
+
 #
 #
 #
@@ -103,9 +108,7 @@ setup(name='dimarray',
       description='numpy array with labelled dimensions and axes, dimension, NaN handling and netCDF I/O',
       keywords=('labelled array','numpy','larry','pandas','iris'),
       packages = ['dimarray','dimarray.core','dimarray.geo','dimarray.io','dimarray.lib', 'dimarray.compat','dimarray.datasets'],
-      package_data = {
-	  "dimarray": ['README.rst','dimarray/datasets/data.zip']
-	  },
+      data_files = datafiles,
       long_description=long_description,
       url='https://github.com/perrette/dimarray',
       license = "BSD 3-Clause",

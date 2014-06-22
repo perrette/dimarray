@@ -2,7 +2,7 @@
 .. notebooks/getting_started.ipynb
 .. To modify this file, edit the source notebook and execute "make rst"
 
-..  _getting_started:
+..  _page_getting_started:
 
 
 Getting started
@@ -45,7 +45,7 @@ dimensions: 'variable', 'time'
 0 / variable (2): a to b
 1 / time (3): 1950 to 1970
 
-For more information refer to section on :ref:`data_structure` (as well as :py:class:`dimarray.Axis` and :py:class:`dimarray.Axes`)
+For more information refer to section on :ref:`page_data_structure` (as well as :py:class:`dimarray.Axis` and :py:class:`dimarray.Axes`)
 
 ..  _numpy-like_attributes:
 
@@ -78,6 +78,8 @@ but integer-index is always possible via `ix` toogle between `labels`- and `posi
 >>> a.ix[0, -1]
 3.0
 
+See also: documentation on :ref:`page_indexing`
+
 ..  _transformation:
 
 transformation
@@ -100,6 +102,8 @@ dimarray: 2 non-null elements (0 null)
 dimensions: 'variable'
 0 / variable (2): a to b
 array([ 2.5,  5. ])
+
+See also: documentation on :ref:`Along-axis_transformations`
 
 ..  _data_alignment__automatic_broadcasting_and_reindexing:
 

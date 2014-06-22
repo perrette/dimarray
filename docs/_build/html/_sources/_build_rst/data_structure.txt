@@ -2,7 +2,7 @@
 .. notebooks/data_structure.ipynb
 .. To modify this file, edit the source notebook and execute "make rst"
 
-..  _data_structure:
+..  _page_data_structure:
 
 
 DimArray: data structure and attributes

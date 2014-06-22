@@ -8,7 +8,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>Getting started &mdash; dimarray 0.1.7.dev documentation</title>
+    <title>Getting started &mdash; dimarray 0.1.8.dev documentation</title>
     
     <link rel="stylesheet" href="../_static/default.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
@@ -16,7 +16,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../',
-        VERSION:     '0.1.7.dev',
+        VERSION:     '0.1.8.dev',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -26,9 +26,9 @@
     <script type="text/javascript" src="../_static/underscore.js"></script>
     <script type="text/javascript" src="../_static/doctools.js"></script>
     <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <link rel="top" title="dimarray 0.1.7.dev documentation" href="../index.html" />
-    <link rel="next" title="Documentation" href="../api_doc.html" />
-    <link rel="prev" title="Installation" href="../installation.html" /> 
+    <link rel="top" title="dimarray 0.1.8.dev documentation" href="../index.html" />
+    <link rel="next" title="Examples" href="../examples.html" />
+    <link rel="prev" title="Getting started" href="" /> 
   </head>
   <body>
     <div class="related">
@@ -41,12 +41,12 @@
           <a href="../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
         <li class="right" >
-          <a href="../api_doc.html" title="Documentation"
+          <a href="../examples.html" title="Examples"
              accesskey="N">next</a> |</li>
         <li class="right" >
-          <a href="../installation.html" title="Installation"
+          <a href="#" title="Getting started"
              accesskey="P">previous</a> |</li>
-        <li><a href="../index.html">dimarray 0.1.7.dev documentation</a> &raquo;</li> 
+        <li><a href="../index.html">dimarray 0.1.8.dev documentation</a> &raquo;</li> 
       </ul>
     </div>  
 
@@ -56,9 +56,9 @@
           <div class="body">
             
   <div class="section" id="getting-started">
-<span id="id1"></span><h1>Getting started<a class="headerlink" href="#getting-started" title="Permalink to this headline">¶</a></h1>
+<span id="page-getting-started"></span><h1>Getting started<a class="headerlink" href="#getting-started" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="define-a-dimarray">
-<span id="id2"></span><h2>define a dimarray<a class="headerlink" href="#define-a-dimarray" title="Permalink to this headline">¶</a></h2>
+<span id="id1"></span><h2>define a dimarray<a class="headerlink" href="#define-a-dimarray" title="Permalink to this headline">¶</a></h2>
 <p>A <strong>``DimArray``</strong> can be defined just like a numpy array, with
 additional information about its axes, which can be given
 via <cite>axes</cite> and <cite>dims</cite> parameters.</p>
@@ -75,7 +75,7 @@ via <cite>axes</cite> and <cite>dims</cite> parameters.</p>
 </div>
 </div>
 <div class="section" id="data-structure">
-<span id="id3"></span><h2>data structure<a class="headerlink" href="#data-structure" title="Permalink to this headline">¶</a></h2>
+<span id="id2"></span><h2>data structure<a class="headerlink" href="#data-structure" title="Permalink to this headline">¶</a></h2>
 <p>Array data are stored in a <cite>values</cite> <strong>attribute</strong>:</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">a</span><span class="o">.</span><span class="n">values</span>
 <span class="go">array([[ 1.,  2.,  3.],</span>
@@ -89,10 +89,10 @@ via <cite>axes</cite> and <cite>dims</cite> parameters.</p>
 <span class="go">1 / time (3): 1950 to 1970</span>
 </pre></div>
 </div>
-<p>For more information refer to section on <a class="reference internal" href="#data-structure"><em>data structure</em></a> (as well as <a class="reference internal" href="../modules.html#dimarray.Axis" title="dimarray.Axis"><tt class="xref py py-class docutils literal"><span class="pre">dimarray.Axis</span></tt></a> and <a class="reference internal" href="../modules.html#dimarray.Axes" title="dimarray.Axes"><tt class="xref py py-class docutils literal"><span class="pre">dimarray.Axes</span></tt></a>)</p>
+<p>For more information refer to section on <a class="reference internal" href="data_structure.html#page-data-structure"><em>DimArray: data structure and attributes</em></a> (as well as <a class="reference internal" href="../modules.html#dimarray.Axis" title="dimarray.Axis"><tt class="xref py py-class docutils literal"><span class="pre">dimarray.Axis</span></tt></a> and <a class="reference internal" href="../modules.html#dimarray.Axes" title="dimarray.Axes"><tt class="xref py py-class docutils literal"><span class="pre">dimarray.Axes</span></tt></a>)</p>
 </div>
 <div class="section" id="numpy-like-attributes">
-<span id="id4"></span><h2>numpy-like attributes<a class="headerlink" href="#numpy-like-attributes" title="Permalink to this headline">¶</a></h2>
+<span id="id3"></span><h2>numpy-like attributes<a class="headerlink" href="#numpy-like-attributes" title="Permalink to this headline">¶</a></h2>
 <p>Numpy-like attributes <cite>dtype</cite>, <cite>shape</cite>, <cite>size</cite> or <cite>ndim</cite> are defined, and are not augmented with <cite>dims</cite> and <cite>labels</cite></p>
 <div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">a</span><span class="o">.</span><span class="n">shape</span>
 <span class="go">(2, 3)</span>
@@ -108,7 +108,7 @@ via <cite>axes</cite> and <cite>dims</cite> parameters.</p>
 </div>
 </div>
 <div class="section" id="indexing">
-<span id="id5"></span><h2>indexing<a class="headerlink" href="#indexing" title="Permalink to this headline">¶</a></h2>
+<span id="id4"></span><h2>indexing<a class="headerlink" href="#indexing" title="Permalink to this headline">¶</a></h2>
 <p><strong>Indexing</strong> works on labels just as expected, including <cite>slice</cite> and boolean array.</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">a</span><span class="p">[</span><span class="s">&#39;b&#39;</span><span class="p">,</span> <span class="mi">1970</span><span class="p">]</span>
 <span class="go">6.0</span>
@@ -119,9 +119,10 @@ via <cite>axes</cite> and <cite>dims</cite> parameters.</p>
 <span class="go">3.0</span>
 </pre></div>
 </div>
+<p>See also: documentation on <a class="reference internal" href="indexing.html#page-indexing"><em>Indexing</em></a></p>
 </div>
 <div class="section" id="transformation">
-<span id="id6"></span><h2>transformation<a class="headerlink" href="#transformation" title="Permalink to this headline">¶</a></h2>
+<span id="id5"></span><h2>transformation<a class="headerlink" href="#transformation" title="Permalink to this headline">¶</a></h2>
 <p>Standard numpy transformations are defined, and now accept axis name:</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">a</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="s">&#39;time&#39;</span><span class="p">)</span>
 <span class="go">dimarray: 2 non-null elements (0 null)</span>
@@ -140,9 +141,10 @@ via <cite>axes</cite> and <cite>dims</cite> parameters.</p>
 <span class="go">array([ 2.5,  5. ])</span>
 </pre></div>
 </div>
+<p>See also: documentation on <em class="xref std std-ref">Along-axis_transformations</em></p>
 </div>
 <div class="section" id="data-alignment-automatic-broadcasting-and-reindexing">
-<span id="id7"></span><h2>data alignment: automatic broadcasting and reindexing<a class="headerlink" href="#data-alignment-automatic-broadcasting-and-reindexing" title="Permalink to this headline">¶</a></h2>
+<span id="id6"></span><h2>data alignment: automatic broadcasting and reindexing<a class="headerlink" href="#data-alignment-automatic-broadcasting-and-reindexing" title="Permalink to this headline">¶</a></h2>
 <p>During an operation, arrays are <strong>automatically re-indexed</strong> to span the
 same axis domain, with nan filling if needed.
 This is quite useful when working with partly-overlapping time series or
@@ -179,7 +181,7 @@ seasonally-varying data (camping summer and winter prices).</p>
 </div>
 </div>
 <div class="section" id="dataset">
-<span id="id8"></span><h2>Dataset<a class="headerlink" href="#dataset" title="Permalink to this headline">¶</a></h2>
+<span id="id7"></span><h2>Dataset<a class="headerlink" href="#dataset" title="Permalink to this headline">¶</a></h2>
 <p>As a commodity, the <strong>`Dataset`</strong> class is an ordered dictionary of DimArrays which also maintains axis aligment</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">dataset</span> <span class="o">=</span> <span class="n">Dataset</span><span class="p">({</span><span class="s">&#39;combined_data&#39;</span><span class="p">:</span><span class="n">combined_data</span><span class="p">,</span> <span class="s">&#39;yearly_data&#39;</span><span class="p">:</span><span class="n">yearly_data</span><span class="p">,</span><span class="s">&#39;seasonal_data&#39;</span><span class="p">:</span><span class="n">seasonal_data</span><span class="p">})</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">dataset</span>
@@ -212,7 +214,7 @@ seasonally-varying data (camping summer and winter prices).</p>
 <p>Note that they are various ways of combining DimArray instances. In many case (when no dimension broadcasting is involved), it is simpler to just use the <a class="reference internal" href="../modules.html#dimarray.stack" title="dimarray.stack"><tt class="xref py py-func docutils literal"><span class="pre">dimarray.stack()</span></tt></a> method.</p>
 </div>
 <div class="section" id="netcdf-reading-and-writing">
-<span id="id9"></span><h2>NetCDF reading and writing<a class="headerlink" href="#netcdf-reading-and-writing" title="Permalink to this headline">¶</a></h2>
+<span id="id8"></span><h2>NetCDF reading and writing<a class="headerlink" href="#netcdf-reading-and-writing" title="Permalink to this headline">¶</a></h2>
 <p>A natural I/O format for such an array is netCDF, common in geophysics, which rely on
 the netCDF4 package. If netCDF4 is installed (much recommanded), a dataset can easily read and write to the netCDF format:</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">dataset</span><span class="o">.</span><span class="n">write_nc</span><span class="p">(</span><span class="s">&#39;test.nc&#39;</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s">&#39;w&#39;</span><span class="p">)</span>
@@ -231,7 +233,7 @@ the netCDF4 package. If netCDF4 is installed (much recommanded), a dataset can e
 </div>
 </div>
 <div class="section" id="reshaping-arrays">
-<span id="id10"></span><h2>Reshaping arrays<a class="headerlink" href="#reshaping-arrays" title="Permalink to this headline">¶</a></h2>
+<span id="id9"></span><h2>Reshaping arrays<a class="headerlink" href="#reshaping-arrays" title="Permalink to this headline">¶</a></h2>
 <p>Additional novelty includes methods to reshaping an array in easy ways, very useful for high-dimensional data analysis.</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">large_array</span> <span class="o">=</span> <span class="n">da</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="mi">2</span><span class="o">*</span><span class="mi">5</span><span class="o">*</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">2</span><span class="p">),</span> <span class="n">dims</span><span class="o">=</span><span class="p">(</span><span class="s">&#39;A&#39;</span><span class="p">,</span><span class="s">&#39;B&#39;</span><span class="p">,</span><span class="s">&#39;C&#39;</span><span class="p">,</span><span class="s">&#39;D&#39;</span><span class="p">))</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">small_array</span> <span class="o">=</span> <span class="n">large_array</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="s">&#39;A&#39;</span><span class="p">,</span><span class="s">&#39;B&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="s">&#39;C&#39;</span><span class="p">,</span><span class="s">&#39;D&#39;</span><span class="p">)</span>  <span class="c"># same as reshape(&#39;A,B&#39;,&#39;C,D&#39;)</span>
@@ -248,7 +250,7 @@ the netCDF4 package. If netCDF4 is installed (much recommanded), a dataset can e
 </div>
 </div>
 <div class="section" id="interfacing-with-pandas">
-<span id="id11"></span><h2>interfacing with pandas<a class="headerlink" href="#interfacing-with-pandas" title="Permalink to this headline">¶</a></h2>
+<span id="id10"></span><h2>interfacing with pandas<a class="headerlink" href="#interfacing-with-pandas" title="Permalink to this headline">¶</a></h2>
 <p>For things that pandas does better, such as pretty printing, I/O to many formats, and low-dimensional data analysis, just use the <a class="reference internal" href="../modules.html#dimarray.DimArray.to_pandas" title="dimarray.DimArray.to_pandas"><tt class="xref py py-meth docutils literal"><span class="pre">dimarray.DimArray.to_pandas()</span></tt></a> method</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">small_array</span><span class="o">.</span><span class="n">to_pandas</span><span class="p">()</span>
 <span class="go">C     0       1       2       3       4</span>
@@ -299,11 +301,11 @@ the netCDF4 package. If netCDF4 is installed (much recommanded), a dataset can e
 </ul>
 
   <h4>Previous topic</h4>
-  <p class="topless"><a href="../installation.html"
-                        title="previous chapter">Installation</a></p>
+  <p class="topless"><a href=""
+                        title="previous chapter">Getting started</a></p>
   <h4>Next topic</h4>
-  <p class="topless"><a href="../api_doc.html"
-                        title="next chapter">Documentation</a></p>
+  <p class="topless"><a href="../examples.html"
+                        title="next chapter">Examples</a></p>
   <h3>This Page</h3>
   <ul class="this-page-menu">
     <li><a href="../_sources/_build_rst/getting_started.txt"
@@ -336,12 +338,12 @@ the netCDF4 package. If netCDF4 is installed (much recommanded), a dataset can e
           <a href="../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
         <li class="right" >
-          <a href="../api_doc.html" title="Documentation"
+          <a href="../examples.html" title="Examples"
              >next</a> |</li>
         <li class="right" >
-          <a href="../installation.html" title="Installation"
+          <a href="#" title="Getting started"
              >previous</a> |</li>
-        <li><a href="../index.html">dimarray 0.1.7.dev documentation</a> &raquo;</li> 
+        <li><a href="../index.html">dimarray 0.1.8.dev documentation</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer">

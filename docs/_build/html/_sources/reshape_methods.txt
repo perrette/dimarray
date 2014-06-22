@@ -1,0 +1,15 @@
+Modify array shape
+------------------
+
+.. .. autoclass:: dimarray.DimArray
+..     :members: newaxis, squeeze, transpose, swapaxes, flatten, group, ungroup, reshape
+..     :undoc-members:
+
+.. automethod:: dimarray.DimArray.newaxis
+.. automethod:: dimarray.DimArray.squeeze
+.. automethod:: dimarray.DimArray.transpose
+.. automethod:: dimarray.DimArray.swapaxes
+.. automethod:: dimarray.DimArray.flatten
+.. automethod:: dimarray.DimArray.group
+.. automethod:: dimarray.DimArray.ungroup
+.. automethod:: dimarray.DimArray.reshape

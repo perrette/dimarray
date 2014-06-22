@@ -1,0 +1,221 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>NetCDF reading and writing &mdash; dimarray 0.1.8.dev documentation</title>
+    
+    <link rel="stylesheet" href="../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0.1.8.dev',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="dimarray 0.1.8.dev documentation" href="../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../index.html">dimarray 0.1.8.dev documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="netcdf-reading-and-writing">
+<span id="page-netcdf"></span><h1>NetCDF reading and writing<a class="headerlink" href="#netcdf-reading-and-writing" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="read-from-one-netcdf-file">
+<span id="id1"></span><h2>Read from one netCDF file<a class="headerlink" href="#read-from-one-netcdf-file" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">dimarray</span> <span class="kn">import</span> <span class="n">read_nc</span><span class="p">,</span> <span class="n">get_datadir</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">os</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ncfile</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">get_datadir</span><span class="p">(),</span> <span class="s">&#39;cmip5.CSIRO-Mk3-6-0.nc&#39;</span><span class="p">)</span>  <span class="c"># get one netCDF file</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">data</span> <span class="o">=</span> <span class="n">read_nc</span><span class="p">(</span><span class="n">ncfile</span><span class="p">)</span>  <span class="c"># load full file</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">data</span>
+<span class="go">Dataset of 2 variables</span>
+<span class="go">dimensions: &#39;time&#39;, &#39;scenario&#39;</span>
+<span class="go">0 / time (451): 1850 to 2300</span>
+<span class="go">1 / scenario (5): historical to rcp85</span>
+<span class="go">tsl: (&#39;time&#39;, &#39;scenario&#39;)</span>
+<span class="go">temp: (&#39;time&#39;, &#39;scenario&#39;)</span>
+</pre></div>
+</div>
+<p>Then access the variable of choice</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="o">%</span><span class="n">matplotlib</span> <span class="n">inline</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">data</span><span class="p">[</span><span class="s">&#39;temp&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">()</span>
+<span class="go">&lt;matplotlib.axes.AxesSubplot at 0x7f81a63953d0&gt;&lt;matplotlib.figure.Figure at 0x7f81a151be50&gt;</span>
+</pre></div>
+</div>
+<p>Load only one variable</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">data</span> <span class="o">=</span> <span class="n">read_nc</span><span class="p">(</span><span class="n">ncfile</span><span class="p">,</span><span class="s">&#39;temp&#39;</span><span class="p">)</span> <span class="c"># only one variable</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">data</span> <span class="o">=</span> <span class="n">read_nc</span><span class="p">(</span><span class="n">ncfile</span><span class="p">,</span><span class="s">&#39;temp&#39;</span><span class="p">,</span> <span class="n">indices</span><span class="o">=</span><span class="p">{</span><span class="s">&quot;time&quot;</span><span class="p">:</span><span class="nb">slice</span><span class="p">(</span><span class="mi">2000</span><span class="p">,</span><span class="mi">2100</span><span class="p">),</span> <span class="s">&quot;scenario&quot;</span><span class="p">:</span><span class="s">&quot;rcp45&quot;</span><span class="p">})</span>  <span class="c"># load only a chunck of the data</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">data</span> <span class="o">=</span> <span class="n">read_nc</span><span class="p">(</span><span class="n">ncfile</span><span class="p">,</span><span class="s">&#39;temp&#39;</span><span class="p">,</span> <span class="n">indices</span><span class="o">=</span><span class="p">{</span><span class="s">&quot;time&quot;</span><span class="p">:</span><span class="mf">1950.3</span><span class="p">},</span> <span class="n">tol</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>  <span class="c">#  approximate matching, adjust tolerance</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">data</span> <span class="o">=</span> <span class="n">read_nc</span><span class="p">(</span><span class="n">ncfile</span><span class="p">,</span><span class="s">&#39;temp&#39;</span><span class="p">,</span> <span class="n">indices</span><span class="o">=</span><span class="p">{</span><span class="s">&quot;time&quot;</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">},</span> <span class="n">indexing</span><span class="o">=</span><span class="s">&#39;position&#39;</span><span class="p">)</span>  <span class="c">#  integer position indexing</span>
+</pre></div>
+</div>
+<p>Load only a chunck of the data</p>
+<hr class="docutils" />
+<p>Read variable &#8216;temp&#8217; across multiple files (representing various climate models).
+In this case the variable is a time series, whose length may vary across experiments
+(thus align=True is passed to reindex axes before stacking). Under the hood the function
+py:func:<cite>dimarray.stack</cite> is called:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">direc</span> <span class="o">=</span> <span class="n">get_datadir</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">temp</span> <span class="o">=</span> <span class="n">read_nc</span><span class="p">(</span><span class="n">direc</span><span class="o">+</span><span class="s">&#39;/cmip5.*.nc&#39;</span><span class="p">,</span> <span class="s">&#39;temp&#39;</span><span class="p">,</span> <span class="n">align</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="s">&#39;model&#39;</span><span class="p">)</span>
+<span class="go">dimarray: 9114 non-null elements (6671 null)</span>
+<span class="go">dimensions: &#39;model&#39;, &#39;time&#39;, &#39;scenario&#39;</span>
+<span class="go">0 / model (7): /home/perrette/anaconda/lib/python2.7/site-packages/dimarray-0.1.8.dev_82a67b0-py2.7.egg/dimarray/datasets/data/cmip5.IPSL-CM5A-LR to /home/perrette/anaconda/lib/python2.7/site-packages/dimarray-0.1.8.dev_82a67b0-py2.7.egg/dimarray/datasets/data/cmip5.CSIRO-Mk3-6-0</span>
+<span class="go">1 / time (451): 1850 to 2300</span>
+<span class="go">2 / scenario (5): historical to rcp85</span>
+<span class="go">array(...)</span>
+</pre></div>
+</div>
+<p>A new &#8216;model&#8217; axis is created labeled with file names. It is then
+possible to rename it more appropriately, e.g. keeping only the part
+directly relevant to identify the experiment:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">getmodel</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;.&#39;</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span> <span class="c"># extract model name from path</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">temp</span><span class="o">.</span><span class="n">reset_axis</span><span class="p">(</span><span class="n">getmodel</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="s">&#39;model&#39;</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span> <span class="c"># would return a copy if inplace is not specified</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">temp</span>
+<span class="go">dimarray: 9114 non-null elements (6671 null)</span>
+<span class="go">dimensions: &#39;model&#39;, &#39;time&#39;, &#39;scenario&#39;</span>
+<span class="go">0 / model (7): IPSL-CM5A-LR to CSIRO-Mk3-6-0</span>
+<span class="go">1 / time (451): 1850 to 2300</span>
+<span class="go">2 / scenario (5): historical to rcp85</span>
+<span class="go">array(...)</span>
+</pre></div>
+</div>
+<p>This works on datasets as well</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">ds</span> <span class="o">=</span> <span class="n">read_nc</span><span class="p">(</span><span class="n">direc</span><span class="o">+</span><span class="s">&#39;/cmip5.*.nc&#39;</span><span class="p">,</span> <span class="n">align</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="s">&#39;model&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ds</span><span class="o">.</span><span class="n">reset_axis</span><span class="p">(</span><span class="n">getmodel</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="s">&#39;model&#39;</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ds</span>
+<span class="go">Dataset of 2 variables</span>
+<span class="go">dimensions: &#39;model&#39;, &#39;time&#39;, &#39;scenario&#39;</span>
+<span class="go">0 / model (7): IPSL-CM5A-LR to CSIRO-Mk3-6-0</span>
+<span class="go">1 / time (451): 1850 to 2300</span>
+<span class="go">2 / scenario (5): historical to rcp85</span>
+<span class="go">tsl: (&#39;model&#39;, &#39;time&#39;, &#39;scenario&#39;)</span>
+<span class="go">temp: (&#39;model&#39;, &#39;time&#39;, &#39;scenario&#39;)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="write-to-netcdf">
+<span id="id2"></span><h2>Write to netCDF<a class="headerlink" href="#write-to-netcdf" title="Permalink to this headline">¶</a></h2>
+<p>Let&#8217;s define some dummy arrays representing temperature in northern and southern hemisphere for three years.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">temperature</span> <span class="o">=</span> <span class="n">DimArray</span><span class="p">([[</span><span class="mf">1.</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">],</span> <span class="p">[</span><span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">6</span><span class="p">]],</span> <span class="n">axes</span><span class="o">=</span><span class="p">[[</span><span class="s">&#39;north&#39;</span><span class="p">,</span><span class="s">&#39;south&#39;</span><span class="p">],</span> <span class="p">[</span><span class="mi">1951</span><span class="p">,</span> <span class="mi">1952</span><span class="p">,</span> <span class="mi">1953</span><span class="p">]],</span> <span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="s">&#39;lat&#39;</span><span class="p">,</span> <span class="s">&#39;time&#39;</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">global_mean</span> <span class="o">=</span> <span class="n">temperature</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="s">&#39;lat&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">climatology</span> <span class="o">=</span> <span class="n">temperature</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="s">&#39;time&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Let&#8217;s define a new dataset</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">dimarray</span> <span class="kn">import</span> <span class="n">Dataset</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ds</span> <span class="o">=</span> <span class="n">Dataset</span><span class="p">({</span><span class="s">&#39;temperature&#39;</span><span class="p">:</span><span class="n">temperature</span><span class="p">,</span> <span class="s">&#39;global&#39;</span><span class="p">:</span><span class="n">global_mean</span><span class="p">})</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ds</span>
+<span class="go">Dataset of 2 variables</span>
+<span class="go">dimensions: &#39;time&#39;, &#39;lat&#39;</span>
+<span class="go">0 / time (3): 1951 to 1953</span>
+<span class="go">1 / lat (2): north to south</span>
+<span class="go">global: (&#39;time&#39;,)</span>
+<span class="go">temperature: (&#39;lat&#39;, &#39;time&#39;)</span>
+</pre></div>
+</div>
+<p>Saving the dataset to file is pretty simple:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">ds</span><span class="o">.</span><span class="n">write_nc</span><span class="p">(</span><span class="s">&#39;/tmp/test.nc&#39;</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s">&#39;w&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>It is possible to append more variables</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">climatology</span><span class="o">.</span><span class="n">write_nc</span><span class="p">(</span><span class="s">&#39;/tmp/test.nc&#39;</span><span class="p">,</span> <span class="s">&#39;climatology&#39;</span><span class="p">)</span>  <span class="c"># by default mode=&#39;a+&#39;</span>
+</pre></div>
+</div>
+<p>Just as a check, all three variables seem to be there:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">read_nc</span><span class="p">(</span><span class="s">&#39;/tmp/test.nc&#39;</span><span class="p">)</span>
+<span class="go">Dataset of 3 variables</span>
+<span class="go">dimensions: &#39;time&#39;, &#39;lat&#39;</span>
+<span class="go">0 / time (3): 1951 to 1953</span>
+<span class="go">1 / lat (2): north to south</span>
+<span class="go">global: (&#39;time&#39;,)</span>
+<span class="go">climatology: (&#39;lat&#39;,)</span>
+<span class="go">temperature: (&#39;lat&#39;, &#39;time&#39;)</span>
+</pre></div>
+</div>
+<p>Note that when appending a variable to a netCDF file or to a dataset, its axes must match, otherwise an error will be raised. In that case it may be necessary to reindex an axis (see <a class="reference internal" href="reindexing.html#page-reindexing"><em>Reindexing: align axes</em></a>). When initializing a dataset with bunch of dimarray however, reindexing is performed automatically.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">NetCDF reading and writing</a><ul>
+<li><a class="reference internal" href="#read-from-one-netcdf-file">Read from one netCDF file</a></li>
+<li><a class="reference internal" href="#write-to-netcdf">Write to netCDF</a></li>
+</ul>
+</li>
+</ul>
+
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="../_sources/_build_rst/netcdf.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../index.html">dimarray 0.1.8.dev documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2014, Mahe Perrette.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>
