@@ -104,7 +104,7 @@ setup(name='dimarray',
       keywords=('labelled array','numpy','larry','pandas','iris'),
       packages = ['dimarray','dimarray.core','dimarray.geo','dimarray.io','dimarray.lib', 'dimarray.compat','dimarray.datasets'],
       package_data = {
-	  "dimarray": ['README.rst','dimarray.ipynb']
+	  "dimarray": ['README.rst','dimarray/datasets/data.zip']
 	  },
       long_description=long_description,
       url='https://github.com/perrette/dimarray',

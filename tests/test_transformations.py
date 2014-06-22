@@ -2,6 +2,57 @@ import sys
 from warnings import warn
 import numpy as np
 import dimarray as da
+import pytest
+
+
+@pytest.fixture()
+def v():
+    import numpy as np
+    values = np.arange(4*3).reshape(4,3)
+    time = 'time', np.arange(1950,1954) 
+    lat = 'lat', np.linspace(-90,90,3)
+    return da.DimArray(values, axes=[np.arange(1950,1954), np.linspace(-90,90,3)], dims=['time','lat'])
+
+#@pytest.fixture()
+#def axis():
+#    return None
+
+def pytest_generate_tests(metafunc):
+    # e.g. test transformations with 3 axis values
+    if 'axis' in metafunc.fixturenames:
+        metafunc.parametrize("axis", [None, 'time', 'lat'])
+        #metafunc.parametrize("axis", [None, 0, 1])
+
+def test_all(v, axis):
+
+    axis_id, axis_nm = v._get_axis_info(axis)
+
+    # sum, product
+    assert np.all(v.sum(axis=axis_nm) == v.values.sum(axis=axis_id))
+    assert np.all(v.prod(axis=axis_nm) == v.values.prod(axis=axis_id))
+
+    # moments
+    assert np.all(v.mean(axis=axis_nm) == v.values.mean(axis=axis_id))
+    assert np.all(v.var(axis=axis_nm) == v.values.var(axis=axis_id))
+    assert np.all(v.std(axis=axis_nm) == v.values.std(axis=axis_id))
+
+    # median, min, max, peak-to-peak
+    assert np.all(v.median(axis=axis_nm) == np.median(v.values, axis=axis_id))
+    assert np.all(v.min(axis=axis_nm) == v.values.min(axis=axis_id))
+    assert np.all(v.max(axis=axis_nm) == v.values.max(axis=axis_id))
+    assert np.all(v.ptp(axis=axis_nm) == v.values.ptp(axis=axis_id))
+
+    # determine if all or any of the elements are True (or non-zero)
+    assert np.all(v.all(axis=axis_nm) == v.values.all(axis=axis_id))
+    assert np.all(v.any(axis=axis_nm) == v.values.any(axis=axis_id))
+
+    # argmin, argmax: locate the minimum and maximum of an array
+    if axis is None:
+        assert np.all(v[v.argmin()] == v.min())
+        assert np.all(v[v.argmax()] == v.max())
+    else:
+        v.argmin(axis=axis_nm)
+        v.argmax(axis=axis_nm)
 
 def test_transform():
     test_diff()
