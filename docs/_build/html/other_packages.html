@@ -8,7 +8,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>Comparisons with other packages &mdash; dimarray 0.1.8.dev documentation</title>
+    <title>Comments on other packages &mdash; dimarray 0.1.8 documentation</title>
     
     <link rel="stylesheet" href="_static/default.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -16,7 +16,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '',
-        VERSION:     '0.1.8.dev',
+        VERSION:     '0.1.8',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -26,8 +26,8 @@
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
     <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <link rel="top" title="dimarray 0.1.8.dev documentation" href="index.html" />
-    <link rel="prev" title="Examples" href="examples.html" /> 
+    <link rel="top" title="dimarray 0.1.8 documentation" href="index.html" />
+    <link rel="prev" title="Examples of use" href="_build_rst/examples.html" /> 
   </head>
   <body>
     <div class="related">
@@ -40,9 +40,9 @@
           <a href="py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
         <li class="right" >
-          <a href="examples.html" title="Examples"
+          <a href="_build_rst/examples.html" title="Examples of use"
              accesskey="P">previous</a> |</li>
-        <li><a href="index.html">dimarray 0.1.8.dev documentation</a> &raquo;</li> 
+        <li><a href="index.html">dimarray 0.1.8 documentation</a> &raquo;</li> 
       </ul>
     </div>  
 
@@ -51,8 +51,11 @@
         <div class="bodywrapper">
           <div class="body">
             
-  <div class="section" id="comparisons-with-other-packages">
-<h1>Comparisons with other packages<a class="headerlink" href="#comparisons-with-other-packages" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="comments-on-other-packages">
+<h1>Comments on other packages<a class="headerlink" href="#comments-on-other-packages" title="Permalink to this headline">¶</a></h1>
+<p>dimarray is strongly inspired from previous work, especially from pandas and larry packages.
+This section attempts to highligh some of the conceptual differences between them, some of
+which are not likely to vanish with the future releases.</p>
 <ul>
 <li><dl class="first docutils">
 <dt><strong>pandas</strong></dt>
@@ -77,12 +80,10 @@ method is defined in <cite>dimarray</cite> as an alias for to_pandas().plot().</
 <li><dl class="first docutils">
 <dt><strong>larry</strong></dt>
 <dd><p class="first last">...was pioneer as labelled array, it skips nans in along-axis transforms
-and comes with a wealth of built-in methods. It seems to do a very good job but does
-not offer as many features as <cite>dimarray</cite> or <cite>pandas</cite> as far as indexing
-is concerned. For example it does not
-support naming dimensions and does not support indexing on axis values
-(but provides <cite>get</cite> method for single element access). Still, from the
-structure (array-like), <cite>dimarray</cite> is closer to larry than to pandas.</p>
+and comes with a wealth of built-in methods. It is very computationally-efficient
+via the use of bottleneck. It is a bit less intuitive than <cite>dimarray</cite> or <cite>pandas</cite>
+as far as indexing is concerned, and does not support naming dimensions.
+From the structure (array-like), <cite>dimarray</cite> is closer to larry than to pandas.</p>
 </dd>
 </dl>
 </li>
@@ -119,11 +120,11 @@ also comes with netCDF I/O capability and may gain a few geospatial features
       <div class="sphinxsidebar">
         <div class="sphinxsidebarwrapper">
   <h4>Previous topic</h4>
-  <p class="topless"><a href="examples.html"
-                        title="previous chapter">Examples</a></p>
+  <p class="topless"><a href="_build_rst/examples.html"
+                        title="previous chapter">Examples of use</a></p>
   <h3>This Page</h3>
   <ul class="this-page-menu">
-    <li><a href="_sources/comparison.txt"
+    <li><a href="_sources/other_packages.txt"
            rel="nofollow">Show Source</a></li>
   </ul>
 <div id="searchbox" style="display: none">
@@ -153,9 +154,9 @@ also comes with netCDF I/O capability and may gain a few geospatial features
           <a href="py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
         <li class="right" >
-          <a href="examples.html" title="Examples"
+          <a href="_build_rst/examples.html" title="Examples of use"
              >previous</a> |</li>
-        <li><a href="index.html">dimarray 0.1.8.dev documentation</a> &raquo;</li> 
+        <li><a href="index.html">dimarray 0.1.8 documentation</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer">

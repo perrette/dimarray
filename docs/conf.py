@@ -76,6 +76,7 @@ pipe = subprocess.Popen(["python", "setup.py", "--version"],
                     stdout=subprocess.PIPE)
 (so,serr) = pipe.communicate()
 version = so.strip().split('-')[0] # remove  git-version from the doc
+version = version.replace('.dev','')  # also remove the 'dev' mention for now
 release = version
 os.chdir('docs') # back to docs dir
 

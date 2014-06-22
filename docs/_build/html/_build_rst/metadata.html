@@ -8,7 +8,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>Metadata &mdash; dimarray 0.1.8.dev documentation</title>
+    <title>Metadata &mdash; dimarray 0.1.8 documentation</title>
     
     <link rel="stylesheet" href="../_static/default.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
@@ -16,7 +16,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../',
-        VERSION:     '0.1.8.dev',
+        VERSION:     '0.1.8',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -26,7 +26,7 @@
     <script type="text/javascript" src="../_static/underscore.js"></script>
     <script type="text/javascript" src="../_static/doctools.js"></script>
     <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <link rel="top" title="dimarray 0.1.8.dev documentation" href="../index.html" />
+    <link rel="top" title="dimarray 0.1.8 documentation" href="../index.html" />
     <link rel="up" title="Documentation" href="../by_topic.html" />
     <link rel="next" title="NetCDF reading and writing" href="netcdf.html" />
     <link rel="prev" title="Along-axis transformations" href="transformations.html" /> 
@@ -47,7 +47,7 @@
         <li class="right" >
           <a href="transformations.html" title="Along-axis transformations"
              accesskey="P">previous</a> |</li>
-        <li><a href="../index.html">dimarray 0.1.8.dev documentation</a> &raquo;</li>
+        <li><a href="../index.html">dimarray 0.1.8 documentation</a> &raquo;</li>
           <li><a href="../by_topic.html" accesskey="U">Documentation</a> &raquo;</li> 
       </ul>
     </div>  
@@ -60,7 +60,8 @@
   <div class="section" id="metadata">
 <span id="page-metadata"></span><span id="id1"></span><h1>Metadata<a class="headerlink" href="#metadata" title="Permalink to this headline">¶</a></h1>
 <p><cite>DimArray</cite> and <cite>Axis</cite> objects, support metadata. They can be passed by keyword arguments to DimArray (not via da.array_kw or DimArray.from_kw NOTE: may remove this functionality), or afterwards:</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">a</span> <span class="o">=</span> <span class="n">DimArray</span><span class="p">([[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">],[</span><span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">6</span><span class="p">]])</span>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">dimarray</span> <span class="kn">import</span> <span class="n">DimArray</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">a</span> <span class="o">=</span> <span class="n">DimArray</span><span class="p">([[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">],[</span><span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">6</span><span class="p">]])</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">a</span><span class="o">.</span><span class="n">name</span><span class="o">=</span><span class="s">&#39;myname&#39;</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">a</span><span class="o">.</span><span class="n">units</span><span class="o">=</span><span class="s">&#39;myunits&#39;</span>
 </pre></div>
@@ -129,7 +130,7 @@
         <li class="right" >
           <a href="transformations.html" title="Along-axis transformations"
              >previous</a> |</li>
-        <li><a href="../index.html">dimarray 0.1.8.dev documentation</a> &raquo;</li>
+        <li><a href="../index.html">dimarray 0.1.8 documentation</a> &raquo;</li>
           <li><a href="../by_topic.html" >Documentation</a> &raquo;</li> 
       </ul>
     </div>

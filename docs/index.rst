@@ -31,8 +31,9 @@ Documentation
    installation.rst
    _build_rst/getting_started.rst
    by_topic.rst
-   examples.rst
-   comparison.rst
+   comparison_table.rst
+   _build_rst/examples.rst
+   other_packages.rst
 
 Further development
 ===================

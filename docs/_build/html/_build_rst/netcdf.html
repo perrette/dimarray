@@ -8,7 +8,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>NetCDF reading and writing &mdash; dimarray 0.1.8.dev documentation</title>
+    <title>NetCDF reading and writing &mdash; dimarray 0.1.8 documentation</title>
     
     <link rel="stylesheet" href="../_static/default.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
@@ -16,7 +16,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../',
-        VERSION:     '0.1.8.dev',
+        VERSION:     '0.1.8',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -26,9 +26,9 @@
     <script type="text/javascript" src="../_static/underscore.js"></script>
     <script type="text/javascript" src="../_static/doctools.js"></script>
     <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <link rel="top" title="dimarray 0.1.8.dev documentation" href="../index.html" />
+    <link rel="top" title="dimarray 0.1.8 documentation" href="../index.html" />
     <link rel="up" title="Documentation" href="../by_topic.html" />
-    <link rel="next" title="Examples" href="../examples.html" />
+    <link rel="next" title="numpy vs dimarray" href="../comparison_table.html" />
     <link rel="prev" title="Metadata" href="metadata.html" /> 
   </head>
   <body>
@@ -42,12 +42,12 @@
           <a href="../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
         <li class="right" >
-          <a href="../examples.html" title="Examples"
+          <a href="../comparison_table.html" title="numpy vs dimarray"
              accesskey="N">next</a> |</li>
         <li class="right" >
           <a href="metadata.html" title="Metadata"
              accesskey="P">previous</a> |</li>
-        <li><a href="../index.html">dimarray 0.1.8.dev documentation</a> &raquo;</li>
+        <li><a href="../index.html">dimarray 0.1.8 documentation</a> &raquo;</li>
           <li><a href="../by_topic.html" accesskey="U">Documentation</a> &raquo;</li> 
       </ul>
     </div>  
@@ -75,9 +75,9 @@
 </pre></div>
 </div>
 <p>Then access the variable of choice</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="o">%</span><span class="n">matplotlib</span> <span class="n">inline</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">data</span><span class="p">[</span><span class="s">&#39;temp&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">()</span>
-<span class="go">&lt;matplotlib.axes.AxesSubplot at 0x7f81a63953d0&gt;&lt;matplotlib.figure.Figure at 0x7f81a151be50&gt;</span>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="o">%</span><span class="n">matplotlib</span> <span class="n">inline</span>  
+<span class="gp">&gt;&gt;&gt; </span><span class="n">data</span><span class="p">[</span><span class="s">&#39;temp&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">()</span>  
+<span class="go">UsageError: unrecognized arguments: </span>
 </pre></div>
 </div>
 <p>Load only one variable</p>
@@ -95,12 +95,6 @@ In this case the variable is a time series, whose length may vary across experim
 py:func:<cite>dimarray.stack</cite> is called:</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">direc</span> <span class="o">=</span> <span class="n">get_datadir</span><span class="p">()</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">temp</span> <span class="o">=</span> <span class="n">read_nc</span><span class="p">(</span><span class="n">direc</span><span class="o">+</span><span class="s">&#39;/cmip5.*.nc&#39;</span><span class="p">,</span> <span class="s">&#39;temp&#39;</span><span class="p">,</span> <span class="n">align</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="s">&#39;model&#39;</span><span class="p">)</span>
-<span class="go">dimarray: 9114 non-null elements (6671 null)</span>
-<span class="go">dimensions: &#39;model&#39;, &#39;time&#39;, &#39;scenario&#39;</span>
-<span class="go">0 / model (7): /home/perrette/anaconda/lib/python2.7/site-packages/dimarray-0.1.8.dev_82a67b0-py2.7.egg/dimarray/datasets/data/cmip5.IPSL-CM5A-LR to /home/perrette/anaconda/lib/python2.7/site-packages/dimarray-0.1.8.dev_82a67b0-py2.7.egg/dimarray/datasets/data/cmip5.CSIRO-Mk3-6-0</span>
-<span class="go">1 / time (451): 1850 to 2300</span>
-<span class="go">2 / scenario (5): historical to rcp85</span>
-<span class="go">array(...)</span>
 </pre></div>
 </div>
 <p>A new &#8216;model&#8217; axis is created labeled with file names. It is then
@@ -134,7 +128,8 @@ directly relevant to identify the experiment:</p>
 <div class="section" id="write-to-netcdf">
 <span id="id2"></span><h2>Write to netCDF<a class="headerlink" href="#write-to-netcdf" title="Permalink to this headline">¶</a></h2>
 <p>Let&#8217;s define some dummy arrays representing temperature in northern and southern hemisphere for three years.</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">temperature</span> <span class="o">=</span> <span class="n">DimArray</span><span class="p">([[</span><span class="mf">1.</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">],</span> <span class="p">[</span><span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">6</span><span class="p">]],</span> <span class="n">axes</span><span class="o">=</span><span class="p">[[</span><span class="s">&#39;north&#39;</span><span class="p">,</span><span class="s">&#39;south&#39;</span><span class="p">],</span> <span class="p">[</span><span class="mi">1951</span><span class="p">,</span> <span class="mi">1952</span><span class="p">,</span> <span class="mi">1953</span><span class="p">]],</span> <span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="s">&#39;lat&#39;</span><span class="p">,</span> <span class="s">&#39;time&#39;</span><span class="p">])</span>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">dimarray</span> <span class="kn">import</span> <span class="n">DimArray</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">temperature</span> <span class="o">=</span> <span class="n">DimArray</span><span class="p">([[</span><span class="mf">1.</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">],</span> <span class="p">[</span><span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">6</span><span class="p">]],</span> <span class="n">axes</span><span class="o">=</span><span class="p">[[</span><span class="s">&#39;north&#39;</span><span class="p">,</span><span class="s">&#39;south&#39;</span><span class="p">],</span> <span class="p">[</span><span class="mi">1951</span><span class="p">,</span> <span class="mi">1952</span><span class="p">,</span> <span class="mi">1953</span><span class="p">]],</span> <span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="s">&#39;lat&#39;</span><span class="p">,</span> <span class="s">&#39;time&#39;</span><span class="p">])</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">global_mean</span> <span class="o">=</span> <span class="n">temperature</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="s">&#39;lat&#39;</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">climatology</span> <span class="o">=</span> <span class="n">temperature</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="s">&#39;time&#39;</span><span class="p">)</span>
 </pre></div>
@@ -193,8 +188,8 @@ directly relevant to identify the experiment:</p>
   <p class="topless"><a href="metadata.html"
                         title="previous chapter">Metadata</a></p>
   <h4>Next topic</h4>
-  <p class="topless"><a href="../examples.html"
-                        title="next chapter">Examples</a></p>
+  <p class="topless"><a href="../comparison_table.html"
+                        title="next chapter">numpy vs dimarray</a></p>
   <h3>This Page</h3>
   <ul class="this-page-menu">
     <li><a href="../_sources/_build_rst/netcdf.txt"
@@ -227,12 +222,12 @@ directly relevant to identify the experiment:</p>
           <a href="../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
         <li class="right" >
-          <a href="../examples.html" title="Examples"
+          <a href="../comparison_table.html" title="numpy vs dimarray"
              >next</a> |</li>
         <li class="right" >
           <a href="metadata.html" title="Metadata"
              >previous</a> |</li>
-        <li><a href="../index.html">dimarray 0.1.8.dev documentation</a> &raquo;</li>
+        <li><a href="../index.html">dimarray 0.1.8 documentation</a> &raquo;</li>
           <li><a href="../by_topic.html" >Documentation</a> &raquo;</li> 
       </ul>
     </div>

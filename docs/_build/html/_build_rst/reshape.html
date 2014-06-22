@@ -8,7 +8,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>Modify array shape &mdash; dimarray 0.1.8.dev documentation</title>
+    <title>Modify array shape &mdash; dimarray 0.1.8 documentation</title>
     
     <link rel="stylesheet" href="../_static/default.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
@@ -16,7 +16,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../',
-        VERSION:     '0.1.8.dev',
+        VERSION:     '0.1.8',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -26,7 +26,7 @@
     <script type="text/javascript" src="../_static/underscore.js"></script>
     <script type="text/javascript" src="../_static/doctools.js"></script>
     <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <link rel="top" title="dimarray 0.1.8.dev documentation" href="../index.html" />
+    <link rel="top" title="dimarray 0.1.8 documentation" href="../index.html" />
     <link rel="up" title="Documentation" href="../by_topic.html" />
     <link rel="next" title="Stack and concatenate arrays" href="combine_arrays.html" />
     <link rel="prev" title="Reindexing: align axes" href="reindexing.html" /> 
@@ -47,7 +47,7 @@
         <li class="right" >
           <a href="reindexing.html" title="Reindexing: align axes"
              accesskey="P">previous</a> |</li>
-        <li><a href="../index.html">dimarray 0.1.8.dev documentation</a> &raquo;</li>
+        <li><a href="../index.html">dimarray 0.1.8 documentation</a> &raquo;</li>
           <li><a href="../by_topic.html" accesskey="U">Documentation</a> &raquo;</li> 
       </ul>
     </div>  
@@ -95,7 +95,7 @@
 <div class="section" id="swapaxes">
 <span id="id3"></span><h2>swapaxes<a class="headerlink" href="#swapaxes" title="Permalink to this headline">¶</a></h2>
 <p>Sometimes it is only useful to have on dimension in the first position, for example to make indexing easier.
-<cite>swapaxes</cite> is a more general method of swapping two axes, but it can achieve that operation nicely (more useful with more than 2 dimensions!):</p>
+<em class="xref std std-ref">dimarray.DimArray.swapaxes</em> is a more general method of swapping two axes, but it can achieve that operation nicely (more useful with more than 2 dimensions!):</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">a</span> <span class="o">=</span> <span class="n">DimArray</span><span class="p">([[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">],[</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">]],</span><span class="n">dims</span><span class="o">=</span><span class="p">(</span><span class="s">&#39;x0&#39;</span><span class="p">,</span><span class="s">&#39;x1&#39;</span><span class="p">))</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">a</span><span class="o">.</span><span class="n">swapaxes</span><span class="p">(</span><span class="s">&#39;x1&#39;</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span>
 <span class="go">dimarray: 6 non-null elements (0 null)</span>
@@ -110,7 +110,7 @@
 </div>
 <div class="section" id="group-and-ungroup-experimental">
 <span id="id4"></span><h2>group and ungroup [experimental]<a class="headerlink" href="#group-and-ungroup-experimental" title="Permalink to this headline">¶</a></h2>
-<p>As a new, experimental feature, it is possible to flatten (group) or any subset of dimensions. Corresponding axes are converted in GroupedAxis objects.</p>
+<p>As a new, experimental feature, it is possible to flatten (group) or any subset of dimensions. Corresponding axes are converted in GroupedAxis objects. It is similar to numpy&#8217;s flatten method but applies selectively on a set of axes.</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="mi">3</span><span class="o">*</span><span class="mi">4</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">v</span> <span class="o">=</span> <span class="n">DimArray</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="s">&#39;time&#39;</span><span class="p">,</span><span class="s">&#39;lat&#39;</span><span class="p">,</span><span class="s">&#39;lon&#39;</span><span class="p">],</span> <span class="n">axes</span><span class="o">=</span><span class="p">[[</span><span class="mi">1950</span><span class="p">,</span><span class="mi">1955</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="mi">90</span><span class="p">,</span><span class="mi">90</span><span class="p">,</span><span class="mi">3</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="mi">180</span><span class="p">,</span><span class="mi">180</span><span class="p">,</span><span class="mi">4</span><span class="p">)])</span>
@@ -167,17 +167,23 @@
 </div>
 <div class="section" id="reshape-experimental">
 <span id="id5"></span><h2>reshape [experimental]<a class="headerlink" href="#reshape-experimental" title="Permalink to this headline">¶</a></h2>
-<p><cite>reshape</cite> is similar but not the same as numpy ndarray&#8217;s <cite>reshape</cite>. It takes only axis names as parameters. It is a high-level function that combine <cite>newaxis</cite>, <cite>squeeze</cite>, <cite>group</cite> and <cite>ungroup</cite> to reshape the array. It differs from numpy in that it cannot &#8220;break&#8221; an existing dimension (unless it is a GroupedAxis). Provided with the parameter <cite>transpose=True</cite>, it also performs transpose as needed to match the required shape.</p>
+<p><a class="reference internal" href="../modules.html#dimarray.DimArray.reshape" title="dimarray.DimArray.reshape"><tt class="xref py py-meth docutils literal"><span class="pre">dimarray.DimArray.reshape()</span></tt></a> is similar but not the same as numpy ndarray&#8217;s <em class="xref std std-ref">reshape</em>. It takes only axis names as parameters. It is a high-level function that makes use of <tt class="xref py py-meth docutils literal"><span class="pre">dimarray.DimArray.newaxis()</span></tt>, <a class="reference internal" href="../modules.html#dimarray.DimArray.squeeze" title="dimarray.DimArray.squeeze"><tt class="xref py py-meth docutils literal"><span class="pre">dimarray.DimArray.squeeze()</span></tt></a>, <a class="reference internal" href="../modules.html#dimarray.DimArray.group" title="dimarray.DimArray.group"><tt class="xref py py-meth docutils literal"><span class="pre">dimarray.DimArray.group()</span></tt></a> and <a class="reference internal" href="../modules.html#dimarray.DimArray.ungroup" title="dimarray.DimArray.ungroup"><tt class="xref py py-meth docutils literal"><span class="pre">dimarray.DimArray.ungroup()</span></tt></a> to reshape the array. It differs from numpy in that it cannot &#8220;break&#8221; an existing dimension (unless it is a GroupedAxis). It also performs <a class="reference internal" href="../modules.html#dimarray.DimArray.transpose" title="dimarray.DimArray.transpose"><tt class="xref py py-meth docutils literal"><span class="pre">dimarray.DimArray.transpose()</span></tt></a> as needed to match the required shape.</p>
 <p>Here an example where high-dimensional data is converted into a pandas&#8217; DataFrame for displaying result of a sensitivity analysis. GroupedAxis are converted into MultiIndex before passing to pandas.</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">large_array</span> <span class="o">=</span> <span class="n">DimArray</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="mi">2</span><span class="o">*</span><span class="mi">5</span><span class="o">*</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">2</span><span class="p">),</span> <span class="n">dims</span><span class="o">=</span><span class="p">(</span><span class="s">&#39;A&#39;</span><span class="p">,</span><span class="s">&#39;B&#39;</span><span class="p">,</span><span class="s">&#39;C&#39;</span><span class="p">,</span><span class="s">&#39;D&#39;</span><span class="p">))</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">large_array</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="s">&#39;A,B&#39;</span><span class="p">,</span><span class="s">&#39;C,D&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">to_pandas</span><span class="p">()</span>
-<span class="go">C     0       1       2       3       4</span>
-<span class="go">D     0   1   0   1   0   1   0   1   0   1</span>
-<span class="go">A B</span>
-<span class="go">0 0   0   1   2   3   4   5   6   7   8   9</span>
-<span class="go">  1  10  11  12  13  14  15  16  17  18  19</span>
-<span class="go">1 0  20  21  22  23  24  25  26  27  28  29</span>
-<span class="go">  1  30  31  32  33  34  35  36  37  38  39</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">large_array</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="s">&#39;A,C&#39;</span><span class="p">,</span><span class="s">&#39;B,D&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">to_pandas</span><span class="p">()</span>
+<span class="go">B     0       1</span>
+<span class="go">D     0   1   0   1</span>
+<span class="go">A C</span>
+<span class="go">0 0   0   1  10  11</span>
+<span class="go">  1   2   3  12  13</span>
+<span class="go">  2   4   5  14  15</span>
+<span class="go">  3   6   7  16  17</span>
+<span class="go">  4   8   9  18  19</span>
+<span class="go">1 0  20  21  30  31</span>
+<span class="go">  1  22  23  32  33</span>
+<span class="go">  2  24  25  34  35</span>
+<span class="go">  3  26  27  36  37</span>
+<span class="go">  4  28  29  38  39</span>
 </pre></div>
 </div>
 </div>
@@ -243,7 +249,7 @@
         <li class="right" >
           <a href="reindexing.html" title="Reindexing: align axes"
              >previous</a> |</li>
-        <li><a href="../index.html">dimarray 0.1.8.dev documentation</a> &raquo;</li>
+        <li><a href="../index.html">dimarray 0.1.8 documentation</a> &raquo;</li>
           <li><a href="../by_topic.html" >Documentation</a> &raquo;</li> 
       </ul>
     </div>

@@ -7,6 +7,7 @@ Documentation
    combine_arrays.rst
    create_dimarray.rst
    data_structure.rst
+   examples.rst
    getting_started.rst
    indexing.rst
    metadata.rst

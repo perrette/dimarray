@@ -49,7 +49,15 @@ def main():
         # code cells
         if cell['cell_type'] == 'code':
 
-            code_lines = ['>>> ' + code for code in cell['input']]
+            code_lines = []
+            for code in cell['input']:
+                # do not add '>>>' if indent
+                if not code.startswith('  '):
+                    code = '>>> '+code
+                else:
+                    code = '... '+code
+                code_lines.append(code)
+
             output_lines = []
             for output in cell['outputs']:
                 
@@ -58,6 +66,8 @@ def main():
                     if line == '\n':
                         output['text'][i] = "<BLANKLINE>\n" 
                 output_lines.extend(output['text'])
+
+            # Here should include figures
 
             text.extend(code_lines) # add code lines
             text.append('\n')

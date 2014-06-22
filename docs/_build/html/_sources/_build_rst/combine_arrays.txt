@@ -33,8 +33,9 @@ stack arrays along new axis
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 >>> a = da.DimArray([10,20,30])
->>> da.stack({'a':a, '2*a':2*a}, axis='items')   # dictionary
->>> da.stack([a, 2*a], keys=['a','2*a'], axis='items')  # list
+>>> dict_form = da.stack({'a':a, '2*a':2*a}, axis='items')   # dictionary
+>>> list_form = da.stack([a, 2*a], keys=['a','2*a'], axis='items')  # list
+>>> list_form
 dimarray: 6 non-null elements (0 null)
 dimensions: 'items', 'x0'
 0 / items (2): a to 2*a

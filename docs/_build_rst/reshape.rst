@@ -52,7 +52,7 @@ swapaxes
 ~~~~~~~~
 
 Sometimes it is only useful to have on dimension in the first position, for example to make indexing easier. 
-`swapaxes` is a more general method of swapping two axes, but it can achieve that operation nicely (more useful with more than 2 dimensions!):
+:py:ref:`dimarray.DimArray.swapaxes` is a more general method of swapping two axes, but it can achieve that operation nicely (more useful with more than 2 dimensions!):
 
 >>> a = DimArray([[1,2,3],[3,4,5]],dims=('x0','x1'))
 >>> a.swapaxes('x1',0)
@@ -69,7 +69,7 @@ array([[1, 3],
 group and ungroup [experimental]
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-As a new, experimental feature, it is possible to flatten (group) or any subset of dimensions. Corresponding axes are converted in GroupedAxis objects. 
+As a new, experimental feature, it is possible to flatten (group) or any subset of dimensions. Corresponding axes are converted in GroupedAxis objects. It is similar to numpy's flatten method but applies selectively on a set of axes. 
 
 >>> import numpy as np
 >>> data = np.arange(2*3*4).reshape(2,3,4)
@@ -128,18 +128,24 @@ array([[[ 0,  1,  2,  3],
 reshape [experimental]
 ~~~~~~~~~~~~~~~~~~~~~~
 
-`reshape` is similar but not the same as numpy ndarray's `reshape`. It takes only axis names as parameters. It is a high-level function that combine `newaxis`, `squeeze`, `group` and `ungroup` to reshape the array. It differs from numpy in that it cannot "break" an existing dimension (unless it is a GroupedAxis). Provided with the parameter `transpose=True`, it also performs transpose as needed to match the required shape. 
+:py:meth:`dimarray.DimArray.reshape` is similar but not the same as numpy ndarray's :ref:`reshape <http://docs.scipy.org/doc/numpy/reference/generated/numpy.reshape.html>`. It takes only axis names as parameters. It is a high-level function that makes use of :py:meth:`dimarray.DimArray.newaxis`, :py:meth:`dimarray.DimArray.squeeze`, :py:meth:`dimarray.DimArray.group` and :py:meth:`dimarray.DimArray.ungroup` to reshape the array. It differs from numpy in that it cannot "break" an existing dimension (unless it is a GroupedAxis). It also performs :py:meth:`dimarray.DimArray.transpose` as needed to match the required shape. 
 
 Here an example where high-dimensional data is converted into a pandas' DataFrame for displaying result of a sensitivity analysis. GroupedAxis are converted into MultiIndex before passing to pandas.
 
 >>> large_array = DimArray(np.arange(2*2*5*2).reshape(2,2,5,2), dims=('A','B','C','D'))
->>> large_array.reshape('A,B','C,D').to_pandas()
-C     0       1       2       3       4    
-D     0   1   0   1   0   1   0   1   0   1
-A B                                        
-0 0   0   1   2   3   4   5   6   7   8   9
-  1  10  11  12  13  14  15  16  17  18  19
-1 0  20  21  22  23  24  25  26  27  28  29
-  1  30  31  32  33  34  35  36  37  38  39
+>>> large_array.reshape('A,C','B,D').to_pandas()
+B     0       1    
+D     0   1   0   1
+A C                
+0 0   0   1  10  11
+  1   2   3  12  13
+  2   4   5  14  15
+  3   6   7  16  17
+  4   8   9  18  19
+1 0  20  21  30  31
+  1  22  23  32  33
+  2  24  25  34  35
+  3  26  27  36  37
+  4  28  29  38  39
 
 

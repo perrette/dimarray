@@ -1,0 +1,167 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Examples of use &mdash; dimarray 0.1.8 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0.1.8',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="dimarray 0.1.8 documentation" href="../index.html" />
+    <link rel="next" title="Comments on other packages" href="../other_packages.html" />
+    <link rel="prev" title="numpy vs dimarray" href="../comparison_table.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../other_packages.html" title="Comments on other packages"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="../comparison_table.html" title="numpy vs dimarray"
+             accesskey="P">previous</a> |</li>
+        <li><a href="../index.html">dimarray 0.1.8 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="examples-of-use">
+<span id="page-examples"></span><h1>Examples of use<a class="headerlink" href="#examples-of-use" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="create-a-generic-time-mean-function">
+<span id="id1"></span><h2>Create a generic time-mean function<a class="headerlink" href="#create-a-generic-time-mean-function" title="Permalink to this headline">¶</a></h2>
+<p>This function applies to any kind of input array, as long as the &#8220;time&#8221; dimension is present.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="k">def</span> <span class="nf">time_mean</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">t1</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">t2</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+<span class="gp">... </span>    <span class="sd">&quot;&quot;&quot; compute time mean between two instants</span>
+<span class="gp">...</span><span class="sd"></span>
+<span class="gp">... </span><span class="sd">    Parameters:</span>
+<span class="gp">... </span><span class="sd">    -----------</span>
+<span class="gp">... </span><span class="sd">    a : DimArray</span>
+<span class="gp">... </span><span class="sd">        must include a &quot;time&quot; dimension</span>
+<span class="gp">... </span><span class="sd">    t1, t2 : same type as a.time (typically int or float)</span>
+<span class="gp">... </span><span class="sd">        start and end times</span>
+<span class="gp">...</span><span class="sd"></span>
+<span class="gp">... </span><span class="sd">    Returns:</span>
+<span class="gp">... </span><span class="sd">    --------</span>
+<span class="gp">... </span><span class="sd">    ma : DimArray</span>
+<span class="gp">... </span><span class="sd">        time-average between t1 and t2</span>
+<span class="gp">... </span><span class="sd">    &quot;&quot;&quot;</span>
+<span class="gp">... </span>    <span class="k">assert</span> <span class="s">&#39;time&#39;</span> <span class="ow">in</span> <span class="n">a</span><span class="o">.</span><span class="n">dims</span><span class="p">,</span> <span class="s">&#39;dimarray must have the &quot;time&quot; dimension&#39;</span>
+<span class="gp">... </span>    <span class="k">return</span> <span class="n">a</span><span class="o">.</span><span class="n">swapaxes</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="s">&#39;time&#39;</span><span class="p">)[</span><span class="n">t1</span><span class="p">:</span><span class="n">t2</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="s">&#39;time&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">dimarray</span> <span class="kn">import</span> <span class="n">DimArray</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+</pre></div>
+</div>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">a</span> <span class="o">=</span> <span class="n">DimArray</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">],</span> <span class="n">axes</span><span class="o">=</span><span class="p">[[</span><span class="mi">2000</span><span class="p">,</span><span class="mi">2001</span><span class="p">,</span><span class="mi">2002</span><span class="p">,</span><span class="mi">2003</span><span class="p">]],</span> <span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="s">&#39;time&#39;</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">time_mean</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="mi">2001</span><span class="p">,</span> <span class="mi">2003</span><span class="p">)</span>  <span class="c"># average over 2001, 2002, 2003</span>
+<span class="go">2.5</span>
+</pre></div>
+</div>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">a</span> <span class="o">=</span> <span class="n">DimArray</span><span class="p">([[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">],[</span><span class="mi">5</span><span class="p">,</span><span class="mi">6</span><span class="p">,</span><span class="mi">7</span><span class="p">,</span><span class="mi">8</span><span class="p">]],</span> <span class="n">axes</span><span class="o">=</span><span class="p">[[</span><span class="s">&#39;a&#39;</span><span class="p">,</span><span class="s">&#39;b&#39;</span><span class="p">],[</span><span class="mi">2000</span><span class="p">,</span><span class="mi">2001</span><span class="p">,</span><span class="mi">2002</span><span class="p">,</span><span class="mi">2003</span><span class="p">]],</span> <span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="s">&#39;items&#39;</span><span class="p">,</span><span class="s">&#39;time&#39;</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">time_mean</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>  <span class="c"># average over the full time axis</span>
+<span class="go">dimarray: 2 non-null elements (0 null)</span>
+<span class="go">dimensions: &#39;items&#39;</span>
+<span class="go">0 / items (2): a to b</span>
+<span class="go">array([ 2.5,  6.5])</span>
+</pre></div>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Examples of use</a><ul>
+<li><a class="reference internal" href="#create-a-generic-time-mean-function">Create a generic time-mean function</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="../comparison_table.html"
+                        title="previous chapter">numpy vs dimarray</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="../other_packages.html"
+                        title="next chapter">Comments on other packages</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="../_sources/_build_rst/examples.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../other_packages.html" title="Comments on other packages"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="../comparison_table.html" title="numpy vs dimarray"
+             >previous</a> |</li>
+        <li><a href="../index.html">dimarray 0.1.8 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2014, Mahe Perrette.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

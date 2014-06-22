@@ -12,6 +12,7 @@ Metadata
 
 `DimArray` and `Axis` objects, support metadata. They can be passed by keyword arguments to DimArray (not via da.array_kw or DimArray.from_kw NOTE: may remove this functionality), or afterwards:
 
+>>> from dimarray import DimArray
 >>> a = DimArray([[1,2,3],[4,5,6]])
 >>> a.name='myname'
 >>> a.units='myunits'

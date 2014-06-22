@@ -8,7 +8,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>Reindexing: align axes &mdash; dimarray 0.1.8.dev documentation</title>
+    <title>Reindexing: align axes &mdash; dimarray 0.1.8 documentation</title>
     
     <link rel="stylesheet" href="../_static/default.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
@@ -16,7 +16,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../',
-        VERSION:     '0.1.8.dev',
+        VERSION:     '0.1.8',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -26,7 +26,7 @@
     <script type="text/javascript" src="../_static/underscore.js"></script>
     <script type="text/javascript" src="../_static/doctools.js"></script>
     <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <link rel="top" title="dimarray 0.1.8.dev documentation" href="../index.html" />
+    <link rel="top" title="dimarray 0.1.8 documentation" href="../index.html" />
     <link rel="up" title="Documentation" href="../by_topic.html" />
     <link rel="next" title="Modify array shape" href="reshape.html" />
     <link rel="prev" title="Indexing" href="indexing.html" /> 
@@ -47,7 +47,7 @@
         <li class="right" >
           <a href="indexing.html" title="Indexing"
              accesskey="P">previous</a> |</li>
-        <li><a href="../index.html">dimarray 0.1.8.dev documentation</a> &raquo;</li>
+        <li><a href="../index.html">dimarray 0.1.8 documentation</a> &raquo;</li>
           <li><a href="../by_topic.html" accesskey="U">Documentation</a> &raquo;</li> 
       </ul>
     </div>  
@@ -116,14 +116,13 @@
 </pre></div>
 </div>
 <div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="o">%</span><span class="n">matplotlib</span> <span class="n">inline</span>   
 <span class="gp">&gt;&gt;&gt; </span><span class="n">plt</span><span class="o">.</span><span class="n">clf</span><span class="p">()</span>  
 <span class="gp">&gt;&gt;&gt; </span><span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">v</span><span class="o">.</span><span class="n">time</span><span class="p">,</span> <span class="n">v</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="s">&#39;s-&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s">&#39;original&#39;</span><span class="p">)</span>  
 <span class="gp">&gt;&gt;&gt; </span><span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">w</span><span class="o">.</span><span class="n">time</span><span class="p">,</span> <span class="n">w</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="s">&#39;o-&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s">&#39;interp&#39;</span><span class="p">)</span>  
 <span class="gp">&gt;&gt;&gt; </span><span class="c">#plt.plot(w1.time, w.values, &#39;o--&#39;, color=&#39;k&#39;, label=&#39;interp&#39;)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">time</span><span class="p">,</span> <span class="n">x</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="s">&#39;*-&#39;</span><span class="p">,</span><span class="n">label</span><span class="o">=</span><span class="s">&#39;nearest&#39;</span><span class="p">)</span> 
 <span class="gp">&gt;&gt;&gt; </span><span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">loc</span><span class="o">=</span><span class="s">&#39;upper left&#39;</span><span class="p">)</span>  
-<span class="go">&lt;matplotlib.legend.Legend at 0x7f7521408990&gt;&lt;matplotlib.figure.Figure at 0x7f7526100f90&gt;</span>
+<span class="go">&lt;matplotlib.legend.Legend at 0x7eff9661e850&gt;</span>
 </pre></div>
 </div>
 </div>
@@ -133,14 +132,12 @@
 <div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="c"># align axes</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">x</span> <span class="o">=</span> <span class="n">da</span><span class="o">.</span><span class="n">DimArray</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">],(</span><span class="s">&#39;x0&#39;</span><span class="p">,[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">]))</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">y</span> <span class="o">=</span> <span class="n">da</span><span class="o">.</span><span class="n">DimArray</span><span class="p">([</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">],(</span><span class="s">&#39;x0&#39;</span><span class="p">,[</span><span class="mi">2</span><span class="p">,</span><span class="mi">4</span><span class="p">]))</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">da</span><span class="o">.</span><span class="n">align_axes</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
-<span class="go">[dimarray: 3 non-null elements (1 null)</span>
-<span class="go"> dimensions: &#39;x0&#39;</span>
-<span class="go"> 0 / x0 (4): 1 to 4</span>
-<span class="go"> array([  1.,   2.,   3.,  nan]), dimarray: 2 non-null elements (2 null)</span>
-<span class="go"> dimensions: &#39;x0&#39;</span>
-<span class="go"> 0 / x0 (4): 1 to 4</span>
-<span class="go"> array([ nan,   3.,  nan,   4.])]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">xa</span><span class="p">,</span> <span class="n">ya</span> <span class="o">=</span> <span class="n">da</span><span class="o">.</span><span class="n">align_axes</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ya</span>
+<span class="go">dimarray: 2 non-null elements (2 null)</span>
+<span class="go">dimensions: &#39;x0&#39;</span>
+<span class="go">0 / x0 (4): 1 to 4</span>
+<span class="go">array([ nan,   3.,  nan,   4.])</span>
 </pre></div>
 </div>
 </div>
@@ -206,7 +203,7 @@
         <li class="right" >
           <a href="indexing.html" title="Indexing"
              >previous</a> |</li>
-        <li><a href="../index.html">dimarray 0.1.8.dev documentation</a> &raquo;</li>
+        <li><a href="../index.html">dimarray 0.1.8 documentation</a> &raquo;</li>
           <li><a href="../by_topic.html" >Documentation</a> &raquo;</li> 
       </ul>
     </div>
