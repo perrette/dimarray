@@ -30,7 +30,7 @@ Documentation
 
    installation.rst
    _build_rst/getting_started.rst
-   _build_rst/getting_started.rst
+   by_topic.rst
    examples.rst
    comparison.rst
 

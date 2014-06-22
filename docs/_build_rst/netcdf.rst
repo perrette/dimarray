@@ -27,9 +27,9 @@ temp: ('time', 'scenario')
 
 Then access the variable of choice
 
->>> %matplotlib inline
->>> data['temp'].plot()
-<matplotlib.axes.AxesSubplot at 0x7f81a63953d0><matplotlib.figure.Figure at 0x7f81a151be50>
+>>> %matplotlib inline  # doctest: +SKIP
+>>> data['temp'].plot()  # doctest: +SKIP
+UsageError: unrecognized arguments: # doctest: +SKIP
 
 Load only one variable
 
@@ -53,12 +53,7 @@ py:func:`dimarray.stack` is called:
 
 >>> direc = get_datadir()
 >>> temp = read_nc(direc+'/cmip5.*.nc', 'temp', align=True, axis='model')
-dimarray: 9114 non-null elements (6671 null)
-dimensions: 'model', 'time', 'scenario'
-0 / model (7): /home/perrette/anaconda/lib/python2.7/site-packages/dimarray-0.1.8.dev_82a67b0-py2.7.egg/dimarray/datasets/data/cmip5.IPSL-CM5A-LR to /home/perrette/anaconda/lib/python2.7/site-packages/dimarray-0.1.8.dev_82a67b0-py2.7.egg/dimarray/datasets/data/cmip5.CSIRO-Mk3-6-0
-1 / time (451): 1850 to 2300
-2 / scenario (5): historical to rcp85
-array(...)
+
 
 A new 'model' axis is created labeled with file names. It is then 
 possible to rename it more appropriately, e.g. keeping only the part
@@ -94,6 +89,7 @@ Write to netCDF
 
 Let's define some dummy arrays representing temperature in northern and southern hemisphere for three years.
 
+>>> from dimarray import DimArray
 >>> temperature = DimArray([[1.,2,3], [4,5,6]], axes=[['north','south'], [1951, 1952, 1953]], dims=['lat', 'time'])
 >>> global_mean = temperature.mean(axis='lat')  
 >>> climatology = temperature.mean(axis='time')

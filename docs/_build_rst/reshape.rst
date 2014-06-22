@@ -23,7 +23,7 @@ Transpose, just like its numpy equivalent, permutes dimensions, but in dimarray 
 
 >>> from dimarray import DimArray
 >>> a = DimArray([[1,2,3],[3,4,5]],dims=('x0','x1'))
->>> a.transpose()
+>>> a.transpose() # doctest: +SKIP
 >>> a.T
 dimarray: 6 non-null elements (0 null)
 dimensions: 'x1', 'x0'

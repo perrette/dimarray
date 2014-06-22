@@ -26,7 +26,10 @@
     <script type="text/javascript" src="../_static/underscore.js"></script>
     <script type="text/javascript" src="../_static/doctools.js"></script>
     <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <link rel="top" title="dimarray 0.1.8.dev documentation" href="../index.html" /> 
+    <link rel="top" title="dimarray 0.1.8.dev documentation" href="../index.html" />
+    <link rel="up" title="Documentation" href="../by_topic.html" />
+    <link rel="next" title="Metadata" href="metadata.html" />
+    <link rel="prev" title="Stack and concatenate arrays" href="combine_arrays.html" /> 
   </head>
   <body>
     <div class="related">
@@ -38,7 +41,14 @@
         <li class="right" >
           <a href="../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li><a href="../index.html">dimarray 0.1.8.dev documentation</a> &raquo;</li> 
+        <li class="right" >
+          <a href="metadata.html" title="Metadata"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="combine_arrays.html" title="Stack and concatenate arrays"
+             accesskey="P">previous</a> |</li>
+        <li><a href="../index.html">dimarray 0.1.8.dev documentation</a> &raquo;</li>
+          <li><a href="../by_topic.html" accesskey="U">Documentation</a> &raquo;</li> 
       </ul>
     </div>  
 
@@ -121,8 +131,9 @@ sum, prod, mean, var, std, median, min, max, php, argmin, argmax, all, any</p>
 <span class="go">array([ 1.,  2.,  3.,  4.])</span>
 </pre></div>
 </div>
-<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">v</span><span class="o">.</span><span class="n">cumprod</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">v</span><span class="o">.</span><span class="n">cumsum</span><span class="p">()</span>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">p</span> <span class="o">=</span> <span class="n">v</span><span class="o">.</span><span class="n">cumprod</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">s</span> <span class="o">=</span> <span class="n">v</span><span class="o">.</span><span class="n">cumsum</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">s</span>
 <span class="go">dimarray: 4 non-null elements (0 null)</span>
 <span class="go">dimensions: &#39;time&#39;</span>
 <span class="go">0 / time (4): 1950 to 1953</span>
@@ -130,9 +141,6 @@ sum, prod, mean, var, std, median, min, max, php, argmin, argmax, all, any</p>
 </pre></div>
 </div>
 <p>A new <cite>diff</cite> method comes with <cite>dimarray</cite>, which reduces axis size by one, by default (and by default <cite>diff</cite> operates along the last axis, like <cite>cumsum</cite>).</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">s</span> <span class="o">=</span> <span class="n">v</span><span class="o">.</span><span class="n">cumsum</span><span class="p">()</span>
-</pre></div>
-</div>
 <div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">s</span><span class="o">.</span><span class="n">diff</span><span class="p">()</span>
 <span class="go">dimarray: 3 non-null elements (0 null)</span>
 <span class="go">dimensions: &#39;time&#39;</span>
@@ -291,6 +299,12 @@ sum, prod, mean, var, std, median, min, max, php, argmin, argmax, all, any</p>
 </li>
 </ul>
 
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="combine_arrays.html"
+                        title="previous chapter">Stack and concatenate arrays</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="metadata.html"
+                        title="next chapter">Metadata</a></p>
   <h3>This Page</h3>
   <ul class="this-page-menu">
     <li><a href="../_sources/_build_rst/transformations.txt"
@@ -322,7 +336,14 @@ sum, prod, mean, var, std, median, min, max, php, argmin, argmax, all, any</p>
         <li class="right" >
           <a href="../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li><a href="../index.html">dimarray 0.1.8.dev documentation</a> &raquo;</li> 
+        <li class="right" >
+          <a href="metadata.html" title="Metadata"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="combine_arrays.html" title="Stack and concatenate arrays"
+             >previous</a> |</li>
+        <li><a href="../index.html">dimarray 0.1.8.dev documentation</a> &raquo;</li>
+          <li><a href="../by_topic.html" >Documentation</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer">

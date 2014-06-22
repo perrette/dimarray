@@ -12,8 +12,8 @@ Under construction...
    _build_rst/reindexing.rst
    _build_rst/reshape.rst
    _build_rst/combine_arrays.rst
+   _build_rst/transformations.rst
    _build_rst/metadata.rst
    _build_rst/netcdf.rst
-   _build_rst/transformations.rst
 
 

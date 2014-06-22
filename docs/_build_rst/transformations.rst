@@ -83,17 +83,15 @@ dimensions: 'time'
 0 / time (4): 1950 to 1953
 array([ 1.,  2.,  3.,  4.])
 
->>> v.cumprod()
->>> v.cumsum()
+>>> p = v.cumprod()
+>>> s = v.cumsum()
+>>> s
 dimarray: 4 non-null elements (0 null)
 dimensions: 'time'
 0 / time (4): 1950 to 1953
 array([  1.,   3.,   6.,  10.])
 
 A new `diff` method comes with `dimarray`, which reduces axis size by one, by default (and by default `diff` operates along the last axis, like `cumsum`).
-
->>> s = v.cumsum()
-
 
 >>> s.diff()
 dimarray: 3 non-null elements (0 null)

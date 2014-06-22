@@ -26,7 +26,10 @@
     <script type="text/javascript" src="../_static/underscore.js"></script>
     <script type="text/javascript" src="../_static/doctools.js"></script>
     <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <link rel="top" title="dimarray 0.1.8.dev documentation" href="../index.html" /> 
+    <link rel="top" title="dimarray 0.1.8.dev documentation" href="../index.html" />
+    <link rel="up" title="Documentation" href="../by_topic.html" />
+    <link rel="next" title="Stack and concatenate arrays" href="combine_arrays.html" />
+    <link rel="prev" title="Reindexing: align axes" href="reindexing.html" /> 
   </head>
   <body>
     <div class="related">
@@ -38,7 +41,14 @@
         <li class="right" >
           <a href="../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li><a href="../index.html">dimarray 0.1.8.dev documentation</a> &raquo;</li> 
+        <li class="right" >
+          <a href="combine_arrays.html" title="Stack and concatenate arrays"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="reindexing.html" title="Reindexing: align axes"
+             accesskey="P">previous</a> |</li>
+        <li><a href="../index.html">dimarray 0.1.8.dev documentation</a> &raquo;</li>
+          <li><a href="../by_topic.html" accesskey="U">Documentation</a> &raquo;</li> 
       </ul>
     </div>  
 
@@ -56,7 +66,7 @@
 <p>Transpose, just like its numpy equivalent, permutes dimensions, but in dimarray it can be provided with axis names instead of just axis position.</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">dimarray</span> <span class="kn">import</span> <span class="n">DimArray</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">a</span> <span class="o">=</span> <span class="n">DimArray</span><span class="p">([[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">],[</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">]],</span><span class="n">dims</span><span class="o">=</span><span class="p">(</span><span class="s">&#39;x0&#39;</span><span class="p">,</span><span class="s">&#39;x1&#39;</span><span class="p">))</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">a</span><span class="o">.</span><span class="n">transpose</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">a</span><span class="o">.</span><span class="n">transpose</span><span class="p">()</span> 
 <span class="gp">&gt;&gt;&gt; </span><span class="n">a</span><span class="o">.</span><span class="n">T</span>
 <span class="go">dimarray: 6 non-null elements (0 null)</span>
 <span class="go">dimensions: &#39;x1&#39;, &#39;x0&#39;</span>
@@ -190,6 +200,12 @@
 </li>
 </ul>
 
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="reindexing.html"
+                        title="previous chapter">Reindexing: align axes</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="combine_arrays.html"
+                        title="next chapter">Stack and concatenate arrays</a></p>
   <h3>This Page</h3>
   <ul class="this-page-menu">
     <li><a href="../_sources/_build_rst/reshape.txt"
@@ -221,7 +237,14 @@
         <li class="right" >
           <a href="../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li><a href="../index.html">dimarray 0.1.8.dev documentation</a> &raquo;</li> 
+        <li class="right" >
+          <a href="combine_arrays.html" title="Stack and concatenate arrays"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="reindexing.html" title="Reindexing: align axes"
+             >previous</a> |</li>
+        <li><a href="../index.html">dimarray 0.1.8.dev documentation</a> &raquo;</li>
+          <li><a href="../by_topic.html" >Documentation</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer">

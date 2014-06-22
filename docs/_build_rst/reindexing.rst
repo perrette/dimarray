@@ -17,6 +17,7 @@ Reindexing is the action of shrinking or extending an array to match a new index
 reindex_axis
 ~~~~~~~~~~~~
 
+>>> import dimarray as da
 >>> a = da.DimArray([3,4],[('x0',[1,3])])
 >>> a.reindex_axis([1,2,3])
 dimarray: 2 non-null elements (1 null)
@@ -59,7 +60,6 @@ The `method=` parameter can be passed to `reindex_axis` and `reindex_like` with 
 
 >>> # Can also reindex in "interp" mode
 >>> a.reindex_axis([0,1,2,3], method='interp')
->>> #c.reindex_like(b, method='interp')
 dimarray: 3 non-null elements (1 null)
 dimensions: 'x0'
 0 / x0 (4): 0 to 3
@@ -74,14 +74,13 @@ array([ nan,  3. ,  3.5,  4. ])
 
 
 >>> import matplotlib.pyplot as plt
->>> %matplotlib inline
->>> plt.clf()
->>> plt.plot(v.time, v.values, 's-', label='original')
->>> plt.plot(w.time, w.values, 'o-', label='interp')
+>>> plt.clf()  # doctest: +SKIP
+>>> plt.plot(v.time, v.values, 's-', label='original')  # doctest: +SKIP
+>>> plt.plot(w.time, w.values, 'o-', label='interp')  # doctest: +SKIP
 >>> #plt.plot(w1.time, w.values, 'o--', color='k', label='interp')
->>> plt.plot(x.time, x.values, '*-',label='nearest')
->>> plt.legend(loc='upper left')
-<matplotlib.legend.Legend at 0x7f9202bdf450><matplotlib.figure.Figure at 0x7f9202c87b90>
+>>> plt.plot(x.time, x.values, '*-',label='nearest') # doctest: +SKIP
+>>> plt.legend(loc='upper left')  # doctest: +SKIP
+<matplotlib.legend.Legend at 0x7eff9661e850>
 
 ..  _align_axes:
 
@@ -93,11 +92,9 @@ It is also possible to proceed to axis alignment on a sequence of arrays (not in
 >>> # align axes
 >>> x = da.DimArray([1,2,3],('x0',[1,2,3]))
 >>> y = da.DimArray([3,4],('x0',[2,4]))
->>> da.align_axes(x, y)
-[dimarray: 3 non-null elements (1 null)
- dimensions: 'x0'
- 0 / x0 (4): 1 to 4
- array([  1.,   2.,   3.,  nan]), dimarray: 2 non-null elements (2 null)
- dimensions: 'x0'
- 0 / x0 (4): 1 to 4
- array([ nan,   3.,  nan,   4.])]
+>>> xa, ya = da.align_axes(x, y)
+>>> ya
+dimarray: 2 non-null elements (2 null)
+dimensions: 'x0'
+0 / x0 (4): 1 to 4
+array([ nan,   3.,  nan,   4.])
