@@ -109,7 +109,7 @@ setup(name='dimarray',
       long_description=long_description,
       url='https://github.com/perrette/dimarray',
       license = "BSD 3-Clause",
-      install_requires = ["numpy>=1.7"],
+      install_requires = ["setuptools", "numpy>=1.7"],
       tests_require = ["pytest"],
       extras_require = {
 	  "ncio": ["netCDF4>=1.0.6"],

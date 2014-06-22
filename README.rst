@@ -62,7 +62,7 @@ b            4     5     6
 Documentation:
 --------------
 See more on:
-http://dimarray.readthedocs.org
+https://pythonhosted.org/dimarray/
 
 
 Download latest version on GitHub:

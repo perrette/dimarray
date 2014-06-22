@@ -2,7 +2,7 @@ import dimarray as da
 import pytest
 import numpy as np
 
-collect_ignore = ["setup.py", "docs/conf.py", "dist", "build", "tests/testing.py", "tests/test_mpl.py"]
+collect_ignore = ["setup.py", "docs/conf.py", "dist", "build", "tests/testing.py", "tests/test_mpl.py", "docs/scripts"]
 collect_ignore.append('docs/_build_rst/dimarray.rst')
 
 try:
