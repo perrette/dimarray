@@ -78,21 +78,21 @@ Requires
 - numpy
 - netCDF4 (optional) :  for netCDF I/O
   
-    repository: https://github.com/Unidata/netcdf4-python
+    - repository: https://github.com/Unidata/netcdf4-python
 
-    From source:
+    - From source:
         the documentation can be found there: http://unidata.github.io/netcdf4-python/
         Basically you need to install HDF5 and netCDF4 libraries on your system before
         using pip or your favorite package manager.
     
-    This can be annoying to install HDF5 and netCDF4 from source.
-    Using the anaconda package from continuum analytics save time 
-    (That is the only one I tried, but it possibly also 
-    works with Enthought, xyPython or some other pre-compiled version of python)
-    With conda (the package manager shipped with - but kind of independent from - anaconda) 
-    it is enough to do a simple:
+    - This can be annoying to install HDF5 and netCDF4 from source. 
+      Using the anaconda package from continuum analytics save time 
+      (That is the only one I tried, but it possibly also 
+      works with Enthought, xyPython or some other pre-compiled version of python)
+      With conda (the package manager shipped with - but kind of independent from - anaconda) 
+      it is enough to do a simple:
 
-        conda install netCDF4 
+        - conda install netCDF4 
 
 - matplotlib (optional) : for plotting (for now plot command also requires pandas)
 - pandas (optional) :  to_pandas() and from_pandas() methods, plot()
@@ -102,3 +102,8 @@ sudo python setup.py install
 or
 
 pip install dimarray
+
+Discussion group
+----------------
+https://groups.google.com/forum/#!forum/dimarray
+
