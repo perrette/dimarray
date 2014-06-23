@@ -8,7 +8,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>numpy vs dimarray &mdash; dimarray 0.1.8 documentation</title>
+    <title>Ref Table numpy vs dimarray &mdash; dimarray 0.1.8 documentation</title>
     
     <link rel="stylesheet" href="_static/default.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -27,8 +27,8 @@
     <script type="text/javascript" src="_static/doctools.js"></script>
     <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <link rel="top" title="dimarray 0.1.8 documentation" href="index.html" />
-    <link rel="next" title="Examples of use" href="_build_rst/examples.html" />
-    <link rel="prev" title="NetCDF reading and writing" href="_build_rst/netcdf.html" /> 
+    <link rel="next" title="Comments on other packages" href="other_packages.html" />
+    <link rel="prev" title="dimArray functions reference API" href="reference_api.functions.html" /> 
   </head>
   <body>
     <div class="related">
@@ -38,13 +38,10 @@
           <a href="genindex.html" title="General Index"
              accesskey="I">index</a></li>
         <li class="right" >
-          <a href="py-modindex.html" title="Python Module Index"
-             >modules</a> |</li>
-        <li class="right" >
-          <a href="_build_rst/examples.html" title="Examples of use"
+          <a href="other_packages.html" title="Comments on other packages"
              accesskey="N">next</a> |</li>
         <li class="right" >
-          <a href="_build_rst/netcdf.html" title="NetCDF reading and writing"
+          <a href="reference_api.functions.html" title="dimArray functions reference API"
              accesskey="P">previous</a> |</li>
         <li><a href="index.html">dimarray 0.1.8 documentation</a> &raquo;</li> 
       </ul>
@@ -55,14 +52,14 @@
         <div class="bodywrapper">
           <div class="body">
             
-  <div class="section" id="numpy-vs-dimarray">
-<h1>numpy vs dimarray<a class="headerlink" href="#numpy-vs-dimarray" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="ref-table-numpy-vs-dimarray">
+<h1>Ref Table numpy vs dimarray<a class="headerlink" href="#ref-table-numpy-vs-dimarray" title="Permalink to this headline">¶</a></h1>
 <p>Table of correspondence between numpy ndarray and dimarray&#8217;s functions and methods</p>
 <table border="1" class="docutils">
 <colgroup>
-<col width="8%" />
-<col width="8%" />
-<col width="83%" />
+<col width="11%" />
+<col width="11%" />
+<col width="78%" />
 </colgroup>
 <thead valign="bottom">
 <tr class="row-odd"><th class="head" colspan="3">array creation</th>
@@ -98,39 +95,36 @@
 <td>array_kw</td>
 <td>same as DimArray.from_kw()</td>
 </tr>
-<tr class="row-odd"><td><ul class="first last simple">
-<li></li>
-</ul>
-</td>
-<td>.</td>
-<td><strong>NOTE:</strong> The <cite>array</cite> and <cite>array_kw</cite> forms (to be used as da.array()) are attempts to make the array definition less verbose. They are experimental and may change in the future.</td>
-</tr>
-<tr class="row-even"><td>zeros</td>
+<tr class="row-odd"><td>zeros</td>
 <td>zeros</td>
 <td>These functions are similar to numpy except that they require <cite>axes</cite> parameter, or a shape= parameter for automatic labelling.</td>
 </tr>
-<tr class="row-odd"><td>ones</td>
+<tr class="row-even"><td>ones</td>
 <td>ones</td>
 <td>&nbsp;</td>
 </tr>
-<tr class="row-even"><td>empty</td>
+<tr class="row-odd"><td>empty</td>
 <td>empty</td>
 <td>&nbsp;</td>
 </tr>
-<tr class="row-odd"><td>zeros_like</td>
+<tr class="row-even"><td>zeros_like</td>
 <td>zeros_like</td>
 <td>&nbsp;</td>
 </tr>
-<tr class="row-even"><td>ones_like</td>
+<tr class="row-odd"><td>ones_like</td>
 <td>ones_like</td>
 <td>&nbsp;</td>
 </tr>
-<tr class="row-odd"><td>empty_like</td>
+<tr class="row-even"><td>empty_like</td>
 <td>empty_like</td>
 <td>&nbsp;</td>
 </tr>
 </tbody>
 </table>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">The <cite>array</cite> and <cite>array_kw</cite> forms (to be used as da.array()) are attempts to make the array definition less verbose. They are experimental and may change in the future.</p>
+</div>
 <table border="1" class="docutils">
 <colgroup>
 <col width="10%" />
@@ -181,21 +175,11 @@ If only transposing (permutation) is needed, the use of <cite>transpose</cite> i
 <td>a.ungroup()</td>
 <td>Inflate two or more &#8220;grouped&#8221; axes (undo a.group()).</td>
 </tr>
-<tr class="row-odd"><td><ul class="first last simple">
-<li></li>
-</ul>
-</td>
-<td><ul class="first last simple">
-<li></li>
-</ul>
-</td>
-<td><strong>NOTE</strong>: The names <cite>group</cite> and <cite>ungroup</cite> may be confusing and could change in the future (e.g. to flatten and inflate)</td>
-</tr>
-<tr class="row-even"><td>a.flatten()</td>
+<tr class="row-odd"><td>a.flatten()</td>
 <td>a.flatten()</td>
 <td>Flatten array. In dimarray the axes are transformed into tuples (<cite>GroupedAxis</cite>).</td>
 </tr>
-<tr class="row-odd"><td>a[np.newaxis]</td>
+<tr class="row-even"><td>a[np.newaxis]</td>
 <td>a.newaxis()</td>
 <td>In numpy, add a singleton dimension, useful for broadcasting
 in an operation. In dimarray, broadcasting is based on dimension
@@ -205,37 +189,44 @@ In dimarray this is a method since it requires the name of the new axis,
 and by extension, if the new axis&#8217; values are also provided it can also
 combines functionality of <cite>repeat</cite>.</td>
 </tr>
-<tr class="row-even"><td>a.squeeze()</td>
+<tr class="row-odd"><td>a.squeeze()</td>
 <td>a.squeeze()</td>
 <td>idem, but also accept axis names (opposite of <cite>newaxis</cite>)</td>
 </tr>
-<tr class="row-odd"><td>a.repeat()</td>
+<tr class="row-even"><td>a.repeat()</td>
 <td>a.repeat()</td>
 <td>In dimarray it&#8217;s mostly an internal method that only
 works on singleton dimensions. This is of no
 much practical use. Use <cite>newaxis</cite> instead.</td>
 </tr>
-<tr class="row-even"><td>broadcast()</td>
+<tr class="row-odd"><td>broadcast()</td>
 <td>a.broadcast()</td>
 <td>Dimarray&#8217;s method similar to numpy&#8217;s function. Add or remove singleton axes to make it match another array&#8217;s
 dimensions, but <strong>without repeating</strong>
 (so that the shapes do not necessarily match, but it is ready for binary operations in a numpy sense)
 In dimarray, the broadcast method can also transpose axes to match dimension ordering.</td>
 </tr>
-<tr class="row-odd"><td>broadcast_arrays()</td>
+<tr class="row-even"><td>broadcast_arrays()</td>
 <td>broadcast_arrays()</td>
 <td>Functions. Like the above, but also repeat the arrays if necessary to match the shape.</td>
 </tr>
 </tbody>
 </table>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">The names <cite>group</cite> and <cite>ungroup</cite> may be confusing and could change in the future (e.g. to flatten and inflate, or unflatten)</p>
+</div>
+<p>The methods below are mostly similar across the packages, but dimarray also accepts axis name instead of axis rank as <cite>axis=</cite>.
+An optional <cite>skipna=</cite> parameter can be provided to ignore nans (default to <cite>False</cite>). Note also that in many cases,
+when a <cite>tuple</cite> of axis names is provided the array is first partially flattened (grouped axis) before the dimension is reduced</p>
 <table border="1" class="docutils">
 <colgroup>
-<col width="11%" />
-<col width="11%" />
-<col width="78%" />
+<col width="12%" />
+<col width="12%" />
+<col width="76%" />
 </colgroup>
 <thead valign="bottom">
-<tr class="row-odd"><th class="head" colspan="3">reduce, accumulate, diff (along-axis transformation)</th>
+<tr class="row-odd"><th class="head" colspan="3">reduce, accumulate (along-axis transformation)</th>
 </tr>
 <tr class="row-even"><th class="head">numpy</th>
 <th class="head">dimarray</th>
@@ -243,73 +234,67 @@ In dimarray, the broadcast method can also transpose axes to match dimension ord
 </tr>
 </thead>
 <tbody valign="top">
-<tr class="row-odd"><td>.</td>
-<td>.</td>
-<td><strong>NOTE</strong>: mostly similar across the packages, but dimarray also accepts axis name instead of axis rank as <cite>axis=</cite>.
-An optional <cite>skipna=</cite> parameter can be provided to ignore nans (default to <cite>False</cite>). Note also that in many cases,
-when a <cite>tuple</cite> of axis names is provided the array is first partially flattened (grouped axis) before the dimension is reduced</td>
-</tr>
-<tr class="row-even"><td>a.max()</td>
+<tr class="row-odd"><td>a.max()</td>
 <td>a.max()</td>
 <td>&nbsp;</td>
 </tr>
-<tr class="row-odd"><td>a.min()</td>
+<tr class="row-even"><td>a.min()</td>
 <td>a.min()</td>
 <td>&nbsp;</td>
 </tr>
-<tr class="row-even"><td>a.ptp()</td>
+<tr class="row-odd"><td>a.ptp()</td>
 <td>a.ptp()</td>
 <td>&nbsp;</td>
 </tr>
-<tr class="row-odd"><td>a.median()</td>
+<tr class="row-even"><td>a.median()</td>
 <td>a.median()</td>
 <td>&nbsp;</td>
 </tr>
-<tr class="row-even"><td>a.all()</td>
+<tr class="row-odd"><td>a.all()</td>
 <td>a.all()</td>
 <td>&nbsp;</td>
 </tr>
-<tr class="row-odd"><td>a.any()</td>
+<tr class="row-even"><td>a.any()</td>
 <td>a.any()</td>
 <td>&nbsp;</td>
 </tr>
-<tr class="row-even"><td>a.prod()</td>
+<tr class="row-odd"><td>a.prod()</td>
 <td>a.prod()</td>
 <td>&nbsp;</td>
 </tr>
-<tr class="row-odd"><td>a.sum()</td>
+<tr class="row-even"><td>a.sum()</td>
 <td>a.sum()</td>
 <td>&nbsp;</td>
 </tr>
-<tr class="row-even"><td>a.mean()</td>
+<tr class="row-odd"><td>a.mean()</td>
 <td>a.mean()</td>
 <td>with optional &#8220;weights=&#8221; parameter to transform into a weighted mean, which is also checked from Axis attribute.</td>
 </tr>
-<tr class="row-odd"><td>a.std()</td>
+<tr class="row-even"><td>a.std()</td>
 <td>a.std()</td>
 <td>idem</td>
 </tr>
-<tr class="row-even"><td>a.var()</td>
+<tr class="row-odd"><td>a.var()</td>
 <td>a.var()</td>
 <td>idem</td>
 </tr>
-<tr class="row-odd"><td>a.argmax()</td>
+<tr class="row-even"><td>a.argmax()</td>
 <td>a.argmax()</td>
 <td>in dimarray, returns axis value of max instead of integer position on the axis</td>
 </tr>
-<tr class="row-even"><td>a.argmin()</td>
+<tr class="row-odd"><td>a.argmin()</td>
 <td>a.argmin()</td>
 <td>idem</td>
 </tr>
-<tr class="row-odd"><td>a.cumsum()</td>
+<tr class="row-even"><td>a.cumsum()</td>
 <td>a.cumsum()</td>
 <td>&nbsp;</td>
 </tr>
-<tr class="row-even"><td>a.cumprod()</td>
+<tr class="row-odd"><td>a.cumprod()</td>
 <td>a.cumprod()</td>
 <td>&nbsp;</td>
 </tr>
-<tr class="row-odd"><td>diff(a,...)</td>
+<tr class="row-even"><td>diff(a,...)</td>
 <td>a.diff()</td>
 <td>as method, and with <cite>scheme=</cite> parameter (&#8220;forward&#8221;, &#8220;centered&#8221;, &#8220;backward&#8221;)</td>
 </tr>
@@ -324,11 +309,11 @@ when a <cite>tuple</cite> of axis names is provided the array is first partially
       <div class="sphinxsidebar">
         <div class="sphinxsidebarwrapper">
   <h4>Previous topic</h4>
-  <p class="topless"><a href="_build_rst/netcdf.html"
-                        title="previous chapter">NetCDF reading and writing</a></p>
+  <p class="topless"><a href="reference_api.functions.html"
+                        title="previous chapter">dimArray functions reference API</a></p>
   <h4>Next topic</h4>
-  <p class="topless"><a href="_build_rst/examples.html"
-                        title="next chapter">Examples of use</a></p>
+  <p class="topless"><a href="other_packages.html"
+                        title="next chapter">Comments on other packages</a></p>
   <h3>This Page</h3>
   <ul class="this-page-menu">
     <li><a href="_sources/comparison_table.txt"
@@ -358,13 +343,10 @@ when a <cite>tuple</cite> of axis names is provided the array is first partially
           <a href="genindex.html" title="General Index"
              >index</a></li>
         <li class="right" >
-          <a href="py-modindex.html" title="Python Module Index"
-             >modules</a> |</li>
-        <li class="right" >
-          <a href="_build_rst/examples.html" title="Examples of use"
+          <a href="other_packages.html" title="Comments on other packages"
              >next</a> |</li>
         <li class="right" >
-          <a href="_build_rst/netcdf.html" title="NetCDF reading and writing"
+          <a href="reference_api.functions.html" title="dimArray functions reference API"
              >previous</a> |</li>
         <li><a href="index.html">dimarray 0.1.8 documentation</a> &raquo;</li> 
       </ul>

@@ -97,6 +97,15 @@ def transpose(self, *dims):
     
     Analogous to numpy, but also allows axis names
 
+    Parameters
+    ----------
+    *dims : int or str
+	variable list of dimensions
+
+    Returns
+    -------
+    transposed_array : DimArray
+
     See also
     ---------
     reshape, group, ungroup, newaxis
@@ -144,7 +153,9 @@ def transpose(self, *dims):
     return self._constructor(result, newaxes)
 
 def swapaxes(self, axis1, axis2):
-    """ analogous to numpy's swapaxes, but can provide axes by name
+    """ Swap two axes
+    
+    analogous to numpy's swapaxes, but can provide axes by name
 
     Parameters
     ----------
@@ -153,7 +164,7 @@ def swapaxes(self, axis1, axis2):
 
     Returns
     -------
-    DimArray
+    transposed_array : DimArray
 
     Examples
     --------
@@ -183,17 +194,22 @@ def swapaxes(self, axis1, axis2):
 # Repeat the array along *existing* axis
 #
 def repeat(self, values, axis=None):
-    """ expand the array along axis: analogous to numpy's repeat
+    """ expand the array along axis
+    
+    repeat(values=None, axis=None, **kwaxes)
 
-    Signature: repeat(values=None, axis=None, **kwaxes)
+    analogous to numpy's repeat
 
     Parameters
     ----------
-        values  : integer (size of new axis) or ndarray (values  of new axis) 
-                  or Axis object
-        axis    : int or str (refer to the dimension along which to repeat)
+        values : int or ndarray or Axis instance
+	    int: size of new axis
+	    ndarray: values  of new axis 
+        axis : int or str 
+	    refer to the dimension along which to repeat
 
-        **kwaxes: alternatively, axes may be passed as keyword arguments 
+        **kwaxes : key-word arguments
+	    alternatively, axes may be passed as keyword arguments 
 
     Returns
     -------
@@ -263,15 +279,21 @@ def repeat(self, values, axis=None):
 
 
 def newaxis(self, name, values=None, pos=0):
-    """ add a new axis, ready to broadcast
+    """ add a new axis
+
+    Add a singleton axis to ease broadcasting, 
+    and repeat array along this axis if required.
 
     Parameters
     ----------
-    name: `str`, axis name
-    values: optional, if provided, broadcast the array along the new axis
+    name : str
+	axis name
+    values: array-like, optional
+	    if provided, broadcast the array along the new axis
             call `repeat(name, values)` after inserting the new singleton 
             dimension (see `repeat`) for more information.
-    pos: `int`, optional: axis position, default 0 (first axis)
+    pos : int, optional
+	axis position, default 0 (first axis)
 
     Returns
     -------
@@ -344,7 +366,19 @@ def newaxis(self, name, values=None, pos=0):
 # Remove / add singleton axis
 #
 def squeeze(self, axis=None):
-    """ Analogous to numpy, but also allows axis name
+    """ Squeeze singleton axes
+    
+    Analogous to numpy, but also allows axis name
+
+    Parameters:
+    -----------
+    axis : int or str or None 
+	axis to squeeze
+	default is None, to remove all singleton axes
+
+    Returns:
+    --------
+    squeezed_array : DimArray
 
     Examples
     --------
@@ -397,18 +431,19 @@ def reshape(self, *newdims, **kwargs):
     
     Parameters
     ----------
-        newdims: tuple or list or variable list of dimension names {str} 
+    newdims : tuple or list or variable list of dimension names {str} 
+        Any dimension now present in the array is added as singleton dimension
+        Any dimension name containing a comma is interpreting as a grouping command.
+        All dimensions to group have to exist already.
 
-            Any dimension now present in the array is added as singleton dimension
-
-            Any dimension name containing a comma is interpreting as a grouping command.
-            All dimensions to group have to exist already.
-
-        transpose: {bool} if True, transpose dimensions to match new order (default True)
+    transpose : bool
+	if True, transpose dimensions to match new order (default True)
+	otherwise, raise and Error if tranpose is needed (closer to original numpy's behaviour)
 
     Returns
     -------
-        reshape: DimArray with reshape.dims == tuple(newdims)
+    reshaped_array : DimArray 
+	with reshaped_array.dims == tuple(newdims)
 
     See also
     --------
@@ -539,20 +574,31 @@ def group(self, *dims, **kwargs):
 
     Parameters
     ----------
-        - dims: list or tuple of axis names
-        - reverse [False]: if True, reverse behaviour: dims are interpreted as 
-            the dimensions to keep, and all the other dimensions are grouped
-        - insert, optional: position where to insert the grouped axis 
-                  (by default, any grouped dimension is inserted at 
-                the position of the first axis involved in grouping)
+    dims : list or tuple of axis names
+    reverse : bool, optional
+	if True, reverse behaviour: dims are interpreted as 
+	the dimensions to keep, and all the other dimensions are grouped
+	default is False
+    insert : int, optional
+	position where to insert the grouped axis 
+        (by default, any grouped dimension is inserted at 
+        the position of the first axis involved in grouping)
 
     Returns
     -------
-        - DimArray appropriately reshaped, with collapsed dimensions as first axis (tuples)
+    grouped_array : DimArray
+	appropriately reshaped, with collapsed dimensions as first axis (tuples)
 
     This is useful to do a regional mean with missing values
 
-    Note: can be passed via the "axis" parameter of the transformation, too
+    Note
+    ----
+    A tuple of axis names can be passed via the "axis" parameter of the transformation
+    to trigger flattening prior to reducing an axis.
+
+    Warning
+    -------
+    Name may change in future release
 
     See also
     --------
@@ -683,7 +729,13 @@ def group(self, *dims, **kwargs):
     return new
 
 def flatten(self):
-    """ analogous to numpy's flatten, but conserves axes with a GroupedAxis object
+    """ flatten a DimArray into a 1-D DimArray
+    
+    analogous to numpy's flatten, but conserves axes with a GroupedAxis object
+
+    Returns
+    -------
+    DimArray
 
     See also
     --------
@@ -714,15 +766,18 @@ def flatten(self):
     return self.group(self.dims)
 
 def ungroup(self, axis=None):
-    """ opposite from group
+    """ undo grouping (inflate array)
 
     Parameters
     ----------
-    axis: axis to ungroup as int or str (default: ungroup all)
+    axis : int or str or None, optional
+	axis to ungroup
+	default to None to ungroup all
 
     Returns
     -------
     DimArray
+
     """
     # by default, ungroup all
     if axis is None:
@@ -805,13 +860,15 @@ class GroupBy(object):
 def groupby(self, *dims):
     """ group by one or several variables along which stat functions can be applied
 
+    .. note:: EXPERIMENTAL: will probably be removed or renamed in future releases
+
     Parameters
     ----------
-        *dims: variable list of dims to keep, all others are flattened
+    *dims: variable list of dims to keep, all others are flattened
 
     Returns
     -------
-        GroupBy object
+    GroupBy object
 
     Notes 
     -----

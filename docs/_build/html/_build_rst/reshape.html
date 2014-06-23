@@ -27,7 +27,7 @@
     <script type="text/javascript" src="../_static/doctools.js"></script>
     <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <link rel="top" title="dimarray 0.1.8 documentation" href="../index.html" />
-    <link rel="up" title="Documentation" href="../by_topic.html" />
+    <link rel="up" title="Reference" href="../reference.html" />
     <link rel="next" title="Stack and concatenate arrays" href="combine_arrays.html" />
     <link rel="prev" title="Reindexing: align axes" href="reindexing.html" /> 
   </head>
@@ -39,16 +39,13 @@
           <a href="../genindex.html" title="General Index"
              accesskey="I">index</a></li>
         <li class="right" >
-          <a href="../py-modindex.html" title="Python Module Index"
-             >modules</a> |</li>
-        <li class="right" >
           <a href="combine_arrays.html" title="Stack and concatenate arrays"
              accesskey="N">next</a> |</li>
         <li class="right" >
           <a href="reindexing.html" title="Reindexing: align axes"
              accesskey="P">previous</a> |</li>
         <li><a href="../index.html">dimarray 0.1.8 documentation</a> &raquo;</li>
-          <li><a href="../by_topic.html" accesskey="U">Documentation</a> &raquo;</li> 
+          <li><a href="../reference.html" accesskey="U">Reference</a> &raquo;</li> 
       </ul>
     </div>  
 
@@ -60,7 +57,7 @@
   <div class="section" id="modify-array-shape">
 <span id="page-reshape"></span><span id="id1"></span><h1>Modify array shape<a class="headerlink" href="#modify-array-shape" title="Permalink to this headline">¶</a></h1>
 <p>Basic numpy methods to modify array dimensions are implemented in dimarray, with some additional functionality allowed by named dimensions.</p>
-<p><strong>Methods overview</strong>: <tt class="xref py py-meth docutils literal"><span class="pre">dimarray.DimArray.newaxis()</span></tt>, <a class="reference internal" href="../modules.html#dimarray.DimArray.squeeze" title="dimarray.DimArray.squeeze"><tt class="xref py py-meth docutils literal"><span class="pre">dimarray.DimArray.squeeze()</span></tt></a>, <a class="reference internal" href="../modules.html#dimarray.DimArray.transpose" title="dimarray.DimArray.transpose"><tt class="xref py py-meth docutils literal"><span class="pre">dimarray.DimArray.transpose()</span></tt></a>, <a class="reference internal" href="../modules.html#dimarray.DimArray.swapaxes" title="dimarray.DimArray.swapaxes"><tt class="xref py py-meth docutils literal"><span class="pre">dimarray.DimArray.swapaxes()</span></tt></a>, <tt class="xref py py-meth docutils literal"><span class="pre">dimarray.DimArray.flatten()</span></tt>, <a class="reference internal" href="../modules.html#dimarray.DimArray.group" title="dimarray.DimArray.group"><tt class="xref py py-meth docutils literal"><span class="pre">dimarray.DimArray.group()</span></tt></a>, <a class="reference internal" href="../modules.html#dimarray.DimArray.ungroup" title="dimarray.DimArray.ungroup"><tt class="xref py py-meth docutils literal"><span class="pre">dimarray.DimArray.ungroup()</span></tt></a>, <a class="reference internal" href="../modules.html#dimarray.DimArray.reshape" title="dimarray.DimArray.reshape"><tt class="xref py py-meth docutils literal"><span class="pre">dimarray.DimArray.reshape()</span></tt></a></p>
+<p><strong>Methods overview</strong>: <a class="reference internal" href="../reference_api.methods.html#dimarray.DimArray.newaxis" title="dimarray.DimArray.newaxis"><tt class="xref py py-meth docutils literal"><span class="pre">dimarray.DimArray.newaxis()</span></tt></a>, <a class="reference internal" href="../reference_api.methods.html#dimarray.DimArray.squeeze" title="dimarray.DimArray.squeeze"><tt class="xref py py-meth docutils literal"><span class="pre">dimarray.DimArray.squeeze()</span></tt></a>, <a class="reference internal" href="../reference_api.methods.html#dimarray.DimArray.transpose" title="dimarray.DimArray.transpose"><tt class="xref py py-meth docutils literal"><span class="pre">dimarray.DimArray.transpose()</span></tt></a>, <a class="reference internal" href="../reference_api.methods.html#dimarray.DimArray.swapaxes" title="dimarray.DimArray.swapaxes"><tt class="xref py py-meth docutils literal"><span class="pre">dimarray.DimArray.swapaxes()</span></tt></a>, <a class="reference internal" href="../reference_api.methods.html#dimarray.DimArray.flatten" title="dimarray.DimArray.flatten"><tt class="xref py py-meth docutils literal"><span class="pre">dimarray.DimArray.flatten()</span></tt></a>, <a class="reference internal" href="../reference_api.methods.html#dimarray.DimArray.group" title="dimarray.DimArray.group"><tt class="xref py py-meth docutils literal"><span class="pre">dimarray.DimArray.group()</span></tt></a>, <a class="reference internal" href="../reference_api.methods.html#dimarray.DimArray.ungroup" title="dimarray.DimArray.ungroup"><tt class="xref py py-meth docutils literal"><span class="pre">dimarray.DimArray.ungroup()</span></tt></a>, <a class="reference internal" href="../reference_api.methods.html#dimarray.DimArray.reshape" title="dimarray.DimArray.reshape"><tt class="xref py py-meth docutils literal"><span class="pre">dimarray.DimArray.reshape()</span></tt></a></p>
 <div class="section" id="transpose">
 <span id="id2"></span><h2>transpose<a class="headerlink" href="#transpose" title="Permalink to this headline">¶</a></h2>
 <p>Transpose, just like its numpy equivalent, permutes dimensions, but in dimarray it can be provided with axis names instead of just axis position.</p>
@@ -167,7 +164,7 @@
 </div>
 <div class="section" id="reshape-experimental">
 <span id="id5"></span><h2>reshape [experimental]<a class="headerlink" href="#reshape-experimental" title="Permalink to this headline">¶</a></h2>
-<p><a class="reference internal" href="../modules.html#dimarray.DimArray.reshape" title="dimarray.DimArray.reshape"><tt class="xref py py-meth docutils literal"><span class="pre">dimarray.DimArray.reshape()</span></tt></a> is similar but not the same as numpy ndarray&#8217;s <em class="xref std std-ref">reshape</em>. It takes only axis names as parameters. It is a high-level function that makes use of <tt class="xref py py-meth docutils literal"><span class="pre">dimarray.DimArray.newaxis()</span></tt>, <a class="reference internal" href="../modules.html#dimarray.DimArray.squeeze" title="dimarray.DimArray.squeeze"><tt class="xref py py-meth docutils literal"><span class="pre">dimarray.DimArray.squeeze()</span></tt></a>, <a class="reference internal" href="../modules.html#dimarray.DimArray.group" title="dimarray.DimArray.group"><tt class="xref py py-meth docutils literal"><span class="pre">dimarray.DimArray.group()</span></tt></a> and <a class="reference internal" href="../modules.html#dimarray.DimArray.ungroup" title="dimarray.DimArray.ungroup"><tt class="xref py py-meth docutils literal"><span class="pre">dimarray.DimArray.ungroup()</span></tt></a> to reshape the array. It differs from numpy in that it cannot &#8220;break&#8221; an existing dimension (unless it is a GroupedAxis). It also performs <a class="reference internal" href="../modules.html#dimarray.DimArray.transpose" title="dimarray.DimArray.transpose"><tt class="xref py py-meth docutils literal"><span class="pre">dimarray.DimArray.transpose()</span></tt></a> as needed to match the required shape.</p>
+<p><a class="reference internal" href="../reference_api.methods.html#dimarray.DimArray.reshape" title="dimarray.DimArray.reshape"><tt class="xref py py-meth docutils literal"><span class="pre">dimarray.DimArray.reshape()</span></tt></a> is similar but not the same as numpy ndarray&#8217;s <em class="xref std std-ref">reshape</em>. It takes only axis names as parameters. It is a high-level function that makes use of <a class="reference internal" href="../reference_api.methods.html#dimarray.DimArray.newaxis" title="dimarray.DimArray.newaxis"><tt class="xref py py-meth docutils literal"><span class="pre">dimarray.DimArray.newaxis()</span></tt></a>, <a class="reference internal" href="../reference_api.methods.html#dimarray.DimArray.squeeze" title="dimarray.DimArray.squeeze"><tt class="xref py py-meth docutils literal"><span class="pre">dimarray.DimArray.squeeze()</span></tt></a>, <a class="reference internal" href="../reference_api.methods.html#dimarray.DimArray.group" title="dimarray.DimArray.group"><tt class="xref py py-meth docutils literal"><span class="pre">dimarray.DimArray.group()</span></tt></a> and <a class="reference internal" href="../reference_api.methods.html#dimarray.DimArray.ungroup" title="dimarray.DimArray.ungroup"><tt class="xref py py-meth docutils literal"><span class="pre">dimarray.DimArray.ungroup()</span></tt></a> to reshape the array. It differs from numpy in that it cannot &#8220;break&#8221; an existing dimension (unless it is a GroupedAxis). It also performs <a class="reference internal" href="../reference_api.methods.html#dimarray.DimArray.transpose" title="dimarray.DimArray.transpose"><tt class="xref py py-meth docutils literal"><span class="pre">dimarray.DimArray.transpose()</span></tt></a> as needed to match the required shape.</p>
 <p>Here an example where high-dimensional data is converted into a pandas&#8217; DataFrame for displaying result of a sensitivity analysis. GroupedAxis are converted into MultiIndex before passing to pandas.</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">large_array</span> <span class="o">=</span> <span class="n">DimArray</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="mi">2</span><span class="o">*</span><span class="mi">5</span><span class="o">*</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">2</span><span class="p">),</span> <span class="n">dims</span><span class="o">=</span><span class="p">(</span><span class="s">&#39;A&#39;</span><span class="p">,</span><span class="s">&#39;B&#39;</span><span class="p">,</span><span class="s">&#39;C&#39;</span><span class="p">,</span><span class="s">&#39;D&#39;</span><span class="p">))</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">large_array</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="s">&#39;A,C&#39;</span><span class="p">,</span><span class="s">&#39;B,D&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">to_pandas</span><span class="p">()</span>
@@ -241,16 +238,13 @@
           <a href="../genindex.html" title="General Index"
              >index</a></li>
         <li class="right" >
-          <a href="../py-modindex.html" title="Python Module Index"
-             >modules</a> |</li>
-        <li class="right" >
           <a href="combine_arrays.html" title="Stack and concatenate arrays"
              >next</a> |</li>
         <li class="right" >
           <a href="reindexing.html" title="Reindexing: align axes"
              >previous</a> |</li>
         <li><a href="../index.html">dimarray 0.1.8 documentation</a> &raquo;</li>
-          <li><a href="../by_topic.html" >Documentation</a> &raquo;</li> 
+          <li><a href="../reference.html" >Reference</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer">

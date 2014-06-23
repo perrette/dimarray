@@ -1,8 +1,8 @@
-dimarray
-========
+Introduction
+============
 
-pandas in N dimensions
-----------------------
+Numpy array with dimensions
+---------------------------
 dimarray is a package to handle numpy arrays with labelled dimensions and axes. 
 Inspired from pandas, it includes advanced alignment and reshaping features and 
 as well as nan handling.
@@ -17,7 +17,7 @@ the netCDF4 package, and supports metadata.
 
 
 Getting started
-----------------
+---------------
 
 A **``DimArray``** can be defined just like a numpy array, with
 additional information about its dimensions, which can be provided
@@ -51,7 +51,7 @@ dimensions: 'variable'
 0 / variable (2): a to b
 array([ 2.,  5.])
 
-But never stays very far from `pandas`:
+Can export to `pandas` for pretty printing:
 
 >>> a.to_pandas()
 time      1950  1960  1970
@@ -61,7 +61,6 @@ b            4     5     6
 
 Documentation:
 --------------
-See more on:
 https://pythonhosted.org/dimarray/
 
 
@@ -69,11 +68,8 @@ Download latest version on GitHub:
 ----------------------------------
 https://github.com/perrette/dimarray
 
-Installation:
--------------
-
-Requires
-
+Dependencies
+------------
 - python2.7
 - numpy
 - netCDF4 (optional) :  for netCDF I/O
@@ -97,8 +93,18 @@ Requires
 - matplotlib (optional) : for plotting (for now plot command also requires pandas)
 - pandas (optional) :  to_pandas() and from_pandas() methods, plot()
 
-sudo python setup.py install
 
-or
+Installation
+------------
+Download the latest version from github and extract from archive
+Then from the dimarray repository type:
+    
+        python setup.py install  
 
-pip install dimarray
+Alternatively, you can use pip to download and install the version from pypi (could be slightly out-of-date):
+
+        pip install dimarray 
+
+or with conda:
+    
+        conda install dimarray

@@ -40,7 +40,7 @@ This function applies to any kind of input array, as long as the "time" dimensio
 
 >>> a = DimArray([1,2,3,4], axes=[[2000,2001,2002,2003]], dims=['time'])
 >>> time_mean(a, 2001, 2003)  # average over 2001, 2002, 2003
-2.5
+3.0
 
 >>> a = DimArray([[1,2,3,4],[5,6,7,8]], axes=[['a','b'],[2000,2001,2002,2003]], dims=['items','time'])
 >>> time_mean(a)  # average over the full time axis

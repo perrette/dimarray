@@ -1,7 +1,7 @@
 """ Numpy-like Axis transformations
 """
 import numpy as np
-from functools import partial
+from functools import partial, wraps
 
 from decorators import format_doc
 from axes import Axis, Axes, GroupedAxis
@@ -13,24 +13,23 @@ from axes import Axis, Axes, GroupedAxis
 __all__ = []
 
 _doc_axis = """
-axis: axis along which to apply the tranform. 
+axis : int or str or tuple
+      axis along which to apply the tranform. 
       Can be given as axis position (`int`), as axis name (`str`), as a 
       `list` or `tuple` of axes (positions or names) to collapse into one axis before 
       applying transform. If `axis` is `None`, just apply the transform on
       the flattened array consistently with numpy (in this case will return
       a scalar).
       Default is `{default_axis}`.
-"""
+""".strip()
 
 _doc_skipna = """
-skipna: If True, treat NaN as missing values (either using MaskedArray or,
+skipna : bool
+    If True, treat NaN as missing values (either using MaskedArray or,
         when available, specific numpy function)
-"""
+""".strip()
 
 _doc_numpy = """ Analogous to numpy's {func}
-
-Signature
----------
 
 {func}(..., axis=None, skipna=False, ...)
 
@@ -38,10 +37,13 @@ Accepts the same parameters as the equivalent numpy function,
 with modified behaviour of the `axis` parameter and an additional 
 `skipna` parameter to handle NaNs (by default considered missing values)
 
+Parameters
+----------
+
 {axis}
 {skipna}
 
-`...` stands for any other parameters required by the function, and depends
+"..." stands for any other parameters required by the function, and depends
 on the particular function being called 
 
 Returns
@@ -53,9 +55,17 @@ and more information.
 
 See Also
 --------
-`apply_along_axis`: is called by this method
-`to_MaskedArray`: is used if skipna is True
+apply_along_axis: is called by this method
+to_MaskedArray: is used if skipna is True
 """.format(axis=_doc_axis, skipna=_doc_skipna, func="{func}")
+
+_doc_weights = """
+weights : str or bool or array-like or callable or None, optional
+          if weights are defined, perform a weighted {func} 
+          the default behaviour ("axis") is too look in individual axes 
+          whether they have a not-None weight attribute
+          Default is "axis" to look at axis' weights attribute
+""".strip()
 
 #
 # Actual transforms
@@ -274,10 +284,14 @@ class _NumpyDesc(object):
         """
         """
         # convert self.apply to an actual function
+        #newmethod = wraps(apply_along_axis)(partial(apply_along_axis, obj, self.numpy_method))
         newmethod = partial(apply_along_axis, obj, self.numpy_method)
 
         # Update doc string
         newmethod.__doc__ = _doc_numpy.format(func=self.numpy_method, default_axis=None)
+
+        # update the name 
+        newmethod.__name__ = self.numpy_method
 
         return newmethod
 
@@ -377,17 +391,21 @@ def diff(self, axis=-1, scheme="backward", keepaxis=False, n=1):
     ----------
     {axis}
 
-    scheme: str, determines the values of the resulting axis
-            "forward" : diff[i] = x[i+1] - x[i]
-            "backward": diff[i] = x[i] - x[i-1]
-            "centered": diff[i] = x[i+1/2] - x[i-1/2]
-            default is "backward"
+    scheme : str, optional
+        determines the values of the resulting axis
+        - "forward" : diff[i] = x[i+1] - x[i]
+        - "backward": diff[i] = x[i] - x[i-1]
+        - "centered": diff[i] = x[i+1/2] - x[i-1/2]
+        Default is "backward"
 
-    keepaxis: bool, if True, keep the initial axis by padding with NaNs
-              Only compatible with "forward" or "backward" differences
+    keepaxis : bool, optional
+            if True, keep the initial axis by padding with NaNs
+            Only compatible with "forward" or "backward" differences
+            Default is False
 
     n : int, optional
         The number of times values are differenced.
+        Default is one
 
     Returns
     -------
@@ -554,16 +572,15 @@ def weighted_mean(self, axis=None, skipna=False, weights='axis', dtype=None, out
 
     Parameters
     ----------
-    axis    : int, str, tuple: axis or group of axes to apply the transform on
-    skipna  : remove nans prior to transformation?
-    weights : if weights, perform a weighted mean (see get_weights method)
-                    the default behaviour ("axis") is too look in individual axes 
-                    whether they have a not-None weight attribute
+    axis : int, str, tuple: axis or group of axes to apply the transform on
+    skipna : remove nans prior to transformation?
+    {weights}
     
     Returns
     -------
     DimArray or scalar, consistently with ndarray behaviour
     """
+
     # Proceed to a weighted mean
     if weights is not None and weights is not False:
         weights = self.get_weights(weights, axis=axis, fill_nans=skipna)
@@ -582,19 +599,23 @@ def weighted_var(self, axis=None, skipna=False, weights="axis", ddof=0, dtype=No
 
     Parameters
     ----------
-    axis    : int, str, tuple: axis or group of axes to apply the transform on
-    skipna  : remove nans prior to transformation?
-    weights : if weights, perform a weighted var (see get_weights method)
-              the default behaviour ("axis") is too look in individual axes 
-              whether they have a not-None weight attribute
-    ddof    : "Delta Degrees of Freedom": the divisor used in the calculation is
-              ``N - ddof``, where ``N`` represents the number of elements. By default `ddof` is zero.
-              Note ddof is ignored when weights are used
+    axis : int or str or tuple, optional
+        axis or group of axes to apply the transform on
+    skipna : bool, optional
+        remove nans prior to transformation?
+        Default is False.
+    {weights}
+    ddof : int, optional
+            "Delta Degrees of Freedom": the divisor used in the calculation is
+             ``N - ddof``, where ``N`` represents the number of elements. By default `ddof` is zero.
+            Note ddof is ignored when weights are used
+            Default is 0.
     
     Returns
     -------
     DimArray or scalar, consistently with ndarray behaviour
     """
+
     # Proceed to a weighted var
     if weights is not None and weights is not False:
         weights = self.get_weights(weights, axis=axis, fill_nans=skipna)
@@ -609,6 +630,8 @@ def weighted_var(self, axis=None, skipna=False, weights="axis", ddof=0, dtype=No
     return dev.mean(axis=axis, skipna=skipna, weights=weights, dtype=dtype, out=out)
 
 def weighted_std(self, *args, **kwargs):
-    """ alias for a.var()**0.5: see `var` method for doc
-    """
     return self.var(*args, **kwargs)**0.5
+
+weighted_mean.__doc__ = weighted_mean.__doc__.format(weights=_doc_weights).format(func='mean')
+weighted_var.__doc__ = weighted_var.__doc__.format(weights=_doc_weights).format(func='var')
+weighted_std.__doc__ = weighted_var.__doc__.replace('var','std')

@@ -8,7 +8,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>Getting started &mdash; dimarray 0.1.8 documentation</title>
+    <title>Tutorial &mdash; dimarray 0.1.8 documentation</title>
     
     <link rel="stylesheet" href="../_static/default.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
@@ -27,8 +27,8 @@
     <script type="text/javascript" src="../_static/doctools.js"></script>
     <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <link rel="top" title="dimarray 0.1.8 documentation" href="../index.html" />
-    <link rel="next" title="Documentation" href="../by_topic.html" />
-    <link rel="prev" title="Installation" href="../installation.html" /> 
+    <link rel="next" title="Examples of use" href="examples.html" />
+    <link rel="prev" title="Introduction" href="../introduction.html" /> 
   </head>
   <body>
     <div class="related">
@@ -38,13 +38,10 @@
           <a href="../genindex.html" title="General Index"
              accesskey="I">index</a></li>
         <li class="right" >
-          <a href="../py-modindex.html" title="Python Module Index"
-             >modules</a> |</li>
-        <li class="right" >
-          <a href="../by_topic.html" title="Documentation"
+          <a href="examples.html" title="Examples of use"
              accesskey="N">next</a> |</li>
         <li class="right" >
-          <a href="../installation.html" title="Installation"
+          <a href="../introduction.html" title="Introduction"
              accesskey="P">previous</a> |</li>
         <li><a href="../index.html">dimarray 0.1.8 documentation</a> &raquo;</li> 
       </ul>
@@ -55,8 +52,8 @@
         <div class="bodywrapper">
           <div class="body">
             
-  <div class="section" id="getting-started">
-<span id="page-getting-started"></span><h1>Getting started<a class="headerlink" href="#getting-started" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="tutorial">
+<span id="page-getting-started"></span><h1>Tutorial<a class="headerlink" href="#tutorial" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="define-a-dimarray">
 <span id="id1"></span><h2>define a dimarray<a class="headerlink" href="#define-a-dimarray" title="Permalink to this headline">¶</a></h2>
 <p>A <strong>``DimArray``</strong> can be defined just like a numpy array, with
@@ -89,7 +86,7 @@ via <cite>axes</cite> and <cite>dims</cite> parameters.</p>
 <span class="go">1 / time (3): 1950 to 1970</span>
 </pre></div>
 </div>
-<p>For more information refer to section on <a class="reference internal" href="data_structure.html#page-data-structure"><em>DimArray: data structure and attributes</em></a> (as well as <a class="reference internal" href="../modules.html#dimarray.Axis" title="dimarray.Axis"><tt class="xref py py-class docutils literal"><span class="pre">dimarray.Axis</span></tt></a> and <a class="reference internal" href="../modules.html#dimarray.Axes" title="dimarray.Axes"><tt class="xref py py-class docutils literal"><span class="pre">dimarray.Axes</span></tt></a>)</p>
+<p>For more information refer to section on <a class="reference internal" href="data_structure.html#page-data-structure"><em>DimArray: data structure and attributes</em></a> (as well as <tt class="xref py py-class docutils literal"><span class="pre">dimarray.Axis</span></tt> and <tt class="xref py py-class docutils literal"><span class="pre">dimarray.Axes</span></tt>)</p>
 </div>
 <div class="section" id="numpy-like-attributes">
 <span id="id3"></span><h2>numpy-like attributes<a class="headerlink" href="#numpy-like-attributes" title="Permalink to this headline">¶</a></h2>
@@ -211,7 +208,7 @@ seasonally-varying data (camping summer and winter prices).</p>
 <span class="go">        [  0,   1,   2]]])</span>
 </pre></div>
 </div>
-<p>Note that they are various ways of combining DimArray instances. In many case (when no dimension broadcasting is involved), it is simpler to just use the <a class="reference internal" href="../modules.html#dimarray.stack" title="dimarray.stack"><tt class="xref py py-func docutils literal"><span class="pre">dimarray.stack()</span></tt></a> method.</p>
+<p>Note that they are various ways of combining DimArray instances. In many case (when no dimension broadcasting is involved), it is simpler to just use the <tt class="xref py py-func docutils literal"><span class="pre">dimarray.stack()</span></tt> method.</p>
 </div>
 <div class="section" id="netcdf-reading-and-writing">
 <span id="id8"></span><h2>NetCDF reading and writing<a class="headerlink" href="#netcdf-reading-and-writing" title="Permalink to this headline">¶</a></h2>
@@ -251,7 +248,7 @@ the netCDF4 package. If netCDF4 is installed (much recommanded), a dataset can e
 </div>
 <div class="section" id="interfacing-with-pandas">
 <span id="id10"></span><h2>interfacing with pandas<a class="headerlink" href="#interfacing-with-pandas" title="Permalink to this headline">¶</a></h2>
-<p>For things that pandas does better, such as pretty printing, I/O to many formats, and low-dimensional data analysis, just use the <a class="reference internal" href="../modules.html#dimarray.DimArray.to_pandas" title="dimarray.DimArray.to_pandas"><tt class="xref py py-meth docutils literal"><span class="pre">dimarray.DimArray.to_pandas()</span></tt></a> method</p>
+<p>For things that pandas does better, such as pretty printing, I/O to many formats, and low-dimensional data analysis, just use the <tt class="xref py py-meth docutils literal"><span class="pre">dimarray.DimArray.to_pandas()</span></tt> method</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">small_array</span><span class="o">.</span><span class="n">to_pandas</span><span class="p">()</span>
 <span class="go">C     0       1       2       3       4</span>
 <span class="go">D     0   1   0   1   0   1   0   1   0   1</span>
@@ -262,7 +259,7 @@ the netCDF4 package. If netCDF4 is installed (much recommanded), a dataset can e
 <span class="go">  1  30  31  32  33  34  35  36  37  38  39</span>
 </pre></div>
 </div>
-<p>And <a class="reference internal" href="../modules.html#dimarray.DimArray.from_pandas" title="dimarray.DimArray.from_pandas"><tt class="xref py py-meth docutils literal"><span class="pre">dimarray.DimArray.from_pandas()</span></tt></a> works to convert pandas objects to <cite>DimArray</cite> (also supports <cite>MultiIndex</cite>):</p>
+<p>And <tt class="xref py py-meth docutils literal"><span class="pre">dimarray.DimArray.from_pandas()</span></tt> works to convert pandas objects to <cite>DimArray</cite> (also supports <cite>MultiIndex</cite>):</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">pandas</span> <span class="kn">as</span> <span class="nn">pd</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">s</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">([[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">],[</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">]],</span> <span class="n">index</span><span class="o">=</span><span class="p">[</span><span class="s">&#39;a&#39;</span><span class="p">,</span><span class="s">&#39;b&#39;</span><span class="p">],</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="mi">1950</span><span class="p">,</span> <span class="mi">1960</span><span class="p">])</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">da</span><span class="o">.</span><span class="n">from_pandas</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
@@ -274,6 +271,7 @@ the netCDF4 package. If netCDF4 is installed (much recommanded), a dataset can e
 <span class="go">       [3, 4]])</span>
 </pre></div>
 </div>
+<p>For more information, you can use inline help (help() or ?) or refer to <a class="reference internal" href="../reference.html#page-reference"><em>Reference</em></a></p>
 </div>
 </div>
 
@@ -285,7 +283,7 @@ the netCDF4 package. If netCDF4 is installed (much recommanded), a dataset can e
         <div class="sphinxsidebarwrapper">
   <h3><a href="../index.html">Table Of Contents</a></h3>
   <ul>
-<li><a class="reference internal" href="#">Getting started</a><ul>
+<li><a class="reference internal" href="#">Tutorial</a><ul>
 <li><a class="reference internal" href="#define-a-dimarray">define a dimarray</a></li>
 <li><a class="reference internal" href="#data-structure">data structure</a></li>
 <li><a class="reference internal" href="#numpy-like-attributes">numpy-like attributes</a></li>
@@ -301,11 +299,11 @@ the netCDF4 package. If netCDF4 is installed (much recommanded), a dataset can e
 </ul>
 
   <h4>Previous topic</h4>
-  <p class="topless"><a href="../installation.html"
-                        title="previous chapter">Installation</a></p>
+  <p class="topless"><a href="../introduction.html"
+                        title="previous chapter">Introduction</a></p>
   <h4>Next topic</h4>
-  <p class="topless"><a href="../by_topic.html"
-                        title="next chapter">Documentation</a></p>
+  <p class="topless"><a href="examples.html"
+                        title="next chapter">Examples of use</a></p>
   <h3>This Page</h3>
   <ul class="this-page-menu">
     <li><a href="../_sources/_build_rst/getting_started.txt"
@@ -335,13 +333,10 @@ the netCDF4 package. If netCDF4 is installed (much recommanded), a dataset can e
           <a href="../genindex.html" title="General Index"
              >index</a></li>
         <li class="right" >
-          <a href="../py-modindex.html" title="Python Module Index"
-             >modules</a> |</li>
-        <li class="right" >
-          <a href="../by_topic.html" title="Documentation"
+          <a href="examples.html" title="Examples of use"
              >next</a> |</li>
         <li class="right" >
-          <a href="../installation.html" title="Installation"
+          <a href="../introduction.html" title="Introduction"
              >previous</a> |</li>
         <li><a href="../index.html">dimarray 0.1.8 documentation</a> &raquo;</li> 
       </ul>

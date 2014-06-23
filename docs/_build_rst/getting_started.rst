@@ -5,8 +5,8 @@
 ..  _page_getting_started:
 
 
-Getting started
-===============
+Tutorial
+========
 
 ..  _define_a_dimarray:
 
@@ -248,3 +248,5 @@ dimensions: 'x0', 'x1'
 1 / x1 (2): 1950 to 1960
 array([[1, 2],
        [3, 4]])
+
+For more information, you can use inline help (help() or ?) or refer to :ref:`page_reference`

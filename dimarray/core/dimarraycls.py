@@ -179,7 +179,7 @@ class DimArray(object):
 		  with dimensions inferred from axes (in that case `axes=` 
 		  must be provided).
 
-	axes : optional, list or tuple 
+	axes : list or tuple, optional
 	
 	    axis values as ndarrays, whose order 
 	    matches axis names (the dimensions) provided via `dims=` 
@@ -190,7 +190,7 @@ class DimArray(object):
 	    If `axes=` is omitted, a standard axis `np.arange(shape[i])`
 	    is created for each axis `i`.
 
-	dims : optional, list or tuple
+	dims : list or tuple, optional
 	    dimensions (or axis names)
 	    This parameter can be omitted if dimensions are already 
 	    provided by other means, such as passing a list of tuple 
@@ -201,12 +201,18 @@ class DimArray(object):
 	    given `x0`, `x1`, ...`xn`, where n is the number of 
 	    dimensions.
 
-	dtype : optional, data type, passed to np.array() 
-	copy : optional, passed to np.array()
+	dtype : numpy data type, optional
+            passed to np.array() 
 
-	**kwargs : metadata 
+	copy : bool, optional
+            passed to np.array()
+
+	**kwargs : keyword arguments
+            metadata 
 	
-	    NOTE: metadata passed this way cannot have name already taken by other 
+	Notes 
+        ----- 
+        metadata passed this way cannot have name already taken by other 
 	    parameters such as "values", "axes", "dims", "dtype" or "copy".
 
 	Examples

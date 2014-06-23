@@ -1,5 +1,5 @@
-numpy vs dimarray
-=================
+Ref Table numpy vs dimarray
+===========================
 
 Table of correspondence between numpy ndarray and dimarray's functions and methods
 
@@ -12,7 +12,6 @@ array               DimArray            In dimarray need to provide axes informa
 -                   DimArray.from_kw    Same as DimArray() but provide axes as key-words.
 -                   array               same as DimArray()
 -                   array_kw            same as DimArray.from_kw()
--                   .                   **NOTE:** The `array` and `array_kw` forms (to be used as da.array()) are attempts to make the array definition less verbose. They are experimental and may change in the future.
 zeros               zeros               These functions are similar to numpy except that they require `axes` parameter, or a shape= parameter for automatic labelling.
 ones                ones                  
 empty               empty                 
@@ -20,6 +19,8 @@ zeros_like          zeros_like
 ones_like           ones_like             
 empty_like          empty_like            
 ==================  ==================  ================    
+
+.. note:: The `array` and `array_kw` forms (to be used as da.array()) are attempts to make the array definition less verbose. They are experimental and may change in the future.
 
 ==================  ==================  ================    
 reshaping
@@ -37,7 +38,6 @@ a.reshape()         a.reshape()         Change array shape without changing the 
                                         If only transposing (permutation) is needed, the use of `transpose` is preferred for clarity.
     -               a.group()           Flatten two axes into one: it is for `reshape` what `swapaxes` is to `transpose`.
     -               a.ungroup()         Inflate two or more "grouped" axes (undo a.group()). 
-    -               -                   **NOTE**: The names `group` and `ungroup` may be confusing and could change in the future (e.g. to flatten and inflate)
 a.flatten()         a.flatten()         Flatten array. In dimarray the axes are transformed into tuples (`GroupedAxis`). 
 a[np.newaxis]       a.newaxis()         In numpy, add a singleton dimension, useful for broadcasting 
                                         in an operation. In dimarray, broadcasting is based on dimension 
@@ -57,14 +57,17 @@ broadcast()         a.broadcast()       Dimarray's method similar to numpy's fun
 broadcast_arrays()  broadcast_arrays()  Functions. Like the above, but also repeat the arrays if necessary to match the shape.
 ==================  ==================  ================    
 
+.. note:: The names `group` and `ungroup` may be confusing and could change in the future (e.g. to flatten and inflate, or unflatten)
+
+The methods below are mostly similar across the packages, but dimarray also accepts axis name instead of axis rank as `axis=`. 
+An optional `skipna=` parameter can be provided to ignore nans (default to `False`). Note also that in many cases, 
+when a `tuple` of axis names is provided the array is first partially flattened (grouped axis) before the dimension is reduced
+
 ==================  ==================  ================    
-reduce, accumulate, diff (along-axis transformation)
+reduce, accumulate (along-axis transformation)
 --------------------------------------------------------
 numpy               dimarray            comments
 ==================  ==================  ================    
-.                   .                   **NOTE**: mostly similar across the packages, but dimarray also accepts axis name instead of axis rank as `axis=`. 
-                                        An optional `skipna=` parameter can be provided to ignore nans (default to `False`). Note also that in many cases, 
-                                        when a `tuple` of axis names is provided the array is first partially flattened (grouped axis) before the dimension is reduced
 a.max()             a.max()             
 a.min()             a.min()             
 a.ptp()             a.ptp()             

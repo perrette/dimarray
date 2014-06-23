@@ -8,7 +8,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>Concept &mdash; dimarray 0.1.8 documentation</title>
+    <title>dimarray documentation &mdash; dimarray 0.1.8 documentation</title>
     
     <link rel="stylesheet" href="_static/default.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -27,7 +27,7 @@
     <script type="text/javascript" src="_static/doctools.js"></script>
     <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <link rel="top" title="dimarray 0.1.8 documentation" href="#" />
-    <link rel="next" title="Installation" href="installation.html" /> 
+    <link rel="next" title="Introduction" href="introduction.html" /> 
   </head>
   <body>
     <div class="related">
@@ -37,10 +37,7 @@
           <a href="genindex.html" title="General Index"
              accesskey="I">index</a></li>
         <li class="right" >
-          <a href="py-modindex.html" title="Python Module Index"
-             >modules</a> |</li>
-        <li class="right" >
-          <a href="installation.html" title="Installation"
+          <a href="introduction.html" title="Introduction"
              accesskey="N">next</a> |</li>
         <li><a href="#">dimarray 0.1.8 documentation</a> &raquo;</li> 
       </ul>
@@ -51,32 +48,58 @@
         <div class="bodywrapper">
           <div class="body">
             
-  <div class="toctree-wrapper compound">
+  <div class="section" id="dimarray-documentation">
+<h1>dimarray documentation<a class="headerlink" href="#dimarray-documentation" title="Permalink to this headline">¶</a></h1>
+<div class="toctree-wrapper compound">
 <ul class="simple">
 </ul>
 </div>
-<div class="section" id="concept">
-<h1>Concept<a class="headerlink" href="#concept" title="Permalink to this headline">¶</a></h1>
-<p>A <cite>numpy</cite> array with labelled axes and dimensions, in the spirit of
-<cite>pandas</cite> but not restricted to low-dimensional arrays, with improved
-indexing, and using the full power of having dimension names
-(see below &#8220;Comparisons with other packages&#8221;).</p>
-<p>Having axis name and axis values allow on-the-fly axis alignment and
-dimension broadcasting in basic operations (addition, etc...),
-so that rules can be defined for nearly every sequence of operands.</p>
-<p>A natural I/O format for such an array is netCDF, common in geophysics, which rely on
-the netCDF4 package. Other formats are under development (HDF5). Metadata are also
-supported, and conserved via slicing and along-axis transformations.</p>
-</div>
-<div class="section" id="documentation">
-<h1>Documentation<a class="headerlink" href="#documentation" title="Permalink to this headline">¶</a></h1>
 <div class="toctree-wrapper compound">
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="_build_rst/getting_started.html">Getting started</a></li>
-<li class="toctree-l1"><a class="reference internal" href="by_topic.html">Documentation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="comparison_table.html">numpy vs dimarray</a></li>
-<li class="toctree-l1"><a class="reference internal" href="_build_rst/examples.html">Examples of use</a></li>
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">Introduction</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="introduction.html#numpy-array-with-dimensions">Numpy array with dimensions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="introduction.html#getting-started">Getting started</a></li>
+<li class="toctree-l2"><a class="reference internal" href="introduction.html#documentation">Documentation:</a></li>
+<li class="toctree-l2"><a class="reference internal" href="introduction.html#download-latest-version-on-github">Download latest version on GitHub:</a></li>
+<li class="toctree-l2"><a class="reference internal" href="introduction.html#dependencies">Dependencies</a></li>
+<li class="toctree-l2"><a class="reference internal" href="introduction.html#installation">Installation</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="_build_rst/getting_started.html">Tutorial</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="_build_rst/getting_started.html#define-a-dimarray">define a dimarray</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_build_rst/getting_started.html#data-structure">data structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_build_rst/getting_started.html#numpy-like-attributes">numpy-like attributes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_build_rst/getting_started.html#indexing">indexing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_build_rst/getting_started.html#transformation">transformation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_build_rst/getting_started.html#data-alignment-automatic-broadcasting-and-reindexing">data alignment: automatic broadcasting and reindexing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_build_rst/getting_started.html#dataset">Dataset</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_build_rst/getting_started.html#netcdf-reading-and-writing">NetCDF reading and writing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_build_rst/getting_started.html#reshaping-arrays">Reshaping arrays</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_build_rst/getting_started.html#interfacing-with-pandas">interfacing with pandas</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="_build_rst/examples.html">Examples of use</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="_build_rst/examples.html#create-a-generic-time-mean-function">Create a generic time-mean function</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="reference.html">Reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="_build_rst/create_dimarray.html">Create a dimarray</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_build_rst/data_structure.html">DimArray: data structure and attributes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_build_rst/indexing.html">Indexing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_build_rst/reindexing.html">Reindexing: align axes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_build_rst/reshape.html">Modify array shape</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_build_rst/combine_arrays.html">Stack and concatenate arrays</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_build_rst/transformations.html">Along-axis transformations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_build_rst/metadata.html">Metadata</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_build_rst/netcdf.html">NetCDF reading and writing</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="reference_api.html">Reference API</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="reference_api.methods.html">DimArray methods reference API</a></li>
+<li class="toctree-l2"><a class="reference internal" href="reference_api.functions.html">dimArray functions reference API</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="comparison_table.html">Ref Table numpy vs dimarray</a></li>
 <li class="toctree-l1"><a class="reference internal" href="other_packages.html">Comments on other packages</a></li>
 </ul>
 </div>
@@ -103,8 +126,7 @@ supported, and conserved via slicing and along-axis transformations.</p>
         <div class="sphinxsidebarwrapper">
   <h3><a href="#">Table Of Contents</a></h3>
   <ul>
-<li><a class="reference internal" href="#">Concept</a></li>
-<li><a class="reference internal" href="#documentation">Documentation</a><ul>
+<li><a class="reference internal" href="#">dimarray documentation</a><ul>
 </ul>
 </li>
 <li><a class="reference internal" href="#further-development">Further development</a></li>
@@ -112,8 +134,8 @@ supported, and conserved via slicing and along-axis transformations.</p>
 </ul>
 
   <h4>Next topic</h4>
-  <p class="topless"><a href="installation.html"
-                        title="next chapter">Installation</a></p>
+  <p class="topless"><a href="introduction.html"
+                        title="next chapter">Introduction</a></p>
   <h3>This Page</h3>
   <ul class="this-page-menu">
     <li><a href="_sources/index.txt"
@@ -143,10 +165,7 @@ supported, and conserved via slicing and along-axis transformations.</p>
           <a href="genindex.html" title="General Index"
              >index</a></li>
         <li class="right" >
-          <a href="py-modindex.html" title="Python Module Index"
-             >modules</a> |</li>
-        <li class="right" >
-          <a href="installation.html" title="Installation"
+          <a href="introduction.html" title="Introduction"
              >next</a> |</li>
         <li><a href="#">dimarray 0.1.8 documentation</a> &raquo;</li> 
       </ul>

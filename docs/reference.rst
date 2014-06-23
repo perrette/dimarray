@@ -1,16 +1,18 @@
-Documentation
--------------
+.. _page_reference:
+
+Reference
+---------
 
 Under construction...
 
-Classical functions have been organized in categories, as a map. 
-For a detailed documentation please use the inline help 
+Classical functions have been organized in categories.
+For a reference documentation please see inline help and next section.
 
->>> help(<myfunc>) 
+>>> help(DimArray.diff)  # doctest: +SKIP
 
 or with `ipyhton`
 
->>> <myfunc>?
+>>> DimArray.diff?  # doctest: +SKIP
 
 See also :ref:`page_getting_started`
              
