@@ -19,14 +19,14 @@ See also :ref:`page_getting_started`
 .. toctree::
    :maxdepth: 3
              
-   _notebook_rst/create_dimarray.rst
-   _notebook_rst/data_structure.rst
-   _notebook_rst/indexing.rst
-   _notebook_rst/reindexing.rst
-   _notebook_rst/reshape.rst
-   _notebook_rst/combine_arrays.rst
-   _notebook_rst/transformations.rst
-   _notebook_rst/metadata.rst
-   _notebook_rst/netcdf.rst
+   _notebooks_rst/create_dimarray.rst
+   _notebooks_rst/data_structure.rst
+   _notebooks_rst/indexing.rst
+   _notebooks_rst/reindexing.rst
+   _notebooks_rst/reshape.rst
+   _notebooks_rst/combine_arrays.rst
+   _notebooks_rst/transformations.rst
+   _notebooks_rst/metadata.rst
+   _notebooks_rst/netcdf.rst
 
 

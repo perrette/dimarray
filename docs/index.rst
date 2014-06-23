@@ -13,7 +13,7 @@ dimarray provide a `numpy` array with labelled axes and dimensions, in the spiri
 
     introduction.rst
     _notebooks_rst/getting_started.rst
-    _build_rst/examples.rst
+    _notebooks_rst/examples.rst
     reference.rst
     reference_api.rst
     other_packages.rst
