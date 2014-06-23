@@ -3,7 +3,7 @@ Comments on other packages
 
 dimarray is strongly inspired from previous work, especially from pandas and larry packages.
 This section attempts to highligh some of the conceptual differences between them, some of 
-which are not likely to vanish with the future releases.
+which are not likely to vanish with the future releases. Please correct if I'm wrong here.
 
 - **pandas**
     ...is an excellent package for low-dimensional data analysis, 
