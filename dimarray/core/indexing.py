@@ -8,7 +8,8 @@ from axes import Axis, Axes, GroupedAxis, is_regular, make_multiindex
 from tools import is_DimArray
 from dimarray.config import get_option
 
-__all__ = ["take", "put", "reindex_axis", "reindex_like"]
+#__all__ = ["take", "put", "reindex_axis", "reindex_like"]
+__all__ = []
 
 #TOLERANCE=1e-8
 TOLERANCE=None
@@ -70,7 +71,7 @@ def _fill_ellipsis(indices, ndim):
 def array_indices(indices_numpy, shape):
     """ Replace non-iterable (incl. slices) with arrays
 
-    indices_numpy: multi-index
+    indices_numpy : multi-index
     shape: shape of array to index
     """
     dummy_ix = []
@@ -126,8 +127,8 @@ def ix_(indices_numpy, shape):
     # convert to matlab-like compatible indices
     """ convert numpy-like to matlab-like indices
 
-    indices_numpy: indices to convert
-    shape: shape of the array, to convert slices
+    indices_numpy : indices to convert
+    shape : shape of the array, to convert slices
     """
     dummy_ix = array_indices(indices_numpy, shape)
     return np.ix_(*dummy_ix)
@@ -548,7 +549,7 @@ def put(self, val, indices=None, axis=0, indexing="values", tol=TOLERANCE, conve
     {broadcast_arrays}
 
     Returns
-     ------
+    -------
     None: (inplace modification)
 
     See Also

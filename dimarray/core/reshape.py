@@ -194,26 +194,22 @@ def swapaxes(self, axis1, axis2):
 # Repeat the array along *existing* axis
 #
 def repeat(self, values, axis=None):
-    """ expand the array along axis
+    """ expand the array along an existing axis
     
-    repeat(values=None, axis=None, **kwaxes)
-
-    analogous to numpy's repeat
-
     Parameters
     ----------
-        values : int or ndarray or Axis instance
-	    int: size of new axis
-	    ndarray: values  of new axis 
-        axis : int or str 
-	    refer to the dimension along which to repeat
+    values : int or ndarray or Axis instance
+        int: size of new axis
+        ndarray: values  of new axis 
+    axis : int or str 
+        refer to the dimension along which to repeat
 
-        **kwaxes : key-word arguments
-	    alternatively, axes may be passed as keyword arguments 
+    **kwaxes : key-word arguments
+        alternatively, axes may be passed as keyword arguments 
 
     Returns
     -------
-        DimArray
+    DimArray
 
     Sea Also
     --------
@@ -591,14 +587,10 @@ def group(self, *dims, **kwargs):
 
     This is useful to do a regional mean with missing values
 
-    Note
-    ----
+    Notes
+    -----
     A tuple of axis names can be passed via the "axis" parameter of the transformation
     to trigger flattening prior to reducing an axis.
-
-    Warning
-    -------
-    Name may change in future release
 
     See also
     --------

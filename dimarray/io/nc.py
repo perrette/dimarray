@@ -92,53 +92,34 @@ def read_nc(f, nms=None, *args, **kwargs):
     nms : None or list or str, optional
         variable name(s) to read
         default is None
-    %s
+    {indexing}
+
+    align : bool, optional
+
+        Multiple files
+
+        if nms is a list of files or a regular expression, pass align=True
+        if the arrays from the various files have to be aligned prior to 
+        concatenation. Similar to dimarray.stack and dimarray.stack_ds
+
+    axis : str, optional
+
+        Multiple files, align==True
+
+        axis along which to join the dimarrays or datasets (if align is True)
+
+    keys: sequence, optional
+
+        Multiple files, align==True
+
+        new axis values. If not provided, file names will be taken instead.
+        It is always possible to use reset_axis later.
 
     Returns
     -------
     obj : DimArray or Dataset
         depending on whether a (single) variable name is passed as argument (nms) or not
 
-    Notes
-    -----
-    indexing parameters similar to `take` are accepted:
-    additional keyword arguments depend on whether one or several files, one or several variables are required for reading (see below)
-
-    Several cases:
-
-    a) Single file
-
-       *args, **kwargs are passed to DimArray.take
-       It includes: indices=, axis=, indexing=, position=, tol=
-
-       Please see help on `Dimarray.take` for more information.
-
-    b) Several files
-
-       same keywords arguments are allowed except except for:
-
-       - `axis` now has another meaning. It is not used for indexing but to 
-       pick the record dimension (in case of concatenate) or the new dimension 
-       along which to join the datasets (in case of stack). 
-       Note that indexing is still possible via `indices=` (in dictionary form)
-       see DimArray.take for more information.
-
-       - `align=True` in stack mode in order to align datasets prior to 
-       concatenation (re-index axes). 
-
-       - keys: sequence, optional
-            to be passed to stack_ds, if axis is not 
-            part of the dataset
-
-        - align: bool, optional
-        if True, reindex axis prior to stacking (default to False)
-
-        - concatenate_only: bool, optional
-            if True, only concatenate along existing 
-        axis (and raise error if axis not existing)
-
-       Please see help on stack_ds and concatenate_ds for more information
-       
     See Also
     --------
     summary_nc, take, stack, concatenate, stack_ds, concatenate_ds,
@@ -150,6 +131,7 @@ def read_nc(f, nms=None, *args, **kwargs):
     >>> from dimarray import read_nc, get_datadir
 
     Single netCDF file
+
     >>> ncfile = os.path.join(get_datadir(), 'cmip5.CSIRO-Mk3-6-0.nc')
 
     >>> data = read_nc(ncfile)  # load full file
@@ -161,9 +143,9 @@ def read_nc(f, nms=None, *args, **kwargs):
     tsl: ('time', 'scenario')
     temp: ('time', 'scenario')
     >>> data = read_nc(ncfile,'temp') # only one variable
-    >>> data = read_nc(ncfile,'temp', indices={"time":slice(2000,2100), "scenario":"rcp45"})  # load only a chunck of the data
-    >>> data = read_nc(ncfile,'temp', indices={"time":1950.3}, tol=0.5)  #  approximate matching, adjust tolerance
-    >>> data = read_nc(ncfile,'temp', indices={"time":-1}, indexing='position')  #  integer position indexing
+    >>> data = read_nc(ncfile,'temp', indices={{"time":slice(2000,2100), "scenario":"rcp45"}})  # load only a chunck of the data
+    >>> data = read_nc(ncfile,'temp', indices={{"time":1950.3}}, tol=0.5)  #  approximate matching, adjust tolerance
+    >>> data = read_nc(ncfile,'temp', indices={{"time":-1}}, indexing='position')  #  integer position indexing
 
     Multiple files
     Read variable 'temp' across multiple files (representing various climate models)
@@ -239,7 +221,7 @@ def read_nc(f, nms=None, *args, **kwargs):
 
     return obj
 
-read_nc.__doc__ = read_nc.__doc__ % _doc_indexing   # format's {} fails because of dictionary syntax in examples {}
+read_nc.__doc__ = read_nc.__doc__.format(indexing=_doc_indexing)   # format's {} fails because of dictionary syntax in examples {}
 
 #
 # read from file

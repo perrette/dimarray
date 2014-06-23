@@ -47,28 +47,7 @@ class DimArray(object):
 
     Methods
     -------
-    broadcast : repeat array to match target dimensions
-    reindex_like : re-index like another dimarray / axes instance
-    reindex_axis : re-index / interpolate an axis
-    reset_axis : reset axis / change axis values & metadata
-
-    reshape 
-    group : flatten particular sets of dimensions
-    ungroup : inflate back
-    swapaxes : swap two axes, e.g. a.swapaxes(0, 'x1') 
-    transpose, squeeze : similar to ndarray's methods
-
-    to_pandas : convert to pandas object (must be <= 4D) (pretty printing)
-    from_pandas : convert from pandas object, support MultiIndex
-
-    to_dataset : split the dimarray along an axis to create a Dataset 
-
-    write_nc : write DimArray to netCDF file
-
-    plot
-    pcolor
-    contourf
-    contour
+    See online documentation
 
     Notes
     -----
@@ -656,7 +635,7 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     #
     @property
     def ix(self):
-        """ integer index-access (toogle between integer-based and values-based indexing)
+        """ property for integer (position) indexing (toogle between integer-based and values-based indexing)
         """
         if self._indexing is "values": 
             _indexing = "position"
@@ -669,6 +648,8 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     #
     @property
     def box(self):
+        """ property to allow indexing without array broadcasting (matlab-like)
+        """
         return self._constructor(self.values, self.axes, _indexing=self._indexing , _indexing_broadcast= not self._indexing_broadcast, **self._metadata)
 
     #

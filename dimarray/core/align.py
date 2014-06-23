@@ -15,7 +15,7 @@ def broadcast_arrays(*arrays):
 
     Parameters
     ----------
-    arrays: variable list of DimArrays
+    arrays : variable list of DimArrays
 
     Returns
     -------
@@ -23,7 +23,7 @@ def broadcast_arrays(*arrays):
 
     Examples
     --------
-    Just as numpy's broadcast_arrays:
+    Just as numpy's broadcast_arrays
 
     >>> import dimarray as da
     >>> x = da.array([[1,2,3]])
@@ -436,21 +436,21 @@ def aggregate(arrays, check_overlap=True):
 
     Parameters
     ----------
-        arrays: sequence of DimArrays
+    arrays : sequence of DimArrays
+    check_overlap :  bool, optional
+        if True, check that arrays do not overlap (to avoid data loss)
+        If any two elements overlap, keep the one which is not NaN, if applicable
+        or raise an error if two valid values overlap
 
-        check_overlap, optional: if True, check that arrays do not overlap (to avoid data loss)
-            If any two elements overlap, keep the one which is not NaN, if applicable
-            or raise an error if two valid values overlap
-
-            Default is True to reduce the risk of errors, but this makes the operation
-            less performant since every time a copy of the subarray is extracted 
-            and tested for NaNs. Consider setting check_overlap to False for large
-            arrays for a well-tested problems, if the valid-nan selection is not 
-            required.
+        Default is True to reduce the risk of errors, but this makes the operation
+        less performant since every time a copy of the subarray is extracted 
+        and tested for NaNs. Consider setting check_overlap to False for large
+        arrays for a well-tested problems, if the valid-nan selection is not 
+        required.
 
     Notes
     -----
-        Probably a bad idea to have duplicate axis values (not tested)
+    Probably a bad idea to have duplicate axis values (not tested)
 
     TODO: add support for missing values other than np.nan
 

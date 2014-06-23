@@ -5,10 +5,11 @@ DimArray methods reference API
 ==============================
 
 DimArray methods are list below by topic, along with examples. 
-Functions are provided in a separate page :ref:`functions`.
+Functions are provided in a separate page :ref:`ref_api_functions`.
 
 .. contents:: 
     :depth: 2
+
 
 Create a DimArray
 -----------------
@@ -53,10 +54,6 @@ Unary operations
 ----------------
 
 .. automethod:: dimarray.DimArray.apply
-
--------------------------
-
-.. automethod:: dimarray.DimArray.__inv__
 
 -------------------------
 
