@@ -1,3 +1,5 @@
+.. _ref_api_methods:
+
 ==============================
 DimArray methods reference API
 ==============================
@@ -269,6 +271,10 @@ Re-indexing
 -------------------------
 
 .. automethod:: dimarray.DimArray.reindex_like
+
+-------------------------
+
+.. automethod:: dimarray.DimArray.sort_axis
 
 
 To / From other objects

@@ -13,6 +13,24 @@ __all__ = ["take", "put", "reindex_axis", "reindex_like"]
 #TOLERANCE=1e-8
 TOLERANCE=None
 
+_doc_broadcast_arrays = """
+    broadcast_arrays: True, by default, consistently with numpy
+    
+      if False, indexing with list or array of indices will behave like
+      Matlab TM does, which means that it will index on each individual dimensions.
+      (internally, any list or array of indices will be converted to a boolean index
+      of values before slicing)
+
+      If True, numpy rules are followed. Consider the following case:
+
+      a = DimArray(np.zeros((4,4,4)))
+      a[[0,0],[0,0],[0,0]]
+      
+      if broadcast_arrays is False, the result will be a 3-D array of shape 2 x 2 x 2
+      if broadcast_arrays is True, the result will be a 1-D array of size 2
+      """.strip()
+
+
 def is_boolean_index(indices, shape):
     """ check if something like a[a>2] is performed for ndim > 1
     """
@@ -154,43 +172,34 @@ def size(self):
     return np.size(self.values)
 
 
-def take(obj, indices, axis=0, indexing="values", tol=TOLERANCE, keepdims=False, broadcast_arrays=True, mode='raise'):
+def take(self, indices, axis=0, indexing="values", tol=TOLERANCE, keepdims=False, broadcast_arrays=True, mode='raise'):
     """ Retrieve values from a DimArray
 
     Parameters
     ----------
-
-        - self or obj: DimArray (ignore this parameter if accessed as bound method)
-        - indices  : int or list or slice (single-dimensional indices)
-                     or a tuple of those (multi-dimensional)
-                     or `dict` (`axis name` : `indices`)
-        - axis     : int or str
-        - indexing     : "values" or "position" 
-                     "position": use numpy-like position index
-                     "values": indexing on axis values 
-        - tol           : tolerance when looking for numerical values, e.g. to use nearest neighbor search, default `None`
-        - keepdims : keep singleton dimensions
-        - broadcast_arrays: True, by default, consistently with numpy
-        
-            if False, indexing with list or array of indices will behave like
-            Matlab TM does, which means that it will index on each individual dimensions.
-            (internally, any list or array of indices will be converted to a boolean index
-            of values before slicing)
-
-            If True, numpy rules are followed. Consider the following case:
-
-            a = DimArray(np.zeros((4,4,4)))
-            a[[0,0],[0,0],[0,0]]
-            
-            if broadcast_arrays is False, the result will be a 3-D array of shape 2 x 2 x 2
-            if broadcast_arrays is True, the result will be a 1-D array of size 2
-
-        - mode: "raise", "clip", "wrap"
-            analogous to numpy.ndarray.take's mode parameter, only valid (for now) if indexing is 'position'
+    indices : int or list or slice (single-dimensional indices)
+               or a tuple of those (multi-dimensional)
+    axis : int or str, optional
+    indexing : "values" or "position", optional
+               or `dict` <axis name>:<indices>
+               "position": use numpy-like position index
+               "values": indexing on axis values 
+               default is "position"
+    tol : float or None, optional
+        tolerance when looking for numerical values, e.g. to use nearest neighbor search, default `None`
+    keepdims : bool, optional 
+        keep singleton dimensions?
+    %s
+    mode : "raise", "clip", "wrap", optional
+         analogous to numpy.ndarray.take's mode parameter, only valid (for now) if indexing is 'position'
 
     Returns
     -------
-        - DimArray object or python built-in type, consistently with numpy slicing
+    indexed_array : DimArray instance or scalar
+
+    See Also:
+    ---------
+    put
 
     Examples
     --------
@@ -215,7 +224,7 @@ def take(obj, indices, axis=0, indexing="values", tol=TOLERANCE, keepdims=False,
     array([ 1.,  4.])
     >>> b = v.take(10, axis=1)  # take, by axis position
     >>> c = v.take(10, axis='d1')  # take, by axis name
-    >>> d = v.take({'d1':10})  # take, by dict {axis name : axis values}
+    >>> d = v.take({{'d1':10}})  # take, by dict {axis name : axis values}
     >>> (a==b).all() and (a==c).all() and (a==d).all()
     True
 
@@ -348,24 +357,24 @@ def take(obj, indices, axis=0, indexing="values", tol=TOLERANCE, keepdims=False,
     assert indexing in ("position", "values"), "invalid mode: "+repr(indexing)
 
     # SPECIAL CASE: full scale boolean array
-    if obj.ndim > 1 and is_boolean_index(indices, obj.shape):
+    if self.ndim > 1 and is_boolean_index(indices, self.shape):
         indices = np.where(np.asarray(indices))
-        newvalues = obj.values[indices]
+        newvalues = self.values[indices]
 
         # return a scalar if size is 1
         if np.size(newvalues) <= 1:
             return newvalues
 
         # or return a DimArray with axes as tuple
-        newaxisvalues = zip(*[obj.axes[i].values[ii] for i, ii in enumerate(indices)])
-        newaxisname = ",".join(obj.dims)
+        newaxisvalues = zip(*[self.axes[i].values[ii] for i, ii in enumerate(indices)])
+        newaxisname = ",".join(self.dims)
         newaxis = Axis(newaxisvalues, newaxisname)
-        newobj = obj._constructor(newvalues, [newaxis], **obj._metadata)
+        newobj = self._constructor(newvalues, [newaxis], **self._metadata)
         return newobj
 
-    indices = _fill_ellipsis(indices, obj.ndim)
+    indices = _fill_ellipsis(indices, self.ndim)
 
-    indices_numpy = obj.axes.loc(indices, axis=axis, position_index=(indexing == "position"), keepdims=keepdims, tol=tol)
+    indices_numpy = self.axes.loc(indices, axis=axis, position_index=(indexing == "position"), keepdims=keepdims, tol=tol)
     #try:
     #    indices_numpy = obj.axes.loc(indices, axis=axis, position_index=(indexing == "position"), keepdims=keepdims, tol=tol)
     #except IndexError, msg:
@@ -373,11 +382,11 @@ def take(obj, indices, axis=0, indexing="values", tol=TOLERANCE, keepdims=False,
 
     # broadcast array-indices & integers, numpy's classical
     if broadcast_arrays:
-        return _take_broadcast(obj, indices_numpy)
+        return _take_broadcast(self, indices_numpy)
 
     # matlab-like, do not broadcast array-indices but simply sample values along each dimension independently
     else:
-        return _take_box(obj, indices_numpy)
+        return _take_box(self, indices_numpy)
 
 def _take_broadcast(a, indices):
     """ broadcast array-indices & integers, numpy's classical
@@ -517,24 +526,34 @@ def _put(obj, val_, indices_numpy_, inplace=False, convert=False):
     if not inplace:
         return obj
 
-def put(obj, val, indices=None, axis=0, indexing="values", tol=TOLERANCE, convert=False, inplace=False, broadcast_arrays=True):
+def put(self, val, indices=None, axis=0, indexing="values", tol=TOLERANCE, convert=False, inplace=False, broadcast_arrays=True):
     """ Put new values into DimArray (inplace)
 
     Parameters
     ----------
-    obj: DimArray (do not provide if method bound to class instance)
-    val: value to put in: scalar or array-like with appropriate shape or DimArray
-    indices, optional: see `take` for indexing rules. indices may be omitted if 
+    val : array-like
+        values to put in the array
+    indices : misc, optional
+        see `DimArray.take` for indexing rules. indices may be omitted if 
         val is a DimArray (will then deduce `indices` from its axes)
-    axis: for single index (see help on `take`)
-    indexing : "position", "values"
-    convert: convert array to val's type
-    inplace: True
-    broadcast_arrays: See documentation on `take`.
+    axis : int or str or None, optional
+        for single index (see help on `DimArray.take`)
+    indexing : str, optional
+        "position", "values"
+    convert : bool, optional
+        convert array to val's type
+    inplace : bool, optional
+        If True, modify array values in place, otherwise make and return a 
+        copy.  Default is False
+    {broadcast_arrays}
 
     Returns
-    -------
+     ------
     None: (inplace modification)
+
+    See Also
+    --------
+    DimArray.take
 
     Examples
     --------
@@ -543,7 +562,7 @@ def put(obj, val, indices=None, axis=0, indexing="values", tol=TOLERANCE, conver
 
     Index by values
 
-    >>> b = a.put(1, indices={'d0': 'b'})
+    >>> b = a.put(1, indices={{'d0': 'b'}})
     >>> b
     dimarray: 4 non-null elements (0 null)
     dimensions: 'd0', 'd1'
@@ -582,7 +601,7 @@ def put(obj, val, indices=None, axis=0, indexing="values", tol=TOLERANCE, conver
 
     Multi-dimension, multi-index
 
-    >>> b = a.put(5, indices={'d0':'b', 'd1':[10.]})
+    >>> b = a.put(5, indices={{'d0':'b', 'd1':[10.]}})
     >>> b
     dimarray: 4 non-null elements (0 null)
     dimensions: 'd0', 'd1'
@@ -601,12 +620,12 @@ def put(obj, val, indices=None, axis=0, indexing="values", tol=TOLERANCE, conver
 
     Inplace
 
-    >>> a.put(6, indices={'d0':'b', 'd1':[10.]}, inplace=True)
+    >>> a.put(6, indices={{'d0':'b', 'd1':[10.]}}, inplace=True)
 
     Multi-Index tests (not straightforward to get matlab-like behaviour)
 
     >>> big = DimArray(np.zeros((2,3,4,5)))
-    >>> indices = {'x0':0 ,'x1':[2,1],'x3':[1,4]}
+    >>> indices = {{'x0':0 ,'x1':[2,1],'x3':[1,4]}}
     >>> sub = big.take(indices, broadcast_arrays=False)*0
     >>> sub.dims == ('x1','x2','x3')
     True
@@ -633,14 +652,14 @@ def put(obj, val, indices=None, axis=0, indexing="values", tol=TOLERANCE, conver
             raise ValueError("indices must be provided for non-DimArray or non-matching shape")
 
     else:
-            indices = _fill_ellipsis(indices, obj.ndim)
+            indices = _fill_ellipsis(indices, self.ndim)
 
 
     # SPECIAL CASE: full scale boolean array
-    if is_boolean_index(indices, obj.shape):
-        return _put(obj, val, np.asarray(indices), inplace=inplace, convert=convert)
+    if is_boolean_index(indices, self.shape):
+        return _put(self, val, np.asarray(indices), inplace=inplace, convert=convert)
 
-    indices_numpy = obj.axes.loc(indices, axis=axis, position_index=(indexing == "position"), tol=tol)
+    indices_numpy = self.axes.loc(indices, axis=axis, position_index=(indexing == "position"), tol=tol)
 
     # do nothing for full-array, boolean indexing
     #if len(indices_numpy) == 1 and isinstance
@@ -648,14 +667,14 @@ def put(obj, val, indices=None, axis=0, indexing="values", tol=TOLERANCE, conver
     # Convert to matlab-like indexing
     if not broadcast_arrays:
 
-        indices_array = array_indices(indices_numpy, obj.shape)
+        indices_array = array_indices(indices_numpy, self.shape)
         indices_numpy_ = np.ix_(*indices_array)
         shp = [len(ix) for ix in indices_array] # get an idea of the shape
 
         ## ...first check that val's shape is consistent with originally required indices
         # if DimArray, transpose to the right shape
         if is_DimArray(val):
-            newdims = [d for d in obj.dims if d in val.dims] + [d for d in val.dims if d not in obj.dims]
+            newdims = [d for d in self.dims if d in val.dims] + [d for d in val.dims if d not in self.dims]
             val = val.transpose(newdims)
 
         # only check for n-d array of size and dimensions > 1
@@ -678,12 +697,16 @@ def put(obj, val, indices=None, axis=0, indexing="values", tol=TOLERANCE, conver
         val_ = val
         indices_numpy_ = indices_numpy
 
-    return _put(obj, val_, indices_numpy_, inplace=inplace, convert=convert)
+    return _put(self, val_, indices_numpy_, inplace=inplace, convert=convert)
 
-def fill(obj, val):
+put.__doc__ = put.__doc__.format(broadcast_arrays=_doc_broadcast_arrays)
+take.__doc__ = take.__doc__ % (_doc_broadcast_arrays)
+#take.__doc__ = take.__doc__.format(broadcast_arrays=_doc_broadcast_arrays)
+
+def fill(self, val):
     """ anologous to numpy's fill (in-place operation)
     """
-    obj.values.fill(val) 
+    self.values.fill(val) 
 
 #
 # Variants 
@@ -964,6 +987,18 @@ def _reindex_axes(self, axes, **kwargs):
 def reindex_like(self, other, method='exact', **kwargs):
     """ reindex_like : re-index like another dimarray / axes instance
 
+    Applies reindex_axis on each axis to match another DimArray
+
+    Parameters
+    ----------
+    other : DimArray or Axes instance
+    method : str, optional
+        reindexing method, see :ref:`reindex_axis` for more information
+
+    Returns
+    -------
+    DimArray
+
     Notes
     -----
     only reindex axes which are present in other
@@ -994,8 +1029,10 @@ def sort_axis(a, axis=0, key=None):
     Parameters
     ----------
     a : DimArray (this argument is pre-assigned when using as bound method)
-    axis, optional: axis by position (int) or name (str) (default: 0)
-    key, optional: function that is called on each axis label and 
+    axis : int or str, optional
+        axis by position (int) or name (str) (default: 0)
+    key : callable or dict-like, optional
+        function that is called on each axis label and 
         whose return value is used for sorting instead of axis label.
         Any other object with __getitem__ attribute may also be used as key,
         such as a dictionary.
@@ -1003,11 +1040,12 @@ def sort_axis(a, axis=0, key=None):
 
     Returns
     --------
-    sorted: new DimArray with sorted axis
+    sorted : new DimArray with sorted axis
 
     Examples
     --------
     Basic
+
     >>> from dimarray import DimArray
     >>> a = DimArray([10,20,30], labels=[2, 0, 1])
     >>> a
@@ -1029,6 +1067,7 @@ def sort_axis(a, axis=0, key=None):
     array([10, 30, 20])
 
     Multi-dimensional
+     
     >>> a = DimArray([[10,20,30],[40,50,60]], labels=[[0, 1], ['a','c','b']])
     >>> a.sort_axis(axis=1)
     dimarray: 6 non-null elements (0 null)
