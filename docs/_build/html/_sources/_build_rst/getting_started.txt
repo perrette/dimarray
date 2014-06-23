@@ -252,3 +252,44 @@ array([[1, 2],
        [3, 4]])
 
 For more information, you can use inline help (help() or ?) or refer to :ref:`page_reference`
+
+..  _Plotting:
+
+Plotting
+--------
+
+dimarray comes with basic plotting facility. For 1-D and 2-D data, it simplies interfaces pandas' plot command (therefore pandas needs to be installed to use it). From the example above:
+
+>>> %matplotlib inline # doctest: +SKIP 
+>>> a = dataset['combined_data']
+>>> a.plot() # doctest: +SKIP
+<matplotlib.axes.AxesSubplot at 0x7f2e5ae61250>
+
+.. image:: getting_started_figures/figure_54-1.png
+
+
+
+In addition, it can also display 2-D data via its methods `contour`, `contourf` and `pcolor` mapped from matplotlib.
+
+>>> # create some data
+>>> lon = np.linspace(-180, 180, 10)
+>>> lat = np.linspace(-90, 90, 10)
+>>> LON, LAT = np.meshgrid(lon, lat)
+>>> DATA = np.cos(np.radians(LON)) + np.cos(np.radians(LAT))
+>>> # define dimarray
+>>> a = DimArray(DATA, axes=[lat, lon], dims=['lat','lon'])
+>>> # plot the data
+>>> a.contourf()
+>>> a.contour(colors='k')
+<matplotlib.contour.QuadContourSet instance at 0x7f2e5a749200>
+
+.. image:: getting_started_figures/figure_56-1.png
+
+
+
+>>> # plot the data
+>>> a.pcolor()
+<matplotlib.collections.QuadMesh at 0x7f2e5a4d6c90>
+
+.. image:: getting_started_figures/figure_57-1.png
+

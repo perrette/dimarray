@@ -1,6 +1,11 @@
 dimarray documentation
 ======================
 
+Welcome to dimarray documentation.
+
+dimarray provide a `numpy` array with labelled axes and dimensions, in the spirit of 
+`pandas` but generalized to N dimensions. It supports metadata and netCDF4 I/O.
+
 .. dimarray documentation master file, created by
    sphinx-quickstart on Wed Jun 18 01:41:33 2014.
    You can adapt this file completely to your liking, but it should at least

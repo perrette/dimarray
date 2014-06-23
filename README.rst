@@ -66,7 +66,7 @@ Documentation                       https://pythonhosted.org/dimarray
 Code on github (bleeding edge)      https://github.com/perrette/dimarray
 Code on pypi   (releases)           https://pypi.python.org/pypi/dimarray
 Mailing List                        https://groups.google.com/forum/#!forum/dimarray
-Issues Tracker                      https://github.com/perrette/dimarray
+Issues Tracker                      https://github.com/perrette/dimarray/issues
 ================================    ====================================
 
 Dependencies

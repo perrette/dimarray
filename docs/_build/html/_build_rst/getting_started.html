@@ -274,6 +274,38 @@ the netCDF4 package. If netCDF4 is installed (much recommanded), a dataset can e
 </div>
 <p>For more information, you can use inline help (help() or ?) or refer to <a class="reference internal" href="../reference.html#page-reference"><em>Reference</em></a></p>
 </div>
+<div class="section" id="plotting">
+<span id="id11"></span><h2>Plotting<a class="headerlink" href="#plotting" title="Permalink to this headline">¶</a></h2>
+<p>dimarray comes with basic plotting facility. For 1-D and 2-D data, it simplies interfaces pandas&#8217; plot command (therefore pandas needs to be installed to use it). From the example above:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="o">%</span><span class="n">matplotlib</span> <span class="n">inline</span> 
+<span class="gp">&gt;&gt;&gt; </span><span class="n">a</span> <span class="o">=</span> <span class="n">dataset</span><span class="p">[</span><span class="s">&#39;combined_data&#39;</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">a</span><span class="o">.</span><span class="n">plot</span><span class="p">()</span> 
+<span class="go">&lt;matplotlib.axes.AxesSubplot at 0x7f2e5ae61250&gt;</span>
+</pre></div>
+</div>
+<img alt="../_images/figure_54-1.png" src="../_images/figure_54-1.png" />
+<p>In addition, it can also display 2-D data via its methods <cite>contour</cite>, <cite>contourf</cite> and <cite>pcolor</cite> mapped from matplotlib.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="c"># create some data</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">lon</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="mi">180</span><span class="p">,</span> <span class="mi">180</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">lat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="mi">90</span><span class="p">,</span> <span class="mi">90</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">LON</span><span class="p">,</span> <span class="n">LAT</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">meshgrid</span><span class="p">(</span><span class="n">lon</span><span class="p">,</span> <span class="n">lat</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">DATA</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="n">LON</span><span class="p">))</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="n">LAT</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c"># define dimarray</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">a</span> <span class="o">=</span> <span class="n">DimArray</span><span class="p">(</span><span class="n">DATA</span><span class="p">,</span> <span class="n">axes</span><span class="o">=</span><span class="p">[</span><span class="n">lat</span><span class="p">,</span> <span class="n">lon</span><span class="p">],</span> <span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="s">&#39;lat&#39;</span><span class="p">,</span><span class="s">&#39;lon&#39;</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c"># plot the data</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">a</span><span class="o">.</span><span class="n">contourf</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">a</span><span class="o">.</span><span class="n">contour</span><span class="p">(</span><span class="n">colors</span><span class="o">=</span><span class="s">&#39;k&#39;</span><span class="p">)</span>
+<span class="go">&lt;matplotlib.contour.QuadContourSet instance at 0x7f2e5a749200&gt;</span>
+</pre></div>
+</div>
+<img alt="../_images/figure_56-1.png" src="../_images/figure_56-1.png" />
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="c"># plot the data</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">a</span><span class="o">.</span><span class="n">pcolor</span><span class="p">()</span>
+<span class="go">&lt;matplotlib.collections.QuadMesh at 0x7f2e5a4d6c90&gt;</span>
+</pre></div>
+</div>
+<img alt="../_images/figure_57-1.png" src="../_images/figure_57-1.png" />
+</div>
 </div>
 
 
@@ -295,6 +327,7 @@ the netCDF4 package. If netCDF4 is installed (much recommanded), a dataset can e
 <li><a class="reference internal" href="#netcdf-reading-and-writing">NetCDF reading and writing</a></li>
 <li><a class="reference internal" href="#reshaping-arrays">Reshaping arrays</a></li>
 <li><a class="reference internal" href="#interfacing-with-pandas">interfacing with pandas</a></li>
+<li><a class="reference internal" href="#plotting">Plotting</a></li>
 </ul>
 </li>
 </ul>
