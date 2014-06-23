@@ -63,6 +63,7 @@ Functions are provided in a separate page <em class="xref std std-ref">functions
 <li><a class="reference internal" href="#create-a-dimarray" id="id7">Create a DimArray</a></li>
 <li><a class="reference internal" href="#modify-shape" id="id8">Modify shape</a></li>
 <li><a class="reference internal" href="#reduce-accumulate" id="id9">Reduce, accumulate</a></li>
+<li><a class="reference internal" href="#plotting" id="id10">Plotting</a></li>
 </ul>
 </div>
 <div class="section" id="create-a-dimarray">
@@ -245,7 +246,6 @@ dimensions.</p>
 </dd></dl>
 
 </div>
-<hr class="docutils" />
 <div class="section" id="swapaxes">
 <h3>swapaxes<a class="headerlink" href="#swapaxes" title="Permalink to this headline">¶</a></h3>
 <dl class="method">
@@ -283,7 +283,6 @@ dimensions.</p>
 </dd></dl>
 
 </div>
-<hr class="docutils" />
 <div class="section" id="reshape">
 <h3>reshape<a class="headerlink" href="#reshape" title="Permalink to this headline">¶</a></h3>
 <dl class="method">
@@ -376,7 +375,6 @@ otherwise, raise and Error if tranpose is needed (closer to original numpy&#8217
 </dd></dl>
 
 </div>
-<hr class="docutils" />
 <div class="section" id="group">
 <h3>group<a class="headerlink" href="#group" title="Permalink to this headline">¶</a></h3>
 <dl class="method">
@@ -478,7 +476,6 @@ the position of the first axis involved in grouping)</p>
 </dd></dl>
 
 </div>
-<hr class="docutils" />
 <div class="section" id="ungroup">
 <h3>ungroup<a class="headerlink" href="#ungroup" title="Permalink to this headline">¶</a></h3>
 <dl class="method">
@@ -504,7 +501,6 @@ default to None to ungroup all</p>
 </dd></dl>
 
 </div>
-<hr class="docutils" />
 <div class="section" id="flatten">
 <h3>flatten<a class="headerlink" href="#flatten" title="Permalink to this headline">¶</a></h3>
 <dl class="method">
@@ -551,7 +547,6 @@ default to None to ungroup all</p>
 </dd></dl>
 
 </div>
-<hr class="docutils" />
 <div class="section" id="newaxis">
 <h3>newaxis<a class="headerlink" href="#newaxis" title="Permalink to this headline">¶</a></h3>
 <dl class="method">
@@ -623,7 +618,6 @@ dimension as many times as necessary.</p>
 </dd></dl>
 
 </div>
-<hr class="docutils" />
 <div class="section" id="squeeze">
 <h3>squeeze<a class="headerlink" href="#squeeze" title="Permalink to this headline">¶</a></h3>
 <dl class="method">
@@ -657,7 +651,6 @@ dimension as many times as necessary.</p>
 </dd></dl>
 
 </div>
-<hr class="docutils" />
 <div class="section" id="repeat">
 <h3>repeat<a class="headerlink" href="#repeat" title="Permalink to this headline">¶</a></h3>
 <dl class="method">
@@ -721,7 +714,6 @@ ndarray: values  of new axis</p>
 </dd></dl>
 
 </div>
-<hr class="docutils" />
 <div class="section" id="broadcast">
 <h3>broadcast<a class="headerlink" href="#broadcast" title="Permalink to this headline">¶</a></h3>
 <dl class="method">
@@ -888,7 +880,6 @@ Default is <cite>None</cite>.</p>
 </dd></dl>
 
 </div>
-<hr class="docutils" />
 <div class="section" id="ptp">
 <h3>ptp<a class="headerlink" href="#ptp" title="Permalink to this headline">¶</a></h3>
 <dl class="method">
@@ -944,7 +935,6 @@ Default is <cite>None</cite>.</p>
 </dd></dl>
 
 </div>
-<hr class="docutils" />
 <div class="section" id="median">
 <h3>median<a class="headerlink" href="#median" title="Permalink to this headline">¶</a></h3>
 <dl class="method">
@@ -1000,7 +990,6 @@ Default is <cite>None</cite>.</p>
 </dd></dl>
 
 </div>
-<hr class="docutils" />
 <div class="section" id="all">
 <h3>all<a class="headerlink" href="#all" title="Permalink to this headline">¶</a></h3>
 <dl class="method">
@@ -1056,7 +1045,6 @@ Default is <cite>None</cite>.</p>
 </dd></dl>
 
 </div>
-<hr class="docutils" />
 <div class="section" id="any">
 <h3>any<a class="headerlink" href="#any" title="Permalink to this headline">¶</a></h3>
 <dl class="method">
@@ -1112,7 +1100,6 @@ Default is <cite>None</cite>.</p>
 </dd></dl>
 
 </div>
-<hr class="docutils" />
 <div class="section" id="prod">
 <h3>prod<a class="headerlink" href="#prod" title="Permalink to this headline">¶</a></h3>
 <dl class="method">
@@ -1168,7 +1155,6 @@ Default is <cite>None</cite>.</p>
 </dd></dl>
 
 </div>
-<hr class="docutils" />
 <div class="section" id="sum">
 <h3>sum<a class="headerlink" href="#sum" title="Permalink to this headline">¶</a></h3>
 <dl class="method">
@@ -1224,7 +1210,6 @@ Default is <cite>None</cite>.</p>
 </dd></dl>
 
 </div>
-<hr class="docutils" />
 <div class="section" id="mean">
 <h3>mean<a class="headerlink" href="#mean" title="Permalink to this headline">¶</a></h3>
 <dl class="method">
@@ -1237,7 +1222,13 @@ Default is <cite>None</cite>.</p>
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>axis</strong> : int, str, tuple: axis or group of axes to apply the transform on</p>
 <p><strong>skipna</strong> : remove nans prior to transformation?</p>
-<p><strong>{weights}</strong></p>
+<p><strong>weights</strong> : str or bool or array-like or callable or None, optional</p>
+<blockquote>
+<div><p>if weights are defined, perform a weighted mean 
+the default behaviour (&#8220;axis&#8221;) is too look in individual axes 
+whether they have a not-None weight attribute
+Default is &#8220;axis&#8221; to look at axis&#8217; weights attribute</p>
+</div></blockquote>
 </td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><p class="first last">DimArray or scalar, consistently with ndarray behaviour</p>
@@ -1248,21 +1239,11 @@ Default is <cite>None</cite>.</p>
 </dd></dl>
 
 </div>
-<hr class="docutils" />
 <div class="section" id="std">
 <h3>std<a class="headerlink" href="#std" title="Permalink to this headline">¶</a></h3>
 <dl class="method">
 <dt id="dimarray.DimArray.std">
 <tt class="descclassname">DimArray.</tt><tt class="descname">std</tt><big>(</big><em>*args</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#dimarray.DimArray.std" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-</div>
-<hr class="docutils" />
-<div class="section" id="var">
-<h3>var<a class="headerlink" href="#var" title="Permalink to this headline">¶</a></h3>
-<dl class="method">
-<dt id="dimarray.DimArray.var">
-<tt class="descclassname">DimArray.</tt><tt class="descname">var</tt><big>(</big><em>axis=None</em>, <em>skipna=False</em>, <em>weights='axis'</em>, <em>ddof=0</em>, <em>dtype=None</em>, <em>out=None</em><big>)</big><a class="headerlink" href="#dimarray.DimArray.var" title="Permalink to this definition">¶</a></dt>
 <dd><p>standard deviation over an axis or group of axes, possibly weighted</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -1277,7 +1258,13 @@ Default is <cite>None</cite>.</p>
 <div><p>remove nans prior to transformation?
 Default is False.</p>
 </div></blockquote>
-<p><strong>{weights}</strong></p>
+<p><strong>weights</strong> : str or bool or array-like or callable or None, optional</p>
+<blockquote>
+<div><p>if weights are defined, perform a weighted std 
+the default behaviour (&#8220;axis&#8221;) is too look in individual axes 
+whether they have a not-None weight attribute
+Default is &#8220;axis&#8221; to look at axis&#8217; weights attribute</p>
+</div></blockquote>
 <p><strong>ddof</strong> : int, optional</p>
 <blockquote>
 <div><dl class="docutils">
@@ -1298,7 +1285,52 @@ Default is 0.</p>
 </dd></dl>
 
 </div>
-<hr class="docutils" />
+<div class="section" id="var">
+<h3>var<a class="headerlink" href="#var" title="Permalink to this headline">¶</a></h3>
+<dl class="method">
+<dt id="dimarray.DimArray.var">
+<tt class="descclassname">DimArray.</tt><tt class="descname">var</tt><big>(</big><em>axis=None</em>, <em>skipna=False</em>, <em>weights='axis'</em>, <em>ddof=0</em>, <em>dtype=None</em>, <em>out=None</em><big>)</big><a class="headerlink" href="#dimarray.DimArray.var" title="Permalink to this definition">¶</a></dt>
+<dd><p>standard deviation over an axis or group of axes, possibly weighted</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>axis</strong> : int or str or tuple, optional</p>
+<blockquote>
+<div><p>axis or group of axes to apply the transform on</p>
+</div></blockquote>
+<p><strong>skipna</strong> : bool, optional</p>
+<blockquote>
+<div><p>remove nans prior to transformation?
+Default is False.</p>
+</div></blockquote>
+<p><strong>weights</strong> : str or bool or array-like or callable or None, optional</p>
+<blockquote>
+<div><p>if weights are defined, perform a weighted var 
+the default behaviour (&#8220;axis&#8221;) is too look in individual axes 
+whether they have a not-None weight attribute
+Default is &#8220;axis&#8221; to look at axis&#8217; weights attribute</p>
+</div></blockquote>
+<p><strong>ddof</strong> : int, optional</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>&#8220;Delta Degrees of Freedom&#8221;: the divisor used in the calculation is</dt>
+<dd><p class="first last"><tt class="docutils literal"><span class="pre">N</span> <span class="pre">-</span> <span class="pre">ddof</span></tt>, where <tt class="docutils literal"><span class="pre">N</span></tt> represents the number of elements. By default <cite>ddof</cite> is zero.</p>
+</dd>
+</dl>
+<p>Note ddof is ignored when weights are used
+Default is 0.</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><p class="first last">DimArray or scalar, consistently with ndarray behaviour</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
 <div class="section" id="argmax">
 <h3>argmax<a class="headerlink" href="#argmax" title="Permalink to this headline">¶</a></h3>
 <dl class="method">
@@ -1331,7 +1363,6 @@ Default is <cite>None</cite>.</p>
 </dd></dl>
 
 </div>
-<hr class="docutils" />
 <div class="section" id="argmin">
 <h3>argmin<a class="headerlink" href="#argmin" title="Permalink to this headline">¶</a></h3>
 <dl class="method">
@@ -1364,7 +1395,6 @@ Default is <cite>None</cite>.</p>
 </dd></dl>
 
 </div>
-<hr class="docutils" />
 <div class="section" id="cumsum">
 <h3>cumsum<a class="headerlink" href="#cumsum" title="Permalink to this headline">¶</a></h3>
 <dl class="method">
@@ -1373,7 +1403,6 @@ Default is <cite>None</cite>.</p>
 <dd></dd></dl>
 
 </div>
-<hr class="docutils" />
 <div class="section" id="cumprod">
 <h3>cumprod<a class="headerlink" href="#cumprod" title="Permalink to this headline">¶</a></h3>
 <dl class="method">
@@ -1382,7 +1411,6 @@ Default is <cite>None</cite>.</p>
 <dd></dd></dl>
 
 </div>
-<hr class="docutils" />
 <div class="section" id="diff">
 <h3>diff<a class="headerlink" href="#diff" title="Permalink to this headline">¶</a></h3>
 <dl class="method">
@@ -1485,6 +1513,71 @@ except along <cite>axis</cite> where the dimension is smaller by <cite>n</cite>.
 
 </div>
 </div>
+<div class="section" id="plotting">
+<h2><a class="toc-backref" href="#id10">Plotting</a><a class="headerlink" href="#plotting" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="plot">
+<h3>plot<a class="headerlink" href="#plot" title="Permalink to this headline">¶</a></h3>
+<dl class="method">
+<dt id="dimarray.DimArray.plot">
+<tt class="descclassname">DimArray.</tt><tt class="descname">plot</tt><big>(</big><em>*args</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#dimarray.DimArray.plot" title="Permalink to this definition">¶</a></dt>
+<dd><p>by default, use pandas for plotting (for now at least)</p>
+</dd></dl>
+
+</div>
+<div class="section" id="pcolor">
+<h3>pcolor<a class="headerlink" href="#pcolor" title="Permalink to this headline">¶</a></h3>
+<dl class="method">
+<dt id="dimarray.DimArray.pcolor">
+<tt class="descclassname">DimArray.</tt><tt class="descname">pcolor</tt><big>(</big><em>*args</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#dimarray.DimArray.pcolor" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot a quadrilateral mesh.</p>
+<p>Wraps matplotlib pcolormesh().
+See pcolormesh documentation in matplotlib for accepted keyword arguments.</p>
+<p class="rubric">Examples</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">x</span> <span class="o">=</span> <span class="n">DimArray</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="mi">100</span><span class="p">,</span><span class="mi">40</span><span class="p">]))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">x</span><span class="o">.</span><span class="n">pcolor</span><span class="p">()</span> 
+<span class="gp">&gt;&gt;&gt; </span><span class="n">x</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">pcolor</span><span class="p">()</span> <span class="c"># to flip horizontal/vertical axes  </span>
+</pre></div>
+</div>
+</dd></dl>
+
+</div>
+<div class="section" id="contourf">
+<h3>contourf<a class="headerlink" href="#contourf" title="Permalink to this headline">¶</a></h3>
+<dl class="method">
+<dt id="dimarray.DimArray.contourf">
+<tt class="descclassname">DimArray.</tt><tt class="descname">contourf</tt><big>(</big><em>*args</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#dimarray.DimArray.contourf" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot filled 2-D contours.</p>
+<p>Wraps matplotlib contourf().
+See contourf documentation in matplotlib for accepted keyword arguments.</p>
+<p class="rubric">Examples</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">x</span> <span class="o">=</span> <span class="n">DimArray</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="mi">100</span><span class="p">,</span><span class="mi">40</span><span class="p">]))</span> 
+<span class="gp">&gt;&gt;&gt; </span><span class="n">x</span><span class="p">[:</span><span class="mi">50</span><span class="p">,:</span><span class="mi">20</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">x</span><span class="o">.</span><span class="n">contourf</span><span class="p">()</span> 
+<span class="gp">&gt;&gt;&gt; </span><span class="n">x</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">contourf</span><span class="p">()</span> <span class="c"># to flip horizontal/vertical axes  </span>
+</pre></div>
+</div>
+</dd></dl>
+
+</div>
+<div class="section" id="contour">
+<h3>contour<a class="headerlink" href="#contour" title="Permalink to this headline">¶</a></h3>
+<dl class="method">
+<dt id="dimarray.DimArray.contour">
+<tt class="descclassname">DimArray.</tt><tt class="descname">contour</tt><big>(</big><em>*args</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#dimarray.DimArray.contour" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot 2-D contours.</p>
+<p>Wraps matplotlib contour().
+See contour documentation in matplotlib for accepted keyword arguments.</p>
+<p class="rubric">Examples</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">x</span> <span class="o">=</span> <span class="n">DimArray</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="mi">100</span><span class="p">,</span><span class="mi">40</span><span class="p">]))</span> 
+<span class="gp">&gt;&gt;&gt; </span><span class="n">x</span><span class="p">[:</span><span class="mi">50</span><span class="p">,:</span><span class="mi">20</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">x</span><span class="o">.</span><span class="n">contour</span><span class="p">()</span> 
+<span class="gp">&gt;&gt;&gt; </span><span class="n">x</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">contour</span><span class="p">()</span> <span class="c"># to flip horizontal/vertical axes </span>
+</pre></div>
+</div>
+</dd></dl>
+
+</div>
+</div>
 </div>
 
 
@@ -1531,6 +1624,13 @@ except along <cite>axis</cite> where the dimension is smaller by <cite>n</cite>.
 <li><a class="reference internal" href="#cumsum">cumsum</a></li>
 <li><a class="reference internal" href="#cumprod">cumprod</a></li>
 <li><a class="reference internal" href="#diff">diff</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#plotting">Plotting</a><ul>
+<li><a class="reference internal" href="#plot">plot</a></li>
+<li><a class="reference internal" href="#pcolor">pcolor</a></li>
+<li><a class="reference internal" href="#contourf">contourf</a></li>
+<li><a class="reference internal" href="#contour">contour</a></li>
 </ul>
 </li>
 </ul>

@@ -7,11 +7,14 @@ Options:
     -h --help   : display this help
 """
 #!/usr/bin/python
-import sys
+from IPython.utils import py3compat
+import base64
+import sys, os
 #import pypandoc
-from os.path import basename, splitext
+from os.path import basename, splitext, join, commonprefix
 from process_notebook import filter_cells, read_nb
 import docopt
+from IPython.display import Image
 
 def make_label(title):
     """ label for future reference
@@ -30,6 +33,8 @@ def main():
     if nm2 is None:
          nm2 = basename(nm.replace('.ipynb','.rst'))
 
+    figdir = splitext(nm2)[0]+'_figures' # store figures
+
     nb = read_nb(nm)
 
     label =  '..  _page_'+filename+':'  # page label
@@ -43,7 +48,7 @@ def main():
     text = [header + '\n\n'] 
     text += [label + '\n'] # add a label to allow hyperlinks
 
-    for cell in nb['worksheets'][0]['cells']:
+    for icell, cell in enumerate(nb['worksheets'][0]['cells']):
         text.append('\n\n') # new line
 
         # code cells
@@ -52,6 +57,8 @@ def main():
             code_lines = []
             for code in cell['input']:
                 # do not add '>>>' if indent
+                if code.startswith('%'): # magic commadn
+                    code = code.strip() + ' # doctest: +SKIP \n' # don't bother with doctets
                 if not code.startswith('  '):
                     code = '>>> '+code
                 else:
@@ -59,13 +66,46 @@ def main():
                 code_lines.append(code)
 
             output_lines = []
-            for output in cell['outputs']:
-                
+            for ioutput, output in enumerate(cell['outputs']):
+
                 # replace with blankline for doctest
                 for i, line in enumerate(output['text']):
                     if line == '\n':
                         output['text'][i] = "<BLANKLINE>\n" 
-                output_lines.extend(output['text'])
+
+                    elif "<matplotlib.axes.AxesSubplot" in line:
+                        code_lines[-1] += ' # doctest: +SKIP' # don't bother with doctets
+
+                # figure
+                if output['output_type'] == 'display_data':
+                    
+                    # save figure
+                    figname = 'figure_{}-{}.png'.format(icell, ioutput)
+                    figfull = join(figdir, figname)
+                    if not os.path.exists(figdir):
+                        os.makedirs(figdir) # create fig directory
+
+                    #image = Image(output['png'])
+                    # make some conversions (after: https://github.com/ipython/ipython/blob/master/IPython/nbconvert/preprocessors/extractoutput.py)
+                    data = output['png']
+                    data = py3compat.cast_bytes(data)
+                    data = base64.decodestring(data)
+                    # write to file
+                    with open(figfull, mode='w') as fig:
+                        print "Save figure to", figfull
+                        fig.write(data) # write figure
+                        #fig.write(output['png']) # write figure
+
+                    # include figure
+                    figinc = join(basename(figdir), figname)
+                    output_lines.append('\n\n')
+                    output_lines.append('.. image:: '+figinc)
+                    output_lines.append('\n\n')
+                    #output_lines.extend(output['text'])
+
+                else:
+                    output_lines.extend(output['text'])
+
 
             # Here should include figures
 

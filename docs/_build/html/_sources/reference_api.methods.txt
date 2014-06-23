@@ -28,55 +28,37 @@ transpose
 ~~~~~~~~~
 .. automethod:: dimarray.DimArray.transpose
 
---------------------
-
 swapaxes
 ~~~~~~~~
 .. automethod:: dimarray.DimArray.swapaxes
-
---------------------
 
 reshape
 ~~~~~~~
 .. automethod:: dimarray.DimArray.reshape
 
---------------------
-
 group
 ~~~~~
 .. automethod:: dimarray.DimArray.group
-
---------------------
 
 ungroup
 ~~~~~~~
 .. automethod:: dimarray.DimArray.ungroup
 
---------------------
-
 flatten
 ~~~~~~~
 .. automethod:: dimarray.DimArray.flatten
-
---------------------
 
 newaxis
 ~~~~~~~
 .. automethod:: dimarray.DimArray.newaxis
 
---------------------
-
 squeeze
 ~~~~~~~
 .. automethod:: dimarray.DimArray.squeeze
 
---------------------
-
 repeat
 ~~~~~~
 .. automethod:: dimarray.DimArray.repeat
-
---------------------
 
 broadcast
 ~~~~~~~~~
@@ -88,97 +70,85 @@ Reduce, accumulate
 max
 ~~~
 .. automethod:: dimarray.DimArray.max
-.. 
-.. --------------------
-.. 
+   
 min
 ~~~
 .. automethod:: dimarray.DimArray.min
-
---------------------
 
 ptp
 ~~~
 .. automethod:: dimarray.DimArray.ptp
 
---------------------
-
 median
 ~~~~~~
 .. automethod:: dimarray.DimArray.median
-
---------------------
 
 all
 ~~~
 .. automethod:: dimarray.DimArray.all
 
---------------------
-
 any
 ~~~
 .. automethod:: dimarray.DimArray.any
-
---------------------
 
 prod
 ~~~~
 .. automethod:: dimarray.DimArray.prod
 
---------------------
-
 sum
 ~~~
 .. automethod:: dimarray.DimArray.sum
  
---------------------
-
 mean
 ~~~~
 .. automethod:: dimarray.DimArray.mean
-
---------------------
 
 std
 ~~~
 .. automethod:: dimarray.DimArray.std
 
---------------------
-
 var
 ~~~
 .. automethod:: dimarray.DimArray.var
-
---------------------
 
 argmax
 ~~~~~~
 .. automethod:: dimarray.DimArray.argmax
 
---------------------
-
 argmin
 ~~~~~~
 .. automethod:: dimarray.DimArray.argmin
-
---------------------
 
 cumsum
 ~~~~~~
 .. automethod:: dimarray.DimArray.cumsum
 
---------------------
-
 cumprod
 ~~~~~~~
 .. automethod:: dimarray.DimArray.cumprod
-
---------------------
 
 diff
 ~~~~
 .. automethod:: dimarray.DimArray.diff
 
+Plotting
+--------
+
+plot
+~~~~
+.. automethod:: dimarray.DimArray.plot
+
+pcolor
+~~~~~~
+.. automethod:: dimarray.DimArray.pcolor
+
+contourf
+~~~~~~~~
+.. automethod:: dimarray.DimArray.contourf
+
+contour
+~~~~~~~
+.. automethod:: dimarray.DimArray.contour
 
 .. .. toctree::
 ..    :maxdepth: 2

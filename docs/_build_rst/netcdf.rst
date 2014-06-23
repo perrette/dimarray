@@ -27,9 +27,13 @@ temp: ('time', 'scenario')
 
 Then access the variable of choice
 
->>> %matplotlib inline  # doctest: +SKIP
->>> data['temp'].plot()  # doctest: +SKIP
-UsageError: unrecognized arguments: # doctest: +SKIP
+>>> %matplotlib inline # doctest: +SKIP 
+>>> data['temp'].plot() # doctest: +SKIP
+<matplotlib.axes.AxesSubplot at 0x7f2afe7be610>
+
+.. image:: netcdf_figures/figure_4-1.png
+
+
 
 Load only one variable
 
@@ -38,8 +42,6 @@ Load only one variable
 >>> data = read_nc(ncfile,'temp', indices={"time":1950.3}, tol=0.5)  #  approximate matching, adjust tolerance
 >>> data = read_nc(ncfile,'temp', indices={"time":-1}, indexing='position')  #  integer position indexing
 
-
-Load only a chunck of the data
 
 ..  __Read_from_multiple_files:
 

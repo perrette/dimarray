@@ -72,11 +72,12 @@
 </pre></div>
 </div>
 <p>Then access the variable of choice</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="o">%</span><span class="n">matplotlib</span> <span class="n">inline</span>  
-<span class="gp">&gt;&gt;&gt; </span><span class="n">data</span><span class="p">[</span><span class="s">&#39;temp&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">()</span>  
-<span class="go">UsageError: unrecognized arguments: </span>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="o">%</span><span class="n">matplotlib</span> <span class="n">inline</span> 
+<span class="gp">&gt;&gt;&gt; </span><span class="n">data</span><span class="p">[</span><span class="s">&#39;temp&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">()</span> 
+<span class="go">&lt;matplotlib.axes.AxesSubplot at 0x7f2afe7be610&gt;</span>
 </pre></div>
 </div>
+<img alt="../_images/figure_4-1.png" src="../_images/figure_4-1.png" />
 <p>Load only one variable</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">data</span> <span class="o">=</span> <span class="n">read_nc</span><span class="p">(</span><span class="n">ncfile</span><span class="p">,</span><span class="s">&#39;temp&#39;</span><span class="p">)</span> <span class="c"># only one variable</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">data</span> <span class="o">=</span> <span class="n">read_nc</span><span class="p">(</span><span class="n">ncfile</span><span class="p">,</span><span class="s">&#39;temp&#39;</span><span class="p">,</span> <span class="n">indices</span><span class="o">=</span><span class="p">{</span><span class="s">&quot;time&quot;</span><span class="p">:</span><span class="nb">slice</span><span class="p">(</span><span class="mi">2000</span><span class="p">,</span><span class="mi">2100</span><span class="p">),</span> <span class="s">&quot;scenario&quot;</span><span class="p">:</span><span class="s">&quot;rcp45&quot;</span><span class="p">})</span>  <span class="c"># load only a chunck of the data</span>
@@ -84,7 +85,6 @@
 <span class="gp">&gt;&gt;&gt; </span><span class="n">data</span> <span class="o">=</span> <span class="n">read_nc</span><span class="p">(</span><span class="n">ncfile</span><span class="p">,</span><span class="s">&#39;temp&#39;</span><span class="p">,</span> <span class="n">indices</span><span class="o">=</span><span class="p">{</span><span class="s">&quot;time&quot;</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">},</span> <span class="n">indexing</span><span class="o">=</span><span class="s">&#39;position&#39;</span><span class="p">)</span>  <span class="c">#  integer position indexing</span>
 </pre></div>
 </div>
-<p>Load only a chunck of the data</p>
 <hr class="docutils" />
 <p>Read variable &#8216;temp&#8217; across multiple files (representing various climate models).
 In this case the variable is a time series, whose length may vary across experiments

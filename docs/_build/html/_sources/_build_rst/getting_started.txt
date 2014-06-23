@@ -202,6 +202,8 @@ array([[  0,   0],
        [ 10, 100],
        [ 20, 200]])
 
+More on netCDF I/O :ref:`page_netcdf`
+
 ..  _Reshaping_arrays:
 
 Reshaping arrays

@@ -1216,6 +1216,12 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 
     def plot(self, *args, **kwargs):
         """ by default, use pandas for plotting (for now at least)
+
+        See doc at:
+
+        help(pandas.Series.plot): 1-D
+
+        help(pandas.DataFrame.plot): 2-D
         """
         assert self.ndim <= 2, "only support plotting for 1- and 2-D objects"
         return self.to_pandas().plot(*args, **kwargs)
@@ -1243,9 +1249,9 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         
         Examples
         --------
-        x = DimArray(np.zeros([100,40]))
-        x.pcolor()
-        x.T.pcolor() # to flip horizontal/vertical axes
+        >>> x = DimArray(np.zeros([100,40]))
+        >>> x.pcolor() # doctest: +SKIP
+        >>> x.T.pcolor() # to flip horizontal/vertical axes  # doctest: +SKIP
         """
         
         if len(self.dims) != 2:
@@ -1263,10 +1269,10 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         
         Examples
         --------
-        x = DimArray(np.zeros([100,40]))
-        x[:50,:20] = 1.
-        x.contourf()
-        x.T.contourf() # to flip horizontal/vertical axes
+        >>> x = DimArray(np.zeros([100,40])) 
+        >>> x[:50,:20] = 1.
+        >>> x.contourf() # doctest: +SKIP
+        >>> x.T.contourf() # to flip horizontal/vertical axes  # doctest: +SKIP
         """
         if len(self.dims) != 2:
             raise NotImplementedError("contourf can only be called on two-dimensional dimarrays.")
@@ -1283,10 +1289,10 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         
         Examples
         --------
-        x = DimArray(np.zeros([100,40]))
-        x[:50,:20] = 1.
-        x.contour()
-        x.T.contour() # to flip horizontal/vertical axes
+        >>> x = DimArray(np.zeros([100,40])) 
+        >>> x[:50,:20] = 1.
+        >>> x.contour() # doctest: +SKIP
+        >>> x.T.contour() # to flip horizontal/vertical axes # doctest: +SKIP
         """
         if len(self.dims) != 2:
             raise NotImplementedError("contour can only be called on two-dimensional dimarrays.")
@@ -1624,3 +1630,4 @@ def hasnan(a):
     if the min method of these object, which may be to ignore nans (e.g. larry)
     """
     return np.isnan(a.min())
+

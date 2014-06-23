@@ -59,14 +59,15 @@ variable
 a            1     2     3
 b            4     5     6
 
-Documentation:
---------------
-https://pythonhosted.org/dimarray/
-
-
-Download latest version on GitHub:
-----------------------------------
-https://github.com/perrette/dimarray
+Useful links
+------------
+================================    ====================================
+Documentation                       https://pythonhosted.org/dimarray
+Code on github (bleeding edge)      https://github.com/perrette/dimarray
+Code on pypi   (releases)           https://pypi.python.org/pypi/dimarray
+Mailing List                        https://groups.google.com/forum/#!forum/dimarray
+Issues Tracker                      https://github.com/perrette/dimarray
+================================    ====================================
 
 Dependencies
 ------------
