@@ -9,4 +9,5 @@ Reference API
 
     reference_api.methods.rst
     reference_api.functions.rst
+    comparison_table.rst
 
