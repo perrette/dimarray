@@ -263,7 +263,7 @@ dimarray comes with basic plotting facility. For 1-D and 2-D data, it simplies i
 >>> %matplotlib inline # doctest: +SKIP 
 >>> a = dataset['combined_data']
 >>> a.plot() # doctest: +SKIP
-<matplotlib.axes.AxesSubplot at 0x7f2e5ae61250>
+<matplotlib.axes.AxesSubplot at 0x7fd8850581d0>
 
 .. image:: getting_started_figures/figure_54-1.png
 
@@ -279,17 +279,17 @@ In addition, it can also display 2-D data via its methods `contour`, `contourf` 
 >>> # define dimarray
 >>> a = DimArray(DATA, axes=[lat, lon], dims=['lat','lon'])
 >>> # plot the data
->>> a.contourf()
->>> a.contour(colors='k')
-<matplotlib.contour.QuadContourSet instance at 0x7f2e5a749200>
+>>> cf = a.contourf()
+>>> a.contour(colors='k') # doctest: +SKIP
+<matplotlib.contour.QuadContourSet instance at 0x7fd88500cf80>
 
 .. image:: getting_started_figures/figure_56-1.png
 
 
 
 >>> # plot the data
->>> a.pcolor()
-<matplotlib.collections.QuadMesh at 0x7f2e5a4d6c90>
+>>> a.pcolor() # doctest: +SKIP
+<matplotlib.collections.QuadMesh at 0x7fd884de20d0>
 
 .. image:: getting_started_figures/figure_57-1.png
 

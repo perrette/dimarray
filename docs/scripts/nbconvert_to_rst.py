@@ -73,7 +73,9 @@ def main():
                     if line == '\n':
                         output['text'][i] = "<BLANKLINE>\n" 
 
-                    elif "<matplotlib.axes.AxesSubplot" in line:
+                    #elif "<matplotlib.axes.AxesSubplot" in line:
+                    #elif "<matplotlib.contour.QuadContourSet" in line:
+                    elif "<matplotlib." in line and not "+SKIP" in code_lines[-1]: # whatever that is a figure
                         code_lines[-1] += ' # doctest: +SKIP' # don't bother with doctets
 
                 # figure

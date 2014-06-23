@@ -12,7 +12,7 @@ dimarray provide a `numpy` array with labelled axes and dimensions, in the spiri
     :maxdepth: 2
 
     introduction.rst
-    _build_rst/getting_started.rst
+    _notebooks_rst/getting_started.rst
     _build_rst/examples.rst
     reference.rst
     reference_api.rst

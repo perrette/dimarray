@@ -74,13 +74,18 @@ array([ nan,  3. ,  3.5,  4. ])
 
 
 >>> import matplotlib.pyplot as plt
+>>> %matplotlib inline # doctest: +SKIP 
 >>> plt.clf()  # doctest: +SKIP
 >>> plt.plot(v.time, v.values, 's-', label='original')  # doctest: +SKIP
 >>> plt.plot(w.time, w.values, 'o-', label='interp')  # doctest: +SKIP
 >>> #plt.plot(w1.time, w.values, 'o--', color='k', label='interp')
 >>> plt.plot(x.time, x.values, '*-',label='nearest') # doctest: +SKIP
->>> plt.legend(loc='upper left')  # doctest: +SKIP
-<matplotlib.legend.Legend at 0x7eff9661e850>
+>>> plt.legend(loc='upper left')   # doctest: +SKIP
+<matplotlib.legend.Legend at 0x7fb89a611d50>
+
+.. image:: reindexing_figures/figure_13-1.png
+
+
 
 ..  _align_axes:
 

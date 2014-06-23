@@ -29,7 +29,7 @@ Then access the variable of choice
 
 >>> %matplotlib inline # doctest: +SKIP 
 >>> data['temp'].plot() # doctest: +SKIP
-<matplotlib.axes.AxesSubplot at 0x7f2afe7be610>
+<matplotlib.axes.AxesSubplot at 0x7fd3ca039610>
 
 .. image:: netcdf_figures/figure_4-1.png
 

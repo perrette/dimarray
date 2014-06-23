@@ -9,7 +9,7 @@ BUILDDIR      = _build
 
 # hack to compute ipython notebooks to rst format
 IPYNBDIR      = notebooks
-RSTDIR 	      = _build_rst
+RSTDIR 	      = _notebooks_rst
 NBCONVERT     = scripts/nbconvert_to_rst.sh
 
 

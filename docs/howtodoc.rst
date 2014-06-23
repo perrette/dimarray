@@ -11,7 +11,7 @@ The workflow is as follow:
     1. cd docs 
     2. ... # edit notebooks in notebooks/
     3. ... # edit rst files 
-    4. make rst  # convert every notebook in docs/notebooks to rst in docs/_build_rst
+    4. make rst  # convert every notebook in docs/notebooks to rst in docs/_notebooks_rst
     5. make html  # this could also be combine above in make rst html
     6. ... # check the result in docs/_build/html/index.html
     7. ... # iterate until you are happy with the result
