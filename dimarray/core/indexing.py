@@ -837,14 +837,21 @@ def reindex_axis(self, values, axis=0, method='exact', repna=True, fill_value=np
 
     Parameters
     ----------
-    values : array-like or Axis: new axis values
-    axis : axis number or name
-    method : "exact" (default), "nearest", "interp" 
-    repna : if False, raise error when an axis value is not present 
-                 otherwise just replace with NaN. Defaulf is True
-    fill_value: value to use instead of missing data
-    tol: re-index with a particular tolerance (can be longer)
-    use_pandas, optional: bool : if True (the default), convert to pandas for re-indexing 
+    values : array-like or Axis
+        new axis values
+    axis : int or str, optional
+        axis number or name
+    method : str, optional
+        "exact" (default), "nearest", "interp" 
+    repna : bool, optional
+        if False, raise error when an axis value is not present 
+        otherwise just replace with NaN. Defaulf is True
+    fill_value: bool, optional
+        value to use instead of missing data
+    tol: float, optional
+        re-index with a particular tolerance (can be longer)
+    use_pandas: bool, optional
+      if True (the default), convert to pandas for re-indexing 
       If any special option (method, tol) is set or if modulo axes are present 
       or, of course, if pandas is not installed,
       this option is set to False by default.

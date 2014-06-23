@@ -671,10 +671,6 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     def box(self):
         return self._constructor(self.values, self.axes, _indexing=self._indexing , _indexing_broadcast= not self._indexing_broadcast, **self._metadata)
 
-    @property
-    def box_ix(self):
-        return self.box.ix
-
     #
     # TRANSFORMS
     # 
@@ -913,7 +909,8 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 
     def __invert__(self): 
         """
-        Examples:
+        Examples
+        --------
         >>> a = DimArray([True, False])
         >>> ~a
         dimarray: 2 non-null elements (0 null)
@@ -926,6 +923,8 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     def _cmp(self, op, other):
         """ Element-wise comparison operator
 
+        Examples
+        --------
         >>> a = DimArray([1, 2])
         >>> a < 2
         dimarray: 2 non-null elements (0 null)
@@ -954,7 +953,8 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     def __nonzero__(self):
         """ Boolean value of the object
 
-        Examples:
+        Examples
+        --------
         >>> a = DimArray([1, 2])
         >>> try:
         ...        if DimArray([1, 2]):
@@ -1085,7 +1085,7 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 
     # Split along an axis
     def to_odict(self, axis=0):
-        """
+        """ Return a dictionary of DimArray
         """
         d = odict()
         for k, val in self.iter(axis):
@@ -1315,7 +1315,65 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 	Returns
 	-------
 	DimArray instance, or None if inplace is True
-	"""
+
+        Examples
+        --------
+        >>> a = DimArray([1, 2, 3, 4], axes = [[ 1900, 1901, 1902, 1903 ]], dims=['time'])
+        >>> a
+        dimarray: 4 non-null elements (0 null)
+        dimensions: 'time'
+        0 / time (4): 1900 to 1903
+        array([1, 2, 3, 4])
+
+        Reset to default init values
+
+        >>> a.reset_axis()
+        dimarray: 4 non-null elements (0 null)
+        dimensions: 'time'
+        0 / time (4): 0 to 3
+        array([1, 2, 3, 4])
+
+        Provide new values for the whole axis
+
+        >>> a.reset_axis(list('abcd'))
+        dimarray: 4 non-null elements (0 null)
+        dimensions: 'time'
+        0 / time (4): a to d
+        array([1, 2, 3, 4])
+
+        Update just a few of the values
+
+        >>> a.reset_axis({{1900:0000}})
+        dimarray: 4 non-null elements (0 null)
+        dimensions: 'time'
+        0 / time (4): 0 to 1903
+        array([1, 2, 3, 4])
+
+        Or transform axis values
+
+        >>> a.reset_axis(lambda x: x*0.01)
+        dimarray: 4 non-null elements (0 null)
+        dimensions: 'time'
+        0 / time (4): 19.0 to 19.03
+        array([1, 2, 3, 4])
+
+        Only change name. Need to set values to False otherwise axis values will be reset
+
+        >>> a.reset_axis(False, name='year')
+        dimarray: 4 non-null elements (0 null)
+        dimensions: 'year'
+        0 / year (4): 1900 to 1903
+        array([1, 2, 3, 4])
+         
+        This is the equivalent of
+
+        >>> a.axes['time'].name = 'year'
+        >>> a
+        dimarray: 4 non-null elements (0 null)
+        dimensions: 'year'
+        0 / year (4): 1900 to 1903
+        array([1, 2, 3, 4])
+        """
 	axes = self.axes.reset_axis(values, axis, inplace=inplace, **kwargs)
 
 	# make a copy?
@@ -1630,4 +1688,5 @@ def hasnan(a):
     if the min method of these object, which may be to ignore nans (e.g. larry)
     """
     return np.isnan(a.min())
+
 

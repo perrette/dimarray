@@ -71,7 +71,9 @@ weights : str or bool or array-like or callable or None, optional
 # Actual transforms
 #
 
-_doc = apply_along_axis = """ Apply along-axis numpy method to DimArray
+@format_doc(skipna=_doc_skipna, axis=_doc_axis.format(default_axis="None"))
+def apply_along_axis(self, func, axis=None, skipna=False, args=(), **kwargs):
+    """ Apply along-axis numpy method to DimArray
 
     apply_along_axis(self, ...)
     Where ... are the parameters below:
@@ -129,8 +131,6 @@ _doc = apply_along_axis = """ Apply along-axis numpy method to DimArray
            [  2.,   3.]])
     """
 
-#@format_doc(skipna=_doc_skipna, axis=_doc_axis.format(default_axis="None"))
-def apply_along_axis(self, func, axis=None, skipna=False, args=(), **kwargs):
 
     # Deal with `axis` parameter, whether `int`, `str` or `tuple`
     obj, idx, name = _deal_with_axis(self, axis)

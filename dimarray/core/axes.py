@@ -11,13 +11,25 @@ __all__ = ["Axis","Axes", "is_regular"]
 
 # generic documentation serving for various functions
 _doc_reset_axis =  dict(
-	values = """values, optional: None or False or numpy array-like or mapper (function, dict)
-	    if None, axis values will be reset to 0, 1, 2...
-	    if False, axis values are not kept identical (e.g. if only metadata are to be changed)
-	    Default to None.""",
-	axis = "axis, optional: int or str, axis to be reset",
-	inplace="inplace, optional: reset axis values in-place (True) or return copy (False)? (default False)",
-	kwargs="**kwargs: also reset other axis attributes (e.g. name, modulo, weights, or any metadata)",
+	values = """
+values : None or False or numpy array-like or mapper (callable or dict), optional
+
+		    - array-like : new axis values, must have exactly the same length as original axis
+		    - dict : establish a map between original and new axis values
+		    - callable : transform each axis value into a new one
+                    - if None, axis values will be reset to 0, 1, 2...
+                    - if False, axis values are left unchanged (e.g. if only metadata are to be changed)
+
+                    Default to None.""".strip(),
+	axis = """
+axis : int or str, optional
+                    axis to be reset""".strip(),
+	inplace="""
+inplace : bool, optional
+                    reset axis values in-place (True) or return copy (False)? (default False)""".strip() ,
+	kwargs="""
+**kwargs : key-word arguments
+                    also reset other axis attributes (e.g. name, modulo, weights, or any metadata)""".strip(),
 	)
 
 def is_regular(values):
@@ -76,7 +88,7 @@ class Descriptor(object):
         """ 
         Parameters
         ----------
-        name: name where attribute value is stored
+        name : name where attribute value is stored
             Warning: must be different from API class attribute
             e.g. prefixed by '_'
 
@@ -996,8 +1008,8 @@ class LocatorAxis(object):
         
         Parameters
         ----------
-            ix: int, list, slice, tuple (on integer index or axis values)
-            **kwargs: see help on LocatorAxis
+        ix : int, list, slice, tuple (on integer index or axis values)
+        **kwargs: see help on LocatorAxis
 
         Returns
         -------
@@ -1057,8 +1069,8 @@ class LocatorAxis(object):
 
         Parameters
         ----------
-        slice_            : slice or tuple 
-        include_last: include last element 
+        slice_ : slice or tuple 
+        include_last : include last element 
 
         Notes
         -----

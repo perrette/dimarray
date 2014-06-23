@@ -6,148 +6,312 @@ DimArray methods are list below by topic, along with examples.
 Functions are provided in a separate page :ref:`functions`.
 
 .. contents:: 
-    :depth: 1
-    :local: 
+    :depth: 2
 
 Create a DimArray
 -----------------
 
-init
-~~~~
 .. automethod:: dimarray.DimArray.__init__
 
+-------------------------
 
-from_kw
-~~~~~~~
 .. automethod:: dimarray.DimArray.from_kw
+
+Comparisons
+-----------
+
+.. automethod:: dimarray.DimArray._cmp
+
+-------------------------
+
+.. automethod:: dimarray.DimArray.__eq__
+
+-------------------------
+
+.. automethod:: dimarray.DimArray.__lt__
+
+-------------------------
+
+.. automethod:: dimarray.DimArray.__gt__
+
+-------------------------
+
+.. automethod:: dimarray.DimArray.__le__
+
+-------------------------
+
+.. automethod:: dimarray.DimArray.__or__
+
+-------------------------
+
+.. automethod:: dimarray.DimArray.__and__
+
+
+Unary operations
+----------------
+
+.. automethod:: dimarray.DimArray.apply
+
+-------------------------
+
+.. automethod:: dimarray.DimArray.__inv__
+
+-------------------------
+
+.. automethod:: dimarray.DimArray.__neg__
+
+-------------------------
+
+.. automethod:: dimarray.DimArray.__pos__
+
+-------------------------
+
+.. automethod:: dimarray.DimArray.__sqrt__
+
+-------------------------
+
+.. automethod:: dimarray.DimArray.__invert__
+
+-------------------------
+
+.. automethod:: dimarray.DimArray.__nonzero__
+
+
+Binary operation
+----------------
+
+.. automethod:: dimarray.DimArray.__add__
+
+-------------------------
+
+.. automethod:: dimarray.DimArray.__sub__
+
+-------------------------
+
+.. automethod:: dimarray.DimArray.__mul__
+
+-------------------------
+
+.. automethod:: dimarray.DimArray.__div__
+
+-------------------------
+
+.. automethod:: dimarray.DimArray.__truediv__
+
+-------------------------
+
+.. automethod:: dimarray.DimArray.__floordiv__
+
+-------------------------
+
+.. automethod:: dimarray.DimArray.__radd__
+
+-------------------------
+
+.. automethod:: dimarray.DimArray.__rsub__
+
+-------------------------
+
+.. automethod:: dimarray.DimArray.__rmul__
+
+-------------------------
+
+.. automethod:: dimarray.DimArray.__rdiv__
+
+-------------------------
+
+.. automethod:: dimarray.DimArray.__pow__
+
+-------------------------
+
+.. automethod:: dimarray.DimArray.__rpow__
+
+
 
 Modify shape
 ------------
 
-transpose
-~~~~~~~~~
 .. automethod:: dimarray.DimArray.transpose
 
-swapaxes
-~~~~~~~~
+-------------------------
+
 .. automethod:: dimarray.DimArray.swapaxes
 
-reshape
-~~~~~~~
+-------------------------
+
 .. automethod:: dimarray.DimArray.reshape
 
-group
-~~~~~
+-------------------------
+
 .. automethod:: dimarray.DimArray.group
 
-ungroup
-~~~~~~~
+-------------------------
+
 .. automethod:: dimarray.DimArray.ungroup
 
-flatten
-~~~~~~~
+-------------------------
+
 .. automethod:: dimarray.DimArray.flatten
 
-newaxis
-~~~~~~~
+-------------------------
+
 .. automethod:: dimarray.DimArray.newaxis
 
-squeeze
-~~~~~~~
+-------------------------
+
 .. automethod:: dimarray.DimArray.squeeze
 
-repeat
-~~~~~~
+-------------------------
+
 .. automethod:: dimarray.DimArray.repeat
 
-broadcast
-~~~~~~~~~
+-------------------------
+
 .. automethod:: dimarray.DimArray.broadcast
 
 Reduce, accumulate
 ------------------
 
-max
-~~~
 .. automethod:: dimarray.DimArray.max
    
-min
-~~~
+-------------------------
+
 .. automethod:: dimarray.DimArray.min
 
-ptp
-~~~
+-------------------------
+
 .. automethod:: dimarray.DimArray.ptp
 
-median
-~~~~~~
+-------------------------
+
 .. automethod:: dimarray.DimArray.median
 
-all
-~~~
+-------------------------
+
 .. automethod:: dimarray.DimArray.all
 
-any
-~~~
+-------------------------
+
 .. automethod:: dimarray.DimArray.any
 
-prod
-~~~~
+-------------------------
+
 .. automethod:: dimarray.DimArray.prod
 
-sum
-~~~
+-------------------------
+
 .. automethod:: dimarray.DimArray.sum
  
-mean
-~~~~
+-------------------------
+
 .. automethod:: dimarray.DimArray.mean
 
-std
-~~~
+-------------------------
+
 .. automethod:: dimarray.DimArray.std
 
-var
-~~~
+-------------------------
+
 .. automethod:: dimarray.DimArray.var
 
-argmax
-~~~~~~
+-------------------------
+
 .. automethod:: dimarray.DimArray.argmax
 
-argmin
-~~~~~~
+-------------------------
+
 .. automethod:: dimarray.DimArray.argmin
 
-cumsum
-~~~~~~
+-------------------------
+
 .. automethod:: dimarray.DimArray.cumsum
 
-cumprod
-~~~~~~~
+-------------------------
+
 .. automethod:: dimarray.DimArray.cumprod
 
-diff
-~~~~
+-------------------------
+
 .. automethod:: dimarray.DimArray.diff
+
+
+Indexing
+--------
+
+.. automethod:: dimarray.DimArray.__getitem__
+
+-------------------------
+
+.. automethod:: dimarray.DimArray.ix
+
+-------------------------
+
+.. automethod:: dimarray.DimArray.box
+
+-------------------------
+
+.. automethod:: dimarray.DimArray.take
+
+-------------------------
+
+.. automethod:: dimarray.DimArray.put
+
+
+Re-indexing
+-----------
+
+.. automethod:: dimarray.DimArray.reset_axis
+
+-------------------------
+
+.. automethod:: dimarray.DimArray.reindex_axis
+
+-------------------------
+
+.. automethod:: dimarray.DimArray.reindex_like
+
+
+To / From other objects
+-----------------------
+
+.. automethod:: dimarray.DimArray.from_pandas
+
+-------------------------
+
+.. automethod:: dimarray.DimArray.to_pandas
+
+-------------------------
+
+.. automethod:: dimarray.DimArray.to_larry
+
+-------------------------
+
+.. automethod:: dimarray.DimArray.to_dataset
+
+I/O
+---
+
+.. automethod:: dimarray.DimArray.write_nc
+
+-------------------------
+
+.. automethod:: dimarray.DimArray.read_nc
 
 Plotting
 --------
 
-plot
-~~~~
 .. automethod:: dimarray.DimArray.plot
 
-pcolor
-~~~~~~
+-------------------------
+
 .. automethod:: dimarray.DimArray.pcolor
 
-contourf
-~~~~~~~~
+-------------------------
+
 .. automethod:: dimarray.DimArray.contourf
 
-contour
-~~~~~~~
+-------------------------
+
 .. automethod:: dimarray.DimArray.contour
 
 .. .. toctree::
