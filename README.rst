@@ -64,7 +64,7 @@ b            4     5     6
 Useful links
 ------------
 ================================    ====================================
-Documentation                       https://pythonhosted.org/dimarray
+Documentation                       http://dimarray.readthedocs.org
 Code on github (bleeding edge)      https://github.com/perrette/dimarray
 Code on pypi   (releases)           https://pypi.python.org/pypi/dimarray
 Mailing List                        https://groups.google.com/forum/#!forum/dimarray
