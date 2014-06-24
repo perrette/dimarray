@@ -253,6 +253,9 @@ def _check_stack_axis(axis, dims, default='unnamed'):
 		i+=1
 	    axis = default+"_{}".format(i)
 
+    elif isinstance(axis, int):
+        raise TypeError("axis must be a str (new axis name)")
+
     if axis in dims:
 	raise ValueError("please provide an axis name which does not \
 		already exist")
@@ -278,6 +281,7 @@ def stack(arrays, axis=None, keys=None, align=False):
     See Also
     --------
     concatenate : join arrays along an existing dimension
+    swapaxes : to modify the position of the newly inserted axis
 
     Examples
     --------
@@ -292,6 +296,8 @@ def stack(arrays, axis=None, keys=None, align=False):
     array([[ 1,  2,  3],
            [11, 22, 33]])
     """
+    assert not isinstance(axis, int), "axis must be a str (you are creating a new axis)"
+
     # make a sequence of arrays
     arrays, keys = _check_stack_args(arrays, keys)
 
