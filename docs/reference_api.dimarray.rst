@@ -1,8 +1,8 @@
 .. _ref_api_methods:
 
-==============================
-DimArray methods reference API
-==============================
+============
+DimArray API
+============
 
 DimArray methods are list below by topic, along with examples. 
 Functions are provided in a separate page :ref:`ref_api_functions`.

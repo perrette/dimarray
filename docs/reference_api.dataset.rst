@@ -1,7 +1,7 @@
 .. _ref_api_dataset:
 
-=====================
-Dataset reference API
-=====================
+===========
+Dataset API
+===========
 
 Under construction...

@@ -1,6 +1,6 @@
-===========================
-Ref Table numpy vs dimarray
-===========================
+=======================
+Table numpy vs dimarray
+=======================
 
 Table of correspondence between numpy ndarray and dimarray's functions and methods
 

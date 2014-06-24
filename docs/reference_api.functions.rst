@@ -1,11 +1,11 @@
 .. _ref_api_functions:
 
-================================
-dimarray functions reference API
-================================
+=======================
+functions reference API
+=======================
 
-DimArray methods are list below by topic, along with examples. 
-Methods are provided in a separate page :ref:`ref_api_methods`.
+dimarray functions are listed below by topic, along with examples. 
+DimArray Methods are provided in a separate page :ref:`ref_api_methods`.
 
 .. contents:: 
     :depth: 2
