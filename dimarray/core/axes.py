@@ -1339,7 +1339,7 @@ class LocatorAxes(object):
         """ Convert to N-D tuple
 
         >>> import dimarray as da
-        >>> a = da.array(np.arange(2*3*4).reshape(2,3,4))
+        >>> a = da.DimArray(np.arange(2*3*4).reshape(2,3,4))
         >>> b = a.group('x1','x2')
         >>> c = b.take((0,1), axis=1)
         >>> np.all(a.take({'x1':0,'x2':1}) == c)

@@ -19,8 +19,8 @@ Reindexing is the action of shrinking or extending an array to match a new index
 reindex_axis
 ~~~~~~~~~~~~
 
->>> import dimarray as da
->>> a = da.DimArray([3,4],[('x0',[1,3])])
+>>> from dimarray import DimArray
+>>> a = DimArray([3,4],[('x0',[1,3])])
 >>> a.reindex_axis([1,2,3])
 dimarray: 2 non-null elements (1 null)
 dimensions: 'x0'
@@ -29,7 +29,7 @@ array([  3.,  nan,   4.])
 
 Also works with string indices
 
->>> b = da.DimArray([1,2,3],[('x0', ['a','b','c'])])
+>>> b = DimArray([1,2,3],[('x0', ['a','b','c'])])
 >>> b.reindex_axis(['b','d'])
 dimarray: 1 non-null elements (1 null)
 dimensions: 'x0'
@@ -45,7 +45,7 @@ reindex_like
 
 Same as reindex_axis, except that the new axes are searched for in another array.
 
->>> c = da.DimArray([[1,2,3], [4,5,6]],[('x0',["a","b"]),('x1',[1, 2, 3])])
+>>> c = DimArray([[1,2,3], [4,5,6]],[('x0',["a","b"]),('x1',[1, 2, 3])])
 >>> c.reindex_like(b)
 dimarray: 6 non-null elements (3 null)
 dimensions: 'x0', 'x1'
@@ -72,9 +72,8 @@ dimensions: 'x0'
 array([ nan,  3. ,  3.5,  4. ])
 
 >>> import numpy as np
->>> import dimarray as da
 >>> time=np.linspace(1950,1955,8)
->>> v = da.array_kw(np.cos(time), time=time)
+>>> v = DimArray(np.cos(time), axes=('time',time))
 >>> w = v.reindex_axis(np.linspace(1948,1957,10), axis='time', method='interp')
 >>> x = v.reindex_axis(np.linspace(1948,1957,10), axis='time', method='nearest')
 
@@ -87,7 +86,7 @@ array([ nan,  3. ,  3.5,  4. ])
 >>> #plt.plot(w1.time, w.values, 'o--', color='k', label='interp')
 >>> plt.plot(x.time, x.values, '*-',label='nearest') # doctest: +SKIP
 >>> plt.legend(loc='upper left')   # doctest: +SKIP
-<matplotlib.legend.Legend at 0x7f9c286f5950>
+<matplotlib.legend.Legend at 0x7f03c0673950>
 
 .. image:: reindexing_files/figure_15-1.png
 
@@ -101,9 +100,10 @@ align_axes
 It is also possible to proceed to axis alignment on a sequence of arrays (not in interpolation mode!):
 
 >>> # align axes
->>> x = da.DimArray([1,2,3],('x0',[1,2,3]))
->>> y = da.DimArray([3,4],('x0',[2,4]))
->>> xa, ya = da.align_axes(x, y)
+>>> from dimarray import align_axes
+>>> x = DimArray([1,2,3],('x0',[1,2,3]))
+>>> y = DimArray([3,4],('x0',[2,4]))
+>>> xa, ya = align_axes(x, y)
 >>> ya
 dimarray: 2 non-null elements (2 null)
 dimensions: 'x0'

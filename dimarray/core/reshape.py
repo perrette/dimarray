@@ -598,10 +598,10 @@ def group(self, *dims, **kwargs):
 
     Examples
     --------
-    >>> import dimarray as da
+    >>> from dimarray import DimArray
     >>> np.random.seed(0)
     >>> values = np.arange(2*3*4).reshape(2,3,4)
-    >>> v = da.array_kw(values, time=[1950,1955], lat=np.linspace(-90,90,3), lon=np.linspace(-180,180,4))
+    >>> v = DimArray(values, axes=[('time', [1950,1955]), ('lat', np.linspace(-90,90,3)), ('lon', np.linspace(-180,180,4))])
     >>> v
     dimarray: 24 non-null elements (0 null)
     dimensions: 'time', 'lat', 'lon'

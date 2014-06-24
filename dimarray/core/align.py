@@ -26,8 +26,8 @@ def broadcast_arrays(*arrays):
     Just as numpy's broadcast_arrays
 
     >>> import dimarray as da
-    >>> x = da.array([[1,2,3]])
-    >>> y = da.array([[1],[2],[3]])
+    >>> x = da.DimArray([[1,2,3]])
+    >>> y = da.DimArray([[1],[2],[3]])
     >>> da.broadcast_arrays(x, y)
     [dimarray: 9 non-null elements (0 null)
     dimensions: 'x0', 'x1'

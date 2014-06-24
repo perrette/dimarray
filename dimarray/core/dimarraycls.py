@@ -57,7 +57,6 @@ class DimArray(object):
     --------
     Axes, Axis, GroupedAxis, Dataset
     read_nc, stack, concatenate
-    array, array_kw
 
     Examples
     --------
@@ -326,6 +325,8 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     @classmethod
     def from_kw(cls, *args, **kwargs):
         """ See array_kw for the doc
+
+        .. deprecated:: This function might disappear in future versions
         """
         if len(args) == 0:
             values = None
@@ -1368,7 +1369,7 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     def from_arrays(cls, *args, **kwargs):
         """ use dimarray.array instead """
         kwargs['cls'] = cls
-        warnings.warn(FutureWarning('from_arrays is deprecated, use da.array() instead'))
+        warnings.warn(FutureWarning('from_arrays is deprecated, use concatenate() or stack() ot Dataset().to_array()) instead'))
         return array(*args, **kwargs)
 
 
@@ -1376,6 +1377,8 @@ DimArray.reset_axis.__func__.__doc__ = DimArray.reset_axis.__func__.__doc__.form
 
 def array_kw(*args, **kwargs):
     """ Define a Dimarray using keyword arguments for axes
+
+    .. deprecated:: This function might disappear in future versions
 
     Parameters
     ----------
