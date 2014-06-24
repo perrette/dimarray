@@ -12,7 +12,7 @@ Methods are provided in a separate page :ref:`ref_api_methods`.
     :local:
 
 
-.. _refapi_join:
+.. _ref_api_join:
 
 Join
 ----

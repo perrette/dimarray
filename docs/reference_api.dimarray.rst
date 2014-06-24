@@ -22,7 +22,7 @@ Create a DimArray
 .. automethod:: dimarray.DimArray.from_kw
 
 
-.. _refapi_reshaping:
+.. _ref_api_reshaping:
 
 Modify shape
 ------------
@@ -153,6 +153,8 @@ Indexing
 .. automethod:: dimarray.DimArray.put
 
 
+.. _ref_api_reindexing:
+
 Re-indexing
 -----------
 
@@ -169,6 +171,8 @@ Re-indexing
 -------------------------
 
 .. automethod:: dimarray.DimArray.sort_axis
+
+.. _ref_api_missingvalues:
 
 Missing values
 --------------

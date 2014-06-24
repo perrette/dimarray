@@ -25,9 +25,11 @@ or with `ipyhton`
 .. .. include::    comparison_table.rst
 
 .. toctree::
-    :maxdepth: 3
+    :maxdepth: 1
 
     reference_api.dimarray.rst
+    reference_api.dataset.rst
+    reference_api.axes.rst
     reference_api.functions.rst
     comparison_table.rst
 

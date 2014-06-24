@@ -68,7 +68,7 @@ array([1950, 1960, 1970])
 numpy-like attributes
 ~~~~~~~~~~~~~~~~~~~~~
 
-Numpy-like attributes `dtype`, `shape`, `size` or `ndim` are defined, and are not augmented with `dims` and `labels`
+Numpy-like attributes `dtype`, `shape`, `size` or `ndim` are defined, and are now augmented with `dims` and `labels`
 
 >>> a.shape
 (2, 3)
@@ -88,12 +88,12 @@ dimensions: 'variable', 'time'
 
 Individual axes can be accessed as well, which are `Axis` instances.
 
-.. _Metadata:
+.. _metadata:
 
-Metadata
+metadata
 ~~~~~~~~
 
-:class:`dimarray.DimArray`, :class.`dimarray.Dataset` and :class:`dimarray.Axis` all support metadata. The straightforward way to define them is via the standard `.` syntax to access an object attribute:
+The straightforward way to define them is via the standard `.` syntax to access an object attribute:
 
 >>> from dimarray import DimArray
 >>> a = DimArray([1,2,3])

@@ -55,7 +55,7 @@ For more information refer to section on :ref:`page_data_structure` (as well as 
 numpy-like attributes
 ---------------------
 
-Numpy-like attributes `dtype`, `shape`, `size` or `ndim` are defined, and are not augmented with `dims` and `labels`
+Numpy-like attributes `dtype`, `shape`, `size` or `ndim` are defined, and are now augmented with `dims` and `labels`
 
 >>> a.shape
 (2, 3)
@@ -106,12 +106,12 @@ dimensions: 'variable'
 0 / variable (2): a to b
 array([ 2.5,  5. ])
 
-.. seealso:: :ref:`Along-axis_transformations`
+.. seealso:: :ref:`page_transformations`
 
-.. _data_alignment__automatic_broadcasting_and_reindexing:
+.. _alignment_in_operations:
 
-data alignment: automatic broadcasting and reindexing
------------------------------------------------------
+alignment in operations
+-----------------------
 
 During an operation, arrays are **automatically re-indexed** to span the 
 same axis domain, with nan filling if needed. 
@@ -125,6 +125,8 @@ dimarray: 2 non-null elements (1 null)
 dimensions: 'year'
 0 / year (3): 1950 to 1970
 array([  10.,  101.,   nan])
+
+.. seealso:: :meth:`reindex_axis <dimarray.DimArray.reindex_axis>`, :meth:`reindex_like <dimarray.DimArray.reindex_like>` and :func:`align_axes <dimarray.align_axes>`
 
 A check is also performed on the dimensions, to ensure consistency of the data.
 If dimensions do not match this is not interpreted as an error but rather as a 
@@ -147,6 +149,8 @@ dimensions: 'year', 'season'
 array([[  0,   0],
        [ 10, 100],
        [ 20, 200]])
+
+.. seealso:: :func:`broadcast_arrays <dimarray.broadcast_arrays>` and :meth:`reshape <dimarray.DimArray.reshape>`
 
 .. _Dataset:
 
@@ -263,7 +267,8 @@ In the above note that new axis values were provided via the parameter `keys=`. 
 
 >>> a = DimArray([11, 12, 13], axes=[[1950, 1951, 1952]], dims=['time'])
 >>> b = DimArray([21, 23], axes=[[1950, 1952]], dims=['time'])
->>> da.stack((a, b), axis='items', keys=['a','b'], align=True)
+>>> c = da.stack((a, b), axis='items', keys=['a','b'], align=True)
+>>> c
 dimarray: 5 non-null elements (1 null)
 dimensions: 'items', 'time'
 0 / items (2): a to b
@@ -271,7 +276,45 @@ dimensions: 'items', 'time'
 array([[ 11.,  12.,  13.],
        [ 21.,  nan,  23.]])
 
-.. seealso:: :ref:`refapi_join`
+.. seealso:: :ref:`ref_api_join`
+
+.. _Drop_missing_data:
+
+Drop missing data
+-----------------
+
+Say you have data with NaNs:
+
+>>> a = DimArray([[11, np.nan, np.nan],[21,np.nan,23]], axes=[['a','b'],[1950, 1951, 1952]], dims=['items','time'])
+>>> a
+dimarray: 3 non-null elements (3 null)
+dimensions: 'items', 'time'
+0 / items (2): a to b
+1 / time (3): 1950 to 1952
+array([[ 11.,  nan,  nan],
+       [ 21.,  nan,  23.]])
+
+You can drop every column that contains a NaN
+
+>>> a.dropna(axis=1) # drop along columns
+dimarray: 2 non-null elements (0 null)
+dimensions: 'items', 'time'
+0 / items (2): a to b
+1 / time (1): 1950 to 1950
+array([[ 11.],
+       [ 21.]])
+
+or actually control decide to retain only these columns with a minimum number of valid data, here one:
+
+>>> a.dropna(axis=1, minvalid=1) # drop every column with less than one valid data
+dimarray: 3 non-null elements (1 null)
+dimensions: 'items', 'time'
+0 / items (2): a to b
+1 / time (2): 1950 to 1952
+array([[ 11.,  nan],
+       [ 21.,  23.]])
+
+.. seealso:: :ref:`ref_api_missingvalues`
 
 .. _Reshaping_arrays:
 
@@ -292,7 +335,7 @@ array([[ 0,  2,  4,  6,  8, 10, 12, 14, 16, 18],
        [20, 22, 24, 26, 28, 30, 32, 34, 36, 38],
        [21, 23, 25, 27, 29, 31, 33, 35, 37, 39]])
 
-.. seealso:: :ref:`refapi_reshaping` and :ref:`page_reshape`
+.. seealso:: :ref:`ref_api_reshaping` and :ref:`page_reshape`
 
 .. _interfacing_with_pandas:
 
@@ -311,7 +354,7 @@ A D
   1  21  23  25  27  29  31  33  35  37  39
 
 .. raw:: html
-     :file: getting_started_files/output_65-0.html
+     :file: getting_started_files/output_75-0.html
 
 
 
@@ -339,9 +382,9 @@ dimarray comes with basic plotting facility. For 1-D and 2-D data, it simplies i
 >>> %matplotlib inline # doctest: +SKIP 
 >>> a = dataset['combined_data']
 >>> a.plot() # doctest: +SKIP
-<matplotlib.axes.AxesSubplot at 0x7f90feff4350>
+<matplotlib.axes.AxesSubplot at 0x7f2dacd72510>
 
-.. image:: getting_started_files/figure_71-1.png
+.. image:: getting_started_files/figure_81-1.png
 
 
 
@@ -357,15 +400,15 @@ In addition, it can also display 2-D data via its methods `contour`, `contourf` 
 >>> # plot the data
 >>> a.contourf() # doctest: +SKIP
 >>> a.contour(colors='k') # doctest: +SKIP
-<matplotlib.contour.QuadContourSet instance at 0x7f90fefb8488>
+<matplotlib.contour.QuadContourSet instance at 0x7f2daccc3050>
 
-.. image:: getting_started_files/figure_73-1.png
+.. image:: getting_started_files/figure_83-1.png
 
 
 
 >>> # plot the data
 >>> a.pcolor() # doctest: +SKIP
-<matplotlib.collections.QuadMesh at 0x7f90fed7a1d0>
+<matplotlib.collections.QuadMesh at 0x7f2dacafb290>
 
-.. image:: getting_started_files/figure_74-1.png
+.. image:: getting_started_files/figure_84-1.png
 

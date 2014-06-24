@@ -9,10 +9,10 @@ Under construction...
    :maxdepth: 1
              
    _notebooks_rst/create_dimarray.rst
-   data_structure.rst
    _notebooks_rst/indexing.rst
-   _notebooks_rst/reindexing.rst
    _notebooks_rst/transformations.rst
-   _notebooks_rst/metadata.rst
    _notebooks_rst/netcdf.rst
-   _notebooks_rst/reshape.rst
+
+..   _notebooks_rst/reindexing.rst
+..   _notebooks_rst/reshape.rst
+..   _notebooks_rst/metadata.rst
