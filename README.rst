@@ -16,6 +16,12 @@ A natural I/O format for such an array is netCDF, common in geophysics, which re
 the netCDF4 package, and supports metadata.
 
 
+License
+-------
+dimarray is distributed under a 3-clause ("Simplified" or "New") BSD
+license. Parts of basemap which have BSD compatible licenses are included.
+See the LICENSE file, which is distributed with the dimarray package, for details.
+
 Getting started
 ---------------
 
