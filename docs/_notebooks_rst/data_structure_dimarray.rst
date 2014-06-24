@@ -27,7 +27,7 @@ array([[ 1.,  2.,  3.],
 .. _values_and_axes:
 
 values and axes
-~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^
 
 Array data are stored in a `values` **attribute**:
 
@@ -68,7 +68,7 @@ array([1950, 1960, 1970])
 .. _numpy-like_attributes:
 
 numpy-like attributes
-~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^
 
 Numpy-like attributes `dtype`, `shape`, `size` or `ndim` are defined, and are now augmented with `dims` and `labels`
 
@@ -93,7 +93,7 @@ Individual axes can be accessed as well, which are `Axis` instances.
 .. _metadata:
 
 metadata
-~~~~~~~~
+^^^^^^^^
 
 The straightforward way to define them is via the standard `.` syntax to access an object attribute:
 

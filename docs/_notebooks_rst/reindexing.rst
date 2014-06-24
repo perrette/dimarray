@@ -17,7 +17,7 @@ Reindexing is the action of shrinking or extending an array to match a new index
 .. _reindex_axis:
 
 reindex_axis
-~~~~~~~~~~~~
+^^^^^^^^^^^^
 
 >>> from dimarray import DimArray
 >>> a = DimArray([3,4],[('x0',[1,3])])
@@ -41,7 +41,7 @@ See :meth:`dimarray.DimArray.reindex_axis`
 .. _reindex_like:
 
 reindex_like
-~~~~~~~~~~~~
+^^^^^^^^^^^^
 
 Same as reindex_axis, except that the new axes are searched for in another array.
 
@@ -60,7 +60,7 @@ See :meth:`dimarray.DimArray.reindex_like`
 .. _Interpolation:
 
 Interpolation
-~~~~~~~~~~~~~
+^^^^^^^^^^^^^
 
 The `method=` parameter can be passed to `reindex_axis` and `reindex_like` with values "nearest" and "interp" to proceed to nearest and linear interpolation.
 
@@ -95,7 +95,7 @@ array([ nan,  3. ,  3.5,  4. ])
 .. _align_axes:
 
 align_axes
-~~~~~~~~~~
+^^^^^^^^^^
 
 It is also possible to proceed to axis alignment on a sequence of arrays (not in interpolation mode!):
 

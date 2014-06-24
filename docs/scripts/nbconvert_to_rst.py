@@ -1,24 +1,44 @@
-""" Convert a notebook to rst file
+__doc__=""" Convert a notebook to rst file
 
-This include html outputs and png figures.
+It inserts ">>>" in front of code lines to produce a nice formatting in sphinx.
+It also handles html outputs and inline figures, can insert a Table of 
+Content or insert a download link to the notebook. 
 
 Usage:
-    nbconvert_docstring.py <notebook.ipynb> [ <text.rst> ] [ --toc] [ --download]
+    nbconvert_to_rst.py <notebook.ipynb> [ <text.rst> ] [ --toc] [ --download] [ --headers SYMBOLS]
 
 Options:
     -h --help   : display this help
-    --toc       : create a Table of Content
+    --toc       : create a Table of Content under the first heading
     --download  : create a link to download the notebook
+    --headers   : sequence of symbols to underline headers. The first symbol will 
+                  be used for a notebook heading of level 1.
+                  Default is: {symbols}
 """
 #!/usr/bin/python
+import sys, os
+from os.path import basename, splitext, join, commonprefix
+
+# to read the notebook 
+import json
+
+# to convert images
 from IPython.utils import py3compat
 import base64
-import sys, os
-#import pypandoc
-from os.path import basename, splitext, join, commonprefix
-from process_notebook import filter_cells, read_nb
+
+# command-line args
 import docopt
-from IPython.display import Image
+
+# update doc with default symbols
+SYMBOLS = '=-^"~+_#'
+__doc__ = __doc__.format(symbols=SYMBOLS )
+    
+
+def read_nb(fname):
+    f = open(fname)
+    nb = json.load(f)
+    f.close()
+    return nb
 
 def make_label(title):
     """ label for future reference
@@ -40,6 +60,12 @@ def main():
     filesdir = splitext(nm2)[0]+'_files' # store figures
 
     nb = read_nb(nm)
+
+    # to underline titles
+    if args['--headers']:
+        symbols = args['SYMBOLS']
+    else:
+        symbols = SYMBOLS
 
     label =  '.. _page_'+filename+':'  # page label
 
@@ -112,7 +138,6 @@ def main():
                     if not os.path.exists(filesdir):
                         os.makedirs(filesdir) # create fig directory
 
-                    #image = Image(output['png'])
                     # make some conversions (after: https://github.com/ipython/ipython/blob/master/IPython/nbconvert/preprocessors/extractoutput.py)
                     data = output['png']
                     data = py3compat.cast_bytes(data)
@@ -195,7 +220,7 @@ def main():
 
             title = cell['source'][0] # assume one line only
             lev = cell['level']
-            symbols = ['=', '-', '~', '_', '+', '#'] # title symbols?
+
             offset = 1 # start at heading level 1
             sym = symbols[lev-offset]
 

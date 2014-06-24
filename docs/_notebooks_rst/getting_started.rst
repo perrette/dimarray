@@ -198,11 +198,11 @@ NetCDF reading and writing
 A natural I/O format for such an array is netCDF, common in geophysics, which rely on
 the netCDF4 package. If netCDF4 is installed (much recommanded), a dataset can easily read and write to the netCDF format:
 
->>> dataset.write_nc('test.nc', mode='w')
+>>> dataset.write_nc('/tmp/test.nc', mode='w')
 
 
 >>> import dimarray as da
->>> da.read_nc('test.nc', 'combined_data')
+>>> da.read_nc('/tmp/test.nc', 'combined_data')
 dimarray: 6 non-null elements (0 null)
 dimensions: 'year', 'season'
 0 / year (3): 1950 to 1970

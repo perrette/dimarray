@@ -19,7 +19,7 @@ Basic numpy methods to modify array dimensions are implemented in dimarray, with
 .. _transpose:
 
 transpose
-~~~~~~~~~
+^^^^^^^^^
 
 Transpose, just like its numpy equivalent, permutes dimensions, but in dimarray it can be provided with axis names instead of just axis position.
 
@@ -51,7 +51,7 @@ array([[[1, 3]],
 .. _swapaxes:
 
 swapaxes
-~~~~~~~~
+^^^^^^^^
 
 Sometimes it is only useful to have on dimension in the first position, for example to make indexing easier. 
 :py:ref:`dimarray.DimArray.swapaxes` is a more general method of swapping two axes, but it can achieve that operation nicely (more useful with more than 2 dimensions!):
@@ -69,7 +69,7 @@ array([[1, 3],
 .. _group_and_ungroup_[experimental]:
 
 group and ungroup [experimental]
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 As a new, experimental feature, it is possible to flatten (group) or any subset of dimensions. Corresponding axes are converted in GroupedAxis objects. It is similar to numpy's flatten method but applies selectively on a set of axes. 
 
@@ -128,7 +128,7 @@ array([[[ 0,  1,  2,  3],
 .. _reshape_[experimental]:
 
 reshape [experimental]
-~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^
 
 :py:meth:`dimarray.DimArray.reshape` is similar but not the same as numpy ndarray's :ref:`reshape <http://docs.scipy.org/doc/numpy/reference/generated/numpy.reshape.html>`. It takes only axis names as parameters. It is a high-level function that makes use of `newaxis`, `squeeze`, `group` and `ungroup` to reshape the array. It differs from numpy in that it cannot "break" an existing dimension (unless it is a GroupedAxis). It also performs :py:meth:`transpose` as needed to match the required shape. 
 

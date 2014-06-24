@@ -8,7 +8,7 @@
 .. _Metadata:
 
 Metadata
-~~~~~~~~
+^^^^^^^^
 :download:`Download notebook </notebooks/metadata.ipynb>` 
 
 
