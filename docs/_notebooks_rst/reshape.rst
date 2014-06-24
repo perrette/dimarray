@@ -9,6 +9,8 @@
 
 Modify array shape
 ------------------
+:download:`Download notebook </notebooks/reshape.ipynb>` 
+
 
 Basic numpy methods to modify array dimensions are implemented in dimarray, with some additional functionality allowed by named dimensions.
 

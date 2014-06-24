@@ -7,6 +7,8 @@
 
 Create a generic time-mean function
 ===================================
+:download:`Download notebook </notebooks/generic_function.ipynb>` 
+
 
 This function applies to any kind of input array, as long as the "time" dimension is present. 
 

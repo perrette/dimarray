@@ -9,6 +9,8 @@
 
 Reindexing: align axes
 ----------------------
+:download:`Download notebook </notebooks/reindexing.ipynb>` 
+
 
 Reindexing is the action of shrinking or extending an array to match a new index, in some ways similar to interpolation, except that by default, the new index has to be present, or it is filled with NaN. Actual interpolation is performed by passing `method="nearest"` or `method="interp"` parameter.
 

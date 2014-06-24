@@ -7,6 +7,8 @@
 
 Advanced Indexing
 =================
+:download:`Download notebook </notebooks/indexing.ipynb>` 
+
 
 Let's first define an array to test indexing
 

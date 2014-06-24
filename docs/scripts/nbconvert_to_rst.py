@@ -3,11 +3,12 @@
 This include html outputs and png figures.
 
 Usage:
-    nbconvert_docstring.py <notebook.ipynb> [ <text.rst> ] [ --toc]
+    nbconvert_docstring.py <notebook.ipynb> [ <text.rst> ] [ --toc] [ --download]
 
 Options:
     -h --help   : display this help
     --toc       : create a Table of Content
+    --download  : create a link to download the notebook
 """
 #!/usr/bin/python
 from IPython.utils import py3compat
@@ -54,12 +55,23 @@ def main():
     :local: 
 
 """
+
+    # create a link to download the notebook
+    path_to_nb = '/'+nm
+    download = """
+:download:`Download notebook <{}>` 
+""".format(path_to_nb)
+
     insert_toc = args['--toc'] # insert toc?
+    insert_download = args['--download'] # insert download link?
 
     text = []
 
     text += [header + '\n\n'] 
     text += [label + '\n'] # add a label to allow hyperlinks
+    
+#    if args['--download']:
+#        text.append(download)
 
     for icell, cell in enumerate(nb['worksheets'][0]['cells']):
         text.append('\n\n') # new line
@@ -204,6 +216,11 @@ def main():
             if insert_toc:
                 text.append(toc)
                 insert_toc = False
+
+            # insert download link
+            if insert_download:
+                text.append(download)
+                insert_download = False
 
     # write note rst to file
     with open(nm2, 'w') as f:

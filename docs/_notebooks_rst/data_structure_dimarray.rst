@@ -9,6 +9,8 @@
 
 DimArray class
 --------------
+:download:`Download notebook </notebooks/data_structure_dimarray.ipynb>` 
+
 
 Let's use this dimarray as example:
 

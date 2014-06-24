@@ -7,6 +7,8 @@
 
 Create a dimarray
 =================
+:download:`Download notebook </notebooks/create_dimarray.ipynb>` 
+
 
 There are various ways of defining a DimArray instance. 
 

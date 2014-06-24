@@ -7,7 +7,9 @@ RSTDIR=$2
 #NOTEBOOKDIR=notebooks
 #RSTDIR=_rst
 indexfile=$RSTDIR/index.rst
-TOC="" # do not include TOC
+TOC="" # --toc to include TOC
+DOWN="" # --download to include download link
+DOWN="--download" # --download to include download link
 
 # start the index
 echo "Documentation" > $indexfile
@@ -26,7 +28,7 @@ for file in $NOTEBOOKDIR/*ipynb ; do
     fi
 
     rstfile=$RSTDIR/`basename ${file%.ipynb}.rst`
-    python scripts/nbconvert_to_rst.py $file $rstfile $TOC
+    python scripts/nbconvert_to_rst.py $file $rstfile $TOC $DOWN
 
     # generate the index
     echo "   `basename $rstfile`" >> $indexfile

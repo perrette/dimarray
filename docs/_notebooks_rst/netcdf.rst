@@ -7,6 +7,8 @@
 
 NetCDF reading and writing
 ==========================
+:download:`Download notebook </notebooks/netcdf.ipynb>` 
+
 
 .. _Read_from_one_netCDF_file:
 

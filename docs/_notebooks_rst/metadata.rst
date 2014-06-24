@@ -9,6 +9,8 @@
 
 Metadata
 ~~~~~~~~
+:download:`Download notebook </notebooks/metadata.ipynb>` 
+
 
 :class:`dimarray.DimArray`, :class.`dimarray.Dataset` and :class:`dimarray.Axis` all support metadata. The straightforward way to define them is via the standard `.` syntax to access an object attribute:
 

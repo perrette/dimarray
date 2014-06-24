@@ -7,6 +7,8 @@
 
 Along-axis transformations
 ==========================
+:download:`Download notebook </notebooks/transformations.ipynb>` 
+
 
 .. _Basics:
 
@@ -94,8 +96,6 @@ dimarray: 3 non-null elements (0 null)
 dimensions: 'x1'
 0 / x1 (3): 0 to 2
 array([ 5.,  7.,  3.])
-
-In `dimarray`, the `argmin` and `argmax` functions return axis value instead of axis position.
 
 .. _Weighted_mean,_std_and_var:
 

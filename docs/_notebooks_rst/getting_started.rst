@@ -7,6 +7,8 @@
 
 Tutorial
 ========
+:download:`Download notebook </notebooks/getting_started.ipynb>` 
+
 
 .. contents::
     :local:
@@ -370,8 +372,6 @@ dimensions: 'x0', 'x1'
 array([[1, 2],
        [3, 4]])
 
-For more information, you can use inline help (help() or ?) or refer to :ref:`page_reference`
-
 .. _Plotting:
 
 Plotting
@@ -382,9 +382,9 @@ dimarray comes with basic plotting facility. For 1-D and 2-D data, it simplies i
 >>> %matplotlib inline # doctest: +SKIP 
 >>> a = dataset['combined_data']
 >>> a.plot() # doctest: +SKIP
-<matplotlib.axes.AxesSubplot at 0x7f2dacd72510>
+<matplotlib.axes.AxesSubplot at 0x7f2c7bf6b510>
 
-.. image:: getting_started_files/figure_81-1.png
+.. image:: getting_started_files/figure_80-1.png
 
 
 
@@ -400,15 +400,18 @@ In addition, it can also display 2-D data via its methods `contour`, `contourf` 
 >>> # plot the data
 >>> a.contourf() # doctest: +SKIP
 >>> a.contour(colors='k') # doctest: +SKIP
-<matplotlib.contour.QuadContourSet instance at 0x7f2daccc3050>
+<matplotlib.contour.QuadContourSet instance at 0x7f2c7cc197e8>
 
-.. image:: getting_started_files/figure_83-1.png
+.. image:: getting_started_files/figure_82-1.png
 
 
 
 >>> # plot the data
 >>> a.pcolor() # doctest: +SKIP
-<matplotlib.collections.QuadMesh at 0x7f2dacafb290>
+<matplotlib.collections.QuadMesh at 0x7f2c7bcf4290>
 
-.. image:: getting_started_files/figure_84-1.png
+.. image:: getting_started_files/figure_83-1.png
 
+
+
+For more information, you can use inline help (help() or ?) or refer to :ref:`page_reference` and :ref:`reference_api` 
