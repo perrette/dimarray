@@ -5,14 +5,14 @@ Numpy array with dimensions
 ---------------------------
 dimarray is a package to handle numpy arrays with labelled dimensions and axes. 
 Inspired from pandas, it includes advanced alignment and reshaping features and 
-as well as nan handling.
+as well as missing-value (NaN) handling.
 
 The main difference with pandas is that it is generalized to N dimensions, and behaves more closely to a numpy array. 
 The axes do not have fixed names ('index', 'columns', etc...) but are 
 given a meaningful name by the user (e.g. 'time', 'items', 'lon' ...). 
 This is especially useful for high dimensional problems such as sensitivity analyses.
 
-A natural I/O format for such an array is netCDF, common in geophysics, which rely on 
+A natural I/O format for such an array is netCDF, common in geophysics, which relies on 
 the netCDF4 package, and supports metadata.
 
 
@@ -111,3 +111,11 @@ Alternatively, you can use pip to download and install the version from pypi (co
 or with conda:
     
         conda install dimarray
+
+
+Contributions
+-------------
+All suggestions for improvement or direct contributions are very welcome.
+You can ask a question or start a discussion on the mailing list
+or open an `issue` on github for precise requests. See  :ref:`links`.
+

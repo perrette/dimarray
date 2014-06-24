@@ -9,8 +9,9 @@ def format_doc(*args, **kwargs):
         try:
             func.__doc__ = func.__doc__.format(*args, **kwargs)
         except AttributeError: # non writable
-            print "failed for", func
-            func = _update_doc(func, *args, **kwargs)
+            func.__func__.__doc__ = func.__func__.__doc__.format(*args, **kwargs)
+            #print "failed for", func
+            #func = _update_doc(func, *args, **kwargs)
         return func
 
     return pseudo_decorator

@@ -2,13 +2,13 @@
 .. notebooks/netcdf.ipynb
 .. To modify this file, edit the source notebook and execute "make rst"
 
-..  _page_netcdf:
+.. _page_netcdf:
 
 
 NetCDF reading and writing
 ==========================
 
-..  _Read_from_one_netCDF_file:
+.. _Read_from_one_netCDF_file:
 
 Read from one netCDF file
 -------------------------
@@ -31,7 +31,7 @@ Then access the variable of choice
 >>> data['temp'].plot() # doctest: +SKIP
 <matplotlib.axes.AxesSubplot at 0x7fd3ca039610>
 
-.. image:: netcdf_figures/figure_4-1.png
+.. image:: netcdf_files/figure_4-1.png
 
 
 
@@ -43,7 +43,7 @@ Load only one variable
 >>> data = read_nc(ncfile,'temp', indices={"time":-1}, indexing='position')  #  integer position indexing
 
 
-..  __Read_from_multiple_files:
+.. __Read_from_multiple_files:
 
  Read from multiple files
 -------------------------
@@ -84,7 +84,7 @@ dimensions: 'model', 'time', 'scenario'
 tsl: ('model', 'time', 'scenario')
 temp: ('model', 'time', 'scenario')
 
-..  _Write_to_netCDF_:
+.. _Write_to_netCDF_:
 
 Write to netCDF 
 ----------------

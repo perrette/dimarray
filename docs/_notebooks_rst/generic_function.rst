@@ -1,17 +1,12 @@
 .. This file was generated automatically from the ipython notebook:
-.. notebooks/examples.ipynb
+.. notebooks/generic_function.ipynb
 .. To modify this file, edit the source notebook and execute "make rst"
 
-..  _page_examples:
+.. _page_generic_function:
 
-
-Examples of use
-===============
-
-..  _Create_a_generic_time-mean_function:
 
 Create a generic time-mean function
------------------------------------
+===================================
 
 This function applies to any kind of input array, as long as the "time" dimension is present. 
 

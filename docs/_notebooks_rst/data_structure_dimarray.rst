@@ -1,12 +1,14 @@
 .. This file was generated automatically from the ipython notebook:
-.. notebooks/data_structure.ipynb
+.. notebooks/data_structure_dimarray.ipynb
 .. To modify this file, edit the source notebook and execute "make rst"
 
-.. _page_data_structure:
+.. _page_data_structure_dimarray:
 
 
-DimArray: data structure and attributes
-=======================================
+.. _DimArray_class:
+
+DimArray class
+--------------
 
 Let's use this dimarray as example:
 
@@ -23,7 +25,7 @@ array([[ 1.,  2.,  3.],
 .. _values_and_axes:
 
 values and axes
----------------
+~~~~~~~~~~~~~~~
 
 Array data are stored in a `values` **attribute**:
 
@@ -64,7 +66,7 @@ array([1950, 1960, 1970])
 .. _numpy-like_attributes:
 
 numpy-like attributes
----------------------
+~~~~~~~~~~~~~~~~~~~~~
 
 Numpy-like attributes `dtype`, `shape`, `size` or `ndim` are defined, and are not augmented with `dims` and `labels`
 
@@ -89,7 +91,7 @@ Individual axes can be accessed as well, which are `Axis` instances.
 .. _Metadata:
 
 Metadata
---------
+~~~~~~~~
 
 :class:`dimarray.DimArray`, :class.`dimarray.Dataset` and :class:`dimarray.Axis` all support metadata. The straightforward way to define them is via the standard `.` syntax to access an object attribute:
 

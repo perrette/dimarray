@@ -263,18 +263,21 @@ def stack(arrays, axis=None, keys=None, align=False):
 
     Parameters
     ----------
-    arrays: sequence or dict of arrays
-    axis, optional: str, new dimension along which to stack the array
-    keys, optional: stack axis values, useful if array is a sequence, or a non-ordered dictionary
-    align, optional: if True, align axes prior to stacking (Default to False)
+    arrays : sequence or dict of arrays
+    axis : str, optional
+        new dimension along which to stack the array
+    keys : array-like, optional
+        stack axis values, useful if array is a sequence, or a non-ordered dictionary
+    align : bool, optional
+        if True, align axes prior to stacking (Default to False)
 
     Returns
     -------
-    DimArray: joint array
+    DimArray : joint array
 
     See Also
     --------
-    concatenate: join arrays along an existing dimension
+    concatenate : join arrays along an existing dimension
 
     Examples
     --------
@@ -332,8 +335,10 @@ def concatenate(arrays, axis=0, check_other_axes=True):
 
     Parameters
     -----------
-    arrays: list of DimArrays
-    axis  : axis along which to concatenate
+    arrays : list of DimArrays
+        arrays to concatenate
+    axis : int or str 
+        axis along which to concatenate
 
     Returns
     -------

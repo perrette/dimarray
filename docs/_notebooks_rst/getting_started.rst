@@ -2,13 +2,16 @@
 .. notebooks/getting_started.ipynb
 .. To modify this file, edit the source notebook and execute "make rst"
 
-..  _page_getting_started:
+.. _page_getting_started:
 
 
 Tutorial
 ========
 
-..  _define_a_dimarray:
+.. contents::
+    :local:
+
+.. _define_a_dimarray:
 
 define a dimarray
 -----------------
@@ -27,7 +30,7 @@ dimensions: 'variable', 'time'
 array([[ 1.,  2.,  3.],
        [ 4.,  5.,  6.]])
 
-..  _data_structure:
+.. _data_structure:
 
 data structure
 --------------
@@ -47,7 +50,7 @@ dimensions: 'variable', 'time'
 
 For more information refer to section on :ref:`page_data_structure` (as well as :py:class:`dimarray.Axis` and :py:class:`dimarray.Axes`)
 
-..  _numpy-like_attributes:
+.. _numpy-like_attributes:
 
 numpy-like attributes
 ---------------------
@@ -63,7 +66,7 @@ Numpy-like attributes `dtype`, `shape`, `size` or `ndim` are defined, and are no
 >>> a.labels   # grab axis values
 (array(['a', 'b'], dtype=object), array([1950, 1960, 1970]))
 
-..  _indexing_:
+.. _indexing_:
 
 indexing 
 ---------
@@ -78,9 +81,9 @@ but integer-index is always possible via `ix` toogle between `labels`- and `posi
 >>> a.ix[0, -1]
 3.0
 
-See also: documentation on :ref:`page_indexing`
+.. seealso:: :ref:`page_indexing`
 
-..  _transformation:
+.. _transformation:
 
 transformation
 --------------
@@ -103,9 +106,9 @@ dimensions: 'variable'
 0 / variable (2): a to b
 array([ 2.5,  5. ])
 
-See also: documentation on :ref:`Along-axis_transformations`
+.. seealso:: :ref:`Along-axis_transformations`
 
-..  _data_alignment__automatic_broadcasting_and_reindexing:
+.. _data_alignment__automatic_broadcasting_and_reindexing:
 
 data alignment: automatic broadcasting and reindexing
 -----------------------------------------------------
@@ -145,7 +148,7 @@ array([[  0,   0],
        [ 10, 100],
        [ 20, 200]])
 
-..  _Dataset:
+.. _Dataset:
 
 Dataset
 -------
@@ -181,7 +184,7 @@ array([[[ 10,  10,  10],
 
 Note that they are various ways of combining DimArray instances. In many case (when no dimension broadcasting is involved), it is simpler to just use the :py:func:`dimarray.stack` method.
 
-..  _NetCDF_reading_and_writing:
+.. _NetCDF_reading_and_writing:
 
 NetCDF reading and writing
 --------------------------
@@ -202,42 +205,115 @@ array([[  0,   0],
        [ 10, 100],
        [ 20, 200]])
 
-More on netCDF I/O :ref:`page_netcdf`
+.. seealso:: :ref:`page_netcdf`
 
-..  _Reshaping_arrays:
+.. _Metadata:
+
+Metadata
+--------
+
+It is possible to define and access metadata via the standard `.` syntax to access an object attribute:
+
+>>> a = DimArray([1, 2])
+
+
+>>> a.name = 'myarray'
+>>> a.units = 'meters'
+
+
+The `_metadata` property returns a dictionary of metadata:
+
+>>> a._metadata  # doctest: +SKIP
+{'name': 'myarray', 'units': 'meters'}
+
+Metadata can also be defined for :class:`dimarray.Dataset` and :class:`dimarray.Axis` instances, and will be written to / read from netCDF files. 
+
+.. note:: Metadata cannot start with an underscore `_` and cannot use any protected class attribute as name (e.g. `values`, `axes`, `dims` and so on). 
+
+.. seealso:: :ref:`page_metadata` for more information.
+
+.. _Join_arrays:
+
+Join arrays
+-----------
+
+DimArrays can be joined along an existing dimension, we say `concatenate` (:func:`dimarray.concatenate`):
+
+>>> a = DimArray([11, 12, 13], axes=[[1950, 1951, 1952]], dims=['time'])
+>>> b = DimArray([14, 15, 16], axes=[[1953, 1954, 1955]], dims=['time'])
+>>> da.concatenate((a, b), axis='time')
+dimarray: 6 non-null elements (0 null)
+dimensions: 'time'
+0 / time (6): 1950 to 1955
+array([11, 12, 13, 14, 15, 16])
+
+or they can be stacked along each other, thereby creating a new dimension (:func:`dimarray.stack`)
+
+>>> a = DimArray([11, 12, 13], axes=[[1950, 1951, 1952]], dims=['time'])
+>>> b = DimArray([21, 22, 23], axes=[[1950, 1951, 1952]], dims=['time'])
+>>> da.stack((a, b), axis='items', keys=['a','b'])
+dimarray: 6 non-null elements (0 null)
+dimensions: 'items', 'time'
+0 / items (2): a to b
+1 / time (3): 1950 to 1952
+array([[11, 12, 13],
+       [21, 22, 23]])
+
+In the above note that new axis values were provided via the parameter `keys=`. If the common "time" dimension was not fully overlapping, array can be aligned prior to stacking via the `align=True` parameter. 
+
+>>> a = DimArray([11, 12, 13], axes=[[1950, 1951, 1952]], dims=['time'])
+>>> b = DimArray([21, 23], axes=[[1950, 1952]], dims=['time'])
+>>> da.stack((a, b), axis='items', keys=['a','b'], align=True)
+dimarray: 5 non-null elements (1 null)
+dimensions: 'items', 'time'
+0 / items (2): a to b
+1 / time (3): 1950 to 1952
+array([[ 11.,  12.,  13.],
+       [ 21.,  nan,  23.]])
+
+.. seealso:: :ref:`refapi_join`
+
+.. _Reshaping_arrays:
 
 Reshaping arrays
 ----------------
 
 Additional novelty includes methods to reshaping an array in easy ways, very useful for high-dimensional data analysis.
 
->>> large_array = da.array(np.arange(2*2*5*2).reshape(2,2,5,2), dims=('A','B','C','D'))
->>> small_array = large_array.group('A','B').group('C','D')  # same as reshape('A,B','C,D')
+>>> large_array = DimArray(np.arange(2*2*5*2).reshape(2,2,5,2), dims=('A','B','C','D'))
+>>> small_array = large_array.reshape('A,D','B,C')
 >>> small_array
 dimarray: 40 non-null elements (0 null)
-dimensions: 'A,B', 'C,D'
-0 / A,B (4): (0, 0) to (1, 1)
-1 / C,D (10): (0, 0) to (4, 1)
-array([[ 0,  1,  2,  3,  4,  5,  6,  7,  8,  9],
-       [10, 11, 12, 13, 14, 15, 16, 17, 18, 19],
-       [20, 21, 22, 23, 24, 25, 26, 27, 28, 29],
-       [30, 31, 32, 33, 34, 35, 36, 37, 38, 39]])
+dimensions: 'A,D', 'B,C'
+0 / A,D (4): (0, 0) to (1, 1)
+1 / B,C (10): (0, 0) to (1, 4)
+array([[ 0,  2,  4,  6,  8, 10, 12, 14, 16, 18],
+       [ 1,  3,  5,  7,  9, 11, 13, 15, 17, 19],
+       [20, 22, 24, 26, 28, 30, 32, 34, 36, 38],
+       [21, 23, 25, 27, 29, 31, 33, 35, 37, 39]])
 
-..  _interfacing_with_pandas:
+.. seealso:: :ref:`refapi_reshaping` and :ref:`page_reshape`
+
+.. _interfacing_with_pandas:
 
 interfacing with pandas
 -----------------------
 
-For things that pandas does better, such as pretty printing, I/O to many formats, and low-dimensional data analysis, just use the :py:meth:`dimarray.DimArray.to_pandas` method
+For things that pandas does better, such as pretty printing, I/O to many formats, and 2-D data analysis, just use the :py:meth:`dimarray.DimArray.to_pandas` method. In the ipython notebook it also has a nice html rendering.
 
 >>> small_array.to_pandas()
-C     0       1       2       3       4    
-D     0   1   0   1   0   1   0   1   0   1
-A B                                        
-0 0   0   1   2   3   4   5   6   7   8   9
-  1  10  11  12  13  14  15  16  17  18  19
-1 0  20  21  22  23  24  25  26  27  28  29
-  1  30  31  32  33  34  35  36  37  38  39
+B     0                   1                
+C     0   1   2   3   4   0   1   2   3   4
+A D                                        
+0 0   0   2   4   6   8  10  12  14  16  18
+  1   1   3   5   7   9  11  13  15  17  19
+1 0  20  22  24  26  28  30  32  34  36  38
+  1  21  23  25  27  29  31  33  35  37  39
+
+.. raw:: html
+     :file: getting_started_files/output_65-0.html
+
+
 
 And :py:meth:`dimarray.DimArray.from_pandas` works to convert pandas objects to `DimArray` (also supports `MultiIndex`):
 
@@ -253,7 +329,7 @@ array([[1, 2],
 
 For more information, you can use inline help (help() or ?) or refer to :ref:`page_reference`
 
-..  _Plotting:
+.. _Plotting:
 
 Plotting
 --------
@@ -263,9 +339,9 @@ dimarray comes with basic plotting facility. For 1-D and 2-D data, it simplies i
 >>> %matplotlib inline # doctest: +SKIP 
 >>> a = dataset['combined_data']
 >>> a.plot() # doctest: +SKIP
-<matplotlib.axes.AxesSubplot at 0x7fd8850581d0>
+<matplotlib.axes.AxesSubplot at 0x7f90feff4350>
 
-.. image:: getting_started_figures/figure_54-1.png
+.. image:: getting_started_files/figure_71-1.png
 
 
 
@@ -279,17 +355,17 @@ In addition, it can also display 2-D data via its methods `contour`, `contourf` 
 >>> # define dimarray
 >>> a = DimArray(DATA, axes=[lat, lon], dims=['lat','lon'])
 >>> # plot the data
->>> cf = a.contourf()
+>>> a.contourf() # doctest: +SKIP
 >>> a.contour(colors='k') # doctest: +SKIP
-<matplotlib.contour.QuadContourSet instance at 0x7fd88500cf80>
+<matplotlib.contour.QuadContourSet instance at 0x7f90fefb8488>
 
-.. image:: getting_started_figures/figure_56-1.png
+.. image:: getting_started_files/figure_73-1.png
 
 
 
 >>> # plot the data
 >>> a.pcolor() # doctest: +SKIP
-<matplotlib.collections.QuadMesh at 0x7fd884de20d0>
+<matplotlib.collections.QuadMesh at 0x7f90fed7a1d0>
 
-.. image:: getting_started_figures/figure_57-1.png
+.. image:: getting_started_files/figure_74-1.png
 

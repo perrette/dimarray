@@ -8,6 +8,7 @@ DimArray methods are list below by topic, along with examples.
 Functions are provided in a separate page :ref:`ref_api_functions`.
 
 .. contents:: 
+    :local:
     :depth: 2
 
 
@@ -20,112 +21,8 @@ Create a DimArray
 
 .. automethod:: dimarray.DimArray.from_kw
 
-Comparisons
------------
 
-.. automethod:: dimarray.DimArray._cmp
-
--------------------------
-
-.. automethod:: dimarray.DimArray.__eq__
-
--------------------------
-
-.. automethod:: dimarray.DimArray.__lt__
-
--------------------------
-
-.. automethod:: dimarray.DimArray.__gt__
-
--------------------------
-
-.. automethod:: dimarray.DimArray.__le__
-
--------------------------
-
-.. automethod:: dimarray.DimArray.__or__
-
--------------------------
-
-.. automethod:: dimarray.DimArray.__and__
-
-
-Unary operations
-----------------
-
-.. automethod:: dimarray.DimArray.apply
-
--------------------------
-
-.. automethod:: dimarray.DimArray.__neg__
-
--------------------------
-
-.. automethod:: dimarray.DimArray.__pos__
-
--------------------------
-
-.. automethod:: dimarray.DimArray.__sqrt__
-
--------------------------
-
-.. automethod:: dimarray.DimArray.__invert__
-
--------------------------
-
-.. automethod:: dimarray.DimArray.__nonzero__
-
-
-Binary operation
-----------------
-
-.. automethod:: dimarray.DimArray.__add__
-
--------------------------
-
-.. automethod:: dimarray.DimArray.__sub__
-
--------------------------
-
-.. automethod:: dimarray.DimArray.__mul__
-
--------------------------
-
-.. automethod:: dimarray.DimArray.__div__
-
--------------------------
-
-.. automethod:: dimarray.DimArray.__truediv__
-
--------------------------
-
-.. automethod:: dimarray.DimArray.__floordiv__
-
--------------------------
-
-.. automethod:: dimarray.DimArray.__radd__
-
--------------------------
-
-.. automethod:: dimarray.DimArray.__rsub__
-
--------------------------
-
-.. automethod:: dimarray.DimArray.__rmul__
-
--------------------------
-
-.. automethod:: dimarray.DimArray.__rdiv__
-
--------------------------
-
-.. automethod:: dimarray.DimArray.__pow__
-
--------------------------
-
-.. automethod:: dimarray.DimArray.__rpow__
-
-
+.. _refapi_reshaping:
 
 Modify shape
 ------------
@@ -273,6 +170,13 @@ Re-indexing
 
 .. automethod:: dimarray.DimArray.sort_axis
 
+Missing values
+--------------
+
+.. automethod:: dimarray.DimArray.dropna
+.. automethod:: dimarray.DimArray.fillna
+.. automethod:: dimarray.DimArray.setna
+
 
 To / From other objects
 -----------------------
@@ -316,6 +220,113 @@ Plotting
 -------------------------
 
 .. automethod:: dimarray.DimArray.contour
+
+
+Comparisons
+-----------
+
+.. automethod:: dimarray.DimArray._cmp
+
+-------------------------
+
+.. automethod:: dimarray.DimArray.__eq__
+
+-------------------------
+
+.. automethod:: dimarray.DimArray.__lt__
+
+-------------------------
+
+.. automethod:: dimarray.DimArray.__gt__
+
+-------------------------
+
+.. automethod:: dimarray.DimArray.__le__
+
+-------------------------
+
+.. automethod:: dimarray.DimArray.__or__
+
+-------------------------
+
+.. automethod:: dimarray.DimArray.__and__
+
+
+Unary operations
+----------------
+
+.. automethod:: dimarray.DimArray.apply
+
+-------------------------
+
+.. automethod:: dimarray.DimArray.__neg__
+
+-------------------------
+
+.. automethod:: dimarray.DimArray.__pos__
+
+-------------------------
+
+.. automethod:: dimarray.DimArray.__sqrt__
+
+-------------------------
+
+.. automethod:: dimarray.DimArray.__invert__
+
+-------------------------
+
+.. automethod:: dimarray.DimArray.__nonzero__
+
+
+Binary operation
+----------------
+
+.. automethod:: dimarray.DimArray.__add__
+
+-------------------------
+
+.. automethod:: dimarray.DimArray.__sub__
+
+-------------------------
+
+.. automethod:: dimarray.DimArray.__mul__
+
+-------------------------
+
+.. automethod:: dimarray.DimArray.__div__
+
+-------------------------
+
+.. automethod:: dimarray.DimArray.__truediv__
+
+-------------------------
+
+.. automethod:: dimarray.DimArray.__floordiv__
+
+-------------------------
+
+.. automethod:: dimarray.DimArray.__radd__
+
+-------------------------
+
+.. automethod:: dimarray.DimArray.__rsub__
+
+-------------------------
+
+.. automethod:: dimarray.DimArray.__rmul__
+
+-------------------------
+
+.. automethod:: dimarray.DimArray.__rdiv__
+
+-------------------------
+
+.. automethod:: dimarray.DimArray.__pow__
+
+-------------------------
+
+.. automethod:: dimarray.DimArray.__rpow__
+
 
 .. .. toctree::
 ..    :maxdepth: 2

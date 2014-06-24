@@ -1,10 +1,13 @@
-""" Convert a notebook to docstring examples (rst-like)
+""" Convert a notebook to rst file
+
+This include html outputs and png figures.
 
 Usage:
-    nbconvert_docstring.py <notebook.ipynb> [ <text.rst> ]
+    nbconvert_docstring.py <notebook.ipynb> [ <text.rst> ] [ --toc]
 
 Options:
     -h --help   : display this help
+    --toc       : create a Table of Content
 """
 #!/usr/bin/python
 from IPython.utils import py3compat
@@ -19,7 +22,7 @@ from IPython.display import Image
 def make_label(title):
     """ label for future reference
     """
-    return '..  _'+title.replace(' ','_').replace(':','_')+':'
+    return '.. _'+title.replace(' ','_').replace(':','_')+':'
 
 def main():
 
@@ -33,11 +36,11 @@ def main():
     if nm2 is None:
          nm2 = basename(nm.replace('.ipynb','.rst'))
 
-    figdir = splitext(nm2)[0]+'_figures' # store figures
+    filesdir = splitext(nm2)[0]+'_files' # store figures
 
     nb = read_nb(nm)
 
-    label =  '..  _page_'+filename+':'  # page label
+    label =  '.. _page_'+filename+':'  # page label
 
     header = """
 .. This file was generated automatically from the ipython notebook:
@@ -45,7 +48,17 @@ def main():
 .. To modify this file, edit the source notebook and execute "make rst" 
     """.format(notebook=nm).strip()
 
-    text = [header + '\n\n'] 
+    # to include a TOC under the first header
+    toc = """
+.. contents:: 
+    :local: 
+
+"""
+    insert_toc = args['--toc'] # insert toc?
+
+    text = []
+
+    text += [header + '\n\n'] 
     text += [label + '\n'] # add a label to allow hyperlinks
 
     for icell, cell in enumerate(nb['worksheets'][0]['cells']):
@@ -83,9 +96,9 @@ def main():
                     
                     # save figure
                     figname = 'figure_{}-{}.png'.format(icell, ioutput)
-                    figfull = join(figdir, figname)
-                    if not os.path.exists(figdir):
-                        os.makedirs(figdir) # create fig directory
+                    figfull = join(filesdir, figname)
+                    if not os.path.exists(filesdir):
+                        os.makedirs(filesdir) # create fig directory
 
                     #image = Image(output['png'])
                     # make some conversions (after: https://github.com/ipython/ipython/blob/master/IPython/nbconvert/preprocessors/extractoutput.py)
@@ -99,15 +112,55 @@ def main():
                         #fig.write(output['png']) # write figure
 
                     # include figure
-                    figinc = join(basename(figdir), figname)
+                    figinc = join(basename(filesdir), figname)
                     output_lines.append('\n\n')
                     output_lines.append('.. image:: '+figinc)
                     output_lines.append('\n\n')
                     #output_lines.extend(output['text'])
 
-                else:
+                elif output['output_type'] == 'pyout':
+
+                    # write text output
                     output_lines.extend(output['text'])
 
+                    # if html, display after the text
+                    if 'html' in output.keys():
+        
+                        # does not seem to work
+                        # print "html found"
+                        # output_lines.append('\n\n')
+                        # output_lines.append('.. raw:: html')
+                        # output_lines.extend(output['html'])
+                        # output_lines.append('\n\n')
+                        # save html
+                        filename = 'output_{}-{}.html'.format(icell, ioutput)
+                        filefull = join(filesdir, filename)
+                        if not os.path.exists(filesdir):
+                            os.makedirs(filesdir) # create files directory
+                        # write to file
+                        f = open(filefull, mode='w')
+                        #with open(filefull, mode='w') as f:
+                        print "Save html to", filefull
+                        try:
+                            f.writelines(output['html']) # write html
+                        except:
+                            import ipdb
+                            ipdb.set_trace()
+
+                        # include html
+                        fileinc = join(basename(filesdir), filename)
+                        output_lines.append('\n\n')
+                        #output_lines.append('.. html:: '+fileinc)
+                        output_lines.append('.. raw:: html\n')
+                        output_lines.append('     :file: '+fileinc)
+                        #output_lines.append('.. include:: '+fileinc)
+                        #output_lines.append('.. image:: '+fileinc)
+                        output_lines.append('\n\n')
+                        #output_lines.extend(output['text'])
+
+                else:
+                    print "Warning: unknown output type"
+                    output_lines.extend(output['text'])
 
             # Here should include figures
 
@@ -145,6 +198,12 @@ def main():
             text.append(title)
             text.append('\n')
             text.append(sym*len(title))
+
+
+            # append TOC
+            if insert_toc:
+                text.append(toc)
+                insert_toc = False
 
     # write note rst to file
     with open(nm2, 'w') as f:

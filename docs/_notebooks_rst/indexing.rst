@@ -2,11 +2,11 @@
 .. notebooks/indexing.ipynb
 .. To modify this file, edit the source notebook and execute "make rst"
 
-..  _page_indexing:
+.. _page_indexing:
 
 
-Indexing
-========
+Advanced Indexing
+=================
 
 Let's first define an array to test indexing
 
@@ -24,7 +24,7 @@ array([[ 1.,  2.],
        [ 5.,  6.],
        [ 7.,  8.]])
 
-..  _Basics__integer,_array,_slice:
+.. _Basics__integer,_array,_slice:
 
 Basics: integer, array, slice
 -----------------------------
@@ -80,29 +80,33 @@ dimensions: 'x0', 'x1'
 array([[ 1.,  2.],
        [ 5.,  6.]])
 
-..  _Modify_array_values:
+.. _Modify_array_values:
 
 Modify array values
 -------------------
 
 All the above can be used to change array values, consistently with what you would expect. 
 
+>>> v['a':'c',10] = 11
+>>> v.ix[2, -1] = 22   # same as v.values[2, -1] = 44
+>>> v[v == 2] = 33
+>>> v[v.x0 == 'b', v.x1 == 20] = 44
 >>> v
 dimarray: 8 non-null elements (0 null)
 dimensions: 'x0', 'x1'
 0 / x0 (4): a to d
 1 / x1 (2): 10.0 to 20.0
-array([[ 1.,  2.],
-       [ 3.,  4.],
-       [ 5.,  6.],
-       [ 7.,  8.]])
+array([[ 11.,  33.],
+       [ 11.,  44.],
+       [ 11.,  22.],
+       [  7.,   8.]])
 
-..  _take_and_put_methods:
+.. _take_and_put_methods:
 
 take and put methods
 --------------------
 
-These two methods are the machinery to accessing and modifying items in the examples above.
+These two methods :py:meth:`dimarray.DimArray.put` and :py:meth:`dimarray.DimArray.take` are the machinery to accessing and modifying items in the examples above.
 They may be useful to use directly for generic programming. 
 They are similar to numpy methods of the same name, but also work in multiple dimensions.
 In particular, they both take dictionary, tuples and boolean arrays as `indices` argument.
@@ -111,13 +115,11 @@ In particular, they both take dictionary, tuples and boolean arrays as `indices`
 
 
 >>> import numpy as np
->>> a = v[:,10]
->>> b = v.take(10, axis=1)
->>> c = v.take(10, axis='x1')
->>> d = v.take({'x1':10}) # dict
->>> e = v.take((slice(None),10)) # tuple
->>> assert(np.all(a==b) and np.all(a==b) and np.all(a==c) and np.all(a==d) and np.all(a==e))
->>> a
+>>> v[:,10]  # doctest: +SKIP
+>>> v.take(10, axis=1)  # doctest: +SKIP
+>>> v.take(10, axis='x1')  # doctest: +SKIP
+>>> v.take({'x1':10}) # dict  # doctest: +SKIP
+>>> v.take((slice(None),10)) # tuple # doctest: +SKIP
 dimarray: 4 non-null elements (0 null)
 dimensions: 'x0'
 0 / x0 (4): a to d
@@ -147,7 +149,7 @@ dimensions: 'x0'
 0 / x0 (4): a to d
 array([ 1.,  3.,  5.,  7.])
 
-Note the `put` command returns a copy by default (`inplace=` can be passed as True, though).
+Note the `put` command returns a copy by default, unless `inplace=True`.
 
 >>> v.put(-99, indices=10, axis='x1')
 dimarray: 8 non-null elements (0 null)

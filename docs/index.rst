@@ -1,3 +1,4 @@
+======================
 dimarray documentation
 ======================
 
@@ -9,21 +10,14 @@ dimarray provide a `numpy` array with labelled axes and dimensions, in the spiri
 .. toctree::
 
 .. toctree::
-    :maxdepth: 2
+    :maxdepth: 1
 
     introduction.rst
     _notebooks_rst/getting_started.rst
-    _notebooks_rst/examples.rst
-    reference.rst
+    advanced.rst
+    cookbook.rst
     reference_api.rst
-    other_packages.rst
     howtodoc.rst
-
-Contributions
-=============
-All suggestions for improvement or direct contributions are very welcome.
-You can ask a question or start a discussion on the mailing list
-or open an `issue` on github for precise requests. See  :ref:`links`.
 
 Indices and tables
 ==================

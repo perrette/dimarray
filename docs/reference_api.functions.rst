@@ -1,7 +1,7 @@
 .. _ref_api_functions:
 
 ================================
-dimArray functions reference API
+dimarray functions reference API
 ================================
 
 DimArray methods are list below by topic, along with examples. 
@@ -9,7 +9,10 @@ Methods are provided in a separate page :ref:`ref_api_methods`.
 
 .. contents:: 
     :depth: 2
+    :local:
 
+
+.. _refapi_join:
 
 Join
 ----

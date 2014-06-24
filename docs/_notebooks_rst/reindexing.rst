@@ -2,17 +2,17 @@
 .. notebooks/reindexing.ipynb
 .. To modify this file, edit the source notebook and execute "make rst"
 
-..  _page_reindexing:
+.. _page_reindexing:
 
 
-..  _Reindexing__align_axes:
+.. _Reindexing__align_axes:
 
 Reindexing: align axes
 ----------------------
 
 Reindexing is the action of shrinking or extending an array to match a new index, in some ways similar to interpolation, except that by default, the new index has to be present, or it is filled with NaN. Actual interpolation is performed by passing `method="nearest"` or `method="interp"` parameter.
 
-..  _reindex_axis:
+.. _reindex_axis:
 
 reindex_axis
 ~~~~~~~~~~~~
@@ -34,7 +34,9 @@ dimensions: 'x0'
 0 / x0 (2): b to d
 array([  2.,  nan])
 
-..  _reindex_like:
+See :meth:`dimarray.DimArray.reindex_axis`
+
+.. _reindex_like:
 
 reindex_like
 ~~~~~~~~~~~~
@@ -51,7 +53,9 @@ array([[  1.,   2.,   3.],
        [  4.,   5.,   6.],
        [ nan,  nan,  nan]])
 
-..  _Interpolation:
+See :meth:`dimarray.DimArray.reindex_like`
+
+.. _Interpolation:
 
 Interpolation
 ~~~~~~~~~~~~~
@@ -69,7 +73,7 @@ array([ nan,  3. ,  3.5,  4. ])
 >>> import dimarray as da
 >>> time=np.linspace(1950,1955,8)
 >>> v = da.array_kw(np.cos(time), time=time)
->>> w = da.reindex_axis(v, np.linspace(1948,1957,10), axis='time', method='interp')
+>>> w = v.reindex_axis(np.linspace(1948,1957,10), axis='time', method='interp')
 >>> x = v.reindex_axis(np.linspace(1948,1957,10), axis='time', method='nearest')
 
 
@@ -81,13 +85,13 @@ array([ nan,  3. ,  3.5,  4. ])
 >>> #plt.plot(w1.time, w.values, 'o--', color='k', label='interp')
 >>> plt.plot(x.time, x.values, '*-',label='nearest') # doctest: +SKIP
 >>> plt.legend(loc='upper left')   # doctest: +SKIP
-<matplotlib.legend.Legend at 0x7fb89a611d50>
+<matplotlib.legend.Legend at 0x7f9c286f5950>
 
-.. image:: reindexing_figures/figure_13-1.png
+.. image:: reindexing_files/figure_15-1.png
 
 
 
-..  _align_axes:
+.. _align_axes:
 
 align_axes
 ~~~~~~~~~~
@@ -103,3 +107,5 @@ dimarray: 2 non-null elements (2 null)
 dimensions: 'x0'
 0 / x0 (4): 1 to 4
 array([ nan,   3.,  nan,   4.])
+
+See :func:`dimarray.align_axes`

@@ -2,7 +2,7 @@
 .. notebooks/create_dimarray.ipynb
 .. To modify this file, edit the source notebook and execute "make rst"
 
-..  _page_create_dimarray:
+.. _page_create_dimarray:
 
 
 Create a dimarray
@@ -10,7 +10,7 @@ Create a dimarray
 
 There are various ways of defining a DimArray instance. 
 
-..  _Standard_definition:
+.. _Standard_definition:
 
 Standard definition
 -------------------
@@ -27,7 +27,7 @@ dimensions: 'variable', 'time'
 array([[ 1.,  2.,  3.],
        [ 4.,  5.,  6.]])
 
-..  _List_of_tuples:
+.. _List_of_tuples:
 
 List of tuples
 --------------

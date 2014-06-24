@@ -15,7 +15,9 @@ __all__ = []
 TOLERANCE=None
 
 _doc_broadcast_arrays = """
-    broadcast_arrays: True, by default, consistently with numpy
+    broadcast_arrays : bool, optional
+    
+      True, by default, consistently with numpy
     
       if False, indexing with list or array of indices will behave like
       Matlab TM does, which means that it will index on each individual dimensions.
@@ -180,17 +182,17 @@ def take(self, indices, axis=0, indexing="values", tol=TOLERANCE, keepdims=False
     ----------
     indices : int or list or slice (single-dimensional indices)
                or a tuple of those (multi-dimensional)
+               or `dict` of {{ axis name : axis values }}
     axis : int or str, optional
     indexing : "values" or "position", optional
-               or `dict` <axis name>:<indices>
-               "position": use numpy-like position index
-               "values": indexing on axis values 
-               default is "position"
+           - "position": use numpy-like position index (default)
+           - "values": indexing on axis values 
+           default is "position"
     tol : float or None, optional
         tolerance when looking for numerical values, e.g. to use nearest neighbor search, default `None`
     keepdims : bool, optional 
         keep singleton dimensions?
-    %s
+    {broadcast_arrays}
     mode : "raise", "clip", "wrap", optional
          analogous to numpy.ndarray.take's mode parameter, only valid (for now) if indexing is 'position'
 
@@ -225,7 +227,7 @@ def take(self, indices, axis=0, indexing="values", tol=TOLERANCE, keepdims=False
     array([ 1.,  4.])
     >>> b = v.take(10, axis=1)  # take, by axis position
     >>> c = v.take(10, axis='d1')  # take, by axis name
-    >>> d = v.take({{'d1':10}})  # take, by dict {axis name : axis values}
+    >>> d = v.take({{'d1':10}})  # take, by dict {{axis name : axis values}}
     >>> (a==b).all() and (a==c).all() and (a==d).all()
     True
 
@@ -242,7 +244,7 @@ def take(self, indices, axis=0, indexing="values", tol=TOLERANCE, keepdims=False
     1.0
     >>> v.take(('a',10))  # multi-dimensional, tuple
     1.0
-    >>> v.take({'d0':'a', 'd1':10})  # dict-like arguments
+    >>> v.take({{'d0':'a', 'd1':10}})  # dict-like arguments
     1.0
 
     Take a list of indices
@@ -388,6 +390,8 @@ def take(self, indices, axis=0, indexing="values", tol=TOLERANCE, keepdims=False
     # matlab-like, do not broadcast array-indices but simply sample values along each dimension independently
     else:
         return _take_box(self, indices_numpy)
+
+take.__doc__ = take.__doc__.format(broadcast_arrays=_doc_broadcast_arrays)
 
 def _take_broadcast(a, indices):
     """ broadcast array-indices & integers, numpy's classical
@@ -701,7 +705,6 @@ def put(self, val, indices=None, axis=0, indexing="values", tol=TOLERANCE, conve
     return _put(self, val_, indices_numpy_, inplace=inplace, convert=convert)
 
 put.__doc__ = put.__doc__.format(broadcast_arrays=_doc_broadcast_arrays)
-take.__doc__ = take.__doc__ % (_doc_broadcast_arrays)
 #take.__doc__ = take.__doc__.format(broadcast_arrays=_doc_broadcast_arrays)
 
 def fill(self, val):
