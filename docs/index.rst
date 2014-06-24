@@ -10,7 +10,7 @@ dimarray provide a `numpy` array with labelled axes and dimensions, in the spiri
 .. toctree::
 
 .. toctree::
-    :maxdepth: 1
+    :maxdepth: 2
 
     introduction.rst
     _notebooks_rst/getting_started.rst
