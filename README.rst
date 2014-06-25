@@ -77,49 +77,53 @@ Mailing List                        https://groups.google.com/forum/#!forum/dima
 Issues Tracker                      https://github.com/perrette/dimarray/issues
 ================================    ====================================
 
-Dependencies
-------------
+Install
+-------
 
-**Required** dependencies:
+**Requirements**:
 
 - python 2.7   
 - numpy 1.7 
 
-**Optional** dependencies:
+**Optional**:
 
 - netCDF4 1.0.8 (netCDF archiving) (see notes below)
 - matplotlib 1.1 (plotting)
 - pandas 0.11 (interface with pandas, plotting)
 
-Notes on installing netCDF4:
-  
-    repository: https://github.com/Unidata/netcdf4-python
-
-    From source:
-        the documentation can be found there: http://unidata.github.io/netcdf4-python/
-        Basically you need to install HDF5 and netCDF4 libraries on your system before
-        using pip or your favorite package manager.
-    
-    This can be annoying to install HDF5 and netCDF4 from source.
-    Using the anaconda package from continuum analytics save time 
-    (That is the only one I tried, but it possibly also 
-    works with Enthought, xyPython or some other pre-compiled version of python)
-    With conda (the package manager shipped with - but kind of independent from - anaconda) 
-    it is enough to do a simple:
-
-        conda install netCDF4 
-
-
-Installation
-------------
 Download the latest version from github and extract from archive
 Then from the dimarray repository type (possibly preceded by sudo):
+
+.. code:: bash
     
-        python setup.py install  
+    python setup.py install  
 
 Alternatively, you can use pip to download and install the version from pypi (could be slightly out-of-date):
 
-        pip install dimarray 
+.. code:: bash
+
+    pip install dimarray 
+
+
+Notes on installing netCDF4
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Installing the netCDF4 python module from source can be cumbersome, because 
+it depends on netCDF4 and (especially) HDF5 C libraries that need to be compiled with 
+specific flags (http://unidata.github.io/netcdf4-python).
+
+For windows binaries are available, which is handy. On Ubuntu, I tried anaconda
+and it worked well (Enthought and xyPython might work as well). 
+Download anaconda (full version) (http://continuum.io/downloads) or 
+miniconda executable (http://conda.pydata.org/miniconda.html). This should 
+make the `conda` command available. Then just do:
+
+.. code:: bash
+
+    conda install netCDF4 
+
+The drawback is that everything then needs to happen within the anaconda/miniconda 
+folder. I was not successful in using conda with a simple `pip install conda` and
+`conda init`.
 
 Contributions
 -------------

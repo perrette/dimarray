@@ -154,9 +154,9 @@ array([[  0,   0],
 
 .. seealso:: :func:`broadcast_arrays <dimarray.broadcast_arrays>` and :meth:`reshape <dimarray.DimArray.reshape>`
 
-.. _Dataset:
+.. _dataset:
 
-Dataset
+dataset
 -------
 
 As a commodity, the **`Dataset`** class is an ordered dictionary of DimArrays which also maintains axis aligment
@@ -190,9 +190,9 @@ array([[[ 10,  10,  10],
 
 Note that they are various ways of combining DimArray instances. In many case (when no dimension broadcasting is involved), it is simpler to just use the :py:func:`dimarray.stack` method.
 
-.. _NetCDF_reading_and_writing:
+.. _netCDF_reading_and_writing:
 
-NetCDF reading and writing
+netCDF reading and writing
 --------------------------
 
 A natural I/O format for such an array is netCDF, common in geophysics, which rely on
@@ -213,9 +213,9 @@ array([[  0,   0],
 
 .. seealso:: :ref:`page_netcdf`
 
-.. _Metadata:
+.. _metadata:
 
-Metadata
+metadata
 --------
 
 It is possible to define and access metadata via the standard `.` syntax to access an object attribute:
@@ -238,9 +238,9 @@ Metadata can also be defined for :class:`dimarray.Dataset` and :class:`dimarray.
 
 .. seealso:: :ref:`page_metadata` for more information.
 
-.. _Join_arrays:
+.. _join_arrays:
 
-Join arrays
+join arrays
 -----------
 
 DimArrays can be joined along an existing dimension, we say `concatenate` (:func:`dimarray.concatenate`):
@@ -280,9 +280,9 @@ array([[ 11.,  12.,  13.],
 
 .. seealso:: :ref:`ref_api_join`
 
-.. _Drop_missing_data:
+.. _drop_missing_data:
 
-Drop missing data
+drop missing data
 -----------------
 
 Say you have data with NaNs:
@@ -318,9 +318,9 @@ array([[ 11.,  nan],
 
 .. seealso:: :ref:`ref_api_missingvalues`
 
-.. _Reshaping_arrays:
+.. _reshaping_arrays:
 
-Reshaping arrays
+reshaping arrays
 ----------------
 
 Additional novelty includes methods to reshaping an array in easy ways, very useful for high-dimensional data analysis.
@@ -372,9 +372,9 @@ dimensions: 'x0', 'x1'
 array([[1, 2],
        [3, 4]])
 
-.. _Plotting:
+.. _plotting:
 
-Plotting
+plotting
 --------
 
 dimarray comes with basic plotting facility. For 1-D and 2-D data, it simplies interfaces pandas' plot command (therefore pandas needs to be installed to use it). From the example above:

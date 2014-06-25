@@ -29,9 +29,10 @@ of an array, and as such supports netCDF I/O format. It makes use of it
 in binary operations (broadcasting), transforms and indexing. 
 It includes some of the nice features of pandas (e.g. axis alignment, optional
 nan skipping) but extends them to N dimensions, with a behaviour closer 
-to a numpy array.
+to a numpy array. Some geo features are planned (weighted mean for latitude, 
+indexing modulo 360 for longitude, basic regridding) but dimarray should remain broad in scope.
 
-`spacegrids`_ is a promising new package to focus on geospatial grids. 
+`spacegrids`_ is a promising new package with focus on geospatial grids. 
 It intends to streamline a number of operations such as
 derivations, integration, regridding by proposing an algebra on 
 between arrays and axes (grids). It also includes a project 
