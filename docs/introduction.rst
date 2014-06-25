@@ -1,64 +1,47 @@
 .. include:: ../README.rst
 
-dimarray's niche in the custom arrays ecosystem
------------------------------------------------
+The ecosystem of labelled arrays
+--------------------------------
 
-dimarray is strongly inspired from previous work, especially from pandas and larry packages.
-This section attempts to highlight some of the conceptual differences between them. 
+A brief overview of the various array packages around. The listing is chronological.
+dimarray is strongly inspired from pandas and larry packages.
 
-pandas 
-^^^^^^
-pandas is an excellent package for low-dimensional data analysis, 
-with many I/O features, but is mostly limited to 2 dimensions (DataFrame), 
-or up to 4 dimensions (Panel, Panel4D). 
+`numpy`_ provides the basic array object, transformations and so on. It does
+not include axis labels and has limited support for missing values (NaNs). 
+An extension, numpy.ma, adds a `mask` attributes and skip NaNs in 
+transformations. 
 
-`dimarray` includes
-some of the nice `pandas` features, such as indexing on axis values, 
-automatic axis alignment, intuitive string representation,
-or a parameter to ignore nans in axis reduction operations. 
-`dimarray` extends these functionalities to any number 
-of dimensions. 
-
-In general, `dimarray` is designed to be more consistent with 
-`numpy`'s ndarray, whereas `pandas` is somewhat between a dictionary and 
-a numpy array. One consequence is that standard indexing with `[]` can be 
-multi-dimensional, another is that iteration (`__iter__` method) 
-is on sub-arrays and not on axis values (the keys). 
-
-`dimarray` comes with `to_pandas` and `from_pandas`
-methods to use the most of each of the packages (also supports `MultiIndex`
-via the equivalent `GroupedAxis` object). For convenience, a `plot`
-method is defined in `dimarray` as an alias for to_pandas().plot().
-
-larry
-^^^^^
-larry was pioneer as labelled array, it skips nans in most transforms
+`larry`_ was pioneer as labelled array, it skips nans in transforms
 and comes with a wealth of built-in methods. It is very computationally-efficient
-via the use of bottleneck. It is a bit less intuitive than `dimarray` or `pandas` 
-as far as indexing is concerned - but it is a matter of taste, 
-and does not support naming dimensions.
-From the structure (array-like), dimarray is closer to larry than to pandas.
-        
+via the use of bottleneck. For now it does not support naming dimensions.
 
-iris
-^^^^
-iris looks like a very powerful package to manipulate geospatial data with 
+`pandas`_ is an excellent package for low-dimensional data analysis, 
+supporting many I/O formats and axis alignment (or "reindexing") 
+in binary operations. It is mostly limited to 2 dimensions (DataFrame), 
+or up to 4 dimensions (Panel, Panel4D).  
+
+`iris`_ looks like a very powerful package to manipulate geospatial data with 
 metadata, netCDF I/O, performing grid transforms etc..., but it is quite a jump 
-from numpy's `ndarray` and requires a bit of learning. 
+from numpy's `ndarray` in term of syntax and requires a bit of learning. 
 
-In contrast, `dimarray` is more general and intuitive for python users. `dimarray`
-also comes with netCDF I/O capability and may gain a few geospatial features 
-(weighted mean for lon/lat, 360 modulo for lon, regridding, etc...) as a subpackage 
-**dimarray.geo** -- and why not an interface to `iris`.
+`dimarray`_, like iris, considers dimension names as a fundamental property
+of an array, and as such supports netCDF I/O format. It makes use of it 
+in binary operations (broadcasting), transforms and indexing. 
+It includes some of the nice features of pandas (e.g. axis alignment, optional
+nan skipping) but extends them to N dimensions, with a behaviour closer 
+to a numpy array.
 
-conclusion
-^^^^^^^^^^
-Having a focus on dimension names and axis values instead of axis rank and position 
-of elements along an axis is a strong feature of `dimarray`. This determines
-fundamental behaviours such as automatic matching of dimensions during a binary 
-operation, but also brings about convenience like passing axis name instead of axis
-rank in many of the methods (`take`, `put`, `reshape`, `sum`, ...).
-This has proven useful to write pretty generic code with arrays of various shape 
-which all share a few dimensions `time`, `lon`, `lat`, `model`, `scenario`, `sample`, 
-`percentile` and so on - as long as one sticks to these names in the particular bit
-of code of course.
+`spacegrids`_ is a promising new package to focus on geospatial grids. 
+It intends to streamline a number of operations such as
+derivations, integration, regridding by proposing an algebra on 
+between arrays and axes (grids). It also includes a project 
+management utility for netCDF files. 
+
+.. _numpy: http://docs.scipy.org/doc/numpy/user
+.. _larry: http://berkeleyanalytics.com/la
+.. _pandas: http://pandas.pydata.org 
+.. _iris: http://scitools.org.uk/iris
+.. _dimarray: dimarray.readthedocs.org
+.. _spacegrids: https://github.com/willo12/spacegrids
+
+.. seealso:: :meth:`DimArray.to_pandas() <dimarray.DimArray.to_pandas>` and :meth:`DimArray.from_pandas() <dimarray.DimArray.from_pandas>`.

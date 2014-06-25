@@ -25,7 +25,7 @@ Pushing to github will update the doc at readthedocs automatically.
 .. note:: Step 4 will work only on unix system because bash is involved in one of the scripts (this could actually be written in python easily)
           There might also be other dependencies involved, maybe even the ipython version (did that with the latest 3.0.0).
 
-.. note:: readthedocs will re-compile the rst files from html, 
+.. note:: readthedocs will re-compile the rst files to html, 
           so that steps 5-6 using your local sphinx installation are only 
           for you to check the results before pushing.
 

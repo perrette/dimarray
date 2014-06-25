@@ -79,9 +79,19 @@ Issues Tracker                      https://github.com/perrette/dimarray/issues
 
 Dependencies
 ------------
-- python2.7
-- numpy
-- netCDF4 (optional) :  for netCDF I/O
+
+**Required** dependencies:
+
+- python 2.7   
+- numpy 1.7 
+
+**Optional** dependencies:
+
+- netCDF4 1.0.8 (netCDF archiving) (see notes below)
+- matplotlib 1.1 (plotting)
+- pandas 0.11 (interface with pandas, plotting)
+
+Notes on installing netCDF4:
   
     repository: https://github.com/Unidata/netcdf4-python
 
@@ -99,14 +109,11 @@ Dependencies
 
         conda install netCDF4 
 
-- matplotlib (optional) : for plotting (for now plot command also requires pandas)
-- pandas (optional) :  to_pandas() and from_pandas() methods, plot()
-
 
 Installation
 ------------
 Download the latest version from github and extract from archive
-Then from the dimarray repository type:
+Then from the dimarray repository type (possibly preceded by sudo):
     
         python setup.py install  
 
@@ -114,14 +121,8 @@ Alternatively, you can use pip to download and install the version from pypi (co
 
         pip install dimarray 
 
-or with conda:
-    
-        conda install dimarray
-
-
 Contributions
 -------------
 All suggestions for improvement or direct contributions are very welcome.
 You can ask a question or start a discussion on the mailing list
 or open an `issue` on github for precise requests. See  :ref:`links`.
-
