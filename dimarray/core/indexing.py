@@ -175,7 +175,7 @@ def size(self):
     return np.size(self.values)
 
 
-def take(self, indices, axis=0, indexing="values", tol=TOLERANCE, keepdims=False, broadcast_arrays=True, mode='raise'):
+def take(self, indices, axis=0, indexing="label", tol=TOLERANCE, keepdims=False, broadcast_arrays=True, mode='raise'):
     """ Retrieve values from a DimArray
 
     Parameters
@@ -184,10 +184,10 @@ def take(self, indices, axis=0, indexing="values", tol=TOLERANCE, keepdims=False
                or a tuple of those (multi-dimensional)
                or `dict` of {{ axis name : axis values }}
     axis : int or str, optional
-    indexing : "values" or "position", optional
+    indexing : "label" or "position", optional
            - "position": use numpy-like position index (default)
-           - "values": indexing on axis values 
-           default is "position"
+           - "label": indexing on axis labels
+           default is "label"
     tol : float or None, optional
         tolerance when looking for numerical values, e.g. to use nearest neighbor search, default `None`
     keepdims : bool, optional 
@@ -357,7 +357,7 @@ def take(self, indices, axis=0, indexing="values", tol=TOLERANCE, keepdims=False
     >>> a[...,0,0].shape
     (2, 3)
     """
-    assert indexing in ("position", "values"), "invalid mode: "+repr(indexing)
+    assert indexing in ("position", "values", "label"), "invalid mode: "+repr(indexing)
 
     # SPECIAL CASE: full scale boolean array
     if self.ndim > 1 and is_boolean_index(indices, self.shape):
@@ -531,7 +531,7 @@ def _put(obj, val_, indices_numpy_, inplace=False, convert=False):
     if not inplace:
         return obj
 
-def put(self, val, indices=None, axis=0, indexing="values", tol=TOLERANCE, convert=False, inplace=False, broadcast_arrays=True):
+def put(self, val, indices=None, axis=0, indexing="label", tol=TOLERANCE, convert=False, inplace=False, broadcast_arrays=True):
     """ Put new values into DimArray (inplace)
 
     Parameters
@@ -543,8 +543,8 @@ def put(self, val, indices=None, axis=0, indexing="values", tol=TOLERANCE, conve
         val is a DimArray (will then deduce `indices` from its axes)
     axis : int or str or None, optional
         for single index (see help on `DimArray.take`)
-    indexing : str, optional
-        "position", "values"
+    indexing : "position" or "label", optional
+        default is "label" for indexing by axis label instead of integer position on the axis
     convert : bool, optional
         convert array to val's type
     inplace : bool, optional
@@ -641,7 +641,7 @@ def put(self, val, indices=None, axis=0, indexing="values", tol=TOLERANCE, conve
     >>> np.all(sub+1 == sub2)
     True
     """
-    assert indexing in ("position", "values"), "invalid mode: "+repr(indexing)
+    assert indexing in ("position", "values", "label"), "invalid mode: "+repr(indexing)
 
     if indices is None:
 
@@ -715,14 +715,14 @@ def fill(self, val):
 #
 # Variants 
 #
-def take_na(obj, indices, axis=0, indexing="values", tol=TOLERANCE, keepdims=False, fill_value=np.nan, repna=True, broadcast_arrays=True):
+def take_na(obj, indices, axis=0, indexing="label", tol=TOLERANCE, keepdims=False, fill_value=np.nan, repna=True, broadcast_arrays=True):
     """ like take but replace any missing value with NaNs
 
     additional parameters:
     na : replacement value, by default np.nan
     """
     #assert not broadcast_arrays, "check potential problem with array broadcasting"
-    assert indexing in ("position", "values"), "invalid mode: "+repr(indexing)
+    assert indexing in ("position", "values", "label"), "invalid mode: "+repr(indexing)
     indices_numpy = obj.axes.loc(indices, axis=axis, position_index=(indexing == "position"), keepdims=keepdims, tol=tol, raise_error=not repna)
 
     indices_numpy, indices_mask = _filter_bad_indices(indices_numpy, obj.dims)

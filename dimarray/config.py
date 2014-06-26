@@ -1,21 +1,7 @@
 """ Global configuration file
 
-Indexing/slicing option(s)
-- indexing: default indexing method 
-- indexing_broadcast: determines if array indices should be 
-    - broadcast onto a single axis (True, the default)
-    - or be dealt with independently from each other (False)
-
-Options that determine alignment behaviour during an operation:
-- op_broadcast: broadcast dimensions (alignment during an operation)
-- op_reindex: align all operands on a common axis (fill with NaN missing values)
-
-Display:
-- display_max: max number of array values displayed (if greater than that
-               array(...) will be shown)
-
-Optimization:
-. use_pandas: use pandas in some crucial operations such as re-indexing
+See rcParams for the options and rcParamsHelp for their meaning.
+dimarray.print_options() provide an overview.
 """
 from collections import OrderedDict as odict
 
@@ -42,8 +28,8 @@ rcParams = Params()
 rcParamsHelp = Params() # help
 
 # indexing
-rcParams['indexing.by'] = "values"
-rcParamsHelp['indexing.by'] = "'values' or 'position' (default: 'values'). Examples: ('values') 2014 or 'red'; ('position') 0, 1, 2 ..., The `.ix` attribute is a toogle between both modes.\n"
+rcParams['indexing.by'] = "label"
+rcParamsHelp['indexing.by'] = "'label' or 'position' (default: 'label'). Examples: ('label') 2014 or 'red'; ('position') 0, 1, 2 ..., The `.ix` attribute is a toogle between both modes.\n"
 
 rcParams['indexing.broadcast'] = True
 rcParamsHelp['indexing.broadcast'] = "bool (default: True). If True, broadcast array indices to collapse indexed dimensions into single shape, like numpy arrays, otherwise (if False) like matlab or pandas, multi-dimensional indexing treated as chained call, with dimensions independent from each other: such behaviour is normally obtained via `a.box[...]` instead of `a[...]`.\n"

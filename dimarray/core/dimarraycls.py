@@ -638,10 +638,10 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     def ix(self):
         """ property for integer (position) indexing (toogle between integer-based and values-based indexing)
         """
-        if self._indexing is "values": 
+        if self._indexing in ("label", "values"):  # values for back-compatibility
             _indexing = "position"
         else:
-            _indexing = "values"
+            _indexing = "label"
         return self._constructor(self.values, self.axes, _indexing=_indexing, _indexing_broadcast=self._indexing_broadcast, **self._metadata)
 
     # 

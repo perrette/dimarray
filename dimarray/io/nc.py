@@ -21,8 +21,11 @@ __all__ = ['read_nc','summary_nc', 'write_nc', 'read_dimensions']
 _doc_indexing = """
     indices : `dict`
         provide indices or slice to extract {nm1:val1}
-    indexing : `str`
-        'values' (default) or 'position' (integer position) similarly to `take`
+    indexing : 'label' or 'position'
+        By default, indexing is by axis values ('label') but 
+        in some cases it is more convenient to provide it directly 
+        by by position on the axis ('position'), in particular when 
+        the first (0) or last (-1) values are requested.
     tol : None or float
        floating point tolerance when indexing float-arrays (default to None for exact match) 
 """.strip()
@@ -108,7 +111,7 @@ def read_nc(f, nms=None, *args, **kwargs):
 
         axis along which to join the dimarrays or datasets (if align is True)
 
-    keys: sequence, optional
+    keys : sequence, optional
 
         Multiple files, align==True
 
