@@ -389,11 +389,14 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         shallow: if True, does not copy values and axes
         """
         import copy
-        new = copy.copy(self) # shallow copy
+        if shallow:
+            new = copy.copy(self) # shallow copy
+        else:
+            new = copy.deepcopy(self) # shallow copy
 
-        if not shallow:
-            new.values = self.values.copy()
-            new.axes = self.axes.copy()
+        #if not shallow:
+        #    new.values = self.values.copy()
+        #    new.axes = self.axes.copy()
 
         return new
         #return DimArray(self.values.copy(), self.axes.copy(), slicing=self.slicing, **{k:getattr(self,k) for k in self.ncattrs()})

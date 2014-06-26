@@ -432,9 +432,10 @@ class Axis(object):
         return "{}({})={}:{}".format(self.name, self.size, *self._bounds())
 
     def copy(self):
-        tmp = copy.copy(self) # shallow copy
-        tmp.values = self.values.copy() # copy of axis values
-        tmp.weights = copy.copy(self.weights) # axis weights
+        #tmp = copy.copy(self) # shallow copy
+        tmp = copy.deepcopy(self) # deep copy: everything in the definition is copied
+        #tmp.values = self.values.copy() # copy of axis values
+        #tmp.weights = copy.copy(self.weights) # axis weights
         return tmp
 
     # a few array-like properties
@@ -762,7 +763,8 @@ class Axes(list):
         super(Axes, self).sort(key=lambda x: dims.index(x.name))
 
     def copy(self):
-        return copy.copy(self)
+        #return copy.copy(self)
+        return copy.deepcopy(self) # not only the list but the elements of the list are copied
 
     def get_idx(self, axis):
         """ always return axis integer location
@@ -1384,20 +1386,3 @@ class LocatorAxes(object):
         kwargs = self.opt.copy()
         kwargs.update(opt)
         return LocatorAxes(self.axes, **kwargs)[indices]
-
-
-def test():
-    """ test module
-    """
-    import doctest
-    import axes
-    #reload(axes)
-    #globs = {'Locator':Locator}
-    #doctest.debug_src(Locator.__doc__)
-    doctest.testmod(axes, optionflags=doctest.ELLIPSIS)
-
-
-if __name__ == "__main__":
-    test()
-
-
