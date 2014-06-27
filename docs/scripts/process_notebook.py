@@ -273,7 +273,8 @@ def main():
 
     # update TOC ?
     if arguments['--toc']:
-        insert = int(arguments['POS'])
+        insert = arguments['POS']
+        if insert is not None: insert = int(insert)
         nb = update_toc(nb, insert=insert)
 
     write_nb(nb, fname=nm_out)
