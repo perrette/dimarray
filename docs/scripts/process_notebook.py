@@ -2,15 +2,15 @@
 """ Process notebook
 
 Usage:
-  process_notebook.py INPUT OUTPUT [--toc] [--title TITLE | --between C1,C2]
-  process_notebook.py INPUT -i [--toc] [--title TITLE | --between C1,C2]
+  process_notebook.py INPUT OUTPUT [--toc [POS] ] [--title TITLE | --between C1,C2]
+  process_notebook.py INPUT -i [--toc [POS] ] [--title TITLE | --between C1,C2]
 
 Options:
   -h --help         Show this screen.
   -i --inplace      Inplace modification of the notebook
-  --toc             Generate Table of Content
-  --section         Extract a section by title
-  --between         Extract a section by cell number
+  --toc  POS        Generate Table of Content, with optional position (default 1, or update existing)
+  --title TITLE     Extract a section by title
+  --between C1,C2   Extract a section by cell number
 """
 import sys
 import json
@@ -106,24 +106,68 @@ def get_toc_cell(nb, FLAG, worksheet=0):
     """
     for i, cell in enumerate(nb['worksheets'][worksheet]['cells']):
 	if cell['cell_type'] == 'markdown' and cell['source'][0].strip() == FLAG:
-	    break
+            return i, cell
+
+    # toc not found, so just create it and insert it at the second position
+    # create TOC cell
+    cell = {
+     "cell_type": "markdown",
+     "metadata": {},
+     }
+    cell["source"] = toc
+    cell['source'] = "\n".join([FLAG]+toc)
+
+    i = 2
 
     return i, cell
     
-def replace_toc(nb, toc, FLAG):
-    """ replace TABLE of content
+def insert_toc(nb, toc, insert=None, worksheet=0):
+    """ insert TABLE of content under the first header
     """
-    i, cell = get_toc_cell(nb, FLAG)
-    cell['source'] = "\n".join([FLAG]+toc)
+    TITLE='### Table of Content'
 
-def update_toc(nb):
+    cells = nb['worksheets'][worksheet]['cells']
+
+    # check whether TOC is present
+    found = False
+    for i, cell in enumerate(cells):
+	if cell['cell_type'] == 'markdown' and cell['source'][0].strip() == TITLE:
+            found = True
+            break
+
+    # toc not found, so just create it and insert it at the second position
+    if not found:
+        #import ipdb
+        #ipdb.set_trace()
+        print "TOC not found: create a new one"
+        # create TOC cell
+        cell = {
+         "cell_type": "markdown",
+         "metadata": {},
+         }
+        # insert at the second position
+        if insert is None: insert = 1
+        cells.insert(insert, cell)
+
+    # move the TOC ?
+    else:
+        print "TOC found: update only"
+        if insert is not None:
+            print "move TOC"
+            cell = cells.pop(i)
+            cells.insert(insert, cell)
+
+    # update TOC
+    cell["source"] = [TITLE]+toc
+
+def update_toc(nb, insert):
     # Create a table of content
     headings, levels = get_headings(nb)
     toc = create_toc(headings, levels, minlev=1)
     print "\n".join(toc)
 
     # Update TOC cell
-    replace_toc(nb, toc, FLAG='### Table of Content')
+    insert_toc(nb, toc, insert=insert)
     return nb
 
 def extract_section_by_cells(nb, l1=None, l2=None):
@@ -229,7 +273,8 @@ def main():
 
     # update TOC ?
     if arguments['--toc']:
-        nb = update_toc(nb)
+        insert = int(arguments['POS'])
+        nb = update_toc(nb, insert=insert)
 
     write_nb(nb, fname=nm_out)
     print 'Notebook written to', nm_out

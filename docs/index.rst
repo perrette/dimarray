@@ -16,6 +16,7 @@ dimarray provide a `numpy` array with labelled axes and dimensions, in the spiri
     _notebooks_rst/getting_started.rst
     advanced.rst
     cookbook.rst
+    talks.rst
     reference_api.rst
     howtodoc.rst
 
