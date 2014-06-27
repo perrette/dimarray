@@ -5,6 +5,15 @@ from functools import partial, wraps
 
 from decorators import format_doc
 from axes import Axis, Axes, GroupedAxis
+from dimarray.tools import anynan
+
+# check whether bottleneck is present
+try:
+    import bottleneck
+    _hasbottleneck = True
+
+except ImportError:
+    _hasbottleneck = False
 
 #
 # Some general documention which is used in several methods
@@ -135,14 +144,19 @@ def apply_along_axis(self, func, axis=None, skipna=False, args=(), **kwargs):
     # Deal with `axis` parameter, whether `int`, `str` or `tuple`
     obj, idx, name = _deal_with_axis(self, axis)
 
-    # Apply numpy function, dealing with NaNs
-    result = _apply_along_axis(obj.values, func, axis=idx, skipna=skipna, args=(), **kwargs)
-
+    # if function is provided by name, determine the proper function to use 
     if type(func) is str:
         funcname = func
-        func = getattr(np, func)
-    else:
-        funcname = func.__name__
+        try:
+            func = _get_func(funcname, skipna)
+        except (AttributeError, AssertionError) as msg:
+            #msg = funcname+" was not found in bottleneck, numpy, numpy.ma"
+            raise ValueError(msg)
+
+    # call function
+    kwargs['axis'] = idx # only pass axis, not skipna
+    result = func(obj.values, *args, **kwargs)
+    funcname = func.__name__
 
     # If `axis` was None (operations on the flattened array), just returns the numpy array
     if axis is None or not isinstance(result, np.ndarray):
@@ -178,65 +192,103 @@ def apply_along_axis(self, func, axis=None, skipna=False, args=(), **kwargs):
 
     return newobj
 
-def _apply_along_axis(values, funcname, axis=None, skipna=False, args=(), **kwargs):
-    """ apply a numpy transform on numpy array but dealing with NaNs
+class _MaskedArrayFunc(object):
+    """ switcher between numpy and numpy.ma functions if skipna is True
+    depends on whether nans are present in an array
     """
-    # Deal with NaNs
-    if skipna:
+    def __init__(self, name):
+        assert hasattr(np.ma, name) and hasattr(np, name), "function not present in numpy or numpy.ma "+name
+        self.__name__ = name  # function name
 
-        # replace with the optimized numpy function if existing
-        if funcname in ("sum","max","min","argmin","argmax"):
-            funcname = "nan"+funcname
-            module = np
+    def __call__(self, values, *args, **kwargs):
 
-        # otherwise convert to MaskedArray if needed
+        # transform numpy array to masked array if needed
+        if anynan(values):
+            values = np.ma.array(values, mask=np.isnan(values))
+            func = getattr(np.ma, self.__name__)
+
         else:
-            values = _to_MaskedArray(values)
-            module = np.ma
+            func = getattr(np, self.__name__)
+
+        result = func(values, *args, **kwargs) 
+
+        # transform back to numpy array
+        if np.ma.isMaskedArray(result):
+            result = result.filled(np.nan)
+
+        return result
+
+def _median_with_nan(values, *args, **kwargs):
+    """ replace "median" if skipna is False
     
-    # use basic numpy functions 
+    numpy's median ignore NaNs as long as less than 50% 
+    modify this behaviour and return NaN just as any other operation would
+    """
+    if _hasbottleneck:
+        result = bottleneck.median(values, *args, **kwargs)
     else:
-        module = np 
+        result = np.median(values, *args, **kwargs)
 
-    # get actual function if provided as str (the default)
-    if type(funcname) is str:
-        func = getattr(module, funcname)
-
-    # but also accept functions provided as functions
-    else:
-        func = funcname
-        funcname = func.__name__
-
-    # Call functions
-    kwargs['axis'] = axis
-    result = func(values, *args, **kwargs) 
-
-    # otherwise, fill NaNs back in
-    if np.ma.isMaskedArray(result):
-        result = result.filled(np.nan)
-
-    # numpy's median ignore NaNs as long as less than 50% ==> change that
-    if funcname == 'median' and not skipna:
-        nans = np.isnan(np.sum(values, axis=axis))
-        if np.any(nans):
-            if np.size(result) == 1: 
-                result = np.nan
-            else:
-                result[nans] = np.nan
+    if anynan(values):
+        if np.size(result) == 1: 
+            result = np.nan
+        else:
+            axis = kwargs.pop('axis', None)
+            nans = anynan(values, axis=axis) # determine where the nans should be
+            result[nans] = np.nan
 
     return result
 
-def _to_MaskedArray(values):
-    """ convert a numpy array to MaskedArray
+def _get_func(funcname, skipna):
+    """ return a function based on its name and whether or not nans should be skipped
     """
-    # fast-check for NaNs, thanks to
-    # http://stackoverflow.com/questions/6736590/fast-check-for-nan-in-numpy
-    if np.isnan(np.min(values)):
-        mask = np.isnan(values)
-    else:
-        mask = False
-    values = np.ma.array(values, mask=mask)
-    return values
+    # At the time of writing this module, bottleneck functions were:
+    # with nan as prefix : sum,max,min,argmin,argmax,mean,median,rankdata,std,var
+    # and median, 
+    # and move_mean,move_median,move_max,move_min,move_std,move_sum
+    # and the same as move_nan<>, except that move_nanmedian was not present
+
+    assert not funcname.startswith('nan'), "enter function name without nan, or provide the actual function as argument"
+
+    #
+    # ignore NaNs
+    #
+    if skipna:
+
+        # check if present in bottleneck
+        if _hasbottleneck:
+            if funcname.startswith('move_'):
+                funcname2 = 'move_nan'+funcname[6:]
+
+            else:
+                funcname2 = "nan"+funcname
+
+            if hasattr(bottleneck, funcname2):
+                return getattr(bottleneck, funcname2)
+
+        # now try a 'nan...' function from numpy 
+        funcname2 = "nan"+funcname
+        if hasattr(np, funcname2):
+            return getattr(np, funcname2)
+
+        # function not present in bottleneck: by default switch back to numpy/numpy.ma
+        return _MaskedArrayFunc(funcname)
+
+    #
+    # do not ignore nans
+    #
+    assert not skipna
+
+    # modify default median behaviour to put nans in the result
+    if funcname == 'median':
+        return _median_with_nan
+
+    # use bottleneck if existing
+    if _hasbottleneck and hasattr(bottleneck, funcname):
+        return getattr(bottleneck, funcname)
+
+    # otherwise basic numpy function
+    return getattr(np, funcname)
 
 def _deal_with_axis(obj, axis):
     """ deal with the `axis` parameter 
@@ -567,7 +619,7 @@ def _append_nans(result, axis, first=False):
 # Define weighted mean/std/var
 #
 
-def weighted_mean(self, axis=None, skipna=False, weights='axis', dtype=None, out=None):
+def weighted_mean(self, axis=None, skipna=False, weights='axis'):
     """ mean over an axis or group of axes, possibly weighted 
 
     Parameters
@@ -587,14 +639,14 @@ def weighted_mean(self, axis=None, skipna=False, weights='axis', dtype=None, out
 
     # if no weights, just apply numpy's mean
     if weights is None or weights is False:
-        return apply_along_axis(self, "mean", axis=axis, skipna=skipna, out=out, dtype=dtype)
+        return apply_along_axis(self, "mean", axis=axis, skipna=skipna)
 
     # weighted mean
     sum_values = apply_along_axis(self*weights, "sum", axis=axis, skipna=skipna)
     sum_weights = apply_along_axis(weights, "sum", axis=axis, skipna=skipna)
     return sum_values / (sum_weights + 0.)
 
-def weighted_var(self, axis=None, skipna=False, weights="axis", ddof=0, dtype=None, out=None):
+def weighted_var(self, axis=None, skipna=False, weights="axis", ddof=0):
     """ standard deviation over an axis or group of axes, possibly weighted 
 
     Parameters
@@ -622,12 +674,12 @@ def weighted_var(self, axis=None, skipna=False, weights="axis", ddof=0, dtype=No
 
     # if no weights, just apply numpy's var
     if weights is None or weights is False:
-        return apply_along_axis(self, "var", axis=axis, skipna=skipna, ddof=ddof, dtype=dtype, out=out)
+        return apply_along_axis(self, "var", axis=axis, skipna=skipna, ddof=ddof)
 
     # weighted mean
-    mean = self.mean(axis=axis, skipna=skipna, weights=weights, dtype=dtype, out=out)
+    mean = self.mean(axis=axis, skipna=skipna, weights=weights)
     dev = (self-mean)**2
-    return dev.mean(axis=axis, skipna=skipna, weights=weights, dtype=dtype, out=out)
+    return dev.mean(axis=axis, skipna=skipna, weights=weights)
 
 def weighted_std(self, *args, **kwargs):
     return self.var(*args, **kwargs)**0.5

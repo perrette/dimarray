@@ -7,6 +7,7 @@ import copy
 import warnings
 from collections import OrderedDict as odict
 
+from dimarray.tools import anynan
 from dimarray.config import get_option
 
 from metadata import MetadataDesc
@@ -598,7 +599,7 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         #    raise ValueError("weight dimensions not conform")
 
         # fill NaNs in when necessary
-        if fill_nans and hasnan(self.values):
+        if fill_nans and anynan(self.values):
             weights.values[np.isnan(self.values)] = np.nan
         
         assert weights is not None
@@ -1091,10 +1092,16 @@ mismatch between values and axes""".format(inferred, self.values.shape)
             ds[k] = val
         return ds
 
-    def to_MaskedArray(self):
+    def to_MaskedArray(self, copy=True):
         """ transform to MaskedArray, with NaNs as missing values
         """
-        return _transform.to_MaskedArray(self.values)
+	values = self.values
+	if anynan(values):
+	    mask = np.isnan(values)
+	else:
+	    mask = False
+	values = np.ma.array(values, mask=mask, copy=copy)
+	return values
 
     def to_list(self, axis=0):
         return [val for  k, val in self.iter(axis)]
@@ -1663,17 +1670,4 @@ def zeros_like(a, dtype=None):
     """
     if dtype is None: dtype = a.dtype
     return zeros(a.axes, dtype=dtype)
-
-def hasnan(a):
-    """ fast way of checking wether an array has nans
-
-    Parameters
-    ----------
-     a: numpy array
-
-    WARNING: if a is a not a numpy array, min will depend on the default behaviour 
-    if the min method of these object, which may be to ignore nans (e.g. larry)
-    """
-    return np.isnan(a.min())
-
 
