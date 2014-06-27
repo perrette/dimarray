@@ -9,6 +9,7 @@ import numpy as np
 import dimarray as da
 #from geo.data.index import to_slice, _slice3D
 
+from dimarray.decorators import format_doc
 from dimarray.dataset import Dataset, concatenate_ds, stack_ds
 from dimarray.core import DimArray, Axis, Axes
 
@@ -60,31 +61,7 @@ _doc_write_modes = """Several write modes are available:
         - 'a+': append if file is present, otherwise create"""
 
 
-def summary_nc(fname):
-    print(_summary_repr(fname))
-
-def _summary_repr(fname):
-    """ print info about netCDF file
-    
-    input: 
-        fname: netCDF file name
-    """
-    lines = []
-    lines.append( fname+":\n"+"-"*len(fname))
-    nms, _ = _scan(fname, verbose=False)
-    header = "Dataset of %s variables" % (len(nms))
-    if len(nms) == 1: header = header.replace('variables','variable')
-    lines.append(header)
-    lines.append(repr(read_dimensions(fname, verbose=False)))
-    for nm in nms:
-        dims, shape = _scan_var(fname, nm, verbose=False)
-        line = nm+": "+repr(dims)
-        lines.append(line)
-
-    return "\n".join(lines)
-
-    #attr = _read_attributes(f, name):
-
+@format_doc(indexing=_doc_indexing)
 def read_nc(f, nms=None, *args, **kwargs):
     """  Read one or several variables from one or several netCDF file
 
@@ -224,8 +201,6 @@ def read_nc(f, nms=None, *args, **kwargs):
 
     return obj
 
-read_nc.__doc__ = read_nc.__doc__.format(indexing=_doc_indexing)   # format's {} fails because of dictionary syntax in examples {}
-
 #
 # read from file
 # 
@@ -235,8 +210,9 @@ def read_dimensions(f, name=None, ix=slice(None), verbose=False):
 
     Parameters
     ----------
-    name: `str`, optional
+    name : str, optional
         variable name
+    ix : integer (position) index
 
     Returns
     -------
@@ -308,14 +284,15 @@ def _extract_kw(kwargs, argnames, delete=True):
             if delete: del kwargs[k]
     return kw
 
+@format_doc(indexing=_doc_indexing)
 def _read_variable(f, name, indices=None, axis=0, verbose=False, **kwargs):
     """ Read one variable from netCDF4 file 
 
     Parameters
     ----------
-    f              : file name or file handle
-    name           : netCDF variable name to extract
-    indices, axis, **kwargs: similar to `DimArray.take`
+    f  : file name or file handle
+    name : netCDF variable name to extract
+    {indexing}
 
     Returns
     -------
@@ -375,7 +352,7 @@ def _read_dataset(f, nms=None, **kwargs):
 
     Parameters
     ----------
-    f   : file name or (netcdf) file handle
+    f : file name or (netcdf) file handle
     nms : list of variables to read (default None for all variables)
     **kwargs
 
@@ -414,19 +391,19 @@ def _read_multinc(fnames, nms=None, axis=None, keys=None, align=False, concatena
 
     Parameters
     ----------
-    fnames: list of file names or file handles to be read
-    nms: variable names to be read
-    axis: string, optional
+    fnames : list of file names or file handles to be read
+    nms : variable names to be read
+    axis : str, optional
         dimension along which the files are concatenated 
         (created as new dimension if not already existing)
-    keys: sequence, optional
+    keys : sequence, optional
         to be passed to stack_nc, if axis is not part of the dataset
-    align: `bool`, optional
+    align : `bool`, optional
         if True, reindex axis prior to stacking (default to False)
-    concatenate_only: `bool`, optional
+    concatenate_only : `bool`, optional
         if True, only concatenate along existing axis (and raise error if axis not existing) 
 
-    **kwargs: keyword arguments passed to io.nc._read_variable  (cannot 
+    **kwargs : keyword arguments passed to io.nc._read_variable  (cannot 
     contain 'axis', though, but indices can be passed as a dictionary
     if needed, e.g. {'time':2010})
 
@@ -487,61 +464,18 @@ def _read_multinc(fnames, nms=None, axis=None, keys=None, align=False, concatena
 
     return ds
 
-##
-## write to file
-##
-def write_nc(f, obj=None, *args, **kwargs):
-    """  Write DimArray or Dataset to file or Create Empty netCDF file
-
-    Parameters
-    ----------
-    Expected parameters depend on object to write.
-
-    ### Create Empty netCDF file  ###
-    {axes}
-
-    ### DimArray ###
-    {dimarray}
-
-    ### Dataset ###
-    {dataset}
-    """
-    if isinstance(obj, Dataset):
-        _write_dataset(f, obj, *args, **kwargs)
-
-    elif isinstance(obj, str):
-        name = obj
-        _createVariable(f, name, *args, **kwargs)
-
-    elif isinstance(obj, DimArray) or isinstance(obj, np.ndarray) or isinstance(obj, list):
-        _write_variable(f, obj, *args, **kwargs)
-
-    else:
-        raise TypeError("only DimArray or Dataset types allowed, \
-                or provide variable name (first argument) and axes parameters to create empty variable.\
-                \nGot first argument {}:{}".format(type(obj), obj))
-
-#def _write_empty_variable(f, obj, name, **kwargs):
-##_createVariable.__doc__ = _createVariable.__doc__.format(netCDF4=_doc_write_nc)
-
-#_doc_write_nc = """ 
-
-#def write_attributes(f, obj):
-
+@format_doc(netCDF4=_doc_write_nc, indexing=_doc_indexing_write, write_modes=_doc_write_modes)
 def _write_dataset(f, obj, mode='w-', indices=None, axis=0, format=FORMAT, verbose=False, **kwargs):
     """ Write Dataset to netCDF file
 
     Parameters
     ----------
-    f : `str` or netCDF handle
+    f : str or netCDF handle
         netCDF file to write to
-
-    mode : `str`
+    mode : str, optional
         File creation mode. Default is 'w-'. Set to 'w' to overwrite any existing file.
         {write_modes}
-
     {netCDF4}
-
     {indexing}
 
     See Also
@@ -563,21 +497,19 @@ def _write_dataset(f, obj, mode='w-', indices=None, axis=0, format=FORMAT, verbo
     if close: f.close()
 
 
-
+@format_doc(netCDF4=_doc_write_nc, indexing=_doc_indexing_write, write_modes=_doc_write_modes)
 def _write_variable(f, obj=None, name=None, mode='a+', format=FORMAT, indices=None, axis=0, verbose=False, **kwargs):
     """ Write DimArray instance to file
 
     Parameters
     ----------
-    f      : file name or netCDF file handle
-    name   : `str`, optional
+    f : file name or netCDF file handle
+    name : str, optional
         variable name, optional if `name` attribute already defined.
-    mode: `str`, optional
+    mode : str, optional
         {write_modes}
         Default mode is 'a+'
-
     {netCDF4}
-
     {indexing}
 
     See Also
@@ -632,6 +564,7 @@ def _write_variable(f, obj=None, name=None, mode='a+', format=FORMAT, indices=No
     if close:
         f.close()
 
+@format_doc(netCDF4=_doc_write_nc, write_modes=_doc_write_modes)
 def _createVariable(f, name, axes, dims=None, dtype=float, verbose=False, mode='a+', format=FORMAT, **kwargs):
     """ Create empty netCDF4 variable from axes
 
@@ -683,13 +616,40 @@ def _createVariable(f, name, axes, dims=None, dtype=float, verbose=False, mode='
 
     return v
 
+##
+## write to file
+##
+@format_doc(dimarray=_write_variable.__doc__, dataset=_write_dataset.__doc__, axes=_createVariable.__doc__)
+def write_nc(f, obj=None, *args, **kwargs):
+    """  Write DimArray or Dataset to file or Create Empty netCDF file
 
-# add doc for keyword arguments
-_write_dataset.__doc__ = _write_dataset.__doc__.format(netCDF4=_doc_write_nc, indexing=_doc_indexing_write, write_modes=_doc_write_modes)
-_write_variable.__doc__ = _write_variable.__doc__.format(netCDF4=_doc_write_nc, indexing=_doc_indexing_write, write_modes=_doc_write_modes)
-_createVariable.__doc__ = _createVariable.__doc__.format(netCDF4=_doc_write_nc, write_modes=_doc_write_modes)
+    Parameters
+    ----------
+    Expected parameters depend on object to write.
 
-write_nc.__doc__ = write_nc.__doc__.format(dimarray=_write_variable.__doc__, dataset=_write_dataset.__doc__, axes=_createVariable.__doc__)
+    ### Create Empty netCDF file  ###
+    {axes}
+
+    ### DimArray ###
+    {dimarray}
+
+    ### Dataset ###
+    {dataset}
+    """
+    if isinstance(obj, Dataset):
+        _write_dataset(f, obj, *args, **kwargs)
+
+    elif isinstance(obj, str):
+        name = obj
+        _createVariable(f, name, *args, **kwargs)
+
+    elif isinstance(obj, DimArray) or isinstance(obj, np.ndarray) or isinstance(obj, list):
+        _write_variable(f, obj, *args, **kwargs)
+
+    else:
+        raise TypeError("only DimArray or Dataset types allowed, \
+                or provide variable name (first argument) and axes parameters to create empty variable.\
+                \nGot first argument {}:{}".format(type(obj), obj))
 
 
 def _check_dimensions(f, axes, **verb):
@@ -732,6 +692,65 @@ def _check_dimensions(f, axes, **verb):
 
     if close: f.close()
 
+#
+# display summary information
+#
+
+def summary_nc(fname):
+    """ Print summary information about the content of a netCDF file
+
+    Parameters
+    ----------
+    fname : netCDF file name
+
+    Returns
+    -------
+    None (print message to screen)
+
+    See Also
+    --------
+    dimarray.io.nc._summary_repr : get the associated string
+    """
+    print(_summary_repr(fname))
+
+def _summary_repr(fname):
+    """ print info about netCDF file
+    """
+    # open file for reading
+    f, close = _check_file(fname, 'r')
+
+    # variable names
+    nms = f.variables.keys()
+
+    # header
+    header = "Dataset of %s variables" % (len(nms))
+    if len(nms) == 1: header = header.replace('variables','variable')
+
+    lines = []
+    lines.append(header)
+    
+    # display dimensions name, size, first and last value
+    for i, dim in enumerate(f.dimensions.keys()):
+        size = len(f.dimensions[dim]) # dimension size
+        try:
+            first, last = f.variables[dim][0], f.variables[dim][-1]
+        except KeyError:
+            first, last = '?','?'
+        line = "{i} / {dim} ({size}): {first} to {last}".format(**locals())
+        lines.append(line)
+
+    # display variables name, shape and dimensions
+    for nm in nms:
+        var = f.variables[nm]
+        dims = var.dimensions
+        #shape = var.shape
+        line = "{nm}: {dims}".format(**locals())
+        lines.append(line)
+
+    # close file
+    if close: f.close()
+
+    return "\n".join(lines)
 
 
 #
@@ -747,15 +766,7 @@ def _scan(f, **verb):
     if close: f.close()
     return [n for n in nms if n not in dims], dims
 
-def _scan_var(f, v, **verb):
-    f, close = _check_file(f, 'r', **verb)
-    var = f.variables[v]
-    dims = var.dimensions
-    shape = var.shape
-    if close: f.close()
-    return dims, shape
-
-
+@format_doc(write_modes=_doc_write_modes)
 def _check_file(f, mode='r', verbose=False, format='NETCDF4'):
     """ open a netCDF4 file
 
@@ -820,8 +831,6 @@ def _check_file(f, mode='r', verbose=False, format='NETCDF4'):
         close = True
 
     return f, close
-
-_check_file.__doc__ = _check_file.__doc__.format(write_modes=_doc_write_modes)
 
 #
 # Append documentation to dimarray's methods
