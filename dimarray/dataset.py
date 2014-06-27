@@ -104,13 +104,11 @@ class Dataset(odict):
         >>> ds = Dataset()
         >>> ds
         Dataset of 0 variables
-        dimensions: 
         <BLANKLINE>
         >>> a = DimArray([0, 1, 2], dims=('time',))
         >>> ds['yo'] = a 
         >>> ds['yo']
         dimarray: 3 non-null elements (0 null)
-        dimensions: 'time'
         0 / time (3): 0 to 2
         array([0, 1, 2])
         """
@@ -223,19 +221,16 @@ class Dataset(odict):
         >>> ds = Dataset(a=a, b=b)
         >>> ds
         Dataset of 2 variables
-        dimensions: 'time'
         0 / time (4): 1950 to 1953
         a: ('time',)
         b: ('time',)
         >>> ds.take(1951, axis='time')
         Dataset of 2 variables
-        dimensions: 
         <BLANKLINE>
         a: 2.0
         b: 11.0
         >>> ds.take(0, axis='time', indexing='position')
         Dataset of 2 variables
-        dimensions: 
         <BLANKLINE>
         a: 1.0
         b: nan
@@ -296,13 +291,11 @@ class Dataset(odict):
         >>> ds = Dataset(a=a, b=b)
         >>> ds.mean(axis='time')
         Dataset of 2 variables
-        dimensions: 'items'
         0 / items (2): a to b
         a: 2.0
         b: ('items',)
         >>> ds.mean(axis='items')
         Dataset of 2 variables
-        dimensions: 'time'
         0 / time (3): 1950 to 1952
         a: ('time',)
         b: ('time',)
@@ -355,7 +348,6 @@ class Dataset(odict):
         >>> ds['b'] = da.zeros(shape=(3,4)) # dimensions 'x0', 'x1'
         >>> ds.reset_axis(['a','b','c'], axis='x0')
         Dataset of 2 variables
-        dimensions: 'x0', 'x1'
         0 / x0 (3): a to c
         1 / x1 (4): 0 to 3
         a: ('x0',)
@@ -468,7 +460,6 @@ def stack_ds(datasets, axis, keys=None, align=False):
     >>> ds2 = Dataset({'a':a*2,'b':b*2}) # dataset of 2 variables from a second experiment
     >>> stack_ds([ds, ds2], axis='stackdim', keys=['exp1','exp2'])
     Dataset of 2 variables
-    dimensions: 'stackdim', 'dima', 'dimb'
     0 / stackdim (2): exp1 to exp2
     1 / dima (3): 0 to 2
     2 / dimb (2): 0 to 1
@@ -534,7 +525,6 @@ def concatenate_ds(datasets, axis=0):
     >>> ds2 = Dataset({'a':a2,'b':b2}) # dataset of 2 variables from a second experiment
     >>> concatenate_ds([ds, ds2])
     Dataset of 2 variables
-    dimensions: 'x0', 'x1'
     0 / x0 (6): a to f
     1 / x1 (2): 1 to 2
     a: ('x0',)

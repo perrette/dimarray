@@ -211,7 +211,6 @@ def take(self, indices, axis=0, indexing="label", tol=TOLERANCE, keepdims=False,
     >>> v = DimArray([[1,2,3],[4,5,6]], axes=[["a","b"], [10.,20.,30.]], dims=['d0','d1'], dtype=float) 
     >>> v
     dimarray: 6 non-null elements (0 null)
-    dimensions: 'd0', 'd1'
     0 / d0 (2): a to b
     1 / d1 (3): 10.0 to 30.0
     array([[ 1.,  2.,  3.],
@@ -222,7 +221,6 @@ def take(self, indices, axis=0, indexing="label", tol=TOLERANCE, keepdims=False,
     >>> a = v[:,10]   # python slicing method
     >>> a
     dimarray: 2 non-null elements (0 null)
-    dimensions: 'd0'
     0 / d0 (2): a to b
     array([ 1.,  4.])
     >>> b = v.take(10, axis=1)  # take, by axis position
@@ -252,7 +250,6 @@ def take(self, indices, axis=0, indexing="label", tol=TOLERANCE, keepdims=False,
     >>> a = v[:,[10,20]] # also work with a list of index
     >>> a
     dimarray: 4 non-null elements (0 null)
-    dimensions: 'd0', 'd1'
     0 / d0 (2): a to b
     1 / d1 (2): 10.0 to 20.0
     array([[ 1.,  2.],
@@ -266,7 +263,6 @@ def take(self, indices, axis=0, indexing="label", tol=TOLERANCE, keepdims=False,
     >>> c = v[:,10:20] # axis values: slice includes last element
     >>> c
     dimarray: 4 non-null elements (0 null)
-    dimensions: 'd0', 'd1'
     0 / d0 (2): a to b
     1 / d1 (2): 10.0 to 20.0
     array([[ 1.,  2.],
@@ -276,7 +272,6 @@ def take(self, indices, axis=0, indexing="label", tol=TOLERANCE, keepdims=False,
     True
     >>> v.ix[:,0:1] # integer position: does *not* include last element
     dimarray: 2 non-null elements (0 null)
-    dimensions: 'd0', 'd1'
     0 / d0 (2): a to b
     1 / d1 (1): 10.0 to 10.0
     array([[ 1.],
@@ -293,7 +288,6 @@ def take(self, indices, axis=0, indexing="label", tol=TOLERANCE, keepdims=False,
 
     >>> v.take(12, axis="d1", tol=5)
     dimarray: 2 non-null elements (0 null)
-    dimensions: 'd0'
     0 / d0 (2): a to b
     array([ 1.,  4.])
 
@@ -313,20 +307,17 @@ def take(self, indices, axis=0, indexing="label", tol=TOLERANCE, keepdims=False,
 
     >>> a[a > 3] # FULL ARRAY: return a numpy array in n-d case (at least for now)
     dimarray: 2 non-null elements (0 null)
-    dimensions: 'x0,x1'
     0 / x0,x1 (2): (1, 1) to (1, 2)
     array([4, 5])
 
     >>> a[a.x0 > 0] # SINGLE AXIS: only first axis
     dimarray: 3 non-null elements (0 null)
-    dimensions: 'x0', 'x1'
     0 / x0 (1): 1 to 1
     1 / x1 (3): 0 to 2
     array([[3, 4, 5]])
 
     >>> a[:, a.x1 > 0] # only second axis 
     dimarray: 4 non-null elements (0 null)
-    dimensions: 'x0', 'x1'
     0 / x0 (2): 0 to 1
     1 / x1 (2): 1 to 2
     array([[1, 2],
@@ -334,7 +325,6 @@ def take(self, indices, axis=0, indexing="label", tol=TOLERANCE, keepdims=False,
 
     >>> a.box[a.x0 > 0, a.x1 > 0]  # AXIS-BASED (need `box` to prevent broadcasting)
     dimarray: 2 non-null elements (0 null)
-    dimensions: 'x0', 'x1'
     0 / x0 (1): 1 to 1
     1 / x1 (2): 1 to 2
     array([[4, 5]])
@@ -345,7 +335,6 @@ def take(self, indices, axis=0, indexing="label", tol=TOLERANCE, keepdims=False,
     >>> b = DimArray([5,6], ['c','d'])
     >>> a.put(b)
     dimarray: 5 non-null elements (0 null)
-    dimensions: 'x0'
     0 / x0 (5): a to e
     array([0, 1, 5, 6, 4])
 
@@ -570,7 +559,6 @@ def put(self, val, indices=None, axis=0, indexing="label", tol=TOLERANCE, conver
     >>> b = a.put(1, indices={{'d0': 'b'}})
     >>> b
     dimarray: 4 non-null elements (0 null)
-    dimensions: 'd0', 'd1'
     0 / d0 (2): a to b
     1 / d1 (2): 10.0 to 20.0
     array([[ 0.,  0.],
@@ -578,7 +566,6 @@ def put(self, val, indices=None, axis=0, indexing="label", tol=TOLERANCE, conver
     >>> a['b'] = 2   # slicing equivalent
     >>> a
     dimarray: 4 non-null elements (0 null)
-    dimensions: 'd0', 'd1'
     0 / d0 (2): a to b
     1 / d1 (2): 10.0 to 20.0
     array([[ 0.,  0.],
@@ -589,7 +576,6 @@ def put(self, val, indices=None, axis=0, indexing="label", tol=TOLERANCE, conver
     >>> b = a.put(3, indices=1, axis='d1', indexing="position")
     >>> b
     dimarray: 4 non-null elements (0 null)
-    dimensions: 'd0', 'd1'
     0 / d0 (2): a to b
     1 / d1 (2): 10.0 to 20.0
     array([[ 0.,  3.],
@@ -597,7 +583,6 @@ def put(self, val, indices=None, axis=0, indexing="label", tol=TOLERANCE, conver
     >>> a.ix[:,1] = 4  # slicing equivalent
     >>> a
     dimarray: 4 non-null elements (0 null)
-    dimensions: 'd0', 'd1'
     0 / d0 (2): a to b
     1 / d1 (2): 10.0 to 20.0
     array([[ 0.,  4.],
@@ -609,7 +594,6 @@ def put(self, val, indices=None, axis=0, indexing="label", tol=TOLERANCE, conver
     >>> b = a.put(5, indices={{'d0':'b', 'd1':[10.]}})
     >>> b
     dimarray: 4 non-null elements (0 null)
-    dimensions: 'd0', 'd1'
     0 / d0 (2): a to b
     1 / d1 (2): 10.0 to 20.0
     array([[ 0.,  4.],
@@ -617,7 +601,6 @@ def put(self, val, indices=None, axis=0, indexing="label", tol=TOLERANCE, conver
     >>> a["b",[10]] = 6
     >>> a
     dimarray: 4 non-null elements (0 null)
-    dimensions: 'd0', 'd1'
     0 / d0 (2): a to b
     1 / d1 (2): 10.0 to 20.0
     array([[ 0.,  4.],
@@ -896,7 +879,6 @@ def reindex_axis(self, values, axis=0, method='exact', repna=True, fill_value=np
     >>> b = da.DimArray([3,4],('x0',[1,3]))
     >>> b.reindex_axis([1,2,3])
     dimarray: 2 non-null elements (1 null)
-    dimensions: 'x0'
     0 / x0 (3): 1 to 3
     array([  3.,  nan,   4.])
 
@@ -904,7 +886,6 @@ def reindex_axis(self, values, axis=0, method='exact', repna=True, fill_value=np
 
     >>> b.reindex_axis([1,2,3], fill_value=-9999)
     dimarray: 3 non-null elements (0 null)
-    dimensions: 'x0'
     0 / x0 (3): 1 to 3
     array([    3, -9999,     4])
 
@@ -912,7 +893,6 @@ def reindex_axis(self, values, axis=0, method='exact', repna=True, fill_value=np
 
     >>> b.reindex_axis([0,1,2,3], method='nearest') # out-of-bound to NaN
     dimarray: 3 non-null elements (1 null)
-    dimensions: 'x0'
     0 / x0 (4): 0 to 3
     array([ nan,   3.,   3.,   4.])
 
@@ -920,7 +900,6 @@ def reindex_axis(self, values, axis=0, method='exact', repna=True, fill_value=np
 
     >>> b.reindex_axis([0,1,2,3], method='interp') # out-of-bound to NaN
     dimarray: 3 non-null elements (1 null)
-    dimensions: 'x0'
     0 / x0 (4): 0 to 3
     array([ nan,  3. ,  3.5,  4. ])
     """
@@ -1014,7 +993,6 @@ def reindex_like(self, other, method='exact', **kwargs):
     >>> c = da.DimArray([[1,2,3], [1,2,3]],[('x1',["a","b"]),('x0',[1, 2, 3])])
     >>> b.reindex_like(c, method='interp')
     dimarray: 3 non-null elements (0 null)
-    dimensions: 'x0'
     0 / x0 (3): 1 to 3
     array([ 3. ,  3.5,  4. ])
     """
@@ -1054,19 +1032,16 @@ def sort_axis(a, axis=0, key=None):
     >>> a = DimArray([10,20,30], labels=[2, 0, 1])
     >>> a
     dimarray: 3 non-null elements (0 null)
-    dimensions: 'x0'
     0 / x0 (3): 2 to 1
     array([10, 20, 30])
 
     >>> a.sort_axis()
     dimarray: 3 non-null elements (0 null)
-    dimensions: 'x0'
     0 / x0 (3): 0 to 2
     array([20, 30, 10])
 
     >>> a.sort_axis(key=lambda x: -x)
     dimarray: 3 non-null elements (0 null)
-    dimensions: 'x0'
     0 / x0 (3): 2 to 0
     array([10, 30, 20])
 
@@ -1075,7 +1050,6 @@ def sort_axis(a, axis=0, key=None):
     >>> a = DimArray([[10,20,30],[40,50,60]], labels=[[0, 1], ['a','c','b']])
     >>> a.sort_axis(axis=1)
     dimarray: 6 non-null elements (0 null)
-    dimensions: 'x0', 'x1'
     0 / x0 (2): 0 to 1
     1 / x1 (3): a to c
     array([[10, 30, 20],

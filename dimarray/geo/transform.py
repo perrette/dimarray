@@ -74,7 +74,6 @@ def regional_mean(a, region=None):
     >>> a = a.transpose(('lon','z','lat'))
     >>> regional_mean(a)
     geoarray: 3 non-null elements (0 null)
-    dimensions: 'z'
     0 / z (3): 0 to 2
     array([ 3.37674289,  3.37674289,  3.37674289])
     """
@@ -214,20 +213,17 @@ def since(obj, refperiod, skipna=False):
 
     >>> since(a, 1955)
     geoarray: 3 non-null elements (0 null)
-    dimensions: 'time'
     0 / time (3): 1950 to 1960
     array([-1.,  0.,  1.])
 
     >>> since(a, refperiod=(1950,1955)) # a tuple is interpreted as a slice
     geoarray: 3 non-null elements (0 null)
-    dimensions: 'time'
     0 / time (3): 1950 to 1960
     array([-0.5,  0.5,  1.5])
 
     >>> a = GeoArray([[1,2],[3,4],[5,6]],time=[1950, 1955, 1960], lon=[30., 45.]) # multidimensional
     >>> since(a, 1955)
     geoarray: 6 non-null elements (0 null)
-    dimensions: 'time', 'lon'
     0 / time (3): 1950 to 1960
     1 / lon (2): 30.0 to 45.0
     array([[-2., -2.],

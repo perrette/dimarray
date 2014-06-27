@@ -30,13 +30,11 @@ def broadcast_arrays(*arrays):
     >>> y = da.DimArray([[1],[2],[3]])
     >>> da.broadcast_arrays(x, y)
     [dimarray: 9 non-null elements (0 null)
-    dimensions: 'x0', 'x1'
     0 / x0 (3): 0 to 2
     1 / x1 (3): 0 to 2
     array([[1, 2, 3],
            [1, 2, 3],
            [1, 2, 3]]), dimarray: 9 non-null elements (0 null)
-    dimensions: 'x0', 'x1'
     0 / x0 (3): 0 to 2
     1 / x1 (3): 0 to 2
     array([[1, 1, 1],
@@ -121,12 +119,10 @@ def align_dims(*arrays):
     >>> y = da.DimArray(np.arange(3), dims=('x1',))
     >>> da.align_dims(x, y)
     [dimarray: 2 non-null elements (0 null)
-    dimensions: 'x0', 'x1'
     0 / x0 (2): 0 to 1
     1 / x1 (1): None to None
     array([[0],
            [1]]), dimarray: 3 non-null elements (0 null)
-    dimensions: 'x0', 'x1'
     0 / x0 (1): None to None
     1 / x1 (3): 0 to 2
     array([[0, 1, 2]])]
@@ -158,10 +154,8 @@ def align_axes(*arrays):
     >>> b = DimArray([2,3],axes=[[2,3]])
     >>> align_axes(a, b)
     [dimarray: 3 non-null elements (1 null)
-    dimensions: 'x0'
     0 / x0 (4): 0 to 3
     array([  0.,   1.,   2.,  nan]), dimarray: 2 non-null elements (2 null)
-    dimensions: 'x0'
     0 / x0 (4): 0 to 3
     array([ nan,  nan,   2.,   3.])]
 
@@ -171,10 +165,8 @@ def align_axes(*arrays):
     >>> b = DimArray([[0,1],[2,3.],[4.,5.]], axes=[[0,1,2],[1,2]]) # one more element along the 1st dimension, 2nd dimension ignored
     >>> align_axes(a, b)
     [dimarray: 2 non-null elements (1 null)
-    dimensions: 'x0'
     0 / x0 (3): 0 to 2
     array([  0.,   1.,  nan]), dimarray: 6 non-null elements (0 null)
-    dimensions: 'x0', 'x1'
     0 / x0 (3): 0 to 2
     1 / x1 (2): 1 to 2
     array([[ 0.,  1.],
@@ -290,7 +282,6 @@ def stack(arrays, axis=None, keys=None, align=False):
     >>> b = DimArray([11,22,33])
     >>> stack([a, b], axis='stackdim', keys=['a','b'])
     dimarray: 6 non-null elements (0 null)
-    dimensions: 'stackdim', 'x0'
     0 / stackdim (2): a to b
     1 / x0 (3): 0 to 2
     array([[ 1,  2,  3],
@@ -364,7 +355,6 @@ def concatenate(arrays, axis=0, check_other_axes=True):
     >>> b = DimArray([4,5,6], axes=[['d','e','f']])
     >>> concatenate((a, b))
     dimarray: 6 non-null elements (0 null)
-    dimensions: 'x0'
     0 / x0 (6): a to f
     array([1, 2, 3, 4, 5, 6])
 
@@ -374,7 +364,6 @@ def concatenate(arrays, axis=0, check_other_axes=True):
     >>> b = DimArray([[4,5,6],[44,55,66]])
     >>> concatenate((a, b), axis=0)
     dimarray: 12 non-null elements (0 null)
-    dimensions: 'x0', 'x1'
     0 / x0 (4): 0 to 1
     1 / x1 (3): 0 to 2
     array([[ 1,  2,  3],
@@ -383,7 +372,6 @@ def concatenate(arrays, axis=0, check_other_axes=True):
            [44, 55, 66]])
     >>> concatenate((a, b), axis='x1')
     dimarray: 12 non-null elements (0 null)
-    dimensions: 'x0', 'x1'
     0 / x0 (2): 0 to 1
     1 / x1 (6): 0 to 2
     array([[ 1,  2,  3,  4,  5,  6],
@@ -474,7 +462,6 @@ def aggregate(arrays, check_overlap=True):
     >>> d = DimArray([-99], axes=[('line',[4])])
     >>> aggregate((a,b,c,d))
     dimarray: 10 non-null elements (6 null)
-    dimensions: 'line', 'col'
     0 / line (4): 0 to 4
     1 / col (4): a to d
     array([[  1.,   2.,   3.,  nan],
@@ -496,7 +483,6 @@ def aggregate(arrays, check_overlap=True):
 
     >>> aggregate((a,b), check_overlap=False)  
     dimarray: 4 non-null elements (2 null)
-    dimensions: 'line', 'col'
     0 / line (2): 0 to 1
     1 / col (3): a to c
     array([[  1.,   4.,   3.],
@@ -508,7 +494,6 @@ def aggregate(arrays, check_overlap=True):
     >>> b = DimArray([[np.nan],[5]], axes=[('line',[1,2]), ('col',['b'])])
     >>> aggregate((a,b)) # does not overwrite `2` at location (1, 'b')
     dimarray: 4 non-null elements (2 null)
-    dimensions: 'line', 'col'
     0 / line (2): 1 to 2
     1 / col (3): a to c
     array([[  1.,   2.,   3.],

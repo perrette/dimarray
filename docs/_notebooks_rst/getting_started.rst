@@ -26,7 +26,6 @@ via `axes` and `dims` parameters.
 >>> a = DimArray([[1.,2,3], [4,5,6]], axes=[['a', 'b'], [1950, 1960, 1970]], dims=['variable', 'time'])
 >>> a
 dimarray: 6 non-null elements (0 null)
-dimensions: 'variable', 'time'
 0 / variable (2): a to b
 1 / time (3): 1950 to 1970
 array([[ 1.,  2.,  3.],
@@ -46,7 +45,6 @@ array([[ 1.,  2.,  3.],
 while its axes are stored in `axes`
 
 >>> a.axes
-dimensions: 'variable', 'time'
 0 / variable (2): a to b
 1 / time (3): 1950 to 1970
 
@@ -94,7 +92,6 @@ Standard numpy transformations are defined, and now accept axis name:
 
 >>> a.mean(axis='time')
 dimarray: 2 non-null elements (0 null)
-dimensions: 'variable'
 0 / variable (2): a to b
 array([ 2.,  5.])
 
@@ -104,7 +101,6 @@ and can ignore **missing values (nans)** if asked to:
 >>> a['a',1950] = np.nan
 >>> a.mean(axis='time', skipna=True)
 dimarray: 2 non-null elements (0 null)
-dimensions: 'variable'
 0 / variable (2): a to b
 array([ 2.5,  5. ])
 
@@ -124,7 +120,6 @@ with incomplete sets of items.
 >>> incomplete_yearly_data = DimArray([10, 100], axes=[[1950, 1960]], dims=['year']) # last year 1970 is missing
 >>> yearly_data + incomplete_yearly_data
 dimarray: 2 non-null elements (1 null)
-dimensions: 'year'
 0 / year (3): 1950 to 1970
 array([  10.,  101.,   nan])
 
@@ -145,7 +140,6 @@ Arrays are said to be **broadcast**:
 >>> combined_data = yearly_data * seasonal_data
 >>> combined_data 
 dimarray: 6 non-null elements (0 null)
-dimensions: 'year', 'season'
 0 / year (3): 1950 to 1970
 1 / season (2): winter to summer
 array([[  0,   0],
@@ -164,7 +158,6 @@ As a commodity, the **`Dataset`** class is an ordered dictionary of DimArrays wh
 >>> dataset = Dataset({'combined_data':combined_data, 'yearly_data':yearly_data,'seasonal_data':seasonal_data})
 >>> dataset
 Dataset of 3 variables
-dimensions: 'season', 'year'
 0 / season (2): winter to summer
 1 / year (3): 1950 to 1970
 seasonal_data: ('season',)
@@ -175,7 +168,6 @@ It is one step away from creating a new DimArray from these various arrays, by b
 
 >>> dataset.to_array(axis='variable')
 dimarray: 18 non-null elements (0 null)
-dimensions: 'variable', 'season', 'year'
 0 / variable (3): seasonal_data to yearly_data
 1 / season (2): winter to summer
 2 / year (3): 1950 to 1970
@@ -204,7 +196,6 @@ the netCDF4 package. If netCDF4 is installed (much recommanded), a dataset can e
 >>> import dimarray as da
 >>> da.read_nc('/tmp/test.nc', 'combined_data')
 dimarray: 6 non-null elements (0 null)
-dimensions: 'year', 'season'
 0 / year (3): 1950 to 1970
 1 / season (2): winter to summer
 array([[  0,   0],
@@ -249,7 +240,6 @@ DimArrays can be joined along an existing dimension, we say `concatenate` (:func
 >>> b = DimArray([14, 15, 16], axes=[[1953, 1954, 1955]], dims=['time'])
 >>> da.concatenate((a, b), axis='time')
 dimarray: 6 non-null elements (0 null)
-dimensions: 'time'
 0 / time (6): 1950 to 1955
 array([11, 12, 13, 14, 15, 16])
 
@@ -259,7 +249,6 @@ or they can be stacked along each other, thereby creating a new dimension (:func
 >>> b = DimArray([21, 22, 23], axes=[[1950, 1951, 1952]], dims=['time'])
 >>> da.stack((a, b), axis='items', keys=['a','b'])
 dimarray: 6 non-null elements (0 null)
-dimensions: 'items', 'time'
 0 / items (2): a to b
 1 / time (3): 1950 to 1952
 array([[11, 12, 13],
@@ -272,7 +261,6 @@ In the above note that new axis values were provided via the parameter `keys=`. 
 >>> c = da.stack((a, b), axis='items', keys=['a','b'], align=True)
 >>> c
 dimarray: 5 non-null elements (1 null)
-dimensions: 'items', 'time'
 0 / items (2): a to b
 1 / time (3): 1950 to 1952
 array([[ 11.,  12.,  13.],
@@ -290,7 +278,6 @@ Say you have data with NaNs:
 >>> a = DimArray([[11, np.nan, np.nan],[21,np.nan,23]], axes=[['a','b'],[1950, 1951, 1952]], dims=['items','time'])
 >>> a
 dimarray: 3 non-null elements (3 null)
-dimensions: 'items', 'time'
 0 / items (2): a to b
 1 / time (3): 1950 to 1952
 array([[ 11.,  nan,  nan],
@@ -300,7 +287,6 @@ You can drop every column that contains a NaN
 
 >>> a.dropna(axis=1) # drop along columns
 dimarray: 2 non-null elements (0 null)
-dimensions: 'items', 'time'
 0 / items (2): a to b
 1 / time (1): 1950 to 1950
 array([[ 11.],
@@ -310,7 +296,6 @@ or actually control decide to retain only these columns with a minimum number of
 
 >>> a.dropna(axis=1, minvalid=1) # drop every column with less than one valid data
 dimarray: 3 non-null elements (1 null)
-dimensions: 'items', 'time'
 0 / items (2): a to b
 1 / time (2): 1950 to 1952
 array([[ 11.,  nan],
@@ -329,7 +314,6 @@ Additional novelty includes methods to reshaping an array in easy ways, very use
 >>> small_array = large_array.reshape('A,D','B,C')
 >>> small_array
 dimarray: 40 non-null elements (0 null)
-dimensions: 'A,D', 'B,C'
 0 / A,D (4): (0, 0) to (1, 1)
 1 / B,C (10): (0, 0) to (1, 4)
 array([[ 0,  2,  4,  6,  8, 10, 12, 14, 16, 18],
@@ -366,7 +350,6 @@ And :py:meth:`dimarray.DimArray.from_pandas` works to convert pandas objects to 
 >>> s = pd.DataFrame([[1,2],[3,4]], index=['a','b'], columns=[1950, 1960])
 >>> da.from_pandas(s)
 dimarray: 4 non-null elements (0 null)
-dimensions: 'x0', 'x1'
 0 / x0 (2): a to b
 1 / x1 (2): 1950 to 1960
 array([[1, 2],

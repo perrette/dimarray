@@ -65,7 +65,6 @@ class DimArray(object):
     >>> a = DimArray([[1.,2,3], [4,5,6]], axes=[['grl', 'ant'], [1950, 1960, 1970]], dims=['variable', 'time']) 
     >>> a
     dimarray: 6 non-null elements (0 null)
-    dimensions: 'variable', 'time'
     0 / variable (2): grl to ant
     1 / time (3): 1950 to 1970
     array([[ 1.,  2.,  3.],
@@ -80,7 +79,6 @@ class DimArray(object):
     while its axes are stored in `axes`:
 
     >>> a.axes
-    dimensions: 'variable', 'time'
     0 / variable (2): grl to ant
     1 / time (3): 1950 to 1970
 
@@ -113,7 +111,6 @@ class DimArray(object):
 
     >>> a.mean(axis='time')
     dimarray: 2 non-null elements (0 null)
-    dimensions: 'variable'
     0 / variable (2): grl to ant
     array([ 2.,  5.])
 
@@ -124,7 +121,6 @@ class DimArray(object):
     >>> b = DimArray([0,1,2], axes = [[0, 1, 2]])
     >>> a+b
     dimarray: 2 non-null elements (1 null)
-    dimensions: 'x0'
     0 / x0 (3): 0 to 2
     array([  0.,   2.,  nan])
 
@@ -134,7 +130,6 @@ class DimArray(object):
     >>> b = DimArray([0, 1, 2], dims=('x1',))
     >>> a+b
     dimarray: 6 non-null elements (0 null)
-    dimensions: 'x0', 'x1'
     0 / x0 (2): 0 to 1
     1 / x1 (3): 0 to 2
     array([[0, 1, 2],
@@ -201,7 +196,6 @@ class DimArray(object):
 
 	>>> DimArray([[1,2,3],[4,5,6]]) # automatic labelling
 	dimarray: 6 non-null elements (0 null)
-	dimensions: 'x0', 'x1'
 	0 / x0 (2): 0 to 1
 	1 / x1 (3): 0 to 2
 	array([[1, 2, 3],
@@ -209,7 +203,6 @@ class DimArray(object):
 
 	>>> DimArray([[1,2,3],[4,5,6]], dims=['items','time'])  # axis names only
 	dimarray: 6 non-null elements (0 null)
-	dimensions: 'items', 'time'
 	0 / items (2): 0 to 1
 	1 / time (3): 0 to 2
 	array([[1, 2, 3],
@@ -217,7 +210,6 @@ class DimArray(object):
 
 	>>> DimArray([[1,2,3],[4,5,6]], axes=[list("ab"), np.arange(1950,1953)]) # axis values only
 	dimarray: 6 non-null elements (0 null)
-	dimensions: 'x0', 'x1'
 	0 / x0 (2): a to b
 	1 / x1 (3): 1950 to 1952
 	array([[1, 2, 3],
@@ -232,7 +224,6 @@ class DimArray(object):
 	True
 	>>> a
 	dimarray: 6 non-null elements (0 null)
-	dimensions: 'items', 'time'
 	0 / items (2): a to b
 	1 / time (3): 1950 to 1952
 	array([[1, 2, 3],
@@ -453,7 +444,6 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         >>> a = DimArray([3,4], axes=[('xx',['a','b'])])
         >>> a.values + a
         dimarray: 2 non-null elements (0 null)
-        dimensions: 'xx'
         0 / xx (2): a to b
         array([6, 8])
         """
@@ -671,13 +661,11 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         --------
         >>> DimArray([1.29, 3.11]).apply(np.round, 1)
         dimarray: 2 non-null elements (0 null)
-        dimensions: 'x0'
         0 / x0 (2): 0 to 1
         array([ 1.3,  3.1])
 
         >>> DimArray([-1.3, -3.1]).apply(np.abs)
         dimarray: 2 non-null elements (0 null)
-        dimensions: 'x0'
         0 / x0 (2): 0 to 1
         array([ 1.3,  3.1])
         """
@@ -774,7 +762,6 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         True
         >>> -b
         dimarray: 4 non-null elements (0 null)
-        dimensions: 'x0', 'x1'
         0 / x0 (2): 0 to 1
         1 / x1 (2): 0 to 1
         array([[-0., -1.],
@@ -786,12 +773,10 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         >>> a = DimArray([1,2,3])
         >>> a/2
         dimarray: 3 non-null elements (0 null)
-        dimensions: 'x0'
         0 / x0 (3): 0 to 2
         array([ 0.5,  1. ,  1.5])
         >>> a//2
         dimarray: 3 non-null elements (0 null)
-        dimensions: 'x0'
         0 / x0 (3): 0 to 2
         array([0, 1, 1])
 
@@ -868,7 +853,6 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         >>> test = DimArray([1, 2]) == 1
         >>> test
         dimarray: 2 non-null elements (0 null)
-        dimensions: 'x0'
         0 / x0 (2): 0 to 1
         array([ True, False], dtype=bool)
         >>> test2 = DimArray([1, 2]) == DimArray([1, 1])
@@ -900,7 +884,6 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         >>> a = DimArray([True, False])
         >>> ~a
         dimarray: 2 non-null elements (0 null)
-        dimensions: 'x0'
         0 / x0 (2): 0 to 1
         array([False,  True], dtype=bool)
         """
@@ -914,7 +897,6 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         >>> a = DimArray([1, 2])
         >>> a < 2
         dimarray: 2 non-null elements (0 null)
-        dimensions: 'x0'
         0 / x0 (2): 0 to 1
         array([ True, False], dtype=bool)
 
@@ -980,7 +962,6 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         >>> s.index.name = 'dim0'
         >>> DimArray.from_pandas(s)
         dimarray: 3 non-null elements (0 null)
-        dimensions: 'dim0'
         0 / dim0 (3): a to c
         array([3, 5, 6])
 
@@ -990,7 +971,6 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         >>> b = panel.to_frame() # pandas' method to convert Panel to DataFrame via MultiIndex
         >>> DimArray.from_pandas(b)    # doctest: +SKIP
         dimarray: 24 non-null elements (0 null)
-        dimensions: 'major,minor', 'x1'
         0 / major,minor (12): (0, 0) to (2, 3)
         1 / x1 (2): 0 to 1
         ...  
@@ -1313,7 +1293,6 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         >>> a = DimArray([1, 2, 3, 4], axes = [[ 1900, 1901, 1902, 1903 ]], dims=['time'])
         >>> a
         dimarray: 4 non-null elements (0 null)
-        dimensions: 'time'
         0 / time (4): 1900 to 1903
         array([1, 2, 3, 4])
 
@@ -1321,7 +1300,6 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 
         >>> a.reset_axis()
         dimarray: 4 non-null elements (0 null)
-        dimensions: 'time'
         0 / time (4): 0 to 3
         array([1, 2, 3, 4])
 
@@ -1329,7 +1307,6 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 
         >>> a.reset_axis(list('abcd'))
         dimarray: 4 non-null elements (0 null)
-        dimensions: 'time'
         0 / time (4): a to d
         array([1, 2, 3, 4])
 
@@ -1337,7 +1314,6 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 
         >>> a.reset_axis({{1900:0000}})
         dimarray: 4 non-null elements (0 null)
-        dimensions: 'time'
         0 / time (4): 0 to 1903
         array([1, 2, 3, 4])
 
@@ -1345,7 +1321,6 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 
         >>> a.reset_axis(lambda x: x*0.01)
         dimarray: 4 non-null elements (0 null)
-        dimensions: 'time'
         0 / time (4): 19.0 to 19.03
         array([1, 2, 3, 4])
 
@@ -1353,7 +1328,6 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 
         >>> a.reset_axis(False, name='year')
         dimarray: 4 non-null elements (0 null)
-        dimensions: 'year'
         0 / year (4): 1900 to 1903
         array([1, 2, 3, 4])
          
@@ -1362,7 +1336,6 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         >>> a.axes['time'].name = 'year'
         >>> a
         dimarray: 4 non-null elements (0 null)
-        dimensions: 'year'
         0 / year (4): 1900 to 1903
         array([1, 2, 3, 4])
         """
@@ -1473,7 +1446,6 @@ def array(data, *args, **kwargs):
     >>> a = DimArray([1,2,3])
     >>> da.array([a, 2*a]) # if keys not provided, default is 0, 1
     dimarray: 6 non-null elements (0 null)
-    dimensions: 'unnamed', 'x0'
     0 / unnamed (2): 0 to 1
     1 / x0 (3): 0 to 2
     array([[1, 2, 3],
@@ -1485,7 +1457,6 @@ def array(data, *args, **kwargs):
     >>> a = da.array(d, keys=['a','b'], axis='items') # keys= just needed to enforce ordering
     >>> a
     dimarray: 6 non-null elements (2 null)
-    dimensions: 'items', 'x0'
     0 / items (2): a to b
     1 / x0 (4): 0.0 to 3.0
     array([[ 10.,  20.,  30.,  nan],
@@ -1502,7 +1473,6 @@ def array(data, *args, **kwargs):
     True
     >>> c
     dimarray: 7 non-null elements (1 null)
-    dimensions: 'items', 'x0', 'x1'
     0 / items (2): a to b
     1 / x0 (2): 0 to 1
     2 / x1 (2): 0 to 1
@@ -1568,7 +1538,6 @@ def empty(axes=None, dims=None, shape=None, dtype=float):
     >>> a.fill(3)
     >>> a
     dimarray: 6 non-null elements (0 null)
-    dimensions: 'time', 'items'
     0 / time (2): 2000 to 2001
     1 / items (3): a to c
     array([[ 3.,  3.,  3.],
@@ -1600,7 +1569,6 @@ def empty_like(a, dtype=None):
     >>> b.fill(3)
     >>> b
     dimarray: 6 non-null elements (0 null)
-    dimensions: 'time', 'items'
     0 / time (2): 2000 to 2001
     1 / items (3): a to c
     array([[ 3.,  3.,  3.],
@@ -1614,7 +1582,6 @@ def nans(axes=None, dims=None, shape=None):
 
     >>> nans(dims=('time','items'), shape=(2, 3))
     dimarray: 0 non-null elements (6 null)
-    dimensions: 'time', 'items'
     0 / time (2): 0 to 1
     1 / items (3): 0 to 2
     array([[ nan,  nan,  nan],
@@ -1634,7 +1601,6 @@ def ones(axes=None, dims=None, shape=None, dtype=float):
 
     >>> ones(dims=('time','items'), shape=(2, 3))
     dimarray: 6 non-null elements (0 null)
-    dimensions: 'time', 'items'
     0 / time (2): 0 to 1
     1 / items (3): 0 to 2
     array([[ 1.,  1.,  1.],
@@ -1655,7 +1621,6 @@ def zeros(axes=None, dims=None, shape=None, dtype=float):
 
     >>> zeros(dims=('time','items'), shape=(2, 3))
     dimarray: 6 non-null elements (0 null)
-    dimensions: 'time', 'items'
     0 / time (2): 0 to 1
     1 / items (3): 0 to 2
     array([[ 0.,  0.,  0.],

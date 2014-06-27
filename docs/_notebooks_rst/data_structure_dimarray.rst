@@ -18,7 +18,6 @@ Let's use this dimarray as example:
 >>> a = DimArray([[1.,2,3], [4,5,6]], axes=[['a', 'b'], [1950, 1960, 1970]], dims=['variable', 'time'])
 >>> a
 dimarray: 6 non-null elements (0 null)
-dimensions: 'variable', 'time'
 0 / variable (2): a to b
 1 / time (3): 1950 to 1970
 array([[ 1.,  2.,  3.],
@@ -38,7 +37,6 @@ array([[ 1.,  2.,  3.],
 while its axes are stored in `axes`:
 
 >>> a.axes
-dimensions: 'variable', 'time'
 0 / variable (2): a to b
 1 / time (3): 1950 to 1970
 
@@ -84,7 +82,6 @@ Numpy-like attributes `dtype`, `shape`, `size` or `ndim` are defined, and are no
 while dimensions are located in an `axes` attribute, an `Axes` instance
 
 >>> a.axes
-dimensions: 'variable', 'time'
 0 / variable (2): a to b
 1 / time (3): 1950 to 1970
 

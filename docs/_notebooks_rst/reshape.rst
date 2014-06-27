@@ -28,7 +28,6 @@ Transpose, just like its numpy equivalent, permutes dimensions, but in dimarray 
 >>> a.transpose() # doctest: +SKIP
 >>> a.T
 dimarray: 6 non-null elements (0 null)
-dimensions: 'x1', 'x0'
 0 / x1 (3): 0 to 2
 1 / x0 (2): 0 to 1
 array([[1, 3],
@@ -38,7 +37,6 @@ array([[1, 3],
 >>> a = DimArray([[[1,2,3],[3,4,5]]],dims=('x2','x0','x1'))
 >>> a.transpose('x1','x2','x0')
 dimarray: 6 non-null elements (0 null)
-dimensions: 'x1', 'x2', 'x0'
 0 / x1 (3): 0 to 2
 1 / x2 (1): 0 to 0
 2 / x0 (2): 0 to 1
@@ -59,7 +57,6 @@ Sometimes it is only useful to have on dimension in the first position, for exam
 >>> a = DimArray([[1,2,3],[3,4,5]],dims=('x0','x1'))
 >>> a.swapaxes('x1',0)
 dimarray: 6 non-null elements (0 null)
-dimensions: 'x1', 'x0'
 0 / x1 (3): 0 to 2
 1 / x0 (2): 0 to 1
 array([[1, 3],
@@ -78,7 +75,6 @@ As a new, experimental feature, it is possible to flatten (group) or any subset 
 >>> v = DimArray(data, dims=['time','lat','lon'], axes=[[1950,1955], np.linspace(-90,90,3), np.linspace(-180,180,4)])
 >>> v
 dimarray: 24 non-null elements (0 null)
-dimensions: 'time', 'lat', 'lon'
 0 / time (2): 1950 to 1955
 1 / lat (3): -90.0 to 90.0
 2 / lon (4): -180.0 to 180.0
@@ -95,7 +91,6 @@ Flatten a set of dimensions:
 >>> w = v.group(('lat','lon'))
 >>> w
 dimarray: 24 non-null elements (0 null)
-dimensions: 'time', 'lat,lon'
 0 / time (2): 1950 to 1955
 1 / lat,lon (12): (-90.0, -180.0) to (90.0, 180.0)
 array([[ 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11],
@@ -105,7 +100,6 @@ Along-axis transformations use that feature and can group any subset of axes pri
 
 >>> v.mean(axis=('lat','lon'))
 dimarray: 2 non-null elements (0 null)
-dimensions: 'time'
 0 / time (2): 1950 to 1955
 array([  5.5,  17.5])
 
@@ -113,7 +107,6 @@ Any grouped axis can be reshaped back to full n-d array via **`ungroup`**
 
 >>> w.ungroup()
 dimarray: 24 non-null elements (0 null)
-dimensions: 'time', 'lat', 'lon'
 0 / time (2): 1950 to 1955
 1 / lat (3): -90.0 to 90.0
 2 / lon (4): -180.0 to 180.0

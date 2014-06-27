@@ -16,12 +16,10 @@ def test():
     Got: source(2)=greenland:antarctica
     >>> data['ts']
     dimarray: 5 non-null elements (5 null)
-    dimensions: 'time'
     0 / time (10): 1950 to 1959
     array([  0.,   1.,   2.,   3.,   4.,  nan,  nan,  nan,  nan,  nan])
     >>> data.to_array(axis='items')
     dimarray: 12250 non-null elements (1750 null)
-    dimensions: 'items', 'lon', 'lat', 'time', 'source'
     0 / items (4): mymap to test
     1 / lon (50): -180.0 to 180.0
     2 / lat (7): -90.0 to 90.0

@@ -748,9 +748,10 @@ class Axes(list):
         """ string representation
         """
         #header = "dimensions: "+ " x ".join([repr(ax.name) for ax in self])
-        header = "dimensions: "+ ", ".join([repr(ax.name) for ax in self])
+        #header = "dimensions: "+ ", ".join([repr(ax.name) for ax in self])
         body = "\n".join(["{} / {}".format(i, repr(ax).split('\n')[0]) for i,ax in enumerate(self)])
-        return "\n".join([header, body])
+        #return "\n".join([header, body])
+        return body
 
     def sort(self, dims):
         """ sort IN PLACE according to the order in "dims"

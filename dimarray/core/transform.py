@@ -109,7 +109,6 @@ def apply_along_axis(self, func, axis=None, skipna=False, args=(), **kwargs):
     >>> c = da.stack([a,b],keys=['a','b'],axis='items')
     >>> c
     dimarray: 7 non-null elements (1 null)
-    dimensions: 'items', 'x0', 'x1'
     0 / items (2): a to b
     1 / x0 (2): 0 to 1
     2 / x1 (2): 0 to 1
@@ -120,21 +119,18 @@ def apply_along_axis(self, func, axis=None, skipna=False, args=(), **kwargs):
             [  2.,   3.]]])
     >>> c.sum(axis=0)
     dimarray: 3 non-null elements (1 null)
-    dimensions: 'x0', 'x1'
     0 / x0 (2): 0 to 1
     1 / x1 (2): 0 to 1
     array([[ nan,   2.],
            [  4.,   6.]])
     >>> c.sum(0, skipna=True)
     dimarray: 4 non-null elements (0 null)
-    dimensions: 'x0', 'x1'
     0 / x0 (2): 0 to 1
     1 / x1 (2): 0 to 1
     array([[ 0.,  2.],
            [ 4.,  6.]])
     >>> c.median(0)
     dimarray: 3 non-null elements (1 null)
-    dimensions: 'x0', 'x1'
     0 / x0 (2): 0 to 1
     1 / x1 (2): 0 to 1
     array([[ nan,   1.],
@@ -476,7 +472,6 @@ def diff(self, axis=-1, scheme="backward", keepaxis=False, n=1):
     >>> s = v.cumsum()
     >>> s 
     dimarray: 4 non-null elements (0 null)
-    dimensions: 'time'
     0 / time (4): 1950 to 1953
     array([  1.,   3.,   6.,  10.])
 
@@ -484,7 +479,6 @@ def diff(self, axis=-1, scheme="backward", keepaxis=False, n=1):
 
     >>> s.diff()
     dimarray: 3 non-null elements (0 null)
-    dimensions: 'time'
     0 / time (3): 1951 to 1953
     array([ 2.,  3.,  4.])
 
@@ -492,7 +486,6 @@ def diff(self, axis=-1, scheme="backward", keepaxis=False, n=1):
 
     >>> s.diff(keepaxis=True)
     dimarray: 3 non-null elements (1 null)
-    dimensions: 'time'
     0 / time (4): 1950 to 1953
     array([ nan,   2.,   3.,   4.])
 
@@ -500,7 +493,6 @@ def diff(self, axis=-1, scheme="backward", keepaxis=False, n=1):
 
     >>> s.diff(keepaxis=True, scheme="forward") # diff[i] = v[i+1] - v[i]
     dimarray: 3 non-null elements (1 null)
-    dimensions: 'time'
     0 / time (4): 1950 to 1953
     array([  2.,   3.,   4.,  nan])
 
@@ -508,7 +500,6 @@ def diff(self, axis=-1, scheme="backward", keepaxis=False, n=1):
 
     >>> s.diff(axis='time', scheme='centered')
     dimarray: 3 non-null elements (0 null)
-    dimensions: 'time'
     0 / time (3): 1950.5 to 1952.5
     array([ 2.,  3.,  4.])
     """
