@@ -21,7 +21,6 @@ Most numpy transformations are built in. Let's create some data to try it out:
 >>> a = DimArray([[1,2,3],[4,5,6]], axes=[['a','b'], [2000,2001,2002]], dims=['time', 'items'])
 >>> a
 dimarray: 6 non-null elements (0 null)
-dimensions: 'time', 'items'
 0 / time (2): a to b
 1 / items (3): 2000 to 2002
 array([[1, 2, 3],
@@ -36,7 +35,6 @@ But the `axis=` parameter can also be passed explicitly to reduce only a specifi
 
 >>> a.mean(axis=0) # sum over first axis 
 dimarray: 3 non-null elements (0 null)
-dimensions: 'items'
 0 / items (3): 2000 to 2002
 array([ 2.5,  3.5,  4.5])
 
@@ -44,7 +42,6 @@ but it is now also possible to indicate axis name:
 
 >>> a.mean(axis='time') # named axis
 dimarray: 3 non-null elements (0 null)
-dimensions: 'items'
 0 / items (3): 2000 to 2002
 array([ 2.5,  3.5,  4.5])
 
@@ -79,7 +76,6 @@ Missing values
 >>> a[1,2] = np.nan
 >>> a
 dimarray: 5 non-null elements (1 null)
-dimensions: 'x0', 'x1'
 0 / x0 (2): 0 to 1
 1 / x1 (3): 0 to 2
 array([[  1.,   2.,   3.],
@@ -87,13 +83,11 @@ array([[  1.,   2.,   3.],
 
 >>> a.sum(axis=0)  # here the nans are not skipped
 dimarray: 2 non-null elements (1 null)
-dimensions: 'x1'
 0 / x1 (3): 0 to 2
 array([  5.,   7.,  nan])
 
 >>> a.sum(axis=0, skipna=True)
 dimarray: 3 non-null elements (0 null)
-dimensions: 'x1'
 0 / x1 (3): 0 to 2
 array([ 5.,  7.,  3.])
 

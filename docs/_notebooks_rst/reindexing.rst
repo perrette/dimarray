@@ -23,7 +23,6 @@ reindex_axis
 >>> a = DimArray([3,4],[('x0',[1,3])])
 >>> a.reindex_axis([1,2,3])
 dimarray: 2 non-null elements (1 null)
-dimensions: 'x0'
 0 / x0 (3): 1 to 3
 array([  3.,  nan,   4.])
 
@@ -32,7 +31,6 @@ Also works with string indices
 >>> b = DimArray([1,2,3],[('x0', ['a','b','c'])])
 >>> b.reindex_axis(['b','d'])
 dimarray: 1 non-null elements (1 null)
-dimensions: 'x0'
 0 / x0 (2): b to d
 array([  2.,  nan])
 
@@ -48,7 +46,6 @@ Same as reindex_axis, except that the new axes are searched for in another array
 >>> c = DimArray([[1,2,3], [4,5,6]],[('x0',["a","b"]),('x1',[1, 2, 3])])
 >>> c.reindex_like(b)
 dimarray: 6 non-null elements (3 null)
-dimensions: 'x0', 'x1'
 0 / x0 (3): a to c
 1 / x1 (3): 1 to 3
 array([[  1.,   2.,   3.],
@@ -67,7 +64,6 @@ The `method=` parameter can be passed to `reindex_axis` and `reindex_like` with 
 >>> # Can also reindex in "interp" mode
 >>> a.reindex_axis([0,1,2,3], method='interp')
 dimarray: 3 non-null elements (1 null)
-dimensions: 'x0'
 0 / x0 (4): 0 to 3
 array([ nan,  3. ,  3.5,  4. ])
 
@@ -106,7 +102,6 @@ It is also possible to proceed to axis alignment on a sequence of arrays (not in
 >>> xa, ya = align_axes(x, y)
 >>> ya
 dimarray: 2 non-null elements (2 null)
-dimensions: 'x0'
 0 / x0 (4): 1 to 4
 array([ nan,   3.,  nan,   4.])
 

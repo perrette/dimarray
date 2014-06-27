@@ -55,23 +55,19 @@ def setna(self, value, na=np.nan, inplace=False):
     >>> a = DimArray([1,2,-99])
     >>> a.setna(-99)
     dimarray: 2 non-null elements (1 null)
-    dimensions: 'x0'
     0 / x0 (3): 0 to 2
     array([  1.,   2.,  nan])
     >>> a.setna([-99, 2]) # sequence
     dimarray: 1 non-null elements (2 null)
-    dimensions: 'x0'
     0 / x0 (3): 0 to 2
     array([  1.,  nan,  nan])
     >>> a.setna(a > 1) # boolean
     dimarray: 2 non-null elements (1 null)
-    dimensions: 'x0'
     0 / x0 (3): 0 to 2
     array([  1.,  nan, -99.])
     >>> a = DimArray([[1,2,-99]])  # multi-dim
     >>> a.setna([-99, a>1])  # boolean
     dimarray: 1 non-null elements (2 null)
-    dimensions: 'x0', 'x1'
     0 / x0 (1): 0 to 0
     1 / x1 (3): 0 to 2
     array([[  1.,  nan,  nan]])
@@ -87,7 +83,6 @@ def fillna(self, value, inplace=False, na=np.nan):
     >>> a = DimArray([1,2,np.nan])
     >>> a.fillna(-99)
     dimarray: 3 non-null elements (0 null)
-    dimensions: 'x0'
     0 / x0 (3): 0 to 2
     array([  1.,   2., -99.])
     """
@@ -117,12 +112,10 @@ def dropna(self, axis=0, minvalid=None, na=np.nan):
     >>> a.ix[1] = np.nan
     >>> a
     dimarray: 2 non-null elements (1 null)
-    dimensions: 'time'
     0 / time (3): 1950 to 1960
     array([  1.,  nan,   3.])
     >>> a.dropna()
     dimarray: 2 non-null elements (0 null)
-    dimensions: 'time'
     0 / time (2): 1950 to 1960
     array([ 1.,  3.])
 
@@ -131,21 +124,18 @@ def dropna(self, axis=0, minvalid=None, na=np.nan):
     >>> a = DimArray([[ np.nan, 2., 3.],[ np.nan, 5., np.nan]])
     >>> a
     dimarray: 3 non-null elements (3 null)
-    dimensions: 'x0', 'x1'
     0 / x0 (2): 0 to 1
     1 / x1 (3): 0 to 2
     array([[ nan,   2.,   3.],
            [ nan,   5.,  nan]])
     >>> a.dropna(axis=1)
     dimarray: 2 non-null elements (0 null)
-    dimensions: 'x0', 'x1'
     0 / x0 (2): 0 to 1
     1 / x1 (1): 1 to 1
     array([[ 2.],
            [ 5.]])
     >>> a.dropna(axis=1, minvalid=1)  # minimum number of valid values, equivalent to `how="all"` in pandas
     dimarray: 3 non-null elements (1 null)
-    dimensions: 'x0', 'x1'
     0 / x0 (2): 0 to 1
     1 / x1 (2): 1 to 2
     array([[  2.,   3.],

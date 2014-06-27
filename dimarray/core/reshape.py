@@ -35,7 +35,6 @@ def broadcast(self, other):
     >>> ts = da.DimArray.from_kw(np.arange(5), time=time)
     >>> cube = da.DimArray.from_kw(np.zeros((3,2,5)), lon=lon, lat=lat, time=time)  # lat x lon x time
     >>> cube.axes  
-    dimensions: 'lat', 'lon', 'time'
     0 / lat (3): 10.0 to 50.0
     1 / lon (2): 10.0 to 30.0
     2 / time (5): 1950 to 1954
@@ -45,7 +44,6 @@ def broadcast(self, other):
     >>> ts3D = ts.broadcast(cube) #  lat x lon x time
     >>> ts3D
     dimarray: 30 non-null elements (0 null)
-    dimensions: 'lat', 'lon', 'time'
     0 / lat (3): 10.0 to 50.0
     1 / lon (2): 10.0 to 30.0
     2 / time (5): 1950 to 1954
@@ -116,14 +114,12 @@ def transpose(self, *dims):
     >>> a = da.DimArray(np.zeros((2,3)), ['x0','x1'])
     >>> a          
     dimarray: 6 non-null elements (0 null)
-    dimensions: 'x0', 'x1'
     0 / x0 (2): 0 to 1
     1 / x1 (3): 0 to 2
     array([[ 0.,  0.,  0.],
            [ 0.,  0.,  0.]])
     >>> a.T       
     dimarray: 6 non-null elements (0 null)
-    dimensions: 'x1', 'x0'
     0 / x1 (3): 0 to 2
     1 / x0 (2): 0 to 1
     array([[ 0.,  0.],
@@ -223,7 +219,6 @@ def repeat(self, values, axis=None):
 
     >>> a2d.repeat(2, axis="lon")  
     dimarray: 6 non-null elements (0 null)
-    dimensions: 'time', 'lon'
     0 / time (3): 1950.0 to 1952.0
     1 / lon (2): 0 to 1
     array([[0, 0],
@@ -232,7 +227,6 @@ def repeat(self, values, axis=None):
 
     >>> a2d.repeat([30., 50.], axis="lon")  
     dimarray: 6 non-null elements (0 null)
-    dimensions: 'time', 'lon'
     0 / time (3): 1950.0 to 1952.0
     1 / lon (2): 30.0 to 50.0
     array([[0, 0],
@@ -314,19 +308,16 @@ def newaxis(self, name, values=None, pos=0):
     >>> a = DimArray([1,2])
     >>> a
     dimarray: 2 non-null elements (0 null)
-    dimensions: 'x0'
     0 / x0 (2): 0 to 1
     array([1, 2])
     >>> a.newaxis('new', pos=1)
     dimarray: 2 non-null elements (0 null)
-    dimensions: 'x0', 'new'
     0 / x0 (2): 0 to 1
     1 / new (1): None to None
     array([[1],
            [2]])
     >>> a.newaxis('new', values=['a','b'],pos=1)
     dimarray: 4 non-null elements (0 null)
-    dimensions: 'x0', 'new'
     0 / x0 (2): 0 to 1
     1 / new (2): a to b
     array([[1, 1],
@@ -382,19 +373,16 @@ def squeeze(self, axis=None):
     >>> a = da.DimArray([[[1,2,3]]])
     >>> a
     dimarray: 3 non-null elements (0 null)
-    dimensions: 'x0', 'x1', 'x2'
     0 / x0 (1): 0 to 0
     1 / x1 (1): 0 to 0
     2 / x2 (3): 0 to 2
     array([[[1, 2, 3]]])
     >>> a.squeeze()
     dimarray: 3 non-null elements (0 null)
-    dimensions: 'x2'
     0 / x2 (3): 0 to 2
     array([1, 2, 3])
     >>> a.squeeze(axis='x1')
     dimarray: 3 non-null elements (0 null)
-    dimensions: 'x0', 'x2'
     0 / x0 (1): 0 to 0
     1 / x2 (3): 0 to 2
     array([[1, 2, 3]])
@@ -451,13 +439,11 @@ def reshape(self, *newdims, **kwargs):
     >>> a = DimArray([7,8])
     >>> a
     dimarray: 2 non-null elements (0 null)
-    dimensions: 'x0'
     0 / x0 (2): 0 to 1
     array([7, 8])
 
     >>> a.reshape(('x0','new'))
     dimarray: 2 non-null elements (0 null)
-    dimensions: 'x0', 'new'
     0 / x0 (2): 0 to 1
     1 / new (1): None to None
     array([[7],
@@ -466,7 +452,6 @@ def reshape(self, *newdims, **kwargs):
     >>> b = DimArray(np.arange(2*2*2).reshape(2,2,2))
     >>> b
     dimarray: 8 non-null elements (0 null)
-    dimensions: 'x0', 'x1', 'x2'
     0 / x0 (2): 0 to 1
     1 / x1 (2): 0 to 1
     2 / x2 (2): 0 to 1
@@ -479,7 +464,6 @@ def reshape(self, *newdims, **kwargs):
     >>> c = b.reshape('x0','x1,x2')
     >>> c
     dimarray: 8 non-null elements (0 null)
-    dimensions: 'x0', 'x1,x2'
     0 / x0 (2): 0 to 1
     1 / x1,x2 (4): (0, 0) to (1, 1)
     array([[0, 1, 2, 3],
@@ -487,7 +471,6 @@ def reshape(self, *newdims, **kwargs):
 
     >>> c.reshape('x0,x1','x2')
     dimarray: 8 non-null elements (0 null)
-    dimensions: 'x0,x1', 'x2'
     0 / x0,x1 (4): (0, 0) to (1, 1)
     1 / x2 (2): 0 to 1
     array([[0, 1],
@@ -604,7 +587,6 @@ def group(self, *dims, **kwargs):
     >>> v = DimArray(values, axes=[('time', [1950,1955]), ('lat', np.linspace(-90,90,3)), ('lon', np.linspace(-180,180,4))])
     >>> v
     dimarray: 24 non-null elements (0 null)
-    dimensions: 'time', 'lat', 'lon'
     0 / time (2): 1950 to 1955
     1 / lat (3): -90.0 to 90.0
     2 / lon (4): -180.0 to 180.0
@@ -619,7 +601,6 @@ def group(self, *dims, **kwargs):
     >>> w = v.group(('lat','lon'), insert=1)
     >>> w 
     dimarray: 24 non-null elements (0 null)
-    dimensions: 'time', 'lat,lon'
     0 / time (2): 1950 to 1955
     1 / lat,lon (12): (-90.0, -180.0) to (90.0, 180.0)
     array([[ 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11],
@@ -632,7 +613,6 @@ def group(self, *dims, **kwargs):
 
     >>> v.group(('lon','lat'), insert=1)
     dimarray: 24 non-null elements (0 null)
-    dimensions: 'time', 'lon,lat'
     0 / time (2): 1950 to 1955
     1 / lon,lat (12): (-180.0, -90.0) to (180.0, 90.0)
     array([[ 0,  4,  8,  1,  5,  9,  2,  6, 10,  3,  7, 11],
@@ -642,7 +622,6 @@ def group(self, *dims, **kwargs):
 
     >>> v.group(('lon','lat'), insert=0).mean(axis=0)
     dimarray: 2 non-null elements (0 null)
-    dimensions: 'time'
     0 / time (2): 1950 to 1955
     array([  5.5,  17.5])
 
@@ -650,7 +629,6 @@ def group(self, *dims, **kwargs):
 
     >>> v.mean(axis=('lon','lat')) 
     dimarray: 2 non-null elements (0 null)
-    dimensions: 'time'
     0 / time (2): 1950 to 1955
     array([  5.5,  17.5])
     """
@@ -739,7 +717,6 @@ def flatten(self):
     >>> a = DimArray([[1,2,3],[4,5,6]])
     >>> a
     dimarray: 6 non-null elements (0 null)
-    dimensions: 'x0', 'x1'
     0 / x0 (2): 0 to 1
     1 / x1 (3): 0 to 2
     array([[1, 2, 3],
@@ -748,7 +725,6 @@ def flatten(self):
     >>> b = a.flatten()
     >>> b
     dimarray: 6 non-null elements (0 null)
-    dimensions: 'x0,x1'
     0 / x0,x1 (6): (0, 0) to (1, 2)
     array([1, 2, 3, 4, 5, 6])
 
@@ -873,7 +849,6 @@ def groupby(self, *dims):
     >>> a = a.newaxis('y',4) # add an axis of length 4
     >>> a.groupby('items').mean()
     dimarray: 3 non-null elements (0 null)
-    dimensions: 'items'
     0 / items (3): a to c
     array([ 2.5,  3.5,  4.5])
     """

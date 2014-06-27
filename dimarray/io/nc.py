@@ -117,7 +117,6 @@ def read_nc(f, nms=None, *args, **kwargs):
     >>> data = read_nc(ncfile)  # load full file
     >>> data
     Dataset of 2 variables
-    dimensions: 'time', 'scenario'
     0 / time (451): 1850 to 2300
     1 / scenario (5): historical to rcp85
     tsl: ('time', 'scenario')
@@ -143,7 +142,6 @@ def read_nc(f, nms=None, *args, **kwargs):
     >>> temp.reset_axis(getmodel, axis='model', inplace=True) # would return a copy if inplace is not specified
     >>> temp
     dimarray: 9114 non-null elements (6671 null)
-    dimensions: 'model', 'time', 'scenario'
     0 / model (7): IPSL-CM5A-LR to CSIRO-Mk3-6-0
     1 / time (451): 1850 to 2300
     2 / scenario (5): historical to rcp85
@@ -154,7 +152,6 @@ def read_nc(f, nms=None, *args, **kwargs):
     >>> ds = da.read_nc(direc+'/cmip5.*.nc', align=True, axis='model')
     >>> ds.reset_axis(getmodel, axis='model')
     Dataset of 2 variables
-    dimensions: 'model', 'time', 'scenario'
     0 / model (7): IPSL-CM5A-LR to CSIRO-Mk3-6-0
     1 / time (451): 1850 to 2300
     2 / scenario (5): historical to rcp85
@@ -592,7 +589,6 @@ def _createVariable(f, name, axes, dims=None, dtype=float, verbose=False, mode='
     >>> da.write_nc(outfile, [111,222,333,444], 'myvar', indices='a', axis='dim2') 
     >>> da.read_nc(outfile,'myvar')
     dimarray: 8 non-null elements (4 null)
-    dimensions: 'dim1', 'dim2'
     0 / dim1 (4): 1 to 4
     1 / dim2 (3): a to c
     array([[ 111.,   11.,   nan],

@@ -21,7 +21,6 @@ Read from one netCDF file
 >>> data = read_nc(ncfile)  # load full file
 >>> data
 Dataset of 2 variables
-dimensions: 'time', 'scenario'
 0 / time (451): 1850 to 2300
 1 / scenario (5): historical to rcp85
 tsl: ('time', 'scenario')
@@ -67,7 +66,6 @@ directly relevant to identify the experiment:
 >>> temp.reset_axis(getmodel, axis='model', inplace=True) # would return a copy if inplace is not specified
 >>> temp
 dimarray: 9114 non-null elements (6671 null)
-dimensions: 'model', 'time', 'scenario'
 0 / model (7): IPSL-CM5A-LR to CSIRO-Mk3-6-0
 1 / time (451): 1850 to 2300
 2 / scenario (5): historical to rcp85
@@ -79,7 +77,6 @@ This works on datasets as well
 >>> ds.reset_axis(getmodel, axis='model', inplace=True)
 >>> ds
 Dataset of 2 variables
-dimensions: 'model', 'time', 'scenario'
 0 / model (7): IPSL-CM5A-LR to CSIRO-Mk3-6-0
 1 / time (451): 1850 to 2300
 2 / scenario (5): historical to rcp85
@@ -105,7 +102,6 @@ Let's define a new dataset
 >>> ds = Dataset({'temperature':temperature, 'global':global_mean})
 >>> ds
 Dataset of 2 variables
-dimensions: 'time', 'lat'
 0 / time (3): 1951 to 1953
 1 / lat (2): north to south
 global: ('time',)
@@ -125,7 +121,6 @@ Just as a check, all three variables seem to be there:
 
 >>> read_nc('/tmp/test.nc')
 Dataset of 3 variables
-dimensions: 'time', 'lat'
 0 / time (3): 1951 to 1953
 1 / lat (2): north to south
 global: ('time',)
