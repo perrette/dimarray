@@ -180,9 +180,12 @@ def main():
                         print "Save html to", filefull
                         try:
                             f.writelines(output['html']) # write html
-                        except:
-                            import ipdb
-                            ipdb.set_trace()
+                        except Exception as msg:
+                            print "Failed !!!"
+                            print(msg)
+                            raise
+                            #import ipdb
+                            #ipdb.set_trace()
 
                         # include html
                         fileinc = join(basename(filesdir), filename)
@@ -196,7 +199,7 @@ def main():
                         #output_lines.extend(output['text'])
 
                 else:
-                    print "Warning: unknown output type"
+                    print "Warning: unknown output type:",output['output_type']
                     output_lines.extend(output['text'])
 
             # Here should include figures
