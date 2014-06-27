@@ -1,7 +1,7 @@
 """ methods to deal with missing values
 """
 import numpy as np
-from tools import is_DimArray
+from dimarray.tools import is_DimArray
 
 def _isnan(a, na=np.nan):
     """ analogous to numpy's isnan

@@ -20,7 +20,7 @@ import operation as _operation  # operation between DimArrays
 import missingvalues # operation between DimArrays
 from align import broadcast_arrays, align_axes, stack
 
-from tools import pandas_obj
+from dimarray.tools import pandas_obj
 
 __all__ = ["DimArray", "array"]
 

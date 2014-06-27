@@ -7,7 +7,7 @@ from collections import OrderedDict
 import functools
 
 from axes import Axis, Axes, GroupedAxis
-from tools import is_DimArray
+from dimarray.tools import is_DimArray
 
 #
 # Broadcast

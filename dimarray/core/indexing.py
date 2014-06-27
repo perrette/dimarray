@@ -5,7 +5,7 @@ import functools
 import copy 
 
 from axes import Axis, Axes, GroupedAxis, is_regular, make_multiindex
-from tools import is_DimArray
+from dimarray.tools import is_DimArray
 from dimarray.config import get_option
 
 #__all__ = ["take", "put", "reindex_axis", "reindex_like"]

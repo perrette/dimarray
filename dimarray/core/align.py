@@ -5,7 +5,7 @@ import numpy as np
 import itertools
 from axes import Axes, Axis
 import warnings
-from tools import is_DimArray
+from dimarray.tools import is_DimArray
 
 def broadcast_arrays(*arrays):
     """ Analogous to numpy.broadcast_arrays

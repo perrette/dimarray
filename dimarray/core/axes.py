@@ -4,8 +4,7 @@ import string
 import copy
 
 from metadata import MetadataDesc
-from tools import is_DimArray
-from tools import is_array1d_equiv
+from dimarray.tools import is_DimArray, is_array1d_equiv
 
 __all__ = ["Axis","Axes", "is_regular"]
 

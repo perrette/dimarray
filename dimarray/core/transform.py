@@ -3,9 +3,10 @@
 import numpy as np
 from functools import partial, wraps
 
-from decorators import format_doc
-from axes import Axis, Axes, GroupedAxis
+from dimarray.decorators import format_doc
 from dimarray.tools import anynan
+
+from axes import Axis, Axes, GroupedAxis
 
 # check whether bottleneck is present
 try:

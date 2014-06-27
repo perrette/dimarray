@@ -4,7 +4,7 @@ Operation and axis aligmnent
 import numpy as np
 
 from align import align_dims, align_axes
-from tools import is_DimArray
+from dimarray.tools import is_DimArray
 
 def operation(func, o1, o2, reindex=True, broadcast=True, constructor=None):
     """ operation on LaxArray objects
