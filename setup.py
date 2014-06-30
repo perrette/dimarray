@@ -8,6 +8,7 @@ import os, sys
 import re
 from setuptools import setup
 from setuptools.command.test import test as TestCommand 
+import warnings
 #import dimarray  # just checking
 
 class MyTests(TestCommand):
