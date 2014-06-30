@@ -943,6 +943,7 @@ class LocatorAxis(object):
         self.raise_error = raise_error
         self.position_index = position_index
         self.keepdims = keepdims 
+        self._list = None   # store axis value as a list
 
         # check parameter values (default to False)
 #        if self._check_params:
@@ -956,6 +957,13 @@ class LocatorAxis(object):
         assert not hasattr(self, 'indexing')
 
         #self.__dict__.update(opt) # update default options
+
+    def tolist(self):
+        """ return axis values as a list
+        """
+        if self._list is None:
+            self._list = self.values.tolist()
+        return self._list
 
     #
     # wrapper mode: __getitem__ and __call__
@@ -994,6 +1002,7 @@ class LocatorAxis(object):
 
         elif self._islist(ix):
             res = map(self.locate, ix)
+            #res = [self.locate(i) for i in ix]
 
         else:
             res = self.locate(ix)
@@ -1108,7 +1117,7 @@ class ObjLocator(LocatorAxis):
         """ find a string
         """
         try:
-            return self.values.tolist().index(val)
+            return self.tolist().index(val)
         except ValueError, msg:
             raise IndexError(msg)
 
@@ -1196,7 +1205,7 @@ class NumLocator(LocatorAxis):
 
         else:
             try:
-                loc = values.tolist().index(val)
+                loc = self.tolist().index(val)
             except ValueError, msg:
                 raise IndexError("{}. Try setting axis `tol` parameter for nearest neighbor search.".format(msg))
 
