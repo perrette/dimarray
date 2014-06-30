@@ -128,14 +128,12 @@ version = '%s'
 short_version = '%s'
 """
     if not filename:
-        filename = os.path.join(
-            os.path.dirname(__file__), 'dimarray', 'version.py')
+        #filename = os.path.join(
+        #    os.path.dirname(__file__), 'dimarray', 'version.py')
+        filename = os.path.join('dimarray', 'version.py')
 
-    a = open(filename, 'w')
-    try:
+    with open(filename, 'w') as a:
         a.write(cnt % (FULLVERSION, VERSION))
-    finally:
-        a.close()
 
 # Write version.py to dimarray
 if write_version:
