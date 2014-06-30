@@ -71,7 +71,7 @@ Useful links
 Documentation                       http://dimarray.readthedocs.org
 Code on github (bleeding edge)      https://github.com/perrette/dimarray
 Code on pypi   (releases)           https://pypi.python.org/pypi/dimarray
-Mailing List                        https://groups.google.com/forum/#!forum/dimarray
+Mailing List                        http://groups.google.com/group/dimarray
 Issues Tracker                      https://github.com/perrette/dimarray/issues
 ================================    ====================================
 
@@ -127,4 +127,4 @@ Contributions
 -------------
 All suggestions for improvement or direct contributions are very welcome.
 You can ask a question or start a discussion on the mailing list
-or open an `issue` on github for precise requests. See  :ref:`links`.
+or open an `issue` on github for precise requests. See `links`_.
