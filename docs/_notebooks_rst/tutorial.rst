@@ -1,13 +1,13 @@
 .. This file was generated automatically from the ipython notebook:
-.. notebooks/getting_started.ipynb
+.. notebooks/tutorial.ipynb
 .. To modify this file, edit the source notebook and execute "make rst"
 
-.. _page_getting_started:
+.. _page_tutorial:
 
 
 Tutorial
 ========
-:download:`Download notebook </notebooks/getting_started.ipynb>` 
+:download:`Download notebook </notebooks/tutorial.ipynb>` 
 
 
 .. contents::
@@ -48,7 +48,12 @@ while its axes are stored in `axes`
 0 / variable (2): a to b
 1 / time (3): 1950 to 1970
 
-For more information refer to section on :ref:`page_data_structure` (as well as :py:class:`dimarray.Axis` and :py:class:`dimarray.Axes`)
+As a convenience, axis labels can be accessed directly by name, as an alias for `a.axes['time'].values`:
+
+>>> a.time
+array([1950, 1960, 1970])
+
+For more information refer to section on :ref:`page_data_structure_dimarray` (as well as :py:class:`dimarray.Axis` and :py:class:`dimarray.Axes`)
 
 .. _numpy-like_attributes:
 
@@ -340,7 +345,7 @@ A D
   1  21  23  25  27  29  31  33  35  37  39
 
 .. raw:: html
-     :file: getting_started_files/output_75-0.html
+     :file: tutorial_files/output_77-0.html
 
 
 
@@ -365,9 +370,9 @@ dimarray comes with basic plotting facility. For 1-D and 2-D data, it simplies i
 >>> %matplotlib inline # doctest: +SKIP 
 >>> a = dataset['combined_data']
 >>> a.plot() # doctest: +SKIP
-<matplotlib.axes.AxesSubplot at 0x7f2c7bf6b510>
+<matplotlib.axes.AxesSubplot at 0x7f3c4df0f490>
 
-.. image:: getting_started_files/figure_80-1.png
+.. image:: tutorial_files/figure_82-1.png
 
 
 
@@ -383,17 +388,17 @@ In addition, it can also display 2-D data via its methods `contour`, `contourf` 
 >>> # plot the data
 >>> a.contourf() # doctest: +SKIP
 >>> a.contour(colors='k') # doctest: +SKIP
-<matplotlib.contour.QuadContourSet instance at 0x7f2c7cc197e8>
+<matplotlib.contour.QuadContourSet instance at 0x7f3c4de1cbd8>
 
-.. image:: getting_started_files/figure_82-1.png
+.. image:: tutorial_files/figure_84-1.png
 
 
 
 >>> # plot the data
 >>> a.pcolor() # doctest: +SKIP
-<matplotlib.collections.QuadMesh at 0x7f2c7bcf4290>
+<matplotlib.collections.QuadMesh at 0x7f3c4dc99350>
 
-.. image:: getting_started_files/figure_83-1.png
+.. image:: tutorial_files/figure_85-1.png
 
 
 
