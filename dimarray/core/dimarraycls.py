@@ -7,8 +7,9 @@ import copy
 import warnings
 from collections import OrderedDict as odict
 
-from dimarray.tools import anynan
+from dimarray.tools import anynan, pandas_obj
 from dimarray.config import get_option
+from dimarray.decorators import format_doc
 
 from metadata import MetadataDesc
 from axes import Axis, Axes, GroupedAxis, _doc_reset_axis
@@ -19,8 +20,6 @@ import indexing as _indexing    # perform slicing and indexing operations
 import operation as _operation  # operation between DimArrays
 import missingvalues # operation between DimArrays
 from align import broadcast_arrays, align_axes, stack
-
-from dimarray.tools import pandas_obj
 
 __all__ = ["DimArray", "array"]
 
@@ -1273,13 +1272,80 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 
         return self._plot2D(plt.contour, *args, **kwargs)
         
-    # reset axis values
-    def reset_axis(self, values=None, axis=0, inplace=False, **kwargs):
-        """ Reset axis values and attributes
+    # (re)set axis values and attributes
+    @format_doc(**_doc_reset_axis)
+    def set_axis(self, values=None, axis=0, inplace=False, **kwargs):
+        """ Set or update axis values and attributes
 
         Parameters
         ----------
         {values}
+        {axis}
+        {inplace}
+        {kwargs}
+
+        Returns
+        -------
+        DimArray instance, or None if inplace is True
+
+        Examples
+        --------
+        >>> a = DimArray([1, 2, 3, 4], axes = [[ 1900, 1901, 1902, 1903 ]], dims=['time'])
+        >>> a
+        dimarray: 4 non-null elements (0 null)
+        0 / time (4): 1900 to 1903
+        array([1, 2, 3, 4])
+
+        Provide new values for the whole axis
+
+        >>> a.set_axis(list('abcd'))
+        dimarray: 4 non-null elements (0 null)
+        0 / time (4): a to d
+        array([1, 2, 3, 4])
+
+        Update just a few of the values
+
+        >>> a.set_axis({{1900:0000}})
+        dimarray: 4 non-null elements (0 null)
+        0 / time (4): 0 to 1903
+        array([1, 2, 3, 4])
+
+        Or transform axis values
+
+        >>> a.set_axis(lambda x: x*0.01)
+        dimarray: 4 non-null elements (0 null)
+        0 / time (4): 19.0 to 19.03
+        array([1, 2, 3, 4])
+
+        Only change name. 
+
+        >>> a.set_axis(name='year')
+        dimarray: 4 non-null elements (0 null)
+        0 / year (4): 1900 to 1903
+        array([1, 2, 3, 4])
+         
+        This is the equivalent of
+
+        >>> a.axes['time'].name = 'year'
+        >>> a
+        dimarray: 4 non-null elements (0 null)
+        0 / year (4): 1900 to 1903
+        array([1, 2, 3, 4])
+        """
+        axes = self.axes.set_axis(values, axis, inplace=inplace, **kwargs)
+
+        # make a copy?
+        if not inplace:
+            a = self.copy()
+            a.axes = axes
+            return a
+
+    @format_doc(**_doc_reset_axis)
+    def reset_axis(self, axis=0, inplace=False, **kwargs):
+        """ Reset to default axis values and attributes
+
+        Parameters
+        ----------
         {axis}
         {inplace}
         {kwargs}
@@ -1302,44 +1368,8 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         dimarray: 4 non-null elements (0 null)
         0 / time (4): 0 to 3
         array([1, 2, 3, 4])
-
-        Provide new values for the whole axis
-
-        >>> a.reset_axis(list('abcd'))
-        dimarray: 4 non-null elements (0 null)
-        0 / time (4): a to d
-        array([1, 2, 3, 4])
-
-        Update just a few of the values
-
-        >>> a.reset_axis({{1900:0000}})
-        dimarray: 4 non-null elements (0 null)
-        0 / time (4): 0 to 1903
-        array([1, 2, 3, 4])
-
-        Or transform axis values
-
-        >>> a.reset_axis(lambda x: x*0.01)
-        dimarray: 4 non-null elements (0 null)
-        0 / time (4): 19.0 to 19.03
-        array([1, 2, 3, 4])
-
-        Only change name. Need to set values to False otherwise axis values will be reset
-
-        >>> a.reset_axis(False, name='year')
-        dimarray: 4 non-null elements (0 null)
-        0 / year (4): 1900 to 1903
-        array([1, 2, 3, 4])
-         
-        This is the equivalent of
-
-        >>> a.axes['time'].name = 'year'
-        >>> a
-        dimarray: 4 non-null elements (0 null)
-        0 / year (4): 1900 to 1903
-        array([1, 2, 3, 4])
         """
-        axes = self.axes.reset_axis(values, axis, inplace=inplace, **kwargs)
+        axes = self.axes.reset_axis(axis, inplace=inplace, **kwargs)
 
         # make a copy?
         if not inplace:
@@ -1355,8 +1385,6 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         warnings.warn(FutureWarning('from_arrays is deprecated, use concatenate() or stack() ot Dataset().to_array()) instead'))
         return array(*args, **kwargs)
 
-
-DimArray.reset_axis.__func__.__doc__ = DimArray.reset_axis.__func__.__doc__.format(**_doc_reset_axis)
 
 def array_kw(*args, **kwargs):
     """ Define a Dimarray using keyword arguments for axes

@@ -4,6 +4,7 @@ from collections import OrderedDict as odict
 import numpy as np
 
 import dimarray as da  # for the doctest, so that they are testable via py.test
+from dimarray.decorators import format_doc
 
 from core import DimArray, array, Axis, Axes
 from core import align_axes, stack, concatenate
@@ -327,8 +328,9 @@ class Dataset(odict):
         """
         return odict(self)
 
-    def reset_axis(self, values=None, axis=0, inplace=False, **kwargs):
-        """ Reset axis values and attributes in all dimarrays present in the dataset
+    @format_doc(**_doc_reset_axis)
+    def set_axis(self, values=None, axis=0, inplace=False, **kwargs):
+        """ (re)set axis values and attributes in all dimarrays present in the dataset
 
         Parameters
         ----------
@@ -346,7 +348,7 @@ class Dataset(odict):
         >>> ds = Dataset()
         >>> ds['a'] = da.zeros(shape=(3,))  # some dimarray with dimension 'x0'
         >>> ds['b'] = da.zeros(shape=(3,4)) # dimensions 'x0', 'x1'
-        >>> ds.reset_axis(['a','b','c'], axis='x0')
+        >>> ds.set_axis(['a','b','c'], axis='x0')
         Dataset of 2 variables
         0 / x0 (3): a to c
         1 / x1 (4): 0 to 3
@@ -361,15 +363,55 @@ class Dataset(odict):
         for nm in self.keys():
             if not axis_name in self[nm].dims:
                 continue
-            super(Dataset, self).__setitem__(nm, self[nm].reset_axis(values, axis, inplace=False, **kwargs) )
+            super(Dataset, self).__setitem__(nm, self[nm].set_axis(values, axis, inplace=False, **kwargs) )
 
         # update the main axis instance
-        self.axes = self.axes.reset_axis(values, axis, inplace=False, **kwargs)
+        self.axes = self.axes.set_axis(values, axis, inplace=False, **kwargs)
 
         if inplace is False:
             return self
 
-Dataset.reset_axis.__func__.__doc__ = Dataset.reset_axis.__func__.__doc__.format(**_doc_reset_axis)
+    @format_doc(**_doc_reset_axis)
+    def reset_axis(self, axis=0, inplace=False, **kwargs):
+        """ (re)set axis values and attributes in all dimarrays present in the dataset
+
+        Parameters
+        ----------
+        {axis}
+        {inplace}
+        {kwargs}
+
+        Returns
+        -------
+        Dataset instance, or None if inplace is True
+
+        Examples
+        --------
+        >>> ds = Dataset()
+        >>> ds['a'] = da.zeros(axes=[['a','b','c']])  # some dimarray with dimension 'x0'
+        >>> ds['b'] = da.zeros(axes=[['a','b','c'], [11,22,33,44]]) # dimensions 'x0', 'x1'
+        >>> ds.reset_axis(axis='x0')
+        Dataset of 2 variables
+        0 / x0 (3): 0 to 2
+        1 / x1 (4): 11 to 44
+        a: ('x0',)
+        b: ('x0', 'x1')
+        """
+        if inplace is False:
+            self = self.copy()
+
+        # update every dimarray in the dict
+        axis_name = self.axes[axis].name
+        for nm in self.keys():
+            if not axis_name in self[nm].dims:
+                continue
+            super(Dataset, self).__setitem__(nm, self[nm].reset_axis(axis, inplace=False, **kwargs) )
+
+        # update the main axis instance
+        self.axes = self.axes.reset_axis(axis, inplace=False, **kwargs)
+
+        if inplace is False:
+            return self
 
     #def dropna(self, axis=0, **kwargs): return self._apply_dimarray_axis('dropna', axis=axis, **kwargs)
 

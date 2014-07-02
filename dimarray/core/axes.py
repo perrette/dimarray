@@ -5,19 +5,19 @@ import copy
 
 from metadata import MetadataDesc
 from dimarray.tools import is_DimArray, is_array1d_equiv
+from dimarray.decorators import format_doc
 
 __all__ = ["Axis","Axes", "is_regular"]
 
 # generic documentation serving for various functions
 _doc_reset_axis =  dict(
         values = """
-values : None or False or numpy array-like or mapper (callable or dict), optional
+values : numpy array-like or mapper (callable or dict), optional
 
                     - array-like : new axis values, must have exactly the same length as original axis
                     - dict : establish a map between original and new axis values
                     - callable : transform each axis value into a new one
-                    - if None, axis values will be reset to 0, 1, 2...
-                    - if False, axis values are left unchanged (e.g. if only metadata are to be changed)
+                    - if None, axis values are left unchanged
 
                     Default to None.""".strip(),
         axis = """
@@ -222,8 +222,8 @@ class Axis(object):
         # for now just set to None
         self._monotonic = None
 
-    def reset(self, values=None, inplace=False, **kwargs):
-        """ Reset axis values and attributes
+    def set(self, values=None, inplace=False, **kwargs):
+        """ Set axis values and / or attributes
 
         Parameters
         ----------
@@ -235,16 +235,8 @@ class Axis(object):
         -------
         Axis instance, or None if inplace is True
         """
-        # if values is not provided, reset axis values
-        if values is None:
-            values = np.arange(self.size)
-
-        # If values is False, do not change values (e.g. to change only some keyword arguments)
-        elif values is False:
-            values = self.values.copy()
-
         # if values is a dictionary, use it to create a mapper
-        elif isinstance(values, dict):
+        if isinstance(values, dict):
             def mapper(x):
                 if x in values.keys():
                     return values[x] 
@@ -256,24 +248,62 @@ class Axis(object):
             mapper = values
             values = [mapper(x) for x in self.values]
 
-        # At this point values must be an array of size equal to values
-        values = np.asarray(values)
-
-        assert values.size == self.values.size, "size cannot be changed"
-        
         if inplace: 
             ax = self
         else: 
             ax = self.copy()
 
-        # does necessary type checking
-        ax[:] = values
+        # At this point values must be an array of size equal to values
+        if values is not None:
+            values = np.asarray(values)
+            assert values.size == self.values.size, "size cannot be changed"
+
+            # does necessary type checking
+            ax[:] = values
 
         for k in kwargs:
             setattr(ax, k, kwargs[k])
 
         if not inplace: 
             return ax
+
+    def reset(self, inplace=False, **kwargs):
+        """ Reset to default axis values and attributes
+
+        Parameters
+        ----------
+        {inplace}
+        {kwargs}
+
+        Returns
+        -------
+        Axis instance, or None if inplace is True
+        """
+        # if values is not provided, reset axis values
+        values = kwargs.pop('values', None)
+        name = kwargs.pop('name', self.name)
+
+        if values is None:
+            values = np.arange(self.size)
+
+        # If values is False, do not change values (e.g. to change only some keyword arguments)
+        elif values is False:
+            values = self.values.copy()
+
+        # by default, all other attributes are also re-set
+        newaxis = self.__class__(values, name, **kwargs)
+
+        if inplace:
+            # delete non-standard attributes
+            for k in self.__dict__:
+                if k not in newaxis.__dict__:
+                    delattr(self, k)
+
+            # update attributes
+            self.__dict__.update(newaxis.__dict__)
+
+        else:
+            return newaxis
 
     def union(self, other):
         """ join two Axis objects
@@ -492,9 +522,6 @@ class Axis(object):
     @classmethod
     def from_pandas(cls, index):
         return cls(index.values, name=index.name)
-
-# update doc
-Axis.reset.__func__.__doc__ = Axis.reset.__func__.__doc__.format(**_doc_reset_axis)
 
 class GroupedAxis(Axis):
     """ an Axis which is a grouping of several axes flattened together
@@ -784,8 +811,9 @@ class Axes(list):
         return LocatorAxes(self)
 
 
-    def reset_axis(self, values=None, axis=0, inplace=False, **kwargs):
-        """ Reset axis values and attributes
+    @format_doc(**_doc_reset_axis)
+    def set_axis(self, values=None, axis=0, inplace=False, **kwargs):
+        """ Set axis values and attributes
 
         Parameters
         ----------
@@ -797,16 +825,44 @@ class Axes(list):
         Returns
         -------
         Axes instance, or None if inplace is True
+
+        See Also
+        --------
+        Axes.reset_axis, Axis.set
         """
         axis = self.get_idx(axis)
-        ax = self[axis].reset(values, inplace=inplace, **kwargs)
+        ax = self[axis].set(values, inplace=inplace, **kwargs)
 
         if not inplace:
             axes = self.copy()
             axes[axis] = ax
             return axes
 
-Axes.reset_axis.__func__.__doc__ = Axes.reset_axis.__func__.__doc__.format(**_doc_reset_axis)
+    @format_doc(**_doc_reset_axis)
+    def reset_axis(self, axis=0, inplace=False, **kwargs):
+        """ Reset axis values and attributes
+
+        Parameters
+        ----------
+        {axis}
+        {inplace}
+        {kwargs}
+
+        Returns
+        -------
+        Axes instance, or None if inplace is True
+
+        See Also
+        --------
+        Axes.set_axis, Axis.reset
+        """
+        axis = self.get_idx(axis)
+        ax = self[axis].reset(inplace=inplace, **kwargs)
+
+        if not inplace:
+            axes = self.copy()
+            axes[axis] = ax
+            return axes
 
 
 def _init_axes(axes=None, dims=None, labels=None, shape=None, raise_warning=True):
