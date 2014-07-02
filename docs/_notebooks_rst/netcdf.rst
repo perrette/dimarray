@@ -124,7 +124,7 @@ Dataset of 3 variables
 0 / time (3): 1951 to 1953
 1 / lat (2): north to south
 global: ('time',)
-climatology: ('lat',)
 temperature: ('lat', 'time')
+climatology: ('lat',)
 
 Note that when appending a variable to a netCDF file or to a dataset, its axes must match, otherwise an error will be raised. In that case it may be necessary to reindex an axis (see :ref:`page_reindexing`). When initializing a dataset with bunch of dimarray however, reindexing is performed automatically.

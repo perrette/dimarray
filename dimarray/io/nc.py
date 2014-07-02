@@ -17,6 +17,12 @@ __all__ = ['read_nc','summary_nc', 'write_nc', 'read_dimensions']
 
 
 #
+# Global variables 
+#
+FORMAT='NETCDF4'  # default format to write to netCDF
+
+
+#
 # some common piece of documentation
 #
 _doc_indexing = """
@@ -34,8 +40,6 @@ _doc_indexing = """
 _doc_indexing_write = """
     {take} 
 """.format(take=_doc_indexing).strip()
-
-FORMAT='NETCDF4'
 
 _doc_write_nc = """ 
     format : `str`
@@ -369,11 +373,11 @@ def _read_dataset(f, nms=None, **kwargs):
 #    if nms is str:
 #        nms = [nms]
 
-    data = dict()
+    data = odict()
     for nm in nms:
         data[nm] = _read_variable(f, nm, **kwargs)
 
-    data = Dataset(**data)
+    data = Dataset(data)
 
     # get dataset's metadata
     for k in f.ncattrs():
