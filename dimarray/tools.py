@@ -8,13 +8,13 @@ try:
     from bottlebeck import anynan
 except ImportError:
     def anynan(a, axis=None):
-	""" fast way of checking wether an array has nans
+        """ fast way of checking wether an array has nans
 
-	Parameters
-	----------
-	 a: numpy array
-	"""
-	return np.isnan(a.min(axis=axis))
+        Parameters
+        ----------
+         a: numpy array
+        """
+        return np.isnan(a.min(axis=axis))
 
 def pandas_obj(values, *axes):
     """ return a pandas object adapted to the dimensions of values

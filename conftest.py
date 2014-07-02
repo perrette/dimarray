@@ -21,13 +21,13 @@ def pytest_assertrepr_compare(op, left, right):
     if (isinstance(left, da.DimArray) or isinstance(left, np.ndarray)) and (isinstance(right, da.DimArray) or isinstance(right, np.ndarray)):
     #and op == "==":
 
-	return ['Comparing {} and {} instances:'.format(type(left).__name__, type(right).__name__)] \
-		+ [''] \
-		+ repr(left).split('\n') \
-		+ ['']  \
-		+ [' :: does not compare with :: ']  \
-		+ ['']  \
-		+ repr(right).split('\n')
+        return ['Comparing {} and {} instances:'.format(type(left).__name__, type(right).__name__)] \
+                + [''] \
+                + repr(left).split('\n') \
+                + ['']  \
+                + [' :: does not compare with :: ']  \
+                + ['']  \
+                + repr(right).split('\n')
 
 ## does not seem to work
 ## # provide fixture when running doctest (equivalent of doctest globs= parameter)

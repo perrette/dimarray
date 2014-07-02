@@ -68,13 +68,13 @@ class DimArray(object):
     0 / variable (2): grl to ant
     1 / time (3): 1950 to 1970
     array([[ 1.,  2.,  3.],
-	   [ 4.,  5.,  6.]])
+           [ 4.,  5.,  6.]])
 
     Array data are stored in a `values` attribute:
 
     >>> a.values
     array([[ 1.,  2.,  3.],
-	   [ 4.,  5.,  6.]])
+           [ 4.,  5.,  6.]])
 
     while its axes are stored in `axes`:
 
@@ -133,7 +133,7 @@ class DimArray(object):
     0 / x0 (2): 0 to 1
     1 / x1 (3): 0 to 2
     array([[0, 1, 2],
-	   [1, 2, 3]])
+           [1, 2, 3]])
     """
     _order = None  # set a general ordering relationship for dimensions
     _metadata = MetadataDesc(exclude=('values','axes'))
@@ -145,98 +145,98 @@ class DimArray(object):
     def __init__(self, values=None, axes=None, dims=None, labels=None, copy=False, dtype=None, _indexing=None, _indexing_broadcast=None, **kwargs):
         """ Initialize a DimArray instance
 
-	Parameters
-	----------
+        Parameters
+        ----------
 
-	values : numpy-like array, or DimArray instance
-		  If `values` is not provided, will initialize an empty array 
-		  with dimensions inferred from axes (in that case `axes=` 
-		  must be provided).
+        values : numpy-like array, or DimArray instance
+                  If `values` is not provided, will initialize an empty array 
+                  with dimensions inferred from axes (in that case `axes=` 
+                  must be provided).
 
-	axes : list or tuple, optional
-	
-	    axis values as ndarrays, whose order 
-	    matches axis names (the dimensions) provided via `dims=` 
-	    parameter. Each axis can also be provided as a tuple 
-	    (str, array-like) which contains both axis name and axis 
-	    values, in which case `dims=` becomes superfluous.
-	    `axes=` can also be provided with a list of Axis objects
-	    If `axes=` is omitted, a standard axis `np.arange(shape[i])`
-	    is created for each axis `i`.
+        axes : list or tuple, optional
+        
+            axis values as ndarrays, whose order 
+            matches axis names (the dimensions) provided via `dims=` 
+            parameter. Each axis can also be provided as a tuple 
+            (str, array-like) which contains both axis name and axis 
+            values, in which case `dims=` becomes superfluous.
+            `axes=` can also be provided with a list of Axis objects
+            If `axes=` is omitted, a standard axis `np.arange(shape[i])`
+            is created for each axis `i`.
 
-	dims : list or tuple, optional
-	    dimensions (or axis names)
-	    This parameter can be omitted if dimensions are already 
-	    provided by other means, such as passing a list of tuple 
-	    to `axes=`. If axes are passed as keyword arguments (via 
-	    **kwargs), `dims=` is used to determine the order of 
-	    dimensions. If `dims` is not provided by any of the means 
-	    mentioned above, default dimension names are 
-	    given `x0`, `x1`, ...`xn`, where n is the number of 
-	    dimensions.
+        dims : list or tuple, optional
+            dimensions (or axis names)
+            This parameter can be omitted if dimensions are already 
+            provided by other means, such as passing a list of tuple 
+            to `axes=`. If axes are passed as keyword arguments (via 
+            **kwargs), `dims=` is used to determine the order of 
+            dimensions. If `dims` is not provided by any of the means 
+            mentioned above, default dimension names are 
+            given `x0`, `x1`, ...`xn`, where n is the number of 
+            dimensions.
 
-	dtype : numpy data type, optional
+        dtype : numpy data type, optional
             passed to np.array() 
 
-	copy : bool, optional
+        copy : bool, optional
             passed to np.array()
 
-	**kwargs : keyword arguments
+        **kwargs : keyword arguments
             metadata 
-	
-	Notes 
+        
+        Notes 
         ----- 
         metadata passed this way cannot have name already taken by other 
-	    parameters such as "values", "axes", "dims", "dtype" or "copy".
+            parameters such as "values", "axes", "dims", "dtype" or "copy".
 
-	Examples
-	--------
+        Examples
+        --------
 
-	Basic:
+        Basic:
 
-	>>> DimArray([[1,2,3],[4,5,6]]) # automatic labelling
-	dimarray: 6 non-null elements (0 null)
-	0 / x0 (2): 0 to 1
-	1 / x1 (3): 0 to 2
-	array([[1, 2, 3],
-	       [4, 5, 6]])
+        >>> DimArray([[1,2,3],[4,5,6]]) # automatic labelling
+        dimarray: 6 non-null elements (0 null)
+        0 / x0 (2): 0 to 1
+        1 / x1 (3): 0 to 2
+        array([[1, 2, 3],
+               [4, 5, 6]])
 
-	>>> DimArray([[1,2,3],[4,5,6]], dims=['items','time'])  # axis names only
-	dimarray: 6 non-null elements (0 null)
-	0 / items (2): 0 to 1
-	1 / time (3): 0 to 2
-	array([[1, 2, 3],
-	       [4, 5, 6]])
+        >>> DimArray([[1,2,3],[4,5,6]], dims=['items','time'])  # axis names only
+        dimarray: 6 non-null elements (0 null)
+        0 / items (2): 0 to 1
+        1 / time (3): 0 to 2
+        array([[1, 2, 3],
+               [4, 5, 6]])
 
-	>>> DimArray([[1,2,3],[4,5,6]], axes=[list("ab"), np.arange(1950,1953)]) # axis values only
-	dimarray: 6 non-null elements (0 null)
-	0 / x0 (2): a to b
-	1 / x1 (3): 1950 to 1952
-	array([[1, 2, 3],
-	       [4, 5, 6]])
+        >>> DimArray([[1,2,3],[4,5,6]], axes=[list("ab"), np.arange(1950,1953)]) # axis values only
+        dimarray: 6 non-null elements (0 null)
+        0 / x0 (2): a to b
+        1 / x1 (3): 1950 to 1952
+        array([[1, 2, 3],
+               [4, 5, 6]])
 
-	More general case:
+        More general case:
 
-	>>> a = DimArray([[1,2,3],[4,5,6]], axes=[list("ab"), np.arange(1950,1953)], dims=['items','time']) 
-	>>> b = DimArray([[1,2,3],[4,5,6]], axes=[('items',list("ab")), ('time',np.arange(1950,1953))])
-	>>> c = DimArray([[1,2,3],[4,5,6]], {'items':list("ab"), 'time':np.arange(1950,1953)}) # here dims can be omitted because shape = (2, 3)
-	>>> np.all(a == b) and np.all(a == c)
-	True
-	>>> a
-	dimarray: 6 non-null elements (0 null)
-	0 / items (2): a to b
-	1 / time (3): 1950 to 1952
-	array([[1, 2, 3],
-	       [4, 5, 6]])
+        >>> a = DimArray([[1,2,3],[4,5,6]], axes=[list("ab"), np.arange(1950,1953)], dims=['items','time']) 
+        >>> b = DimArray([[1,2,3],[4,5,6]], axes=[('items',list("ab")), ('time',np.arange(1950,1953))])
+        >>> c = DimArray([[1,2,3],[4,5,6]], {'items':list("ab"), 'time':np.arange(1950,1953)}) # here dims can be omitted because shape = (2, 3)
+        >>> np.all(a == b) and np.all(a == c)
+        True
+        >>> a
+        dimarray: 6 non-null elements (0 null)
+        0 / items (2): a to b
+        1 / time (3): 1950 to 1952
+        array([[1, 2, 3],
+               [4, 5, 6]])
 
-	Empty data
+        Empty data
 
-	>>> a = DimArray(axes=[('items',list("ab")), ('time',np.arange(1950,1953))])
+        >>> a = DimArray(axes=[('items',list("ab")), ('time',np.arange(1950,1953))])
 
-	Metadata
+        Metadata
 
-	>>> a = DimArray([[1,2,3],[4,5,6]], name='test', units='none') 
-	
+        >>> a = DimArray([[1,2,3],[4,5,6]], name='test', units='none') 
+        
         """
         # check if attached to values (e.g. DimArray object)
         if hasattr(values, "axes") and axes is None:
@@ -1075,13 +1075,13 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     def to_MaskedArray(self, copy=True):
         """ transform to MaskedArray, with NaNs as missing values
         """
-	values = self.values
-	if anynan(values):
-	    mask = np.isnan(values)
-	else:
-	    mask = False
-	values = np.ma.array(values, mask=mask, copy=copy)
-	return values
+        values = self.values
+        if anynan(values):
+            mask = np.isnan(values)
+        else:
+            mask = False
+        values = np.ma.array(values, mask=mask, copy=copy)
+        return values
 
     def to_list(self, axis=0):
         return [val for  k, val in self.iter(axis)]
@@ -1275,18 +1275,18 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         
     # reset axis values
     def reset_axis(self, values=None, axis=0, inplace=False, **kwargs):
-	""" Reset axis values and attributes
+        """ Reset axis values and attributes
 
-	Parameters
-	----------
-	{values}
-	{axis}
-	{inplace}
-	{kwargs}
+        Parameters
+        ----------
+        {values}
+        {axis}
+        {inplace}
+        {kwargs}
 
-	Returns
-	-------
-	DimArray instance, or None if inplace is True
+        Returns
+        -------
+        DimArray instance, or None if inplace is True
 
         Examples
         --------
@@ -1339,13 +1339,13 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         0 / year (4): 1900 to 1903
         array([1, 2, 3, 4])
         """
-	axes = self.axes.reset_axis(values, axis, inplace=inplace, **kwargs)
+        axes = self.axes.reset_axis(values, axis, inplace=inplace, **kwargs)
 
-	# make a copy?
-	if not inplace:
-	    a = self.copy()
-	    a.axes = axes
-	    return a
+        # make a copy?
+        if not inplace:
+            a = self.copy()
+            a.axes = axes
+            return a
 
     # for back-compatibility
     @classmethod
@@ -1430,8 +1430,8 @@ def array(data, *args, **kwargs):
 
     if data is an array-like, this call is the same as DimArray(data, *args, **kwargs)
     if data is a dict, list or tuple, this call is similar to da.stack(data, *args, **kwargs) but 
-	with align=True by default and an additional parameter broadcast=True by default
-	This behaviour might change.
+        with align=True by default and an additional parameter broadcast=True by default
+        This behaviour might change.
 
     See also
     --------
@@ -1484,30 +1484,30 @@ def array(data, *args, **kwargs):
     """
     # if some kind of dictionary, first transform to list of values and keys
     if isinstance(data, dict):
-	from collections import OrderedDict as odict
+        from collections import OrderedDict as odict
 
-	d = odict()
-	keys = kwargs.pop('keys', data.keys())
-	for k in keys:
-	    d[k] = data[k]
+        d = odict()
+        keys = kwargs.pop('keys', data.keys())
+        for k in keys:
+            d[k] = data[k]
 
-	data = d.values()
-	kwargs['keys'] = keys
+        data = d.values()
+        kwargs['keys'] = keys
 
     # sequence: align axes and stack arrays
     if (isinstance(data, list) or isinstance(data, tuple)) and len(data) > 0 and isinstance(data[0], DimArray):
 
-	# reindex and broad-cast arrays? (by default, yes)
-	reindex = kwargs.pop('align', True)
-	broadcast = kwargs.pop('broadcast', True)
+        # reindex and broad-cast arrays? (by default, yes)
+        reindex = kwargs.pop('align', True)
+        broadcast = kwargs.pop('broadcast', True)
 
-	if reindex:
-	    data = align_axes(*data)
+        if reindex:
+            data = align_axes(*data)
 
-	if broadcast:
-	    data = broadcast_arrays(*data) # make sure the arrays have the same dimension
+        if broadcast:
+            data = broadcast_arrays(*data) # make sure the arrays have the same dimension
 
-	kwargs['align'] = False # already aligned
+        kwargs['align'] = False # already aligned
 
         return stack(data, *args, **kwargs) 
 

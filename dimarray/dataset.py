@@ -144,8 +144,8 @@ class Dataset(odict):
     def write_nc(self, f, *args, **kwargs):
         """ Save dataset in netCDF file.
 
-	If you see this documentation, it means netCDF4 is not installed on your system 
-	and you will not be able to use this functionality.
+        If you see this documentation, it means netCDF4 is not installed on your system 
+        and you will not be able to use this functionality.
         """
         import io.nc as ncio
         ncio._write_dataset(f, self, *args, **kwargs)
@@ -156,8 +156,8 @@ class Dataset(odict):
     def read_nc(cls, f, *args, **kwargs):
         """ Read dataset from netCDF file.
 
-	If you see this documentation, it means netCDF4 is not installed on your system 
-	and you will not be able to use this functionality.
+        If you see this documentation, it means netCDF4 is not installed on your system 
+        and you will not be able to use this functionality.
         """
         import io.nc as ncio
         return ncio._read_dataset(f, *args, **kwargs)

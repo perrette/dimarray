@@ -38,24 +38,24 @@ def filter_cells(cells=None, nb=None, worksheet=0, cell_type=None, custom=None, 
     **kwargs: keyword arguements to test various cell fields
     """
     if cells is None:
-	cells = nb['worksheets'][worksheet]['cells']
+        cells = nb['worksheets'][worksheet]['cells']
 
     # filtering function
     def filt(x):
-	res = True
-	if res and cell_type is not None:
-	    res = x['cell_type'] == cell_type
-	for k in kwargs:
-	    if not res: break
-	    if strip:
-		res = x[k].strip() == kwargs[k]
-	    else:
-		res = x[k] == kwargs[k]
+        res = True
+        if res and cell_type is not None:
+            res = x['cell_type'] == cell_type
+        for k in kwargs:
+            if not res: break
+            if strip:
+                res = x[k].strip() == kwargs[k]
+            else:
+                res = x[k] == kwargs[k]
 
-	if res and custom:
-	    res = custom(x)
+        if res and custom:
+            res = custom(x)
 
-	return res
+        return res
 
     return filter(filt, cells)
 
@@ -72,16 +72,16 @@ def get_group(nb, heading, worksheets=0):
     start = end = level = None
     for i, cell in enumerate(nb['worksheets'][worksheet]['cells']):
 
-	# find the heading?
-	if cell['cell_type'] =='heading' and cell['source'].strip() == heading:
-	    start = i
-	    level = cell['level']
-	    continue
+        # find the heading?
+        if cell['cell_type'] =='heading' and cell['source'].strip() == heading:
+            start = i
+            level = cell['level']
+            continue
 
-	# stop when a heading of level equal or superior is found
-	if start is not None and cell['cell_type'] =='heading' and cell['level'] >= level:
-	    end = i
-	    break
+        # stop when a heading of level equal or superior is found
+        if start is not None and cell['cell_type'] =='heading' and cell['level'] >= level:
+            end = i
+            break
 
     if end is None: end = -1
     assert start is not None, "Header not found"
@@ -92,20 +92,20 @@ def get_group(nb, heading, worksheets=0):
 def create_toc(headings, levels, minlev = 0, maxlev = 6):
     toc = []
     for i, hd in enumerate(headings):
-	lev = int(levels[i])
-	if lev > maxlev or lev < minlev:
-	    continue
+        lev = int(levels[i])
+        if lev > maxlev or lev < minlev:
+            continue
 
-	url = "#"+hd[0].replace(' ','-').replace('`','')
-	entry = "    "*(lev-minlev) + "- [{}]({})".format(hd[0], url)
-	toc.append(entry)
+        url = "#"+hd[0].replace(' ','-').replace('`','')
+        entry = "    "*(lev-minlev) + "- [{}]({})".format(hd[0], url)
+        toc.append(entry)
     return toc
 
 def get_toc_cell(nb, FLAG, worksheet=0):
     """ return index of TOC cell
     """
     for i, cell in enumerate(nb['worksheets'][worksheet]['cells']):
-	if cell['cell_type'] == 'markdown' and cell['source'][0].strip() == FLAG:
+        if cell['cell_type'] == 'markdown' and cell['source'][0].strip() == FLAG:
             return i, cell
 
     # toc not found, so just create it and insert it at the second position
@@ -131,7 +131,7 @@ def insert_toc(nb, toc, insert=None, worksheet=0):
     # check whether TOC is present
     found = False
     for i, cell in enumerate(cells):
-	if cell['cell_type'] == 'markdown' and cell['source'][0].strip() == TITLE:
+        if cell['cell_type'] == 'markdown' and cell['source'][0].strip() == TITLE:
             found = True
             break
 

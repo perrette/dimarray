@@ -96,8 +96,8 @@ def _get_axes(*arrays):
                 common_axis = axis
 
             # Test alignment for non-singleton axes
-	    if not (axis.size == 1 or np.all(axis.values==common_axis.values)):
-		raise ValueError("axes are not aligned")
+            if not (axis.size == 1 or np.all(axis.values==common_axis.values)):
+                raise ValueError("axes are not aligned")
 
         # append new axis
         axes.append(common_axis)
@@ -226,7 +226,7 @@ def _check_stack_args(arrays, keys=None):
         
     # make sure the result is a sequence
     if type(arrays) not in (list, tuple):
-	raise TypeError("argument must be a dictionary, list or tuple")
+        raise TypeError("argument must be a dictionary, list or tuple")
 
     # make sure keys exist
     if keys is None: keys = np.arange(len(arrays))
@@ -238,19 +238,19 @@ def _check_stack_axis(axis, dims, default='unnamed'):
     (just to have that in one place)
     """
     if axis is None:
-	axis = default
-	if axis in dims:
-	    i = 1
-	    while default+"_{}".format(i) in dims:
-		i+=1
-	    axis = default+"_{}".format(i)
+        axis = default
+        if axis in dims:
+            i = 1
+            while default+"_{}".format(i) in dims:
+                i+=1
+            axis = default+"_{}".format(i)
 
     elif isinstance(axis, int):
         raise TypeError("axis must be a str (new axis name)")
 
     if axis in dims:
-	raise ValueError("please provide an axis name which does not \
-		already exist")
+        raise ValueError("please provide an axis name which does not \
+                already exist")
     return axis
 
 def stack(arrays, axis=None, keys=None, align=False):
@@ -301,7 +301,7 @@ def stack(arrays, axis=None, keys=None, align=False):
 
     # re-index axes if needed
     if align:
-	arrays = align_axes(*arrays)
+        arrays = align_axes(*arrays)
 
     # make it a numpy array
     data = [a.values for a in arrays]
@@ -312,11 +312,11 @@ def stack(arrays, axis=None, keys=None, align=False):
 
     # find common axes
     try: 
-	axes = _get_axes(*arrays)
+        axes = _get_axes(*arrays)
     except ValueError, msg: 
-	if 'axes are not aligned' in repr(msg):
-	    msg = 'axes are not aligned\n ==> Try passing `align=True`' 
-	raise ValueError(msg)
+        if 'axes are not aligned' in repr(msg):
+            msg = 'axes are not aligned\n ==> Try passing `align=True`' 
+        raise ValueError(msg)
 
     # new axes
     #newaxes = axes[:pos] + [newaxis] + axes[pos:] 

@@ -116,10 +116,10 @@ setup(name='dimarray',
       install_requires = ["setuptools", "numpy>=1.7"],
       tests_require = ["pytest"],
       extras_require = {
-	  "ncio": ["netCDF4>=1.0.6"],
-	  "pandas": ["pandas>=0.11.0"],
-	  "plotting": ["matplotlib>=1.1", "pandas>=0.11.0"],
-	  },
+          "ncio": ["netCDF4>=1.0.6"],
+          "pandas": ["pandas>=0.11.0"],
+          "plotting": ["matplotlib>=1.1", "pandas>=0.11.0"],
+          },
       cmdclass = {'test':MyTests},
       )
 

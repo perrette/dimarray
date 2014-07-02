@@ -98,7 +98,7 @@ def transpose(self, *dims):
     Parameters
     ----------
     *dims : int or str
-	variable list of dimensions
+        variable list of dimensions
 
     Returns
     -------
@@ -277,13 +277,13 @@ def newaxis(self, name, values=None, pos=0):
     Parameters
     ----------
     name : str
-	axis name
+        axis name
     values: array-like, optional
-	    if provided, broadcast the array along the new axis
+            if provided, broadcast the array along the new axis
             call `repeat(name, values)` after inserting the new singleton 
             dimension (see `repeat`) for more information.
     pos : int, optional
-	axis position, default 0 (first axis)
+        axis position, default 0 (first axis)
 
     Returns
     -------
@@ -360,8 +360,8 @@ def squeeze(self, axis=None):
     Parameters:
     -----------
     axis : int or str or None 
-	axis to squeeze
-	default is None, to remove all singleton axes
+        axis to squeeze
+        default is None, to remove all singleton axes
 
     Returns:
     --------
@@ -421,13 +421,13 @@ def reshape(self, *newdims, **kwargs):
         All dimensions to group have to exist already.
 
     transpose : bool
-	if True, transpose dimensions to match new order (default True)
-	otherwise, raise and Error if tranpose is needed (closer to original numpy's behaviour)
+        if True, transpose dimensions to match new order (default True)
+        otherwise, raise and Error if tranpose is needed (closer to original numpy's behaviour)
 
     Returns
     -------
     reshaped_array : DimArray 
-	with reshaped_array.dims == tuple(newdims)
+        with reshaped_array.dims == tuple(newdims)
 
     See also
     --------
@@ -555,18 +555,18 @@ def group(self, *dims, **kwargs):
     ----------
     dims : list or tuple of axis names
     reverse : bool, optional
-	if True, reverse behaviour: dims are interpreted as 
-	the dimensions to keep, and all the other dimensions are grouped
-	default is False
+        if True, reverse behaviour: dims are interpreted as 
+        the dimensions to keep, and all the other dimensions are grouped
+        default is False
     insert : int, optional
-	position where to insert the grouped axis 
+        position where to insert the grouped axis 
         (by default, any grouped dimension is inserted at 
         the position of the first axis involved in grouping)
 
     Returns
     -------
     grouped_array : DimArray
-	appropriately reshaped, with collapsed dimensions as first axis (tuples)
+        appropriately reshaped, with collapsed dimensions as first axis (tuples)
 
     This is useful to do a regional mean with missing values
 
@@ -739,8 +739,8 @@ def ungroup(self, axis=None):
     Parameters
     ----------
     axis : int or str or None, optional
-	axis to ungroup
-	default to None to ungroup all
+        axis to ungroup
+        default to None to ungroup all
 
     Returns
     -------
