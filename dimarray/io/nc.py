@@ -235,14 +235,14 @@ def read_dimensions(f, name=None, ix=slice(None), verbose=False):
 
     # load axes
     axes = Axes()
-    for k in dims:
+    for dim in dims:
 
-        try:
-            values = f.variables[k][ix]
-        except KeyError:
-            msg = "'{}' dimension not found, define integer range".format(k)
+        if dim in f.variables.keys():
+            values = f.variables[dim][ix]
+        else:
+            msg = "'{}' dimension not found, define integer range".format(dim)
             warnings.warn(msg)
-            values = np.arange(len(f.dimensions[k]))
+            values = np.arange(len(f.dimensions[dim]))
 
         # replace unicode by str as a temporary bug fix (any string seems otherwise to be treated as unicode in netCDF4)
         if values.size > 0 and type(values[0]) is unicode:
@@ -250,7 +250,14 @@ def read_dimensions(f, name=None, ix=slice(None), verbose=False):
                 if type(val) is unicode:
                     values[i] = str(val)
 
-        axes.append(Axis(values, k))
+        axis = Axis(values, dim)
+
+        # add metadata
+        if dim in f.variables.keys():
+            meta = _read_attributes(f, dim)
+            axis._metadata = meta
+
+        axes.append(axis)
 
     if close: f.close()
 
