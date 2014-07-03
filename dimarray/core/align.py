@@ -205,14 +205,21 @@ def _common_axis(*axes):
     if len(axes) == 1:
         return axes[0]
 
-    elif len(axes) == 2:
-        ax0, ax1 = axes
-        return ax0.union(ax1)
+#    elif len(axes) == 2:
+#        ax0, ax1 = axes
+#        return ax0.union(ax1)
 
     else:
         ax0 = axes[0]
         ax1 = _common_axis(*axes[1:])
-        return ax0.union(ax1)
+
+        # do not include None unless we have a singleton
+        if ax0[0] is None:
+            return ax1
+        elif len(ax1) == 1 and ax1[0] is None:
+            return ax0
+        else:
+            return ax0.union(ax1)
 
 def _check_stack_args(arrays, keys=None):
     """ generic function to deal with arguments for stacking
