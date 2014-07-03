@@ -515,85 +515,6 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         pos, names = zip(*[self._get_axis_info(x) for x in axes])
         return pos, names
 
-    #
-    # Return a weight for each array element, used for `mean`, `std` and `var`
-    #
-    def get_weights(self, weights=None, axis=None, fill_nans=True):
-        """ Weights associated to each array element
-        
-        Parameters
-        ----------
-            weights: (numpy)array-like of weights, taken from axes if None or "axis" or "axes"
-            axis   : int or str, if None a N-D weight is created
-
-        Returns
-        -------
-            weights: DimArray of weights, or None
-
-        Notes
-        -----
-        this function is used by `mean`, `std` and `var`
-        """
-        # make sure weights is a nd-array
-        if weights is not None:
-            weights = np.array(weights) 
-
-        if weights in ('axis','axes'):
-            weights = None
-
-        if axis is None:
-            dims = self.dims
-
-        elif type(axis) is tuple:
-            dims = axis
-
-        else:
-            dims = (axis,)
-
-        # axes over which the weight is defined
-        axes = [ax for ax in self.axes if ax.name in dims]
-
-        # Create weights from the axes if not provided
-        if weights is None:
-
-            weights = 1
-            for axis in dims:
-                ax = self.axes[axis]
-                if ax.weights is None: continue
-                weights = ax.get_weights().reshape(dims) * weights
-
-            if weights is 1:
-                return None
-            else:
-                weights = weights.values
-
-        # Now create a dimarray and make it full size
-        # ...already full-size
-        if weights.shape == self.shape:
-            weights = DimArray(weights, self.axes)
-
-        # ...need to be expanded
-        elif weights.shape == tuple(ax.size for ax in axes):
-            weights = DimArray(weights, axes).expand(self.dims)
-
-        else:
-            try:
-                weights = weights + np.zeros_like(self.values)
-
-            except:
-                raise ValueError("weight dimensions are not conform")
-            weights = DimArray(weights, self.axes)
-
-        #else:
-        #    raise ValueError("weight dimensions not conform")
-
-        # fill NaNs in when necessary
-        if fill_nans and anynan(self.values):
-            weights.values[np.isnan(self.values)] = np.nan
-        
-        assert weights is not None
-        return weights
-
 
     #
     # INDEXING
@@ -678,12 +599,15 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     prod = _transform.prod
 
     # use weighted mean/std/var by default
+    _get_weights = _transform._get_weights
+    mean = _transform.mean
+    std = _transform.std
+    var = _transform.var
+
+    # but provide standard mean just in case
     _mean = _transform._mean
     _std = _transform._std
     _var = _transform._var
-    mean = _transform.weighted_mean
-    std = _transform.weighted_std
-    var = _transform.weighted_var
 
     #_mean = _transform.mean
     #_var = _transform.var

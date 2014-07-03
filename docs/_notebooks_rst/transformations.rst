@@ -107,23 +107,61 @@ Classical, unweighted mean:
 >>> v.mean()  
 0.58019972362897432
 
-Now after setting the `weights` attribute to the "lat" axis, to weight the data as the cosine of the latitude (because of the sphericity of the Earth):
+Now we build a weight array as the cosine of the latitude (because of the sphericity of the Earth) and the smaller area of latitude bands at high latitudes:
 
->>> v.axes['lat'].weights = np.cos(np.radians(v.lat)) 
+>>> w = np.cos(np.radians(v.lat)) # weight based on latitude values 
+
+
+We can pass this array of weights via the `weights` parameter:
+
+>>> v.mean(weights={'lat':w})  # lat axis receives weights
+0.57628879031663871
+
+Or by setting the `weights` attribute to the "lat" axis, to make this change permanent:
+
+>>> v.axes['lat'].weights = w
 
 
 >>> v.mean()
 0.57628879031663871
 
-Weights are conserved by slicing:
+Weights are conserved by slicing and array-indexing:
 
->>> v[0:80].axes['lat'].weights
+>>> v[[0,80]].axes['lat'].weights
 array([ 1.        ,  0.17364818])
 
-Weights can also be defined as a function:
+Weights can also be defined as a function of axis values:
 
 >>> v.axes['lat'].weights = lambda x : np.cos(np.radians(x))
 
 
 >>> v.mean()
 0.57628879031663871
+
+Under the hood, weights are computed via the :meth:`DimArray._get_weights` method, so you can always check which weights are being used:
+
+>>> v._get_weights()
+dimarray: 6 non-null elements (0 null)
+0 / lat (3): -80 to 80
+1 / lon (2): -180 to 180
+array([[ 0.17364818,  0.17364818],
+       [ 1.        ,  1.        ],
+       [ 0.17364818,  0.17364818]])
+
+It is normally `None`:
+
+>>> v.axes['lat'].weights = None
+>>> v._get_weights()
+
+
+The `GeoArray` class defines weights automatically for latitude:
+
+>>> from dimarray.geo import GeoArray
+>>> g = GeoArray(v, copy=True)
+>>> g._get_weights()
+dimarray: 6 non-null elements (0 null)
+0 / lat (3): -80 to 80
+1 / lon (2): -180 to 180
+array([[ 0.17364818,  0.17364818],
+       [ 1.        ,  1.        ],
+       [ 0.17364818,  0.17364818]])

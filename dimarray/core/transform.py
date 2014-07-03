@@ -4,7 +4,7 @@ import numpy as np
 from functools import partial, wraps
 
 from dimarray.decorators import format_doc
-from dimarray.tools import anynan
+from dimarray.tools import anynan, is_DimArray
 
 from axes import Axis, Axes, GroupedAxis
 
@@ -68,14 +68,6 @@ See Also
 apply_along_axis: is called by this method
 to_MaskedArray: is used if skipna is True
 """.format(axis=_doc_axis, skipna=_doc_skipna, func="{func}")
-
-_doc_weights = """
-weights : str or bool or array-like or callable or None, optional
-          if weights are defined, perform a weighted {func} 
-          the default behaviour ("axis") is too look in individual axes 
-          whether they have a not-None weight attribute
-          Default is "axis" to look at axis' weights attribute
-""".strip()
 
 #
 # Actual transforms
@@ -610,27 +602,211 @@ def _append_nans(result, axis, first=False):
 #
 # Define weighted mean/std/var
 #
+_doc_weights = dict(
 
-def weighted_mean(self, axis=None, skipna=False, weights='axis'):
-    """ mean over an axis or group of axes, possibly weighted 
+        axis = """
+    axis : int or str or tuple, optional
+        axis or group of axes to apply the transform on
+        """.strip(),
+
+        skipna = """
+    skipna : bool, optional
+        ignore missing values (nans) prior to transformation
+        Default is False.""".strip(),
+
+        weights = """
+    weights : array-like or callable or dict, optional
+        if provided, is used instead if individual axes' `weights` attributes
+
+        A weights array can be built from individual axes' weights, either
+        as a parameter to this function, or as a permanent axis attribute
+        defined for the relevant axes. Weights can be of the form:
+
+        - 1-D array-like : for 1-D arrays or if the transformation
+        is to be applied to one axis only (via `axis` parameter)
+
+        - callable : like above, will be applied on the axis specified 
+        by the `axis` parameter, if provided
+
+        If passed as a parameter to the weighted transformation, weights
+        can also be provided as a dictionary. The keys must be axis names 
+        or integer ranks, and values one of the accepted types.""".strip(),
+
+        note = """
+    Note
+    ----
+    The weights actually used in the transformation can be checked 
+    via the DimArray._get_weights() method (experimental)""".strip(),
+
+        descr = """
+    This transformation can be weighted if a non-None `weights` parameter is provided, or if
+    one of the axes has a non-None `weights` attribute. Otherwise, a standard, unweighted 
+    transformation is performed.""".strip(),
+
+)
+
+#
+# Return a weight for each array element, used for `mean`, `std` and `var`
+#
+@format_doc(**_doc_weights)
+def _get_weights(self, axis=None, mirror_nans=True, weights=None):
+    """ Build array of weights based on individual axes' weights attribute
 
     Parameters
     ----------
-    axis : int, str, tuple: axis or group of axes to apply the transform on
-    skipna : remove nans prior to transformation?
+    axis : int or str, optional
+        if None a N-D weight is created, otherwise 1-D only
+    mirror_nans : bool, optional
+        mirror `values`'s NaNs in created weights (True by default)
+    {weights}
+
+    Returns
+    -------
+    full_weights : DimArray of weights, or None
+
+    See Also
+    --------
+    DimArray.mean, DimArray.var, DimArray.std
+    """
+    # avoid circular import
+    from dimarray import DimArray
+
+    if axis is None:
+        dims = self.dims
+
+    elif type(axis) is tuple:
+        dims = axis
+
+    else:
+        dims = (axis,)
+
+    # for 1-D array, same as axis is None is like axis=0
+    if axis is None and self.ndim == 1:
+        axis = 0
+
+    # check weights type
+    array_type = (isinstance(weights, np.ndarray) or isinstance(weights, DimArray)) and weights.ndim == 1
+    dict_type = isinstance(weights, dict)
+    assert weights is None or callable(weights) or array_type or dict_type, "unexpected type for `weights`"
+    assert weights is None or not (not dict_type and axis is None), "`weights` type incompatible with flattening operation, provide `axis` or use dict-type weights"
+    assert weights is None or not (not dict_type and type(axis) is tuple), "`weights` type incompatible with flattening operation, use dict-type weights"
+
+    # make weight dict-like to be applicable (operation on single axis)
+    if not dict_type: 
+        weights = {axis: weights}
+
+    # axes over which the weight is defined
+    axes = [ax for ax in self.axes if ax.name in dims]
+
+    # Create weights from the axes 
+    full_weights = 1.
+    for axis in dims:
+        ax = self.axes[axis]
+
+        # get proper weights array: from `Axis` or user-provided on-the-fly
+        if weights is not None and axis in weights.keys():
+            axis_weights = weights[axis]
+        else:
+            axis_weights = ax.weights
+
+        # if weight is None, just skip it
+        if axis_weights is None: 
+            continue
+
+        # broadcast and multiply weights for all axes involved 
+        full_weights = ax._get_weights(axis_weights).reshape(dims) * full_weights
+
+    if full_weights is 1.:
+        return None
+    else:
+        full_weights = full_weights.values
+
+    # Now create a dimarray and make it full size
+    # ...already full-size
+    if full_weights.shape == self.shape:
+        full_weights = DimArray(full_weights, self.axes)
+
+    # ...need to be expanded
+    elif full_weights.shape == tuple(ax.size for ax in axes):
+        full_weights = DimArray(full_weights, axes).expand(self.dims)
+
+    else:
+        try:
+            full_weights = full_weights + np.zeros_like(self.values)
+
+        except:
+            raise ValueError("weight dimensions are not conform")
+        full_weights = DimArray(full_weights, self.axes)
+
+    # add NaNs in when necessary
+    if mirror_nans and anynan(self.values):
+        full_weights.values[np.isnan(self.values)] = np.nan
+    
+    assert full_weights is not None
+    return full_weights
+
+
+@format_doc(**_doc_weights)
+def mean(self, axis=None, skipna=False, weights=None):
+    """ mean over an axis or group of axes, possibly weighted 
+
+    {descr} 
+
+    Parameters
+    ----------
+    {axis}
+    {skipna}
     {weights}
     
     Returns
     -------
-    DimArray or scalar, consistently with ndarray behaviour
+    DimArray instance or scalar, consistently with ndarray behaviour
+
+    {note}
+
+    See Also
+    --------
+    DimArray.var, DimArray.std, DimArray._get_weights
+
+    Example
+    -------
+    >>> from dimarray import DimArray
+    >>> np.random.seed(0) # to make results reproducible
+    >>> v = DimArray(np.random.rand(3,2), axes=[[-80, 0, 80], [-180, 180]], dims=['lat','lon'])
+
+    Classical, unweighted mean:
+
+    >>> v.mean() 
+    0.58019972362897432
+
+    Weighted mean
+
+    >>> w = np.cos(np.radians(v.lat))
+    >>> v.mean(weights={{'lat':w}})  # only lat axis is weighted
+    0.57628879031663871
+
+    Make the change permanent
+
+    >>> v.axes['lat'].weights = w
+    >>> v.mean()
+    0.57628879031663871
+
+    Check the weights being used (experimental)
+
+    >>> v._get_weights()
+    dimarray: 6 non-null elements (0 null)
+    0 / lat (3): -80 to 80
+    1 / lon (2): -180 to 180
+    array([[ 0.17364818,  0.17364818],
+           [ 1.        ,  1.        ],
+           [ 0.17364818,  0.17364818]])
     """
 
     # Proceed to a weighted mean
-    if weights is not None and weights is not False:
-        weights = self.get_weights(weights, axis=axis, fill_nans=skipna)
+    weights = self._get_weights(weights=weights, axis=axis, mirror_nans=skipna)
 
     # if no weights, just apply numpy's mean
-    if weights is None or weights is False:
+    if weights is None:
         return apply_along_axis(self, "mean", axis=axis, skipna=skipna)
 
     # weighted mean
@@ -638,16 +814,14 @@ def weighted_mean(self, axis=None, skipna=False, weights='axis'):
     sum_weights = apply_along_axis(weights, "sum", axis=axis, skipna=skipna)
     return sum_values / (sum_weights + 0.)
 
-def weighted_var(self, axis=None, skipna=False, weights="axis", ddof=0):
-    """ standard deviation over an axis or group of axes, possibly weighted 
+@format_doc(**_doc_weights)
+def var(self, axis=None, skipna=False, weights=None, ddof=0):
+    """ variance over an axis or group of axes, possibly weighted 
 
     Parameters
     ----------
-    axis : int or str or tuple, optional
-        axis or group of axes to apply the transform on
-    skipna : bool, optional
-        remove nans prior to transformation?
-        Default is False.
+    {axis}
+    {skipna}
     {weights}
     ddof : int, optional
             "Delta Degrees of Freedom": the divisor used in the calculation is
@@ -657,15 +831,19 @@ def weighted_var(self, axis=None, skipna=False, weights="axis", ddof=0):
     
     Returns
     -------
-    DimArray or scalar, consistently with ndarray behaviour
-    """
+    DimArray instance or scalar, consistently with ndarray behaviour
 
+    {note}
+
+    See Also
+    --------
+    DimArray.mean, DimArray.std, DimArray._get_weights
+    """
     # Proceed to a weighted var
-    if weights is not None and weights is not False:
-        weights = self.get_weights(weights, axis=axis, fill_nans=skipna)
+    weights = self._get_weights(weights=weights, axis=axis, mirror_nans=skipna)
 
     # if no weights, just apply numpy's var
-    if weights is None or weights is False:
+    if weights is None:
         return apply_along_axis(self, "var", axis=axis, skipna=skipna, ddof=ddof)
 
     # weighted mean
@@ -673,9 +851,8 @@ def weighted_var(self, axis=None, skipna=False, weights="axis", ddof=0):
     dev = (self-mean)**2
     return dev.mean(axis=axis, skipna=skipna, weights=weights)
 
-def weighted_std(self, *args, **kwargs):
+# add standard deviation
+def std(self, *args, **kwargs):
     return self.var(*args, **kwargs)**0.5
 
-weighted_mean.__doc__ = weighted_mean.__doc__.format(weights=_doc_weights).format(func='mean')
-weighted_var.__doc__ = weighted_var.__doc__.format(weights=_doc_weights).format(func='var')
-weighted_std.__doc__ = weighted_var.__doc__.replace('var','std')
+std.__doc__ = var.__doc__.replace('variance','standard deviation').replace('var','std').replace('DimArray.std','DimArray.var') # last one for See Also

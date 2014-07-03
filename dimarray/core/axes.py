@@ -484,8 +484,14 @@ class Axis(object):
     def __len__(self): 
         return self.values.__len__
 
-    def get_weights(self, weights=None):
+    def _get_weights(self, weights=None):
         """ return axis weights as a DimArray
+
+        Parameters
+        ----------
+        weights : array-like or callable, optional
+            if provided, will be used instead of self.weights
+            used in weighted transformations (see doc in there)
         """
         from dimarraycls import DimArray
 
@@ -506,7 +512,7 @@ class Axis(object):
 
         # already an array of weights
         else:
-            weights = np.array(weights, copy=False)
+            weights = np.asarray(weights)
 
         # index on one dimension
         ax = Axis(self.values, name=self.name)
@@ -562,14 +568,12 @@ class GroupedAxis(Axis):
         """ Combine the weights as a product of the individual axis weights
         """
         if self._weights is None:
-            self._weights = self._get_weights()
+            #self._weights = self._get_weights()
+            if np.all([ax.weights is None for ax in self.axes]):
+                self._weights = None
+            else:
+                self._weights =_flatten(*[ax._get_weights() for ax in self.axes]).prod(axis=1)
         return self._weights
-
-    def _get_weights(self):
-        if np.all([ax.weights is None for ax in self.axes]):
-            return None
-        else:
-            return _flatten(*[ax.get_weights() for ax in self.axes]).prod(axis=1)
 
     @property
     def size(self): 
