@@ -667,82 +667,193 @@ def _get_weights(self, axis=None, mirror_nans=True, weights=None):
     See Also
     --------
     DimArray.mean, DimArray.var, DimArray.std
+
+    Example
+    -------
+
+    Simpler examples are found Dimarray.mean's doc.
+    These are mostly meant as doctest.
+
+    >>> from dimarray import DimArray
+    >>> np.random.seed(0) # to make results reproducible
+    >>> v = DimArray(np.random.rand(3,2), axes=[[-80, 0, 80], [-180, 180]], dims=['lat','lon'])
+    >>> v._get_weights() # None
+    >>> w = lambda x : np.cos(np.radians(v.lat))
+    >>> v.axes['lat'].weights = w
+    >>> v._get_weights()
+    dimarray: 6 non-null elements (0 null)
+    0 / lat (3): -80 to 80
+    1 / lon (2): -180 to 180
+    array([[ 0.17364818,  0.17364818],
+           [ 1.        ,  1.        ],
+           [ 0.17364818,  0.17364818]])
+    >>> v.axes['lat'].weights = None
+    >>> v._get_weights() # None
+
+    Can pass the weigthts as a dictionary 
+
+    >>> v._get_weights(weights={{'lat':w}}) 
+    dimarray: 6 non-null elements (0 null)
+    0 / lat (3): -80 to 80
+    1 / lon (2): -180 to 180
+    array([[ 0.17364818,  0.17364818],
+           [ 1.        ,  1.        ],
+           [ 0.17364818,  0.17364818]])
+
+    Or by indicating the axis
+    
+    >>> v._get_weights(weights=w, axis='lat') 
+    dimarray: 6 non-null elements (0 null)
+    0 / lat (3): -80 to 80
+    1 / lon (2): -180 to 180
+    array([[ 0.17364818,  0.17364818],
+           [ 1.        ,  1.        ],
+           [ 0.17364818,  0.17364818]])
+
+    It possible to mix up axis and dict-input weights
+
+    >>> v.axes['lat'].weights = w
+    >>> v._get_weights(weights={{'lon':lambda x:((x+180)/100)**2}}) 
+    dimarray: 6 non-null elements (0 null)
+    0 / lat (3): -80 to 80
+    1 / lon (2): -180 to 180
+    array([[ 0.       ,  1.5628336],
+           [ 0.       ,  9.       ],
+           [ 0.       ,  1.5628336]])
+
+    But if the transformation is required on one axis only, 
+    weights on other axes are not accounted for since they
+    would not affect the result of the transformation.
+
+    >>> v._get_weights(weights={{'lon':lambda x:((x+180)/100)**2}}, axis='lat') 
+    dimarray: 6 non-null elements (0 null)
+    0 / lat (3): -80 to 80
+    1 / lon (2): -180 to 180
+    array([[ 0.17364818,  0.17364818],
+           [ 1.        ,  1.        ],
+           [ 0.17364818,  0.17364818]])
+
+    What is provided as argument overrides axis attribute. 
+    Here when the weights are provided for one axis only:
+
+    >>> v._get_weights(weights=lambda x:((x+180)/100)**2, axis='lat') 
+    dimarray: 6 non-null elements (0 null)
+    0 / lat (3): -80 to 80
+    1 / lon (2): -180 to 180
+    array([[ 1.,  1.],
+           [ 1.,  1.],
+           [ 4.,  4.]])
+
+    Or when the weight is provided as a numpy array
+
+    >>> w = np.array([[ 1.,  1.],
+    ...               [ 1.,  1.],
+    ...               [ 4.,  4.]])
+    >>> v._get_weights(weights=w)
+    dimarray: 6 non-null elements (0 null)
+    0 / lat (3): -80 to 80
+    1 / lon (2): -180 to 180
+    array([[ 1.,  1.],
+           [ 1.,  1.],
+           [ 4.,  4.]])
+
+    Or even as DimArray (which will be broadcast with the appropriate shape)
+
+    >>> wa = DimArray(w[:,0], axes=[v.axes['lat']])
+    >>> v._get_weights(weights=wa)
+    dimarray: 6 non-null elements (0 null)
+    0 / lat (3): -80 to 80
+    1 / lon (2): -180 to 180
+    array([[ 1.,  1.],
+           [ 1.,  1.],
+           [ 4.,  4.]])
+
+    Any nans in the data will induce 0 in the weights, 
+    since the element will then be discarded or the result be NaN anyway.
+
+    >>> v.values[1, 0] = np.nan
+    >>> v._get_weights(weights=w)
+    dimarray: 6 non-null elements (0 null)
+    0 / lat (3): -80 to 80
+    1 / lon (2): -180 to 180
+    array([[ 1.,  1.],
+           [ 0.,  1.],
+           [ 4.,  4.]])
     """
     # avoid circular import
     from dimarray import DimArray
 
+    # dims: axes from which the weights should be computed
     if axis is None:
         dims = self.dims
-
     elif type(axis) is tuple:
         dims = axis
-
     else:
         dims = (axis,)
+
+    # common case: no weight is provided and no Axis has weights
+    # if is enough to check on all axes to be reduced, weights on other axes 
+    # make no difference to the reduction transformation
+    if weights is None and np.all([self.axes[dim].weights is None for dim in dims]):
+        return None
 
     # for 1-D array, same as axis is None is like axis=0
     if axis is None and self.ndim == 1:
         axis = 0
 
-    # check weights type
-    array_type = (isinstance(weights, np.ndarray) or isinstance(weights, DimArray)) and weights.ndim == 1
-    dict_type = isinstance(weights, dict)
-    assert weights is None or callable(weights) or array_type or dict_type, "unexpected type for `weights`"
-    assert weights is None or not (not dict_type and axis is None), "`weights` type incompatible with flattening operation, provide `axis` or use dict-type weights"
-    assert weights is None or not (not dict_type and type(axis) is tuple), "`weights` type incompatible with flattening operation, use dict-type weights"
+    # check `weights` type
 
-    # make weight dict-like to be applicable (operation on single axis)
-    if not dict_type: 
-        weights = {axis: weights}
+    # special case: if weights is DimArray, just use it as full weight
+    if isinstance(weights, DimArray):
+        full_weights = weights.broadcast(self.axes) # broadcast weights on appropriate dimension
 
-    # axes over which the weight is defined
-    axes = [ax for ax in self.axes if ax.name in dims]
+    # special case II: numpy array of appropriate dimension ==> just use it as full weight
+    elif isinstance(weights, np.ndarray) and weights.ndim > 1:
+        assert weights.shape == self.shape, "`weights` must be either 1-D or have same shape as DimArray"
+        full_weights = DimArray(weights, self.axes)
 
-    # Create weights from the axes 
-    full_weights = 1.
-    for axis in dims:
-        ax = self.axes[axis]
-
-        # get proper weights array: from `Axis` or user-provided on-the-fly
-        if weights is not None and axis in weights.keys():
-            axis_weights = weights[axis]
-        else:
-            axis_weights = ax.weights
-
-        # if weight is None, just skip it
-        if axis_weights is None: 
-            continue
-
-        # broadcast and multiply weights for all axes involved 
-        full_weights = ax._get_weights(axis_weights).reshape(dims) * full_weights
-
-    if full_weights is 1.:
-        return None
+    # make axis weights based by combining single-axis weights (standard form)
     else:
-        full_weights = full_weights.values
+        array_type = isinstance(weights, np.ndarray) and weights.dim == 1
+        dict_type = isinstance(weights, dict)
+        assert weights is None or callable(weights) or array_type or dict_type, "unexpected type for `weights`"
+        assert weights is None or not (not dict_type and axis is None), "`weights` type incompatible with flattening operation, provide `axis` or use dict-type weights"
+        assert weights is None or not (not dict_type and type(axis) is tuple), "`weights` type incompatible with flattening operation, use dict-type weights"
 
-    # Now create a dimarray and make it full size
-    # ...already full-size
-    if full_weights.shape == self.shape:
-        full_weights = DimArray(full_weights, self.axes)
+        # make weights dict-like  (operation on single axis)
+        if not dict_type: 
+            weights = {axis: weights}
 
-    # ...need to be expanded
-    elif full_weights.shape == tuple(ax.size for ax in axes):
-        full_weights = DimArray(full_weights, axes).expand(self.dims)
+        # Create weights from the axes (only compute for the axes to be reduced)
+        full_weights = 1.
+        for axis in dims:
+            ax = self.axes[axis]
 
-    else:
-        try:
-            full_weights = full_weights + np.zeros_like(self.values)
+            # get proper weights array: from `Axis` or user-provided on-the-fly
+            if weights is not None and axis in weights.keys():
+                axis_weights = weights[axis]
+            else:
+                axis_weights = ax.weights
 
-        except:
-            raise ValueError("weight dimensions are not conform")
-        full_weights = DimArray(full_weights, self.axes)
+            # if weight is None, just skip it
+            if axis_weights is None: 
+                continue
 
-    # add NaNs in when necessary
+            # broadcast and multiply weights for all axes involved 
+            full_weights = ax._get_weights(axis_weights).reshape(dims) * full_weights
+
+        # SPECIAL CASE: NO weights (e.g. weights parameter provided as {} or {'lat':None} and no axis weights attributes):
+        if full_weights is 1.:
+            return None
+
+        full_weights = full_weights.broadcast(self.axes)
+
+    # set 0 in a where there are NaNs. 
     if mirror_nans and anynan(self.values):
-        full_weights.values[np.isnan(self.values)] = np.nan
-    
+        full_weights.values[np.isnan(self.values)] = 0
+
     assert full_weights is not None
+    
     return full_weights
 
 
