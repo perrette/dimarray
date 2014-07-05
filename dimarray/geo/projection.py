@@ -14,6 +14,20 @@ The aim is to be able to read and transform coordinate systems from a netCDF loo
 
 The classes will inherit from cartopy's projection classes but 
 be initialized with netCDF4 projections names.
+
+References
+----------
+PROJ.4 Projections: 
+    http://www.remotesensing.org/geotiff/proj_list
+    http://trac.osgeo.org/proj/wiki/GenParms
+NetCDF Conventions:
+    http://cfconventions.org
+    http://cfconventions.org/1.4
+    http://cfconventions.org/1.6 (in track-change mode w.r.t CF-1.4)
+    E.g.: http://cfconventions.org/1.4.html#grid-mappings-and-projections
+NetCDF Conventions in Java: 
+    https://www.unidata.ucar.edu/software/thredds/current/netcdf-java/reference/StandardCoordinateTransforms.html
+
 """
 import warnings
 import math
@@ -21,8 +35,6 @@ import numpy
 import cartopy
 from cartopy import crs
 from dimarray.info import file_an_issue_message
-from projection_def_netcdf import get_best_matches_param, get_best_matches_mapping
-#from shapely.geometry import Point, LineString
 
 # check cartopy version
 M = cartopy.__version__.split('.')[0]
