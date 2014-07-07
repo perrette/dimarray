@@ -34,7 +34,7 @@ import warnings
 import math
 import numpy as np
 import cartopy
-from cartopy import crs
+import cartopy.crs as ccrs
 #from cartopy.crs import Projection, Globe
 import dimarray.compat.cartopy as compat_crs
 
@@ -51,9 +51,9 @@ def _check_cartopy_version():
     # update Stereographic proejctions
     if int(M) < 999: # update with proper cartopy version if the pull request 
         # is accepted
-        crs.Stereographic = compat_crs.Stereographic
-        crs.NorthPolarStereo = compat_crs.NorthPolarStereo
-        crs.SouthPolarStereo = compat_crs.SouthPolarStereo
+        ccrs.Stereographic = compat_crs.Stereographic
+        ccrs.NorthPolarStereo = compat_crs.NorthPolarStereo
+        ccrs.SouthPolarStereo = compat_crs.SouthPolarStereo
 
 _check_cartopy_version()
 
@@ -86,7 +86,7 @@ def _error_message(error, table):
     msg += "\n"+file_an_issue_message()
     return msg
 
-#class Globe(crs.Globe):
+#class Globe(ccrs.Globe):
 #    """ Represents the globe
 #    """
 #    # netCDF to Cartopy parameters
@@ -111,7 +111,7 @@ def _error_message(error, table):
 #                raise ValueError(msg)
 #
 #        try:
-#            crs.Globe.__init__(self, **cartopy_params)
+#            ccrs.Globe.__init__(self, **cartopy_params)
 #        except Exception as error:
 #            msg = _error_message(error, self)
 #            raise error.__class__(msg)
@@ -157,7 +157,7 @@ class Projection(object):
 
         # Initialize a globe
         try:
-            globe = crs.Globe(**globe_params)
+            globe = ccrs.Globe(**globe_params)
             cartopy_params['globe'] = globe
         except Exception as error:
             msg = _error_message(error, self._table_globe)
@@ -165,8 +165,8 @@ class Projection(object):
 
         # Initialize cartopy coordinate system
         try:
-            CRSproj = self.__class__.__bases__[1] # (Projection, crs...)
-            assert np.issubclass_(CRSproj, crs.Projection) # must be a crs projection
+            CRSproj = self.__class__.__bases__[1] # (Projection, ccrs...)
+            assert np.issubclass_(CRSproj, ccrs.Projection) # must be a crs projection
             CRSproj.__init__(self, **cartopy_params)
 
         except Exception as error:
@@ -176,13 +176,13 @@ class Projection(object):
 #
 # NOTE: the grid_mapping_name is 'longitude_latitude' and not 'geodetic'
 #
-class Geodetic(Projection, crs.Geodetic):
+class Geodetic(Projection, ccrs.Geodetic):
     """ Same as cartopy.crs.Geodetic but accept netCDF parameters as arguments
     """
     grid_mapping_name = 'longitude_latitude'
     _table = {} # no parameter apart from "globe"
 
-class Stereographic(Projection, crs.Stereographic):
+class Stereographic(Projection, ccrs.Stereographic):
 
     grid_mapping_name = "stereographic"
 
@@ -205,7 +205,7 @@ class Stereographic(Projection, crs.Stereographic):
 #
 #
 #
-class PolarStereographic(Projection, crs.Stereographic):
+class PolarStereographic(Projection, ccrs.Stereographic):
 
     grid_mapping_name = "polar_stereographic"
 
@@ -240,7 +240,7 @@ class PolarStereographic(Projection, crs.Stereographic):
 ## #
 ## # Here just for convenience
 ## #
-## class NorthPolarStereographic(Projection, crs.NorthPolarStereo):
+## class NorthPolarStereographic(Projection, ccrs.NorthPolarStereo):
 ## 
 ##     grid_mapping_name = "north_polar_stereographic" # not in CF-convention
 ## 
@@ -252,7 +252,7 @@ class PolarStereographic(Projection, crs.Stereographic):
 ## 
 ##     _alternate_parameters = [['straight_vertical_longitude_from_pole', 'longitude_of_projection_origin']]
 ## 
-## class SouthPolarStereographic(Projection, crs.SouthPolarStereo):
+## class SouthPolarStereographic(Projection, ccrs.SouthPolarStereo):
 ## 
 ##     grid_mapping_name = "south_polar_stereographic" # not in CF-convention
 ## 
@@ -310,20 +310,19 @@ _doc_grid_mapping = """
     Examples
     --------
 
-    All of the grid_mapping instances below could be checked by
-    calling dimarray.geo.projection._check_grid_mapping
-    The returned cartopy.crs.CRS instances all have a proj4_init 
-    attribute for PROJ.4 equivalent.
-
     Import Cartopy's crs module
 
     >>> import cartopy.crs as ccrs
-    
+
     Longitude / Latitude coordinates
 
     >>> grid_mapping = ccrs.Geodetic() # cartopy
     >>> grid_mapping = "geodetic"  # cartopy class name
     >>> grid_mapping = {'grid_mapping_name':'longitude_latitude'} # CF-1.4
+
+    Other coordinates systems onto which lon and lat can be projected onto
+
+    >>> from dimarray.geo.projection import project_coords
 
     North Polar Stereographic Projection over Greenland
 
@@ -338,15 +337,21 @@ _doc_grid_mapping = """
     ...     false_easting = 0.,  # default offset to express x w.r.t 
     ...     false_northing = 0., # default offset to express y
     ...     globe=globe)  # cartopy.crs.CRS instance
+    >>> project_coords(70, -40, grid_mapping)
+    (24969236.85758362, 8597597.732836112)
 
     ... with Cartopy NorthPolarStereo class (central_latitude=90. by default)
 
     >>> grid_mapping = ccrs.NorthPolarStereo(central_longitude=-39., true_scale_latitude=71.)  
+    >>> project_coords(70, -40, grid_mapping)
+    (24969236.85758362, 8597597.732836112)
 
     ... same as above, default parameters (central_longitude=0., 
                                     true_scale_latitude=None, or 90.)
 
     >>> grid_mapping = 'northpolarstereo'  # cartopy instance with defualt params 
+    >>> project_coords(70, -40, grid_mapping)
+    (25510048.966384508, -9284898.498437265)
 
     ... Using CF-1.4 and later conventions, intended for netCDF files.
 
@@ -359,39 +364,104 @@ _doc_grid_mapping = """
     ...     false_northing = 0., 
     ...     ellipsoid = 'WGS84', 
     ...     )  # CF-1.4
+    >>> project_coords(70, -40, grid_mapping)
+    (24969236.85758362, 8597597.732836112)
 
     ... PROJ.4 equivalent, with all parameters
 
-    >>> from dimarray.geo.projection import _check_grid_mapping
-    >>> gm = _check_grid_mapping(grid_mapping)
-    >>> isinstance(gm, ccrs.CRS)
-    True
-    >>> gm.proj4_init
-    '+ellps=WGS84 +proj=stere +lat_0=90.0 +lon_0=-39.0 +x_0=0.0 +y_0=0.0 +lat_ts=71.0 +no_defs'
+    >>> proj4_init = "+ellps=WGS84 +proj=stere +lat_0=90.0 +lon_0=-39.0 +x_0=0.0 +y_0=0.0 +lat_ts=71.0"
+    >>> project_coords(70, -40, proj4_init)
+    (24969236.85758362, 8597597.732836112)
 """.strip()
 
-def _check_grid_mapping(grid_mapping):
+class Proj4(ccrs.CRS):
+    """ Projection class which can be initialized from string proj.4 parameters 
+    """ 
+    _table_globe = dict([['datum', 'datum'], ['ellps', 'ellipse'],
+                    ['a', 'semimajor_axis'], ['b', 'semiminor_axis'],
+                    ['f', 'flattening'], ['rf', 'inverse_flattening'],
+                    ['towgs84', 'towgs84'], ['nadgrids', 'nadgrids']])
+
+    def __init__(self, proj4_init):
+        """ 
+        Examples
+        --------
+        >>> prj = Proj4("+ellps=WGS84 +proj=stere +lat_0=90.0 +lon_0=-39.0 +x_0=0.0 +y_0=0.0 +lat_ts=71.0")
+        """
+        assert isinstance(proj4_init, str), "must be str"
+        #assert '+' in proj4_init, "PROJ.4 str includes '+'"
+
+        # arrange into keys, values pairs
+        tmp = [arg.split('=') for arg in proj4_init.split()] # +key, value pair
+
+        msg = "invalid PROJ.4 str, must be of the form +param=value +param2=value2"
+
+        try:
+            pkeys, values = zip(*tmp)
+        except ValueError:
+            if "+no_defs" in proj4_init: 
+                msg += "(e.g. try removing +no_defs)"
+            raise ValueError(msg)
+
+        try:
+            keys = [k.split('+')[1] for k in pkeys] # remove the +
+        except IndexError:
+            raise ValueError(msg)
+
+        # convert type
+        for i, v in enumerate(values):
+            try:
+                values[i] = float(i)
+            except:
+                pass
+
+        # split parameters between globe and non-globe parameters
+        globe_params = {self._table_globe[k]:v for k,v in zip(keys, values) if k in self._table_globe.keys()}
+        proj4_params = [(k,v) for k,v in zip(keys, values) if k not in self._table_globe.keys()]
+
+        # initialize Globe instance
+        globe = ccrs.Globe(**globe_params)
+
+        # initialize CRS instance
+        super(Proj4, self).__init__(proj4_params, globe=globe)
+
+def get_grid_mapping(grid_mapping):
     """ check grid_mapping type (see doc in transform_coords)
     """
     if isinstance(grid_mapping, dict):
-        cls = _get_grid_mapping_class(grid_mapping.pop('grid_mapping_name'))
+        grid_mapping = grid_mapping.copy()
+        try:
+            grid_mapping_name = grid_mapping.pop('grid_mapping_name')
+        except KeyError:
+            raise ValueError("grid_mapping_name not present")
+
+        cls = _get_grid_mapping_class(grid_mapping_name)
         grid_mapping = cls(**grid_mapping)
 
     elif isinstance(grid_mapping, str):
 
         # special case: PROJ.4 string?
         if '+' in grid_mapping:
-            grid_mapping = _get_from_proj4_args(grid_mapping)
+            grid_mapping = Proj4(grid_mapping)
 
-        # common case: netCDF transformation name: default parameters
+        # common case: Cartopy class name
         else:
-            cls = _get_grid_mapping_class(grid_mapping)
+            members = inspect.getmembers(ccrs, lambda x: np.issubclass_(x, ccrs.CRS) and x.__name__.lower() == grid_mapping.lower())
+            if len(members) == 0:
+                raise ValueError("class "+grid_mapping+" not found")
+            else:
+                assert len(members) == 1, "more than one match, bug: check case"
+                cls = members[0][1]
+                #cls = getattr(ccrs, grid_mapping)
             grid_mapping = cls()
 
-    elif not isinstance(grid_mapping, crs.CRS):
+    elif not isinstance(grid_mapping, ccrs.CRS):
         msg = 80*'-'+'\n'+_doc_grid_mapping+'\n'+80*'-'+'\n\n'
         msg += 'grid_mapping: must be str or dict or cartopy.crs.CRS instance (see above)'
         raise TypeError(msg)
+
+    # just checking
+    assert isinstance(grid_mapping, ccrs.CRS), 'something went wrong'
 
     return grid_mapping
 
@@ -426,8 +496,8 @@ def transform_coords(x, y, grid_mapping1, grid_mapping2):
     dimarray.geo.GeoArray.transform
     dimarray.geo.GeoArray.transform_vectors
     """
-    grid_mapping1 = _check_grid_mapping(grid_mapping1)
-    grid_mapping2 = _check_grid_mapping(grid_mapping2)
+    grid_mapping1 = get_grid_mapping(grid_mapping1)
+    grid_mapping2 = get_grid_mapping(grid_mapping2)
 
     if np.isscalar(x):
         xt, yt = grid_mapping2.transform_point(x, y, grid_mapping1)
@@ -460,8 +530,8 @@ def transform_vectors(x, y, u, v, grid_mapping1, grid_mapping2):
     --------
     geo.transform_coords
     """
-    grid_mapping1 = _check_grid_mapping(grid_mapping1)
-    grid_mapping2 = _check_grid_mapping(grid_mapping2)
+    grid_mapping1 = get_grid_mapping(grid_mapping1)
+    grid_mapping2 = get_grid_mapping(grid_mapping2)
 
     ut, vt = grid_mapping2.transform_points(grid_mapping1, x, y, u, v)
 
@@ -489,8 +559,8 @@ def project_coords(lon, lat, grid_mapping, inverse=False):
     dimarray.geo.transform_coords
     """
     if inverse:
-        x, y = transform_coords(lon, lat, grid_mapping, crs.Geodetic())
+        x, y = transform_coords(lon, lat, grid_mapping, ccrs.Geodetic())
     else:
-        x, y = transform_coords(lon, lat, crs.Geodetic(), grid_mapping)
+        x, y = transform_coords(lon, lat, ccrs.Geodetic(), grid_mapping)
 
     return x, y
