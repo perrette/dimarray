@@ -8,7 +8,8 @@ References
     http://cfconventions.org/1.4
     http://cfconventions.org/1.6 (in track-change mode w.r.t CF-1.4)
 """
-from collection import OrderedDict as odict
+from collections import OrderedDict as odict
+import sys
 import numpy as np
 from dimarray import DimArray, Axes, Axis
 
@@ -96,7 +97,8 @@ class GeoArray(DimArray):
         super(GeoArray, self).__init__(values, axes, **kwargs) # order dimensions
 
         # add metadata
-        if metadata is None: metadata = {}
+        #if metadata is None: metadata = {}
+        metadata = {}
         if units: metadata['units'] = units
         if standard_name: metadata['standard_name'] = standard_name
         if long_name: metadata['long_name'] = long_name
@@ -124,8 +126,10 @@ class GeoArray(DimArray):
     def __print__(self): return super(GeoArray, self).__print__().replace("dimarray","geoarray")
     def __str__(self): return super(GeoArray, self).__str__().replace("dimarray","geoarray")
 
-    def transform(self, to_grid_mapping, from_grid_mapping=None, x1=None, y1=None, horizontal_coordinates=None):
-        """ Transform to a new coordinate system and interpolate values onto a new regular grid
+    def transform_scalars(self, to_grid_mapping, from_grid_mapping=None, \
+            xt=None, yt=None, horizontal_coordinates=None):
+        """ Transform scalar field array into a new coordinate system and \
+                interpolate values onto a new regular grid
 
         Parameters
         ----------
@@ -135,7 +139,7 @@ class GeoArray(DimArray):
             original grid mapping, to be provided only when no grid_mapping 
             attribute is defined or when the axes are something else than 
             Longitude and Latitude
-        x1, y1 : array-like (1-D), optional
+        xt, yt : array-like (1-D), optional
             new coordinates to interpolate the array on
             will be deduced as min and max of new coordinates if not provided
         horizontal_coordinates : sequence with 2 str, optional
@@ -147,7 +151,7 @@ class GeoArray(DimArray):
         transformed : GeoArray
             new GeoArray transformed
         """ 
-        from projection import Geodetic, transform  # avoid loading the projection module since it's quite heavy
+        from projection import transform_coords  # avoid loading the projection module since it's quite heavy
         from dimarray.compat.basemap import interp
 
         # find horizontal coordinates
@@ -187,7 +191,7 @@ class GeoArray(DimArray):
             # otherwise check whether the Coordinates are Geodetic (long/lat)
             else:
                 if isinstance(x0, Longitude) and isinstance(y0, Latitude):
-                    from_grid_mapping = Geodetic()
+                    from_grid_mapping = "geodetic"
 
         # double-check
         if from_grid_mapping is None:
@@ -197,31 +201,63 @@ class GeoArray(DimArray):
         x0_2d, y0_2d = np.meshgrid(x0.values, y0.values)
 
         # Transform coordinates 
-        x1_2d, y1_2d = transform(x0_2d, x0_2d, from_grid_mapping, to_grid_mapping)
+        xt_2d, yt_2d = transform_coords(x0_2d, x0_2d, from_grid_mapping, to_grid_mapping)
 
         # Interpolate onto a new regular grid while roughly conserving the steps
-        if x1 is None:
-            x1 = np.linspace(x1_2d.min(), x1_2d.max(), x1_2d.shape[1])
-        if y1 is None:
-            y1 = np.linspace(y1_2d.min(), y1_2d.max(), y1_2d.shape[0])
+        if xt is None:
+            xt = np.linspace(xt_2d.min(), xt_2d.max(), xt_2d.shape[1])
+        if yt is None:
+            yt = np.linspace(yt_2d.min(), yt_2d.max(), yt_2d.shape[0])
 
-        x1r_2d, y1r_2d = np.meshgrid(x1, y1) # regular 2-D grid
+        xtr_2d, ytr_2d = np.meshgrid(xt, yt) # regular 2-D grid
 
         if self.ndim == 2:
-            newvalues = interp(self.values, x1_2d, y1_2d, x1r_2d, y1r_2d)
+            newvalues = interp(self.values, xt_2d, yt_2d, xtr_2d, ytr_2d)
+            transformed = self._constructor(newvalues, [Y(yt), X(xt)])
 
         else:
             # first reshape to 3-D, flattening everything except vertical coordinates
             # TODO: optimize by computing and re-using weights?
-            obj = self.group((x0.name, x1.name), reverse=True, insert=0)  
+            obj = self.group((x0.name, xt.name), reverse=True, insert=0)  
             newvalues = []
             for k, suba in obj.iter(axis=0): # iterate over the first dimension
-                newval = interp(suba.values, x1_2d, y1_2d, x1r_2d, y1r_2d)
+                newval = interp(suba.values, xt_2d, yt_2d, xtr_2d, ytr_2d)
                 newvalues.append(newval)
 
             # stack the arrays together
-            np.stack(newvalues)
+            newvalues = np.array(newvalues)
+            grouped_obj = self._constructor(newvalues, [obj.axes[0], Y(yt), X(xt)])
+            transformed = grouped_obj.ungroup(axis=0)
 
+        return transformed
+
+
+    def transform_vectors(self, to_grid_mapping, from_grid_mapping=None, \
+            xt=None, yt=None, horizontal_coordinates=None):
+        """ Transform vector field array into a new coordinate system and \
+                interpolate values onto a new regular grid
+
+        Parameters
+        ----------
+        to_grid_mapping : str or dict or cartopy.crs.CRS instance
+            grid mapping onto which the transformation should be done
+        from_grid_mapping : idem, optional
+            original grid mapping, to be provided only when no grid_mapping 
+            attribute is defined or when the axes are something else than 
+            Longitude and Latitude
+        xt, yt : array-like (1-D), optional
+            new coordinates to interpolate the array on
+            will be deduced as min and max of new coordinates if not provided
+        horizontal_coordinates : sequence with 2 str, optional
+            provide horizontal coordinates by name if not an instance of 
+            Latitude, Longitude, X or Y
+
+        Return
+        ------
+        transformed : GeoArray
+            new GeoArray transformed
+        """ 
+        pass
 
 # define Latitude and Longitude axes
 class Coordinate(Axis):
@@ -230,11 +266,12 @@ class Coordinate(Axis):
     def __init__(self, values, name=None, dtype=float, standard_name="", long_name="", units="", **kwargs):
         #if metadata is None: metadata = {}
 
-        if hasattr(self, "name"): # class attribute?
-            name = self.name
-
         metadata = dict()
         metadata.update(self.__class__.__dict__) # add class metadata to metadata
+
+        def_name = metadata.pop('name', None)
+        if name is None:
+            name = def_name
 
         if long_name: 
             metadata['long_name'] = long_name
@@ -251,15 +288,20 @@ class Coordinate(Axis):
         # from metadata (e.g. units)
         metadata.update(kwargs)
 
-        super(self.__class__, self).__init__(values, name, dtype=dtype, **metadata) 
+        #cls = self.__class__
+        #module = sys.modules[__name__]
+        #cls = getattr(module, self.__class__.__name__) # ?
+        #print name
+        super(Coordinate, self).__init__(values, name, dtype=dtype, **metadata)
+        #Axis.__init__(self, values, name, dtype=dtype, **metadata) 
 
     @classmethod
     def from_axis(cls, ax):
         " define a Coordinate from an Axis object "
-        return cls(ax.name, ax.values, **ax._metadata)
+        return cls(ax.values, ax.name, **ax._metadata)
 
     def __repr__(self):
-        return super(self.__class__, self).__repr__()+" (Geo{})".format(self.__class__.__name__)
+        return super(Coordinate, self).__repr__()+" (Coord-{})".format(self.__class__.__name__)
 
 class Time(Coordinate):
     """ Time coordinate
@@ -277,10 +319,10 @@ class Latitude(Coordinate):
     ---------
     http://cfconventions.org/1.6#latitude-coordinate
     """
-    name = 'lat', 
-    long_name = "latitude", 
-    units = "degrees_north", 
-    standard_name = "latitude", 
+    name = 'lat'
+    long_name = "latitude"
+    units = "degrees_north"
+    standard_name = "latitude"
     weights = lambda x: np.cos(np.radians(x))
          
 class Longitude(Coordinate):
@@ -304,7 +346,7 @@ class X(Coordinate):
     ---------
     http://cfconventions.org/1.6#grid-mappings-and-projections
     """
-    name = 'x',
+    name = 'x'
     long_name = "x distance on the projection plane from the origin";
     standard_name = "projection_x_coordinate";
     #units = "km";

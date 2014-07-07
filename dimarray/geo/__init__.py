@@ -8,4 +8,4 @@ from dimarray import *
 from geoarray import GeoArray
 
 # Overwrite with specific GeoArray functions
-from io import *
+from ncio import *
