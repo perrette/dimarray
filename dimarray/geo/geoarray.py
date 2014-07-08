@@ -103,21 +103,25 @@ class GeoArray(DimArray):
         if standard_name: metadata['standard_name'] = standard_name
         if long_name: metadata['long_name'] = long_name
 
-        # Transform axes to "geo" axes
+        # Transform axes to "geo" axes based on name and metadat
         for i, ax in enumerate(self.axes):
             if isinstance(ax, Coordinate):
                 pass
-            if is_latitude(ax.name):
+            if is_latitude(ax.name) or (hasattr(ax, 'standard_name') \
+                    and ax.standard_name == 'latitude'):
                 self.axes[i] = Latitude.from_axis(ax)
-            if is_longitude(ax.name):
+            if is_longitude(ax.name) or (hasattr(ax, 'standard_name') \
+                    and ax.standard_name == 'longitude'):
                 self.axes[i] = Longitude.from_axis(ax)
             if is_time(ax.name):
                 self.axes[i] = Time.from_axis(ax)
-            if ax.name == 'x':
+            if ax.name == 'x' or (hasattr(ax, 'standard_name') \
+                    and ax.standard_name == 'projection_x_coordinate'):
                 self.axes[i] = X.from_axis(ax)
-            if ax.name == 'y':
+            if ax.name == 'y' or (hasattr(ax, 'standard_name') \
+                    and ax.standard_name == 'projection_y_coordinate'):
                 self.axes[i] = Y.from_axis(ax)
-            if ax.name == 'z':
+            if ax.name in ('z','height','depth'):
                 self.axes[i] = Z.from_axis(ax)
 
         # check 
@@ -126,35 +130,9 @@ class GeoArray(DimArray):
     def __print__(self): return super(GeoArray, self).__print__().replace("dimarray","geoarray")
     def __str__(self): return super(GeoArray, self).__str__().replace("dimarray","geoarray")
 
-    def transform_scalars(self, to_grid_mapping, from_grid_mapping=None, \
-            xt=None, yt=None, horizontal_coordinates=None):
-        """ Transform scalar field array into a new coordinate system and \
-                interpolate values onto a new regular grid
-
-        Parameters
-        ----------
-        to_grid_mapping : str or dict or cartopy.crs.CRS instance
-            grid mapping onto which the transformation should be done
-        from_grid_mapping : idem, optional
-            original grid mapping, to be provided only when no grid_mapping 
-            attribute is defined or when the axes are something else than 
-            Longitude and Latitude
-        xt, yt : array-like (1-D), optional
-            new coordinates to interpolate the array on
-            will be deduced as min and max of new coordinates if not provided
-        horizontal_coordinates : sequence with 2 str, optional
-            provide horizontal coordinates by name if not an instance of 
-            Latitude, Longitude, X or Y
-
-        Return
-        ------
-        transformed : GeoArray
-            new GeoArray transformed
-        """ 
-        from projection import transform_coords  # avoid loading the projection module since it's quite heavy
-        from dimarray.compat.basemap import interp
-
-        # find horizontal coordinates
+    def _get_horizontal_coordinates(self, horizontal_coordinates=None):
+        """ return horizontal coordinates
+        """
         if horizontal_coordinates: 
             assert len(horizontal_coordinates) == 2, "horizontal_coordinates must be a sequence of length 2"
             x0nm, y0nm = horizontal_coordinates
@@ -181,60 +159,12 @@ class GeoArray(DimArray):
             else:
                 raise Exception("Could not find Y-coordinate among GeoArray axes")
 
-        # determine grid mapping
-        if from_grid_mapping is None:
-
-            # first check if grid_mapping attribute is defined
-            if hasattr(self, 'grid_mapping'):
-                from_grid_mapping = self.grid_mapping
-
-            # otherwise check whether the Coordinates are Geodetic (long/lat)
-            else:
-                if isinstance(x0, Longitude) and isinstance(y0, Latitude):
-                    from_grid_mapping = "geodetic"
-
-        # double-check
-        if from_grid_mapping is None:
-            raise Exception("provide from_grid_mapping or define grid_mapping attribute")
-
-        # Create a 2-D grid with horizontal coordinates
-        x0_2d, y0_2d = np.meshgrid(x0.values, y0.values)
-
-        # Transform coordinates 
-        xt_2d, yt_2d = transform_coords(x0_2d, x0_2d, from_grid_mapping, to_grid_mapping)
-
-        # Interpolate onto a new regular grid while roughly conserving the steps
-        if xt is None:
-            xt = np.linspace(xt_2d.min(), xt_2d.max(), xt_2d.shape[1])
-        if yt is None:
-            yt = np.linspace(yt_2d.min(), yt_2d.max(), yt_2d.shape[0])
-
-        xtr_2d, ytr_2d = np.meshgrid(xt, yt) # regular 2-D grid
-
-        if self.ndim == 2:
-            newvalues = interp(self.values, xt_2d, yt_2d, xtr_2d, ytr_2d)
-            transformed = self._constructor(newvalues, [Y(yt), X(xt)])
-
-        else:
-            # first reshape to 3-D, flattening everything except vertical coordinates
-            # TODO: optimize by computing and re-using weights?
-            obj = self.group((x0.name, xt.name), reverse=True, insert=0)  
-            newvalues = []
-            for k, suba in obj.iter(axis=0): # iterate over the first dimension
-                newval = interp(suba.values, xt_2d, yt_2d, xtr_2d, ytr_2d)
-                newvalues.append(newval)
-
-            # stack the arrays together
-            newvalues = np.array(newvalues)
-            grouped_obj = self._constructor(newvalues, [obj.axes[0], Y(yt), X(xt)])
-            transformed = grouped_obj.ungroup(axis=0)
-
-        return transformed
+        return x0, y0
 
 
-    def transform_vectors(self, to_grid_mapping, from_grid_mapping=None, \
+    def transform_scalars(self, to_grid_mapping, from_grid_mapping=None, \
             xt=None, yt=None, horizontal_coordinates=None):
-        """ Transform vector field array into a new coordinate system and \
+        """ Transform scalar field array into a new coordinate system and \
                 interpolate values onto a new regular grid
 
         Parameters
@@ -257,7 +187,134 @@ class GeoArray(DimArray):
         transformed : GeoArray
             new GeoArray transformed
         """ 
-        pass
+        from projection import transform_coords, _get_grid_mapping  # avoid loading the projection module since it's quite heavy
+        from dimarray.compat.basemap import interp
+
+        # find horizontal coordinates
+        x0, y0 = self._get_horizontal_coordinates(horizontal_coordinates)
+
+        # transpose the array to shape .., y0, x0
+        dims_orig = self.dims
+        dims_new = [d for d in seld.dims if d not in [x0.name, y0.name]] + [y0.name, x0.name]
+        self = self.transpose(dims_new) 
+
+        #assert self.dims.index(x0.name) > self.axes[
+
+        # determine grid mapping
+        if from_grid_mapping is None:
+
+            # first check if grid_mapping attribute is defined
+            if hasattr(self, 'grid_mapping'):
+                from_grid_mapping = self.grid_mapping
+
+            # otherwise check whether the Coordinates are Geodetic (long/lat)
+            else:
+                if isinstance(x0, Longitude) and isinstance(y0, Latitude):
+                    from_grid_mapping = "geodetic"
+
+        # double-check
+        if from_grid_mapping is None:
+            raise Exception("provide from_grid_mapping or define grid_mapping attribute")
+
+        # convert "to" grid mapping to check the kind of transformation we are 
+        # having
+        to_grid_mapping = _get_grid_mapping(to_grid_mapping)
+
+        # Create a 2-D grid with horizontal coordinates
+        x0_2d, y0_2d = np.meshgrid(x0.values, y0.values)
+
+        # Transform coordinates 
+        xt_2d, yt_2d = transform_coords(x0_2d, x0_2d, from_grid_mapping, to_grid_mapping)
+
+        # Interpolate onto a new regular grid while roughly conserving the steps
+        if xt is None:
+            xt = np.linspace(xt_2d.min(), xt_2d.max(), xt_2d.shape[1])
+        if yt is None:
+            yt = np.linspace(yt_2d.min(), yt_2d.max(), yt_2d.shape[0])
+
+        xtr_2d, ytr_2d = np.meshgrid(xt, yt) # regular 2-D grid
+
+        # Define new axes
+        # ...toward geodetic coordinates?
+        if '+proj=lonlon' in to_grid_mapping.proj4_init:
+            p
+        # ...make some projection
+        else:
+            newaxx = X(xt)
+            newaxy = Y(xt)
+
+        if self.ndim == 2:
+            newvalues = interp(self.values, xt_2d, yt_2d, xtr_2d, ytr_2d)
+            transformed = self._constructor(newvalues, [newaxy, newaxx])
+
+        else:
+            # first reshape to 3-D, flattening everything except vertical coordinates
+            # TODO: optimize by computing and re-using weights?
+            obj = self.group((x0.name, xt.name), reverse=True, insert=0)  
+            newvalues = []
+            for k, suba in obj.iter(axis=0): # iterate over the first dimension
+                newval = interp(suba.values, xt_2d, yt_2d, xtr_2d, ytr_2d)
+                newvalues.append(newval)
+
+            # stack the arrays together
+            newvalues = np.array(newvalues)
+            grouped_obj = self._constructor(newvalues, [obj.axes[0], newyax, newxax])
+            transformed = grouped_obj.ungroup(axis=0)
+
+        # reshape back
+        # ...replace old axis names by new ones of the projection
+        dims_orig = list(dims_orig)
+        dims_orig[dims_orig.index(x0.name)] = newaxx.name
+        dims_orig[dims_orig.index(y0.name)] = newaxy.name
+        # ...transpose
+        transformed = transformed.transpose(dims_orig)
+
+        # add metadata
+
+        return transformed
+
+
+    def transform_vectors(self, to_grid_mapping, from_grid_mapping=None, \
+            xt=None, yt=None, horizontal_coordinates=None):
+        """ Transform vector field array into a new coordinate system and \
+                interpolate values onto a new regular grid
+
+        Assume the vector field is represented by an array of shape (2, Ny, Nx)
+
+        Parameters
+        ----------
+        to_grid_mapping : str or dict or cartopy.crs.CRS instance
+            grid mapping onto which the transformation should be done
+        from_grid_mapping : idem, optional
+            original grid mapping, to be provided only when no grid_mapping 
+            attribute is defined or when the axes are something else than 
+            Longitude and Latitude
+        xt, yt : array-like (1-D), optional
+            new coordinates to interpolate the array on
+            will be deduced as min and max of new coordinates if not provided
+        horizontal_coordinates : sequence with 2 str, optional
+            provide horizontal coordinates by name if not an instance of 
+            Latitude, Longitude, X or Y
+
+        Return
+        ------
+        transformed : GeoArray
+            new 3-D GeoArray transformed and interpolated
+        """ 
+        # find horizontal coordinates
+        x0, y0 = self._get_horizontal_coordinates(horizontal_coordinates)
+
+        # get vector components
+        try:
+            ut, vt = self.swapaxes(axis=vector_components) 
+        except IndexError:
+            raise ValueError('invalid vector components axis')
+        except ValueError:
+            raise ValueError('vector component axis must have only two elements')
+        
+        # for now, just make it work for 3-D arrays of shape 
+
+
 
 # define Latitude and Longitude axes
 class Coordinate(Axis):
@@ -332,11 +389,11 @@ class Longitude(Coordinate):
     ---------
     http://cfconventions.org/1.6#longitude-coordinate
     """
-    name='lon', 
-    long_name="longitude", 
-    units="degrees_east", 
-    standard_name="longitude", 
-    modulo=360., 
+    name='lon' 
+    long_name="longitude" 
+    units="degrees_east"
+    standard_name="longitude" 
+    modulo=360.
 
 # To handle projection systems
 class X(Coordinate):

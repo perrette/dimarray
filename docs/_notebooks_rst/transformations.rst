@@ -160,8 +160,8 @@ The `GeoArray` class defines weights automatically for latitude:
 >>> g = GeoArray(v, copy=True)
 >>> g._get_weights()
 dimarray: 6 non-null elements (0 null)
-0 / lat (3): -80 to 80
-1 / lon (2): -180 to 180
+0 / lat (3): -80.0 to 80.0
+1 / lon (2): -180.0 to 180.0
 array([[ 0.17364818,  0.17364818],
        [ 1.        ,  1.        ],
        [ 0.17364818,  0.17364818]])

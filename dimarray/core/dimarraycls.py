@@ -947,6 +947,19 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         obj = pandas_obj(self.values, *[ax.to_pandas() for ax in self.axes])
         return obj
 
+    def to_cube(self):
+        """ convert dimarray to iris cube
+        """
+        from dimarray.convert.iris import as_cube
+        return as_cube(self, copy=True)
+
+    @classmethod
+    def from_cube(cls, cube):
+        """ convert from iris cube
+        """
+        from dimarray.convert.iris import as_dimarray
+        return as_dimarray(cube, copy=True, cls=cls)
+
 #    def to_frame(self, col=0):
 #        """ to pandas dataFrame
 #
