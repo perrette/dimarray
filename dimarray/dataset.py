@@ -18,6 +18,7 @@ class Dataset(odict):
     """
 
     _metadata = MetadataDesc(exclude=['axes'])
+    _constructor = DimArray
 
     def __init__(self, *args, **kwargs):
         """ initialize a dataset from a set of objects of varying dimensions
@@ -45,7 +46,7 @@ class Dataset(odict):
             value = values[i]
             if not isinstance(value, DimArray):
                 if np.isscalar(value):
-                    values[i] = DimArray(value)
+                    values[i] = self._constructor(value)
                 else:
                     raise TypeError("A Dataset can only store DimArray instances, got {}: {}".format(key, value))
 
@@ -115,7 +116,7 @@ class Dataset(odict):
         """
         if not isinstance(val, DimArray):
             if np.isscalar(val):
-                val = DimArray(val)
+                val = self._constructor(val)
             else:
                 raise TypeError("can only append DimArray instances")
 
@@ -165,7 +166,7 @@ class Dataset(odict):
 
     read = read_nc
 
-    def to_array(self, axis=None, keys=None, _constructor=None):
+    def to_array(self, axis=None, keys=None):
         """ Convert to DimArray
 
         axis  : axis name, by default "unnamed"
@@ -201,8 +202,7 @@ class Dataset(odict):
         # determine axes
         axes = [Axis(keys, axis)] + self.axes 
 
-        if _constructor is None: _constructor = DimArray
-        return _constructor(data, axes)
+        return self._constructor(data, axes)
 
 
     def take(self, indices, axis=0, raise_error=True, **kwargs):
@@ -247,7 +247,7 @@ class Dataset(odict):
                     continue
             a = self[k].take(ii, axis=axis, indexing='position')
             if not isinstance(a, DimArray):
-                a = DimArray(a)
+                a = self._constructor(a)
             odict.__setitem__(newdata, k, a)
 
         # update the axis
