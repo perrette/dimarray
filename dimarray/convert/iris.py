@@ -91,12 +91,12 @@ def as_coord(ax):
     name = ax.name
     if (np.issubdtype(points.dtype, np.number) and
             iris.util.monotonic(points, strict=True)):
-        coord = DimCoord(points) #TODO: define circular based on modulo attribute?
-        coord.rename(name)
+        coord = DimCoord(points, var_name=name) #TODO: define circular based on modulo attribute?
+        #coord.rename(name)
 
     else:
-        coord = AuxCoord(points)
-        coord.rename(name)
+        coord = AuxCoord(points, var_name=name)
+        #coord.rename(name)
 
     # add coordinate metadata
     _add_iris_metadata(coord, ax._metadata)
@@ -109,22 +109,24 @@ def as_coord(ax):
 def _add_dimarray_metadata(dim_obj, iris_obj):
     if iris_obj.standard_name: dim_obj.standard_name = iris_obj.standard_name
     if iris_obj.long_name: dim_obj.long_name = iris_obj.long_name
-    if iris_obj.units: dim_obj.units = iris_obj.units
+    if iris_obj.units: dim_obj.units = iris_obj.units.name
     if iris_obj.var_name: dim_obj.name = iris_obj.var_name
     dim_obj.__dict__.update(iris_obj.attributes)
 
 def as_axis(coord):
     """ convert Cube coordinate to DimArray Axis
     """
-    values = coord.data
+    values = np.array(coord.points)
     name = coord.var_name
     ax = Axis(values, name)
     _add_dimarray_metadata(ax, coord)
 
+    return ax
+
 def as_dimarray(cube, copy=True, cls=None):
     """ convert Cube to GeoArray
     """
-    values = coord.data
+    values = cube.data
     axes = []
     # NOTE: There seems to be nothing in iris that 
     # prevents the number of dim_coords from
@@ -137,7 +139,7 @@ def as_dimarray(cube, copy=True, cls=None):
     if cls is None: cls = DimArray
     dim_array = cls(values, axes, copy=copy)
 
-    _add_dimarray_metadata(dim_array, coord)
+    _add_dimarray_metadata(dim_array, cube)
 
     return dim_array
 
