@@ -221,8 +221,9 @@ class X(Coordinate):
     http://cfconventions.org/1.6#grid-mappings-and-projections
     """
     name = 'x'
-    long_name = "x distance on the projection plane from the origin";
-    standard_name = "projection_x_coordinate";
+    long_name = "x distance"
+    #long_name = "x distance on the projection plane from the origin";
+    #standard_name = "projection_x_coordinate";
     #units = "km";
 
 class Y(Coordinate):
@@ -233,8 +234,9 @@ class Y(Coordinate):
     http://cfconventions.org/1.6#grid-mappings-and-projections
     """
     name = 'y'
-    long_name = "y distance on the projection plane from the origin";
-    standard_name = "projection_y_coordinate";
+    long_name = "y distance"
+    #long_name = "y distance on the projection plane from the origin";
+    #standard_name = "projection_y_coordinate";
 
 class Z(Coordinate):
     """ Vertical coordinate

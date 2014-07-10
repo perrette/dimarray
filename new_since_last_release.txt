@@ -1,0 +1,19 @@
+bugfix:
+    added __ne__ attribute to DimArray (a != b)
+    align (reindex) axes involving a None singleton
+    bugfix: weighted mean: py.test now work on geoarray
+
+new features:
+    dimarray.geo module now handles transformation using cartopy
+    CF-conform transformation are automatically mapped from proj4
+    arguments
+
+deprecations:
+
+incompatible api change:
+    dimarray.geo was cleared from previous code (apart from GeoArray)
+    reset_axis, set_axis
+    weights parameter simplified for mean, std, and var
+
+    
+

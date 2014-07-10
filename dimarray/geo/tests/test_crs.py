@@ -1,5 +1,6 @@
 """ test CRS transforms
 """
+from __future__ import division
 
 import unittest
 import numpy as np
@@ -7,7 +8,7 @@ from numpy.testing import assert_allclose
 
 import dimarray as da
 from dimarray.geo.crs import get_grid_mapping, Proj4
-from dimarray.geo import GeoArray
+from dimarray.geo import GeoArray, transform, transform_vectors
 
 class TestCRS(unittest.TestCase):
     """ test netCDF formulation versus Proj.4
@@ -15,12 +16,12 @@ class TestCRS(unittest.TestCase):
     grid_mapping = None
     proj4_init = None
 
-    def setUp(self):
-        shape = 180, 360
-        ni, nj = shape # full globe
-        lat = np.linspace(-89.5, 89.5, ni)
-        lon = np.linspace(-179.9, 179.5, nj)
-        self.a = GeoArray(np.random.randn(*shape), lon=lon, lat=lat)
+    #def setUp(self):
+    #    shape = 180, 360
+    #    ni, nj = shape # full globe
+    #    lat = np.linspace(-89.5, 89.5, ni)
+    #    lon = np.linspace(-179.9, 179.5, nj)
+    #    self.a = GeoArray(np.random.randn(*shape), lon=lon, lat=lat)
 
     def test_from_cf(self):
         if not self.grid_mapping: return # only subclassing
@@ -41,9 +42,6 @@ class TestCRS(unittest.TestCase):
         expected = self.grid_mapping
         self.assertEqual(crs.cf_params, expected)
 
-    def test_transform(self):
-        pass
-        
 
 class TestStereographic(TestCRS):
 
@@ -73,26 +71,61 @@ class TestPolarStereographic(TestCRS):
 
     proj4_init = '+ellps=WGS84 +proj=stere +lat_0=90.0 +lon_0=-39.0 +x_0=0.0 +y_0=0.0 +lat_ts=71.0'
 
-    def test_coords(self):
+
+class TestPolarStereographicData(unittest.TestCase):
+    def setUp(self):
         ncfile = da.get_ncfile('greenland_velocity.nc')
         try:
-            ds = da.read_nc(ncfile, ['surfvelmag','mapping','lon','lat'])
+            self.grl = da.read_nc(ncfile)
         except:
-            warnings.warn('could not test transform on real file')
-            #return # no netCDF4?
+            self.grl = None
+            warnings.warn('could not read netCDF: no test_coords')
+            return
 
-        vmag, mapping, lon, lat = ds.values()
-        mapping = mapping._metadata
-        del mapping['name']  # should probably remove automatic naming after being in a dataset
-        
-        crs = get_grid_mapping(mapping)
+        grl = self.grl
+
+        self.vmag = grl['surfvelmag']
+        self.vx = grl['surfvelx']
+        self.vy = grl['surfvely']
+        self.lon = grl['lon']
+        self.lat = grl['lat']
+        self.mapping = grl['mapping']._metadata
+        del self.mapping['name'] # should probably remove automatic naming after being in a dataset
+
+    def test_coords(self):
+        if self.grl is None: return
+
+        vmag = self.vmag
+        crs = get_grid_mapping(self.mapping)
+
         lonlat = get_grid_mapping('geodetic')
         x1, y1 = np.meshgrid(vmag.x1, vmag.y1)
         coords = lonlat.transform_points(crs, x1, y1)
         newlon, newlat, z = np.rollaxis(coords, -1) # bring the last axis at the front
 
-        assert_allclose(newlon, lon)
-        assert_allclose(newlat, lat)
+        assert_allclose(newlon, self.lon)
+        assert_allclose(newlat, self.lat)
+
+    def test_transform(self):
+        " just run a transform "
+        if self.grl is None: return
+        
+        vmagt = transform(self.vmag, from_grid_mapping=self.mapping, \
+                to_grid_mapping='geodetic', \
+                xt=np.linspace(-75,-10,300), yt=np.linspace(60, 84, 300))
+
+        self.assertGreater((~np.isnan(vmagt)).sum() , (~np.isnan(self.vmag)).sum()*0.25) # against all nan
+        #assert_allclose((ut**2+vt**2, vmagt**2)
+
+        ut, vt = transform_vectors(self.vx, self.vy, from_grid_mapping=self.mapping, \
+                to_grid_mapping='geodetic', \
+                xt=np.linspace(-75,-10,300), yt=np.linspace(60, 84, 300))
+
+        #assert_allclose((ut**2+vt**2)**0.5, vmagt, atol=1e-2, rtol=0.01)
+        # fraction of point close within 1%
+        frac = np.isclose((ut**2+vt**2)**0.5, vmagt, rtol=0.01, equal_nan=True).sum() / vmagt.size
+        self.assertGreaterEqual(frac, 0.7)  # multiplication + interp ==> does not work so well ??
+
 
 class TestGeodetic(TestCRS):
 
@@ -102,6 +135,15 @@ class TestGeodetic(TestCRS):
         )  # CF-1.4
 
     proj4_init = '+ellps=WGS84 +proj=lonlat'
+
+class TestRotatedPoles(TestCRS):
+
+    grid_mapping = dict(
+            grid_mapping_name = 'rotated_latitude_longitude',
+            grid_north_pole_longitude =0., 
+            grid_north_pole_latitude =90.)
+
+    proj4_init = '+ellps=WGS84 +proj=ob_tran +o_proj=latlon +o_lon_p=0 +o_lat_p=90.0 +lon_0=180.0 +to_meter=0.0174532925199'
 
 
 
