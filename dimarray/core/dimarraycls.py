@@ -807,6 +807,19 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         else:
             return res
 
+    def __ne__(self, other): 
+        """ non equal 
+        >>> DimArray([1, 2]) != 1
+        dimarray: 2 non-null elements (0 null)
+        0 / x0 (2): 0 to 1
+        array([False,  True], dtype=bool)
+        """
+        eq = self == other
+        if isinstance(eq, bool):
+            return not eq
+        else:
+            return ~eq
+
     def __invert__(self): 
         """
         Examples
