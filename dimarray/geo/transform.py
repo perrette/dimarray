@@ -50,6 +50,7 @@ def _check_grid_mapping(grid_mapping=None, geo_array=None):
     """ make sure the grid mapping is a CRS instance, 
     or convert it to a CRS instance
     """
+    import cartopy.crs as ccrs
     from dimarray.geo.crs import get_grid_mapping, CF_CRS
 
     if grid_mapping is None and geo_array is not None \
@@ -59,13 +60,15 @@ def _check_grid_mapping(grid_mapping=None, geo_array=None):
     if grid_mapping is None: 
         raise ValueError("grid mapping not provided")
 
-    # already a CRS instance : do nothing
-    if isinstance(grid_mapping, ccrs.CRS):
-        return grid_mapping
+    ## already a CRS instance : do nothing
+    #if isinstance(grid_mapping, ccrs.CRS):
+    #    return grid_mapping
 
-    # some more possibility offered, such as providing proj.4-like parameters
-    else:
-        grid_mapping = get_grid_mapping(grid_mapping)
+    # if dict remove name
+    if isinstance(grid_mapping, dict) and 'name' in grid_mapping.keys():
+        del grid_mapping['name'] # typical case via ._metadata after reading from a dataset
+
+    grid_mapping = get_grid_mapping(grid_mapping)
 
     # now add a cf_params attribute if needed
     # NOTE: for now just do not force conversion from Cartopy
@@ -75,7 +78,7 @@ def _check_grid_mapping(grid_mapping=None, geo_array=None):
             crs = get_grid_mapping(grid_mapping, cf_conform=True)
             grid_mapping.cf_params = grid_mapping
         except:
-            pass
+            raise
 
     return grid_mapping
 
@@ -101,13 +104,14 @@ def _transform_coordinates(from_grid_mapping, to_grid_mapping, x0_2d, y0_2d, xt=
     """
     # Transform coordinates 
     #xt_2d, yt_2d = transform_coords(x0_2d, x0_2d, from_grid_mapping, to_grid_mapping)
-    xt_2d, yt_2d = to_grid_mapping.transform_points(from_grid_mapping, x0_2d, x0_2d)
+    trans = to_grid_mapping.transform_points(from_grid_mapping, x0_2d, x0_2d)
+    xt_2d, yt_2d, zt_2d = np.rollaxis(trans,2) # last dimension first
 
     # Interpolate onto a new regular grid while roughly conserving the steps
     if xt is None:
-        xt = np.linspace(xt_2d.min(), xt_2d.max(), xt_2d.shape[1])
+        xt = np.linspace(xt_2d.min(), xt_2d.max(), x0_2d.shape[1])
     if yt is None:
-        yt = np.linspace(yt_2d.min(), yt_2d.max(), yt_2d.shape[0])
+        yt = np.linspace(yt_2d.min(), yt_2d.max(), y0_2d.shape[0])
 
     assert xt.ndim == 1 and yt.ndim == 1, 'transformed coordinates must be 1-D'
 
@@ -161,14 +165,14 @@ def transform_scalars(geo_array, to_grid_mapping, from_grid_mapping=None, \
 
     # transpose the array to shape .., y0, x0 (cartesian convention needed for meshgrid)
     dims_orig = geo_array.dims
-    dims_new = [d for d in seld.dims if d not in [x0.name, y0.name]] + [y0.name, x0.name]
+    dims_new = [d for d in geo_array.dims if d not in [x0.name, y0.name]] + [y0.name, x0.name]
     geo_array = geo_array.transpose(dims_new) 
 
     #assert geo_array.dims.index(x0.name) > geo_array.axes[
 
     # get cartopy.crs.CRS instances
-    from_grid_mapping = _check_grid_mapping(from_grid_mapping, geoarray)
-    to_grid_mapping = _check_grid_mapping(from_grid_mapping)
+    from_grid_mapping = _check_grid_mapping(from_grid_mapping, geo_array)
+    to_grid_mapping = _check_grid_mapping(to_grid_mapping)
     #from_grid_mapping = _get_grid_mapping(geoarray, from_grid_mapping)
     #to_grid_mapping = get_grid_mapping(to_grid_mapping)
 
@@ -177,20 +181,25 @@ def transform_scalars(geo_array, to_grid_mapping, from_grid_mapping=None, \
     xt_2d, yt_2d, xt_1d, yt_1d = _transform_coordinates(from_grid_mapping, to_grid_mapping, x0_2d, y0_2d, xt, yt)
     xt_2dr, yt_2dr = np.meshgrid(xt_1d, yt_1d) # regular 2-D grid
 
+    # transform back the target grid for interpolation...
+    tmp = from_grid_mapping.transform_points(to_grid_mapping, xt_2dr, yt_2dr)
+    x0_int, y0_int, z0_int = np.rollaxis(tmp, 2) # roll last axis first
+
     # Define new axes
     # ...toward geodetic coordinates? (several standards seem to exist, cartopy uses "lonlat"
     if '+proj=latlong' in to_grid_mapping.proj4_init \
             or '+proj=lonlat' in to_grid_mapping.proj4_init:
         newaxx = Longitude(xt_1d)
-        newaxy = Longitude(yt_1d)
+        newaxy = Latitude(yt_1d)
 
     # ...make some projection
     else:
         newaxx = X(xt_1d)
-        newaxy = Y(xt_1d)
+        newaxy = Y(yt_1d)
 
     if geo_array.ndim == 2:
-        newvalues = interp(geo_array.values, xt_2d, yt_2d, xt_2dr, yt_2dr)
+        #newvalues = interp(geo_array.values, xt_2d, yt_2d, xt_2dr, yt_2dr)
+        newvalues = interp(geo_array.values, x0.values, y0.values, x0_int, y0_int)
         transformed = geo_array._constructor(newvalues, [newaxy, newaxx])
 
     else:
@@ -199,7 +208,8 @@ def transform_scalars(geo_array, to_grid_mapping, from_grid_mapping=None, \
         obj = geo_array.group((x0.name, xt.name), reverse=True, insert=0)  
         newvalues = []
         for k, suba in obj.iter(axis=0): # iterate over the first dimension
-            newval = interp(suba.values, xt_2d, yt_2d, xt_2dr, yt_2dr)
+            #newval = interp(suba.values, xt_2d, yt_2d, xt_2dr, yt_2dr)
+            newval = interp(geo_array.values, x0.values, y0.values, x0_int, y0_int)
             newvalues.append(newval)
 
         # stack the arrays together
@@ -221,6 +231,7 @@ def transform_scalars(geo_array, to_grid_mapping, from_grid_mapping=None, \
         cf_params = to_grid_mapping.cf_params
         transformed.grid_mapping = cf_params
     except:
+        raise
         warnings.warn("cannot convert grid mapping to CF-conform metadata")
         if hasattr(transformed, 'grid_mapping'):
             del transformed.grid_mapping # remove old metadata

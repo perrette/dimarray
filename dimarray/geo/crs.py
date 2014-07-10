@@ -602,7 +602,7 @@ def get_grid_mapping(grid_mapping, cf_conform=False):
     assert isinstance(grid_mapping, ccrs.CRS), 'something went wrong'
 
     if cf_conform and not isinstance(grid_mapping, CF_CRS):
-        cf_params = grid_mapping.cf_params
+        cf_params = _proj4_to_cf_params(grid_mapping.proj4_params) # CF-conform grid-mapping
         grid_mapping = get_grid_mapping(cf_params) # CF-conform grid-mapping
 
     return grid_mapping

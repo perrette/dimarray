@@ -645,6 +645,7 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     flatten = _reshape.flatten
     reshape = _reshape.reshape
     transpose = _reshape.transpose
+    rollaxis = _reshape.rollaxis
     broadcast = _reshape.broadcast
     groupby = _reshape.groupby
     swapaxes = _reshape.swapaxes

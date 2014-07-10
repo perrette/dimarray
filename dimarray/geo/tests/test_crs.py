@@ -2,14 +2,25 @@
 """
 
 import unittest
+import numpy as np
+from numpy.testing import assert_allclose
 
+import dimarray as da
 from dimarray.geo.crs import get_grid_mapping, Proj4
+from dimarray.geo import GeoArray
 
 class TestCRS(unittest.TestCase):
     """ test netCDF formulation versus Proj.4
     """
     grid_mapping = None
     proj4_init = None
+
+    def setUp(self):
+        shape = 180, 360
+        ni, nj = shape # full globe
+        lat = np.linspace(-89.5, 89.5, ni)
+        lon = np.linspace(-179.9, 179.5, nj)
+        self.a = GeoArray(np.random.randn(*shape), lon=lon, lat=lat)
 
     def test_from_cf(self):
         if not self.grid_mapping: return # only subclassing
@@ -29,6 +40,10 @@ class TestCRS(unittest.TestCase):
         crs = get_grid_mapping(self.proj4_init)
         expected = self.grid_mapping
         self.assertEqual(crs.cf_params, expected)
+
+    def test_transform(self):
+        pass
+        
 
 class TestStereographic(TestCRS):
 
@@ -57,6 +72,27 @@ class TestPolarStereographic(TestCRS):
         )  # CF-1.4
 
     proj4_init = '+ellps=WGS84 +proj=stere +lat_0=90.0 +lon_0=-39.0 +x_0=0.0 +y_0=0.0 +lat_ts=71.0'
+
+    def test_coords(self):
+        ncfile = da.get_ncfile('greenland_velocity.nc')
+        try:
+            ds = da.read_nc(ncfile, ['surfvelmag','mapping','lon','lat'])
+        except:
+            warnings.warn('could not test transform on real file')
+            #return # no netCDF4?
+
+        vmag, mapping, lon, lat = ds.values()
+        mapping = mapping._metadata
+        del mapping['name']  # should probably remove automatic naming after being in a dataset
+        
+        crs = get_grid_mapping(mapping)
+        lonlat = get_grid_mapping('geodetic')
+        x1, y1 = np.meshgrid(vmag.x1, vmag.y1)
+        coords = lonlat.transform_points(crs, x1, y1)
+        newlon, newlat, z = np.rollaxis(coords, -1) # bring the last axis at the front
+
+        assert_allclose(newlon, lon)
+        assert_allclose(newlat, lat)
 
 class TestGeodetic(TestCRS):
 

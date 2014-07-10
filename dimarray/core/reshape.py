@@ -7,7 +7,8 @@ from collections import OrderedDict
 import functools
 
 from axes import Axis, Axes, GroupedAxis
-from dimarray.tools import is_DimArray
+#from dimarray.tools import is_DimArray
+import dimarray as da
 
 #
 # Broadcast
@@ -61,7 +62,7 @@ def broadcast(self, other):
         newaxes = other
 
     # Or as DimArray
-    elif is_DimArray(other):
+    elif isinstance(other, da.DimArray):
          newaxes = other.axes
 
     # Or as OrderedDict of axis names, axis values
@@ -185,6 +186,47 @@ def swapaxes(self, axis1, axis2):
         else:
             newshape.append(i)
     return transpose(self, newshape)
+
+def rollaxis(self, axis, start=0):
+    """ Roll the specified axis backwards, until it lies in a given position.
+
+    Parameters
+    ----------
+    axis : int or str
+        The axis to roll backwards.  The positions of the other axes do not
+        change relative to one another.
+    start : int, optional
+        The axis is rolled until it lies before this position.  The default,
+        0, results in a "complete" roll.
+
+    Returns
+    -------
+    res : DimArray instance
+        Output array.
+
+    See Also
+    --------
+    roll : Roll the elements of an array by a number of positions along a
+        given axis.  (TODO)
+
+    Examples
+    --------
+    >>> import dimarray as da
+    >>> a = da.ones(shape=(3,4,5,6))
+    >>> a.rollaxis(3, 1).shape
+    (3, 6, 4, 5)
+    >>> a.rollaxis(2).shape
+    (5, 3, 4, 6)
+    >>> a.rollaxis(1, 4).shape
+    (3, 5, 6, 4)
+    """
+    axis, _ = self._get_axis_info(axis) # position
+
+    # use numpy rollaxis on an empty array to determine the shape
+    fake = np.ones(range(self.ndim)) # first is 0 ==> empty
+    newshape = np.rollaxis(fake, axis, start).shape
+
+    return self.transpose(newshape)
 
 #
 # Repeat the array along *existing* axis
