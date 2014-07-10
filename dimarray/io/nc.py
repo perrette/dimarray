@@ -79,25 +79,28 @@ def read_nc(f, nms=None, *args, **kwargs):
     {indexing}
 
     align : bool, optional
-
-        Multiple files
-
         if nms is a list of files or a regular expression, pass align=True
         if the arrays from the various files have to be aligned prior to 
         concatenation. Similar to dimarray.stack and dimarray.stack_ds
 
+        Only when reading multiple files
+
     axis : str, optional
-
-        Multiple files, align==True
-
         axis along which to join the dimarrays or datasets (if align is True)
 
+        Only when reading multiple files and align==True
+
     keys : sequence, optional
-
-        Multiple files, align==True
-
         new axis values. If not provided, file names will be taken instead.
         It is always possible to use set_axis later.
+
+        Only when reading multiple files and align==True
+
+    copy_grid_mapping : bool, optional
+        if True, any "grid_mapping" attribute pointing to another variable 
+        present in the dataset will be replaced by that variable's metadata
+        as a dictionary. This can ease transformations.
+        Default is True.
 
     Returns
     -------
@@ -293,7 +296,7 @@ def _extract_kw(kwargs, argnames, delete=True):
     return kw
 
 @format_doc(indexing=_doc_indexing)
-def _read_variable(f, name, indices=None, axis=0, verbose=False, **kwargs):
+def _read_variable(f, name, indices=None, axis=0, verbose=False, copy_grid_mapping=True, **kwargs):
     """ Read one variable from netCDF4 file 
 
     Parameters
@@ -301,6 +304,11 @@ def _read_variable(f, name, indices=None, axis=0, verbose=False, **kwargs):
     f  : file name or file handle
     name : netCDF variable name to extract
     {indexing}
+
+    copy_grid_mapping : bool, optional
+        if True, any "grid_mapping" attribute pointing to another variable 
+        present in the dataset will be replaced by that variable's metadata
+        as a dictionary. This can ease transformations.
 
     Returns
     -------
@@ -340,12 +348,22 @@ def _read_variable(f, name, indices=None, axis=0, verbose=False, **kwargs):
 
     # initialize a dimarray
     obj = DimArray(newdata, newaxes)
-    obj.name = name
+    #obj.name = name
 
     # Read attributes
     attr = _read_attributes(f, name)
     for k in attr:
         setattr(obj, k, attr[k])
+
+    # copy grid_mapping?
+    if copy_grid_mapping and hasattr(obj, 'grid_mapping'):
+        gm = obj.grid_mapping
+        try:
+            mapping = _read_variable(f, gm, copy_grid_mapping=False)
+            obj.grid_mapping = mapping._metadata
+
+        except Exception as error:
+            warnings.warn(error.message +"\n ==> could not read grid mapping")
 
     # close netCDF if file was given as file name
     if close:
@@ -506,7 +524,7 @@ def _write_dataset(f, obj, mode='w-', indices=None, axis=0, format=FORMAT, verbo
 
 
 @format_doc(netCDF4=_doc_write_nc, indexing=_doc_indexing_write, write_modes=_doc_write_modes)
-def _write_variable(f, obj=None, name=None, mode='a+', format=FORMAT, indices=None, axis=0, verbose=False, **kwargs):
+def _write_variable(f, obj=None, name=None, mode='a+', format=FORMAT, indices=None, axis=0, verbose=False, write_grid_mapping=True, **kwargs):
     """ Write DimArray instance to file
 
     Parameters
@@ -519,6 +537,9 @@ def _write_variable(f, obj=None, name=None, mode='a+', format=FORMAT, indices=No
         Default mode is 'a+'
     {netCDF4}
     {indexing}
+    write_grid_mapping : bool, optional
+        if True (the default), write any grid mapping attribute as a 
+        separate variable in the dataset, accordingly to CF-conventions
 
     See Also
     --------
@@ -527,13 +548,13 @@ def _write_variable(f, obj=None, name=None, mode='a+', format=FORMAT, indices=No
     """
     if not name and hasattr(obj, "name"): name = obj.name
     assert name, "invalid variable name !"
+    assert isinstance(obj, DimArray), "expected a DimArray instance, got {}".format(type(obj))
 
     # control wether file name or netCDF handle
     f, close = _check_file(f, mode=mode, verbose=verbose, format=format)
 
     # create variable if necessary
     if name not in f.variables:
-        assert isinstance(obj, DimArray), "a must be a DimArray"
         v = _createVariable(f, name, obj.axes, dtype=obj.dtype, **kwargs)
 
     else:
@@ -559,15 +580,53 @@ def _write_variable(f, obj=None, name=None, mode='a+', format=FORMAT, indices=No
     v[ix] = np.asarray(obj)
 
     # add metadata if any
-    if isinstance(obj, DimArray):
-        meta = obj._metadata
-        for k in meta.keys():
-            if k == "name": continue # 
-            try:
-                f.variables[name].setncattr(k, meta[k])
+    #if isinstance(obj, DimArray):
+    meta = obj._metadata
+    for k in meta.keys():
+        if k == "name": continue # 
 
-            except TypeError, msg:
-                raise Warning(msg)
+        # write grid_mapping in a separate variable
+        if k == 'grid_mapping' and write_grid_mapping \
+                and isinstance(meta[k], dict) \
+                and 'grid_mapping_name' in meta[k]:
+
+            # first search whether the mapping is already present
+            found = False
+            for nm in f.variables.keys():
+                ncvar = f.variables[nm]
+                if ncvar.size == 1 and hasattr(ncvar, 'grid_mapping_name'):
+                    test_grid_mapping = {kk: getattr(ncvar, kk) for kk in ncvar.ncattrs()}
+                    if test_grid_mapping == meta['grid_mapping']:
+                        found = True
+                        break
+            if found: 
+                meta[k] = nm # point toward the new name
+                    
+            else:
+                name0 = "mapping"
+                name = name0
+                i = 0
+                while name in f.variables.keys():
+                    i += 1
+                    name = name0+str(i)
+                    assert i < 100, 'infinite look'
+
+                try:
+                    mapping = f.createVariable(name, np.dtype('S1'), ())
+                    for kk, val in meta['grid_mapping'].iteritems():
+                        mapping.setncattr(kk, val)
+                    meta[k] = name # point toward the new name
+                except TypeError as error:
+                    msg = error.message
+                    msg += "\n=>could not create grid mapping variable"
+                    #warnings.warn(msg)
+                    raise Warning(msg)
+
+        try:
+            f.variables[name].setncattr(k, meta[k])
+
+        except TypeError, msg:
+            raise Warning(msg)
 
     if close:
         f.close()
