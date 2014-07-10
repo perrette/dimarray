@@ -148,7 +148,10 @@ class CF_CRS(object):
 
         # Initialize cartopy coordinate system
         try:
-            CRSproj = filter(lambda x : np.issubclass_(x, ccrs.CRS), self.__class__.__bases__)[0] # find CRS base
+            # find cartopy.crs.CRS ancestor:
+            CRSproj = self.__class__
+            while np.issubclass_(CRSproj, CF_CRS):
+                CRSproj = filter(lambda x : np.issubclass_(x, ccrs.CRS), CRSproj.__bases__)[0]
             CRSproj.__init__(self, **cartopy_params)
             #super(CRSproj, self)(**cartopy_params)
 
@@ -176,7 +179,7 @@ class CF_CRS(object):
 class Geodetic(CF_CRS, ccrs.Geodetic):
     """ Same as cartopy.crs.Geodetic but accept netCDF parameters as arguments
     """
-    grid_mapping_name = 'longitude_latitude'
+    grid_mapping_name = 'latitude_longitude'
     _proj4_def = '+proj=lonlat'
     _cartopy = {} # no parameter apart from "globe"
 
@@ -236,32 +239,8 @@ class PolarStereographic(Stereographic):
                 or kwargs['latitude_of_projection_origin'] not in (-90, 90):
             raise ValueError(msg)
 
-## #
-## # Here just for convenience
-## #
-## class NorthPolarStereographic(CF_CRS, ccrs.NorthPolarStereo):
-## 
-##     grid_mapping_name = "north_polar_stereographic" # not in CF-convention
-## 
-##     # correspondence table between netCDF and Cartopy parameters
-##     _cartopy = dict(
-##             straight_vertical_longitude_from_pole = 'central_longitude',  # preferred?
-##             longitude_of_projection_origin = 'central_longitude', # also accepted
-##             )
-## 
-##     _alternate_parameters = [['straight_vertical_longitude_from_pole', 'longitude_of_projection_origin']]
-## 
-## class SouthPolarStereographic(CF_CRS, ccrs.SouthPolarStereo):
-## 
-##     grid_mapping_name = "south_polar_stereographic" # not in CF-convention
-## 
-##     # correspondence table between netCDF and Cartopy parameters
-##     _cartopy = dict(
-##             straight_vertical_longitude_from_pole = 'central_longitude',  # preferred?
-##             longitude_of_projection_origin = 'central_longitude', # also accepted
-##             )
-## 
-##     _alternate_parameters = [['straight_vertical_longitude_from_pole', 'longitude_of_projection_origin']]
+
+
 
 # 
 # Conversions between PROJ.4 parameters and CF parameters
@@ -487,70 +466,29 @@ def _get_cf_crs_class(grid_mapping_name):
     return found[0] # 0: class name, 1: class
 
 
+def get_grid_mapping(grid_mapping, cf_conform=False):
+    """ Get a cartopy's CRS instance from a variety of key-word parameters
 
-def get_grid_mapping(grid_mapping, cf_check=False):
-    """ check grid_mapping type (see doc in transform_coords)
+    Parameters
+    ----------
+    grid_mapping : str or dict or cartopy.crs.CRS instance
+        See below
+    cf_conform : if True, only returns dimarray.geo.CF_CRS instances
 
-    grid_mapping : dict of CF parameters or Cartopy projection instance or 
-    cf_check : if True, must be dict of CF parameters
-    """
-    if cf_check:
-        if not isinstance(grid_mapping, dict):
-            raise TypeError("grid_mapping must be a dict of CF-conform parameters, got {} : {}".format(type(grid_mapping), grid_mapping))
+    Returns
+    -------
+    cartopy's CRS instance 
 
-    if isinstance(grid_mapping, dict):
-        grid_mapping = grid_mapping.copy()
-        try:
-            grid_mapping_name = grid_mapping.pop('grid_mapping_name')
-        except KeyError:
-            raise ValueError("grid_mapping_name not present")
-
-        cls = _get_cf_crs_class(grid_mapping_name)
-        grid_mapping = cls(**grid_mapping)
-
-    elif isinstance(grid_mapping, str):
-
-        # special case: PROJ.4 string?
-        if '+' in grid_mapping:
-            grid_mapping = Proj4(grid_mapping)
-
-        # common case: Cartopy class name
-        else:
-            members = inspect.getmembers(ccrs, lambda x: np.issubclass_(x, ccrs.CRS) and x.__name__.lower() == grid_mapping.lower())
-            if len(members) == 0:
-                raise ValueError("class "+grid_mapping+" not found")
-            else:
-                assert len(members) == 1, "more than one match, bug: check case"
-                cls = members[0][1]
-                #cls = getattr(ccrs, grid_mapping)
-            grid_mapping = cls()
-
-    elif not isinstance(grid_mapping, ccrs.CRS):
-        msg = 80*'-'+'\n'+_doc_grid_mapping+'\n'+80*'-'+'\n\n'
-        msg += 'grid_mapping: must be str or dict or cartopy.crs.CRS instance (see above)'
-        raise TypeError(msg)
-
-    # just checking
-    assert isinstance(grid_mapping, ccrs.CRS), 'something went wrong'
-
-    if not isinstance(grid_mapping, CF_CRS):
-        # try to return a CF-conform class
-        try:
-            cf_params = grid_mapping.cf_params
-            grid_mapping = get_grid_mapping(cf_params) # CF-conform grid-mapping
-        except:
-            pass
-
-    return grid_mapping
-
-
-_doc_grid_mapping = """
+    Note
+    ----
     A grid mapping can be defined in one of the following ways:
     - providing a cartopy.crs.CRS instance directly
     - provide a cartopy.crs.CRS subclass name, for initialization with 
       default parameters
     - providing a dictionary of netCDF-conform parameters (CF-1.4)
     - provide a PROJ.4 string, with parameters preceded by '+' (EXPERIMENTAL)
+
+    This will be converted into a cartopy.crs.CRS instance.
 
     Information on netcdf-conforming parameters can be found here:
     http://cfconventions.org/1.4.html#appendix-grid-mappings
@@ -576,7 +514,7 @@ _doc_grid_mapping = """
 
     Other coordinates systems onto which lon and lat can be projected onto
 
-    >>> from dimarray.geo.crs import _get_cf_crs_class
+    >>> from dimarray.geo.crs import get_grid_mapping
 
     North Polar Stereographic Projection over Greenland
 
@@ -621,7 +559,54 @@ _doc_grid_mapping = """
     >>> crs = get_grid_mapping(proj4_init)
     >>> crs.transform_point(70, -40, ccrs.Geodetic())
     (24969236.85758362, 8597597.732836112)
-""".strip()
+    """
+    if isinstance(grid_mapping, dict):
+        grid_mapping = grid_mapping.copy()
+        try:
+            grid_mapping_name = grid_mapping.pop('grid_mapping_name')
+        except KeyError:
+            raise ValueError("grid_mapping_name not present")
+
+        cls = _get_cf_crs_class(grid_mapping_name)
+        grid_mapping = cls(**grid_mapping)
+
+    elif isinstance(grid_mapping, str):
+
+        # special case: PROJ.4 string?
+        if '+' in grid_mapping:
+            grid_mapping = Proj4(grid_mapping)
+            # try to convert to CF_CRS class
+            try:
+                cf_params = grid_mapping.cf_params
+                grid_mapping(get_grid_mapping(cf_params))
+            except:
+                pass
+
+        # common case: Cartopy class name
+        else:
+            members = inspect.getmembers(ccrs, lambda x: np.issubclass_(x, ccrs.CRS) and x.__name__.lower() == grid_mapping.lower())
+            if len(members) == 0:
+                raise ValueError("class "+grid_mapping+" not found")
+            else:
+                assert len(members) == 1, "more than one match, bug: check case"
+                cls = members[0][1]
+                #cls = getattr(ccrs, grid_mapping)
+            grid_mapping = cls()
+
+    elif not isinstance(grid_mapping, ccrs.CRS):
+        #msg = 80*'-'+'\n'+get_grid_mapping.__doc__+'\n'+80*'-'+'\n\n'
+        msg = 'grid_mapping: must be str or dict or cartopy.crs.CRS instance, got: {}'.format(grid_mapping)
+        raise TypeError(msg)
+
+    # just checking
+    assert isinstance(grid_mapping, ccrs.CRS), 'something went wrong'
+
+    if cf_conform and not isinstance(grid_mapping, CF_CRS):
+        cf_params = grid_mapping.cf_params
+        grid_mapping = get_grid_mapping(cf_params) # CF-conform grid-mapping
+
+    return grid_mapping
+
 
 
 

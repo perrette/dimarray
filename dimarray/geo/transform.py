@@ -1,4 +1,4 @@
-""" Various transformations specific to a geoarray
+""" Geo-Array transformation between various coordinate reference system
 """ 
 import warnings
 import numpy as np
@@ -6,7 +6,10 @@ from dimarray.geo.geoarray import GeoArray, DimArray
 from dimarray.geo.geoarray import X, Y, Z, Longitude, Latitude 
 from dimarray import stack
 
-def _get_horizontal_coordinates(geo_array, horizontal_coordinates=None):
+#
+# share private functions
+#
+def _check_horizontal_coordinates(geo_array, horizontal_coordinates=None, add_grid_mapping=True):
     """ return horizontal coordinates
     """
     if horizontal_coordinates: 
@@ -35,34 +38,51 @@ def _get_horizontal_coordinates(geo_array, horizontal_coordinates=None):
         else:
             raise Exception("Could not find Y-coordinate among GeoArray axes")
 
+    # Add grid mapping to GeoArray if Coordinates are Geodetic (long/lat)
+    if add_grid_mapping and (not hasattr(geo_array, 'grid_mapping') or geo_array.grid_mapping is None) \
+        and isinstance(x0, Longitude) and isinstance(y0, Latitude):
+            geo_array.grid_mapping = {'grid_mapping_name':'latitude_longitude'}
+
     return x0, y0
 
-#
-# Transformations involving changes in Coordinate Reference System
-#
-def _get_grid_mapping_geoarray(geo_array, grid_mapping=None):
-    """ return grid mapping instance by checking both grid_mapping and 
-    geo_array's attributes"""
-    from dimarray.geo.crs import get_grid_mapping  
 
-    if grid_mapping is None:
+def _check_grid_mapping(grid_mapping=None, geo_array=None):
+    """ make sure the grid mapping is a CRS instance, 
+    or convert it to a CRS instance
+    """
+    from dimarray.geo.crs import get_grid_mapping, CF_CRS
 
-        # first check if grid_mapping attribute is defined
-        # (in form of a dictionary of CF-conform parameters)
-        if hasattr(geo_array, 'grid_mapping'):
-            grid_mapping = get_grid_mapping(geo_array.grid_mapping, cf_check=True)
+    if grid_mapping is None and geo_array is not None \
+        and hasattr(geo_array, 'grid_mapping'):
+            grid_mapping = geo_array.grid_mapping
 
-        # otherwise check whether the Coordinates are Geodetic (long/lat)
-        else:
-            if isinstance(x0, Longitude) and isinstance(y0, Latitude):
-                grid_mapping = get_grid_mapping("geodetic")
+    if grid_mapping is None: 
+        raise ValueError("grid mapping not provided")
+
+    # already a CRS instance : do nothing
+    if isinstance(grid_mapping, ccrs.CRS):
+        return grid_mapping
 
     # some more possibility offered, such as providing proj.4-like parameters
     else:
         grid_mapping = get_grid_mapping(grid_mapping)
 
+    # now add a cf_params attribute if needed
+    # NOTE: for now just do not force conversion from Cartopy
+    # since the CF version is still experimental
+    if not isinstance(grid_mapping, CF_CRS):
+        try:
+            crs = get_grid_mapping(grid_mapping, cf_conform=True)
+            grid_mapping.cf_params = grid_mapping
+        except:
+            pass
+
     return grid_mapping
 
+
+#
+# Transformations involving changes in Coordinate Reference System
+#
 def _transform_coordinates(from_grid_mapping, to_grid_mapping, x0_2d, y0_2d, xt=None, yt=None):
     """ project coordinates
 
@@ -93,6 +113,9 @@ def _transform_coordinates(from_grid_mapping, to_grid_mapping, x0_2d, y0_2d, xt=
 
     return xt_2d, yt_2d, xt, yt
 
+#
+#
+#
 def transform_scalars(geo_array, to_grid_mapping, from_grid_mapping=None, \
         xt=None, yt=None, horizontal_coordinates=None):
     """ Transform scalar field array into a new coordinate system and \
@@ -103,6 +126,8 @@ def transform_scalars(geo_array, to_grid_mapping, from_grid_mapping=None, \
     geo_array : GeoArray or other DimArray instance
     to_grid_mapping : str or dict or cartopy.crs.CRS instance
         grid mapping onto which the transformation should be done
+        str : PROJ.4 str or cartopy.crs.CRS class name
+        dict : CF parameters
     from_grid_mapping : idem, optional
         original grid mapping, to be provided only when no grid_mapping 
         attribute is defined or when the axes are something else than 
@@ -118,6 +143,9 @@ def transform_scalars(geo_array, to_grid_mapping, from_grid_mapping=None, \
     ------
     transformed : GeoArray
         new GeoArray transformed
+
+    Examples
+    --------
     """ 
     # local import since it's quite heavy
     from dimarray.geo.crs import get_grid_mapping  
@@ -129,7 +157,7 @@ def transform_scalars(geo_array, to_grid_mapping, from_grid_mapping=None, \
         geo_array = GeoArray(geo_array) 
 
     # find horizontal coordinates
-    x0, y0 = _get_horizontal_coordinates(geo_array, horizontal_coordinates)
+    x0, y0 = _check_horizontal_coordinates(geo_array, horizontal_coordinates)
 
     # transpose the array to shape .., y0, x0 (cartesian convention needed for meshgrid)
     dims_orig = geo_array.dims
@@ -139,8 +167,10 @@ def transform_scalars(geo_array, to_grid_mapping, from_grid_mapping=None, \
     #assert geo_array.dims.index(x0.name) > geo_array.axes[
 
     # get cartopy.crs.CRS instances
-    from_grid_mapping = _get_grid_mapping_geoarray(geoarray, from_grid_mapping)
-    to_grid_mapping = get_grid_mapping(to_grid_mapping)
+    from_grid_mapping = _check_grid_mapping(from_grid_mapping, geoarray)
+    to_grid_mapping = _check_grid_mapping(from_grid_mapping)
+    #from_grid_mapping = _get_grid_mapping(geoarray, from_grid_mapping)
+    #to_grid_mapping = get_grid_mapping(to_grid_mapping)
 
     # Transform coordinates and prepare regular grid for interpolation
     x0_2d, y0_2d = np.meshgrid(x0.values, y0.values)
@@ -211,6 +241,8 @@ def transform_vectors(u, v, to_grid_mapping, from_grid_mapping=None, \
         x- and y- vector components
     to_grid_mapping : str or dict or cartopy.crs.CRS instance
         grid mapping onto which the transformation should be done
+        str : PROJ.4 str or cartopy.crs.CRS class name
+        dict : CF parameters
     from_grid_mapping : idem, optional
         original grid mapping, to be provided only when no grid_mapping 
         attribute is defined or when the axes are something else than 
@@ -240,11 +272,11 @@ def transform_vectors(u, v, to_grid_mapping, from_grid_mapping=None, \
         assert hasattr(v, 'grid_mapping') and u.grid_mapping == v.grid_mapping, 'u and v must have the same grid mapping'
 
     # get grid mapping instances
-    from_grid_mapping = _get_grid_mapping_geoarray(u, from_grid_mapping)
-    to_grid_mapping = get_grid_mapping(to_grid_mapping)
+    from_grid_mapping = _check_grid_mapping(from_grid_mapping, u)
+    to_grid_mapping = _check_grid_mapping(from_grid_mapping)
 
     # find horizontal coordinates
-    x0, y0 = _get_horizontal_coordinates(geo_array, horizontal_coordinates)
+    x0, y0 = _check_horizontal_coordinates(geo_array, horizontal_coordinates)
 
     # Transform coordinates and prepare regular grid for interpolation
     x0_2d, y0_2d = np.meshgrid(x0.values, y0.values)
