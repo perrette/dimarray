@@ -241,6 +241,11 @@ class DimArray(object):
         if hasattr(values, "axes") and axes is None:
             axes = values.axes
 
+        if hasattr(values, "_metadata"):
+            metadata = values._metadata.copy() # copy just in case
+        else:
+            metadata = {}
+
         # default options
         if _indexing is None: _indexing = get_option('indexing.by')
         if _indexing_broadcast is None: _indexing_broadcast = get_option('indexing.broadcast')
@@ -292,7 +297,8 @@ class DimArray(object):
         #
         #for k in kwargs:
         #    setncattr(self, k, kwargs[k]) # perform type-checking and store in self._metadata
-        self._metadata = kwargs
+        metadata.update(kwargs)
+        self._metadata = metadata
 
         # Check consistency between axes and values
         inferred = tuple([ax.size for ax in self.axes])
