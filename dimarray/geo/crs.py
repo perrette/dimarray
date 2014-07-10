@@ -116,14 +116,14 @@ class CF_CRS(object):
 
     grid_mapping_name = None
 
-    _priority = 1 # integer indicating the priority of the class (in case several are available)
-
     def __init__(self, **kwargs):
         """ Initialize a projection class with CF-1.4 conforming parameters
 
         See class's `_cartopy` and `_cartopy_globe` attribute for correspondence 
         between CF-1.4 and Cartopy parameters
         """
+        assert isinstance(self, ccrs.CRS), "dimarray.geo.CF_CRS class must be subclassed with another cartopy.crs.CRS instance"
+
         self._check_params(kwargs)
 
         cartopy_params = {}
@@ -148,62 +148,27 @@ class CF_CRS(object):
 
         # Initialize cartopy coordinate system
         try:
-            CRSproj = self.__class__.__bases__[1] # (CF_CRS, ccrs...)
-            assert np.issubclass_(CRSproj, ccrs.CRS) # must be a crs projection
+            CRSproj = filter(lambda x : np.issubclass_(x, ccrs.CRS), self.__class__.__bases__)[0] # find CRS base
             CRSproj.__init__(self, **cartopy_params)
+            #super(CRSproj, self)(**cartopy_params)
 
         except Exception as error:
             msg = _error_message(error, self._cartopy)
             raise error.__class__(msg)
 
-        # double check parameters
-        try:
-            cf_params = self.cf_params # conversion from proj4 to cf_params
-            for k in kwargs:
-                assert kwargs[k] == cf_params[k], \
-                        "cf parameter mismatch for {}: \n  input: {}\n  converted: {}".format(k, kwargs[k], cf_params[k])
-
-        except Exception as error:
-            warnings.warn(error.message)
-
-        #self.cf_params = kwargs  # cf-conform parameters
+        # check that init went well
+        assert isinstance(self, ccrs.CRS)
+        assert self.proj4_init is not None
+        assert self.proj4_params is not None
 
     @property
     def cf_params(self):
         """ return netCDF parameters based on proj4 names
         """
-        return _crs_to_cf_params(self, self.__class__)
+        return _proj4_to_cf_params(self.proj4_params, self.__class__)
 
     def _check_params(self, kwargs):
         pass
-
-    @classmethod
-    def _test_proj4_params(cls, proj4_params):
-        """ return an int indicating the priority of the class, in case 
-        several projections are compatible
-        """
-        assert isinstance(proj4_params, dict), "must be a dictionary"
-        if cls._test_proj4_params_names(proj4_params) and \
-                cls._test_proj4_params_values(proj4_params):
-                    return cls._priority
-        else:
-            return 0
-
-    @classmethod
-    def _test_proj4_params_names(cls, proj4_params):
-        """ return book
-        """
-        match = '+proj='+proj4_params['proj'] in cls._proj4_def
-        for k, v in proj4_params.iteritems():
-            patt = '+'+k+'='
-            match = match and (patt in cls._proj4_def or patt in cls._proj4_def_globe)
-            if not match:
-                print patt
-        return match
-
-    @classmethod
-    def _test_proj4_params_values(cls, proj4_params):
-        return True
 
 #
 # NOTE: the grid_mapping_name is 'longitude_latitude' and not 'geodetic'
@@ -238,11 +203,10 @@ class Stereographic(CF_CRS, ccrs.Stereographic):
                 +lat_ts=standard_parallel
                 """
 
-
 #
 #
 #
-class PolarStereographic(CF_CRS, ccrs.Stereographic):
+class PolarStereographic(Stereographic):
 
     grid_mapping_name = "polar_stereographic"
 
@@ -266,11 +230,11 @@ class PolarStereographic(CF_CRS, ccrs.Stereographic):
                 +k_0=scale_factor_at_projection_origin
             """
 
-    _priority = Stereographic._priority + 1 # higher priority than Stereographic
-
-    @classmethod
-    def _test_proj4_params_values(cls, proj4_params):
-        return 'lat_0' in proj4_params and proj4_params['lat_0'] in (-90, 90)
+    def _check_params(self, kwargs):
+        msg = "need to provide latitude_of_projection_origin (+lat_0) with -90 or +90"
+        if not 'latitude_of_projection_origin' in kwargs \
+                or kwargs['latitude_of_projection_origin'] not in (-90, 90):
+            raise ValueError(msg)
 
 ## #
 ## # Here just for convenience
@@ -300,104 +264,13 @@ class PolarStereographic(CF_CRS, ccrs.Stereographic):
 ##     _alternate_parameters = [['straight_vertical_longitude_from_pole', 'longitude_of_projection_origin']]
 
 # 
-# Conversions between cartopy's CRS instances, PROJ.4 parameters and CF parameters
+# Conversions between PROJ.4 parameters and CF parameters
 # These function use cartopy's CRS proj4_init and proj4_params attributes.
 # to convert from CRS instances to PROJ.4 parameters.
 #
 # They are also based on inspection of this module's CF_CRS classes and
 # in particular their attributes _proj4_def to match back pro4_params to CF params
 #
-def _crs_to_cf_class(crs):
-    """ Find CF_CRS class corresponding to a cartopy's CRS instance
-
-    by inspecting the current module.
-
-    Parameters
-    ----------
-    crs : cartopy.crs.CRS instance
-    
-    Returns
-    -------
-    cls : dimarray.geo.crs.CF_CRS class
-
-    Raises
-    ------
-    ValueError if no CF_CRS subclass is found
-    """
-    assert isinstance(crs, ccrs.CRS)
-    proj4_params = crs.proj4_params.copy() # as a dictionary
-
-    proj = proj4_params['proj'] # projection name
-
-    # All available classes
-    classes = _get_cf_crs_classes()
-
-    # Get those whose proj_4 def matches
-    patt = '+proj='+proj
-    classes = filter(lambda cls: patt in cls._proj4_def,  classes)
-
-    if len(classes) == 0:
-        msg = "no matching CRS class for +proj="+proj
-        raise ValueError(msg)
-
-    # stop there if only one class found
-    # error message on parameters will then be more informative
-    if len(classes) == 1:
-        i = 0
-
-    # otherwise perform more extensive tests on parameter compatibility to obtain 
-    # a priority of use
-    else:
-        # test for priority
-        priorites = [cls._test_proj4_params(proj4_params) for cls in classes]
-        i = np.argmax(priorites)
-
-    cls = classes[i]
-
-    return cls
-
-
-def _crs_to_cf_params(crs, cls=None):
-    """ extract netCDF parameters from a cartopy.crs.CRS instance
-    
-    Parameters
-    ----------
-    crs : cartopy.crs.CRS instance
-    cls : corresponding CF_CRS class
-
-    Returns
-    -------
-    cf_params : dict of CF parameters
-    """
-    proj4_params = crs.proj4_params.copy() # as a dictionary
-
-    if cls is None:
-        cls = _crs_to_cf_class(crs)
- 
-    # From proj4_def, Build a dictionary as look-up table
-    # of parameter names from PROJ.4 to CF
-    proj4_def = cls._proj4_def + " " + cls._proj4_def_globe
-    table = {}
-    #print proj4_def.strip().split()
-    for patt in proj4_def.strip().split(): # cartopy property
-        nm_p4, nm_cf = patt.strip().split('=')
-        nm_p4 = nm_p4.split('+')[1] # remove the +
-        #if nm_p4 == 'proj':
-        #    continue
-        #print patt, nm_p4, nm_cf
-        table[nm_p4] = nm_cf
-
-    # Convert PROJ.4 into CF parameters using the lookup table
-    cf_params = {'grid_mapping_name':cls.grid_mapping_name}
-
-    for k in proj4_params: # cartopy property
-        if k == 'proj':
-            continue
-        nm_cf = table[k]
-        cf_params[nm_cf] = proj4_params[k]
-
-    return cf_params
-
 def _parse_proj4(proj4_init):
     """ convert proj4 string to (key, value) pairs
     """
@@ -428,26 +301,143 @@ def _parse_proj4(proj4_init):
 
     return zip(keys, values)
 
+def _proj4_to_cf_class(proj4_params):
+    """ Find CF_CRS class corresponding to a dict of PROJ.4 parameters
+
+    by inspecting the current module.
+
+    Parameters
+    ----------
+    proj4_params : dict of PROJ.4 parameters
+    
+    Returns
+    -------
+    cls : dimarray.geo.crs.CF_CRS class
+
+    Raises
+    ------
+    ValueError if no CF_CRS subclass is found
+    """
+    proj = proj4_params['proj'] # projection name
+
+    # All available classes
+    classes = _get_cf_crs_classes()
+
+    # Get those whose proj_4 def matches
+    patt = '+proj='+proj
+    classes = filter(lambda cls: patt in cls._proj4_def,  classes)
+
+    if len(classes) == 0:
+        msg = "no matching CRS class for +proj="+proj
+        raise ValueError(msg)
+
+    # Check by converting proj4_params to netCDF and initializing the class
+    error_messages = []
+    def test_init(cls):
+        try:
+            cf_params = _proj4_to_cf_params(proj4_params, cls=cls)
+            del cf_params['grid_mapping_name']
+            cls(**cf_params)
+        except Exception as error:
+            error_messages.append(error.message) # collect error messages
+            return False # it failed somewhere
+        return True
+
+    # prepare error message prior to testing
+    msg = "{} matching CRS classes for +proj={} ".format(len(classes), proj)
+    msg += "but all failed on initialization (see error messages above)"
+    #msg += "\n"+", ".join([repr(cls) for cls in classes])
+
+    classes = filter(test_init,  classes)
+
+    if len(classes) == 0:
+        msg = "\n".join(error_messages)+"\n"+"-"*80+"\n"+msg # also show init error messages
+        raise ValueError(msg)
+
+    # stop there if only one class found
+    elif len(classes) == 1:
+        cls = classes[0]
+
+    # otherwise they are probably sub-classes, e.g. Stereo and PolarStereo 
+    # use subclass in priority because more specialized
+    else:
+        def cmp_(cls0, cls1):
+            if np.issubclass_(cls0, cls1):
+                return -1
+            elif np.issubclass_(cls1, cls0):
+                return 1
+            else:
+                return 0 # do not change order
+        classes = list(classes)
+        classes.sort(cmp_)
+        cls = classes[0]
+
+    return cls
+
+def _proj4_to_cf_params(proj4_params, cls=None):
+    """ extract netCDF parameters from a dictionary of proj4 parameters
+    
+    Parameters
+    ----------
+    proj4_params : dict of PROJ.4 parameters
+    cls : corresponding CF_CRS class, optional
+        If not provided, will be looked for in the dimarray.geo.crs module
+
+    Returns
+    -------
+    cf_params : dict of CF parameters
+    """
+
+    if cls is None:
+        cls = _proj4_to_cf_class(proj4_params)
+ 
+    # From proj4_def, Build a dictionary as look-up table
+    # of parameter names from PROJ.4 to CF
+    proj4_def = cls._proj4_def + " " + cls._proj4_def_globe
+    table = {}
+    #print proj4_def.strip().split()
+    for patt in proj4_def.strip().split(): # cartopy property
+        nm_p4, nm_cf = patt.strip().split('=')
+        nm_p4 = nm_p4.split('+')[1] # remove the +
+        table[nm_p4] = nm_cf
+
+    # Convert PROJ.4 into CF parameters using the lookup table
+    cf_params = {'grid_mapping_name':cls.grid_mapping_name}
+
+    for k in proj4_params: # cartopy property
+        if k == 'proj':
+            continue
+        nm_cf = table[k]
+        cf_params[nm_cf] = proj4_params[k]
+
+    assert cf_params is not None
+
+    return cf_params
+
 class Proj4(ccrs.CRS):
     """ cartopy.crs.CRS instance initialize from a PROJ.4 string
     """
-    def __init__(self, proj4_init):
+    def __init__(self, proj4_init=None, **proj4_params):
         """ initialize a CRS instance based on PROJ.4 parameters
 
         Examples
         --------
         >>> prj = Proj4("+ellps=WGS84 +proj=stere +lat_0=90.0 +lon_0=-39.0 +x_0=0.0 +y_0=0.0 +lat_ts=71.0")
         """
-        _cartopy_globe = dict([['datum', 'datum'], ['ellps', 'ellipse'],
+        table_globe = dict([['datum', 'datum'], ['ellps', 'ellipse'],
                         ['a', 'semimajor_axis'], ['b', 'semiminor_axis'],
                         ['f', 'flattening'], ['rf', 'inverse_flattening'],
                         ['towgs84', 'towgs84'], ['nadgrids', 'nadgrids']])
 
-        proj4_params = _parse_proj4(proj4_init) # key, value pair
+    
+        assert proj4_init is not None or len(proj4_params) > 0, "no argument provided"
+        assert not (proj4_init is not None and len(proj4_params) > 0), "must provide EITHER a string of key-word arguments"
+        if len(proj4_params) == 0:
+            proj4_params = _parse_proj4(proj4_init) # key, value pair
 
         # split parameters between globe and non-globe parameters
-        globe_params = {_cartopy_globe[k]:v for k,v in proj4_params if k in _cartopy_globe.keys()}
-        proj4_params = [(k,v) for k,v in proj4_params if k not in _cartopy_globe.keys()]
+        globe_params = {table_globe[k]:v for k,v in proj4_params if k in table_globe.keys()}
+        proj4_params = [(k,v) for k,v in proj4_params if k not in table_globe.keys()]
 
         # initialize Globe instance
         globe = ccrs.Globe(**globe_params)
@@ -457,7 +447,7 @@ class Proj4(ccrs.CRS):
 
     @property
     def cf_params(self):
-        return _crs_to_cf_params(self)
+        return _proj4_to_cf_params(self.proj4_params)
 
 #
 # Inspect the CF_CRS instances
@@ -491,6 +481,8 @@ def _get_cf_crs_class(grid_mapping_name):
         msg = msg.format(grid_mapping_name, ", ".join(accepted))
         msg += "\n"+file_an_issue_message()
         raise ValueError(msg)
+
+    assert len(found) == 1
 
     return found[0] # 0: class name, 1: class
 
@@ -540,6 +532,14 @@ def get_grid_mapping(grid_mapping, cf_check=False):
 
     # just checking
     assert isinstance(grid_mapping, ccrs.CRS), 'something went wrong'
+
+    if not isinstance(grid_mapping, CF_CRS):
+        # try to return a CF-conform class
+        try:
+            cf_params = grid_mapping.cf_params
+            grid_mapping = get_grid_mapping(cf_params) # CF-conform grid-mapping
+        except:
+            pass
 
     return grid_mapping
 

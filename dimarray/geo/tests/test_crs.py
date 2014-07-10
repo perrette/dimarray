@@ -3,7 +3,7 @@
 
 import unittest
 
-from dimarray.geo.crs import get_grid_mapping, _crs_to_cf_params, Proj4
+from dimarray.geo.crs import get_grid_mapping, Proj4
 
 #class TestCRS(unittest.TestCase):
 #    """ test netCDF formulation versus Proj.4
