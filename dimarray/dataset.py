@@ -10,14 +10,15 @@ from core import DimArray, array, Axis, Axes
 from core import align_axes, stack, concatenate
 from core.align import _check_stack_args, _get_axes, stack, concatenate, _check_stack_axis, get_dims as _get_dims
 from core import pandas_obj
-from core.metadata import MetadataDesc
+from core.metadata import MetadataBase
 from core.axes import _doc_reset_axis
 
-class Dataset(odict):
+class Dataset(odict, MetadataBase):
     """ Container for a set of aligned objects
     """
+    # will not appear as metadata
+    __metadata_exclude__ = ['axes']
 
-    _metadata = MetadataDesc(exclude=['axes'])
     _constructor = DimArray
 
     def __init__(self, *args, **kwargs):

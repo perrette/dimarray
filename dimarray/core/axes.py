@@ -3,7 +3,7 @@ from collections import OrderedDict as odict
 import string
 import copy
 
-from metadata import MetadataDesc
+from metadata import MetadataBase
 from dimarray.tools import is_DimArray, is_array1d_equiv
 from dimarray.decorators import format_doc
 
@@ -117,7 +117,7 @@ class Descriptor(object):
 #
 # Axis class
 #
-class Axis(object):
+class Axis(MetadataBase):
     """ Axis
 
     Attributes
@@ -133,7 +133,7 @@ class Axis(object):
 
     _metadata : property which returns a dictionary of metadata
     """
-    _metadata = MetadataDesc(exclude = ["values", "name"]) # variables which are NOT metadata
+    __metadata_exclude__ = ["values", "name"]
 
     # Descriptor: define attributes which are inherited by any sub-class (default to None)
     # in order to avoid the necessity of manual definition when subclassing
@@ -534,7 +534,7 @@ class GroupedAxis(Axis):
     """
     modulo = None
 
-    _metadata = MetadataDesc(exclude = ["values", "name","axes"]) # variables which are NOT metadata
+    __metadata_exclude__ = ["values", "name","axes"]
 
     def __init__(self, *axes):
         """

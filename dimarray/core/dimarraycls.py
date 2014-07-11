@@ -11,7 +11,7 @@ from dimarray.tools import anynan, pandas_obj
 from dimarray.config import get_option
 from dimarray.decorators import format_doc
 
-from metadata import MetadataDesc
+from metadata import MetadataBase
 from axes import Axis, Axes, GroupedAxis, _doc_reset_axis
 
 import transform as _transform  # numpy along-axis transformations, interpolation
@@ -23,7 +23,7 @@ from align import broadcast_arrays, align_axes, stack
 
 __all__ = ["DimArray", "array"]
 
-class DimArray(object):
+class DimArray(MetadataBase):
     """ numpy's ndarray with labelled dimensions and axes
 
     Attributes
@@ -135,7 +135,8 @@ class DimArray(object):
            [1, 2, 3]])
     """
     _order = None  # set a general ordering relationship for dimensions
-    _metadata = MetadataDesc(exclude=('values','axes'))
+
+    __metadata_exclude__ = ["values", "axes"]
 
     #
     # NOW MAIN BODY OF THE CLASS
