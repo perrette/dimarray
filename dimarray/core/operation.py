@@ -2,6 +2,7 @@
 Operation and axis aligmnent
 """
 import numpy as np
+import warnings
 
 from align import align_dims, align_axes
 from dimarray.tools import is_DimArray
@@ -42,6 +43,11 @@ def operation(func, o1, o2, reindex=True, broadcast=True, constructor=None):
         return constructor(res, o2.axes)
 
     # both objects are dimarrays
+
+    # check grid mapping and emit a warning if mismatch
+    if hasattr(o1, 'grid_mapping') and hasattr(o2, 'grid_mapping') \
+            and o1.grid_mapping != o2.grid_mapping:
+                warnings.warn("binary op : grid mappings mismatch")
 
     # Align axes by re-indexing
     if reindex:
