@@ -7,7 +7,7 @@ from dimarray import *
 # Add GeoArray to the list
 from geoarray import GeoArray
 
-from transform import transform, transform_vectors
+from projection import transform, transform_vectors
 
 # Overwrite with specific GeoArray functions
 from ncio import *
