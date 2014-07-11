@@ -171,6 +171,7 @@ def read_nc(f, nms=None, *args, **kwargs):
             raise ValueError('File is not present: '+repr(f))
         else:
             f = test
+            f.sort()
 
     # multi-file ?
     if type(f) is list:
