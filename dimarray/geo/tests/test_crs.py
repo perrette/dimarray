@@ -90,7 +90,6 @@ class TestPolarStereographicData(unittest.TestCase):
         self.lon = grl['lon']
         self.lat = grl['lat']
         self.mapping = grl['mapping']._metadata
-        del self.mapping['name'] # should probably remove automatic naming after being in a dataset
 
     def test_coords(self):
         if self.grl is None: return

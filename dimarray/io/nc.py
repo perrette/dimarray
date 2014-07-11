@@ -548,13 +548,13 @@ def _write_variable(f, obj=None, name=None, mode='a+', format=FORMAT, indices=No
     """
     if not name and hasattr(obj, "name"): name = obj.name
     assert name, "invalid variable name !"
-    assert isinstance(obj, DimArray), "expected a DimArray instance, got {}".format(type(obj))
 
     # control wether file name or netCDF handle
     f, close = _check_file(f, mode=mode, verbose=verbose, format=format)
 
     # create variable if necessary
     if name not in f.variables:
+        assert isinstance(obj, DimArray), "expected a DimArray instance, got {}".format(type(obj))
         v = _createVariable(f, name, obj.axes, dtype=obj.dtype, **kwargs)
 
     else:
@@ -580,7 +580,11 @@ def _write_variable(f, obj=None, name=None, mode='a+', format=FORMAT, indices=No
     v[ix] = np.asarray(obj)
 
     # add metadata if any
-    #if isinstance(obj, DimArray):
+    if not isinstance(obj, DimArray):
+        if close:
+            f.close()
+        return
+
     meta = obj._metadata
     for k in meta.keys():
         if k == "name": continue # 

@@ -140,7 +140,7 @@ class Dataset(odict):
                 self.axes.append(axis.copy())  
 
         # update name
-        val.name = key
+        # val.name = key # DON'T : annoying e.g. grid_mapping metadata 
         super(Dataset, self).__setitem__(key, val)
 
     def write_nc(self, f, *args, **kwargs):
@@ -412,68 +412,6 @@ class Dataset(odict):
 
         if inplace is False:
             return self
-
-    #def dropna(self, axis=0, **kwargs): return self._apply_dimarray_axis('dropna', axis=axis, **kwargs)
-
-#    def subset(self, names=None, dims=None):
-#        """ return a subset of the dictionary
-#
-#        names: variable names
-#        dims : dimensions to conform too
-#        """
-#        if names is None and dims is not None:
-#            names = self._filter_dims(dims)
-#
-#        d = self.__class__()
-#        for nm in names:
-#            d[nm] = self[nm]
-#        return d
-#
-#    def _filter_dims(self, dims):
-#        """ return variables names matching given dimensions
-#        """
-#        nms = []
-#        for nm in self:
-#            if tuple(self[nm].dims) == tuple(dims):
-#                nms.append(nm)
-#        return nms
-#
-
-def _get_list_arrays(data, keys):
-    """ initialize from DimArray objects (internal method)
-    """
-    if not isinstance(data, dict) and not isinstance(data, list):
-        raise TypeError("Type not understood. Expected list or dict, got {}: {}".format(type(data), data))
-
-    assert keys is None or len(keys) == len(data), "keys do not match with data length !"
-
-    # Transform data to a list
-    if isinstance(data, dict):
-        if keys is None:
-            keys = data.keys()
-        else:
-            assert set(keys) == set(data.keys()), "keys do not match dictionary keys"
-        data = [data[k] for k in keys]
-    
-    # Check everything is a DimArray
-    for v in data:
-        if not isinstance(v, DimArray):
-            raise TypeError("A Dataset can only store DimArray instances")
-
-    # Assign names
-    if keys is not None:
-        for i, v in enumerate(data):
-            v = v.copy(shallow=True) # otherwise name is changed on the caller side
-            v.name = keys[i]
-            data[i] = v
-
-    else:
-        for i, v in enumerate(data):
-            if not hasattr(v,'name') or not v.name:
-                v.name = i
-                #v.name = "v%i"%(i)
-
-    return data
 
 
 def stack_ds(datasets, axis, keys=None, align=False):
