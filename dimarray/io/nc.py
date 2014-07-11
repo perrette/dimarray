@@ -524,7 +524,7 @@ def _write_dataset(f, obj, mode='w-', indices=None, axis=0, format=FORMAT, verbo
 
 
 @format_doc(netCDF4=_doc_write_nc, indexing=_doc_indexing_write, write_modes=_doc_write_modes)
-def _write_variable(f, obj=None, name=None, mode='a+', format=FORMAT, indices=None, axis=0, verbose=False, write_grid_mapping=True, **kwargs):
+def _write_variable(f, obj=None, name=None, mode='a+', format=FORMAT, indices=None, axis=0, verbose=False, share_grid_mapping=True, **kwargs):
     """ Write DimArray instance to file
 
     Parameters
@@ -537,9 +537,10 @@ def _write_variable(f, obj=None, name=None, mode='a+', format=FORMAT, indices=No
         Default mode is 'a+'
     {netCDF4}
     {indexing}
-    write_grid_mapping : bool, optional
+    share_grid_mapping : bool, optional
         if True (the default), write any grid mapping attribute as a 
         separate variable in the dataset, accordingly to CF-conventions
+        in order to share that information across several variables
 
     See Also
     --------
@@ -590,7 +591,7 @@ def _write_variable(f, obj=None, name=None, mode='a+', format=FORMAT, indices=No
         if k == "name": continue # 
 
         # write grid_mapping in a separate variable
-        if k == 'grid_mapping' and write_grid_mapping \
+        if k == 'grid_mapping' and share_grid_mapping \
                 and isinstance(meta[k], dict) \
                 and 'grid_mapping_name' in meta[k]:
 
