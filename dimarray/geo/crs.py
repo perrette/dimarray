@@ -201,6 +201,8 @@ class CF_CRS(object):
         for k, val in proj4_params.iteritems(): # cartopy property
             if k == 'proj': continue
             nm_cf = table[k]
+            #if val == 'IGNORE': continue
+            if nm_cf == 'IGNORE': continue
             cf_params[nm_cf] = val
 
         return cf_params
@@ -212,6 +214,7 @@ class CF_CRS(object):
         cf_params = cls._proj4_to_cf_params(proj4_params)
         del cf_params['grid_mapping_name']
         return cls(**cf_params)
+
 
 #
 # NOTE: the grid_mapping_name is 'longitude_latitude' and not 'geodetic'
@@ -236,6 +239,7 @@ class Geodetic(CF_CRS, ccrs.Geodetic):
         units = "degrees_north",
         standard_name = "latitude",
         )
+
 
 class Stereographic(CF_CRS, ccrs.Stereographic):
 
@@ -329,27 +333,51 @@ class RotatedPole(CF_CRS, ccrs.RotatedPole):
     @classmethod
     def _proj4_to_cf_params(cls, proj4_params):
         # can't just parse _proj4_def
+        proj4_params = proj4_params.copy()
         import math
-        assert proj4_params['proj'] == 'ob_tran'
-        _check_default(proj4_params, 'o_lon_p', 0.)
-        _check_default(proj4_params, 'o_proj', 'latlon')
-        #_check_default(proj4_params, 'to_meter', math.radians(1))
-        assert not 'to_meter' in proj4_params or abs(proj4_params['to_meter'] - math.radians(1)) < 1e-6
+        assert proj4_params.pop('proj') == 'ob_tran'
+        assert proj4_params.pop('o_lon_p',0) == 0.
+        assert proj4_params.pop('o_proj','latlon') == 'latlon'
+        assert abs(proj4_params.pop('to_meter',math.radians(1)) - math.radians(1)) < 1e-6
 
         cf = {}
         #cf['grid_north_pole_latitude'] = proj4_params.pop('o_lat_p', None)
 
         if 'o_lat_p' in proj4_params:
-            cf['grid_north_pole_latitude'] = proj4_params['o_lat_p']
+            cf['grid_north_pole_latitude'] = proj4_params.pop('o_lat_p')
         if 'lon_0' in proj4_params:
-            cf['grid_north_pole_longitude'] = proj4_params['lon_0'] - 180.
+            cf['grid_north_pole_longitude'] = proj4_params.pop('lon_0') - 180.
 
         cf['grid_mapping_name'] = cls.grid_mapping_name
 
+        if len(proj4_params) > 0:
+            warnings.warn("some params left: {}".format(proj4_params))
+
         return cf
 
-def _check_default(kwargs, nm, val):
-    assert not nm in kwargs or kwargs[nm] == val
+class TransverseMercator(CF_CRS, ccrs.TransverseMercator):
+    grid_mapping_name = "transverse_mercator"
+
+    _cartopy = dict(
+            scale_factor_at_central_meridian = "scale_factor", 
+            longitude_of_central_meridian = "central_longitude",
+            latitude_of_projection_origin = "central_latitude",
+            false_northing = "false_northing",
+            false_easting = "false_easting",
+            )
+
+    _proj4_def = """+ellps=ellipsoid +proj=tmerc 
+                    +lon_0=longitude_of_central_meridian 
+                    +lat_0=latitude_of_projection_origin 
+                    +k=scale_factor_at_central_meridian 
+                    +x_0=false_easting
+                    +y_0=false_northing
+                    +units=IGNORE
+                 """
+
+
+#def _check_default(kwargs, nm, val):
+#    assert not nm in kwargs or kwargs[nm] == val
 
 # They are also based on inspection of this module's CF_CRS classes and
 # in particular their attributes _proj4_def to match back pro4_params to CF params
@@ -458,6 +486,8 @@ class Proj4(ccrs.CRS):
         assert not (proj4_init is not None and len(proj4_params) > 0), "must provide EITHER a string of key-word arguments"
         if len(proj4_params) == 0:
             proj4_params = _parse_proj4(proj4_init) # key, value pair
+        else:
+            proj4_params = zip(proj4_params.keys(), proj4_params.values())
 
         # split parameters between globe and non-globe parameters
         globe_params = {table_globe[k]:v for k,v in proj4_params if k in table_globe.keys()}

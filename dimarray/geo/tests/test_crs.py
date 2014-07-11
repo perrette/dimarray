@@ -145,6 +145,19 @@ class TestRotatedPoles(TestCRS):
     proj4_init = '+ellps=WGS84 +proj=ob_tran +o_proj=latlon +o_lon_p=0 +o_lat_p=90.0 +lon_0=180.0 +to_meter=0.0174532925199'
 
 
+class TestTransverseMercator(TestCRS):
+
+    grid_mapping = dict(
+            grid_mapping_name = 'transverse_mercator',
+            scale_factor_at_central_meridian = 1.,
+            longitude_of_central_meridian = 0.,
+            latitude_of_projection_origin = 0.,
+            false_northing = 0.,
+            false_easting = 0.,
+            ellipsoid = 'WGS84', 
+            )
+
+    proj4_init = '+ellps=WGS84 +proj=tmerc +lon_0=0.0 +lat_0=0.0 +k=1.0 +x_0=0.0 +y_0=0.0 +units=m'
 
 
   #  def test_polar_stereographic(self):
