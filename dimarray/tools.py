@@ -58,8 +58,14 @@ def is_DimArray(obj):
 
 def is_array1d_equiv(a):
     " test if a is convertible to a 1-D array of scalar"
+    from dimarray import Axis
     if isinstance(a, np.ndarray) and a.ndim == 1:
         res = True
+    elif isinstance(a, Axis): 
+        res = True
+    # [ 1-d array ] is not considered array-equivalent (speed-up axes init)
+    elif type(a) is list and len(a) == 1 and is_array1d_equiv(a[0]):
+        res = False # np.asarray(a) would return True but it does not matter here
     else:
         try:
             a = np.asarray(a)

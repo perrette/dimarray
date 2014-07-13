@@ -272,7 +272,8 @@ class DimArray(MetadataBase):
         if axes is None and labels is None:
             assert values is not None, "values= or/and axes=, labels= required to determine dimensions"
 
-        axes = Axes._init(axes, dims=dims, labels=labels, shape=values.shape if values is not None else None)
+        if not isinstance(axes, Axes):
+            axes = Axes._init(axes, dims=dims, labels=labels, shape=values.shape if values is not None else None)
         assert type(axes) is Axes
 
         # if values not provided, create empty data, filled with NaNs if dtype is float
