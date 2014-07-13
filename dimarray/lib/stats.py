@@ -6,8 +6,8 @@ import dimarray as da
 def percentile(a, pct, axis=0, newaxis=None, out=None, overwrite_input=False):
     """ calculate percentile along an axis
 
-    parameters:
-    -----------
+    Parameters
+    ----------
     pct: float, percentile or sequence of percentiles (0< <100)
     axis, optional, default 0: axis along which to compute percentiles
     newaxis, optional: name of the new percentile axis, if more than one pct. 
@@ -16,12 +16,13 @@ def percentile(a, pct, axis=0, newaxis=None, out=None, overwrite_input=False):
 
     out, overwrite_input: passed to numpy's percentile method (see documentation)
 
-    outputs:
-    --------
+    Returns
+    -------
     pctiles: DimArray or scalar whose required axis has been reduced or replaced by percentiles
 
-    Examples:
-    ---------
+    Examples
+    --------
+    >>> from dimarray import DimArray
     >>> np.random.seed(0) # for reproductibility of results
     >>> a = DimArray(np.random.randn(1000), dims=['sample'])
     >>> percentile(a, 50)
@@ -29,7 +30,6 @@ def percentile(a, pct, axis=0, newaxis=None, out=None, overwrite_input=False):
 
     >>> percentile(a, [50, 95])
     dimarray: 2 non-null elements (0 null)
-    dimensions: 'sample_percentile'
     0 / sample_percentile (2): 50 to 95
     array([-0.05802803,  1.66012041])
     """
@@ -52,30 +52,32 @@ def percentile(a, pct, axis=0, newaxis=None, out=None, overwrite_input=False):
         if newaxis is None:
             newaxis = nm + '_percentile'
         results = [da.DimArray(res, axes=subaxes) for res in results] # list of DimArrays
-        results = da.from_arrays(results, keys=pct, axis=newaxis) # join in a larger DimArray
+        results = da.stack(results, keys=pct, axis=newaxis) # stack in a larger DimArray
 
     return results
 
 def quantile(a, q, axis=0, newaxis=None, out=None, overwrite_input=False):
     """ Same as percentile, but provide quantiles instead 
-    
-    parameters: same as percentile, except than pct is replaced by q:
-    -----------
+
+    Parameters 
+    ----------
     q: quantile(s): must be between 0 and 1 instead of 0 and 100
+    *args, **kwargs: same as percentile, except than pct is replaced by q
+    
 
     See help on percentile for full documentation.
 
-    See Also:
-    ---------
+    See Also
+    --------
     percentile
 
-    Example:
-    -------
+    Examples
+    --------
+    >>> from dimarray import DimArray
     >>> np.random.seed(0) # for reproductibility of results
     >>> a = DimArray(np.random.randn(1000), dims=['sample'])
     >>> quantile(a, [0.5, 0.95])
     dimarray: 2 non-null elements (0 null)
-    dimensions: 'sample_quantile'
     0 / sample_quantile (2): 0.5 to 0.95
     array([-0.05802803,  1.66012041])
     """

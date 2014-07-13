@@ -1,7 +1,7 @@
 """ methods to deal with missing values
 """
 import numpy as np
-from tools import is_DimArray
+from dimarray.tools import is_DimArray
 
 def _isnan(a, na=np.nan):
     """ analogous to numpy's isnan
@@ -13,7 +13,7 @@ def _isnan(a, na=np.nan):
 
 def is_boolean_array(value):
     """ 
-
+    >>> from dimarray import DimArray
     >>> a = DimArray([1,2,3])
     >>> is_boolean_array(a)
     False
@@ -41,92 +41,101 @@ def isnan(a, na=np.nan):
     """
     return a._constructor(_isnan(a, na=na), a.axes, **a._metadata)
 
-def setna(a, value, na=np.nan, inplace=False):
+def setna(self, value, na=np.nan, inplace=False):
     """ set a value as missing
 
-    value: the values to set to na
-    na: the replacement value (default np.nan)
+    Parameters
+    ----------
+    value : the values to set to na
+    na : the replacement value (default np.nan)
 
+    Examples
+    --------
+    >>> from dimarray import DimArray
     >>> a = DimArray([1,2,-99])
     >>> a.setna(-99)
     dimarray: 2 non-null elements (1 null)
-    dimensions: 'x0'
     0 / x0 (3): 0 to 2
     array([  1.,   2.,  nan])
     >>> a.setna([-99, 2]) # sequence
     dimarray: 1 non-null elements (2 null)
-    dimensions: 'x0'
     0 / x0 (3): 0 to 2
     array([  1.,  nan,  nan])
     >>> a.setna(a > 1) # boolean
     dimarray: 2 non-null elements (1 null)
-    dimensions: 'x0'
     0 / x0 (3): 0 to 2
     array([  1.,  nan, -99.])
     >>> a = DimArray([[1,2,-99]])  # multi-dim
     >>> a.setna([-99, a>1])  # boolean
     dimarray: 1 non-null elements (2 null)
-    dimensions: 'x0', 'x1'
     0 / x0 (1): 0 to 0
     1 / x1 (3): 0 to 2
     array([[  1.,  nan,  nan]])
     """
-    return a.put(na, _matches(a.values, value), convert=True, inplace=inplace)
+    return self.put(na, _matches(self.values, value), convert=True, inplace=inplace)
 
-def fillna(a, value, inplace=False, na=np.nan):
-    """
+def fillna(self, value, inplace=False, na=np.nan):
+    """ Fill NaN with a replacement value
+
+    Examples
+    --------
+    >>> from dimarray import DimArray
     >>> a = DimArray([1,2,np.nan])
     >>> a.fillna(-99)
     dimarray: 3 non-null elements (0 null)
-    dimensions: 'x0'
     0 / x0 (3): 0 to 2
     array([  1.,   2., -99.])
     """
-    return a.put(value, _isnan(a.values, na=na), convert=True, inplace=inplace)
+    return self.put(value, _isnan(self.values, na=na), convert=True, inplace=inplace)
 
-def dropna(a, axis=0, minvalid=None, na=np.nan):
+def dropna(self, axis=0, minvalid=None, na=np.nan):
     """ drop nans along an axis
 
-    axis: axis position or name or list of names
-    minvalid, optional: min number of valid point in each slice along axis values
+    Parameters
+    ----------
+    axis : axis position or name or list of names
+    minvalid : int, optional
+        min number of valid point in each slice along axis values
         by default all the points
 
-    Examples:
-    ---------
+    Returns
+    -------
+    DimArray
+
+    Examples
+    --------
 
     1-Dimension
+
+    >>> from dimarray import DimArray
     >>> a = DimArray([1.,2,3],('time',[1950, 1955, 1960]))
     >>> a.ix[1] = np.nan
     >>> a
     dimarray: 2 non-null elements (1 null)
-    dimensions: 'time'
     0 / time (3): 1950 to 1960
     array([  1.,  nan,   3.])
     >>> a.dropna()
     dimarray: 2 non-null elements (0 null)
-    dimensions: 'time'
     0 / time (2): 1950 to 1960
     array([ 1.,  3.])
 
     Multi-dimensional
+
     >>> a = DimArray([[ np.nan, 2., 3.],[ np.nan, 5., np.nan]])
     >>> a
     dimarray: 3 non-null elements (3 null)
-    dimensions: 'x0', 'x1'
     0 / x0 (2): 0 to 1
     1 / x1 (3): 0 to 2
     array([[ nan,   2.,   3.],
            [ nan,   5.,  nan]])
     >>> a.dropna(axis=1)
     dimarray: 2 non-null elements (0 null)
-    dimensions: 'x0', 'x1'
     0 / x0 (2): 0 to 1
     1 / x1 (1): 1 to 1
     array([[ 2.],
            [ 5.]])
     >>> a.dropna(axis=1, minvalid=1)  # minimum number of valid values, equivalent to `how="all"` in pandas
     dimarray: 3 non-null elements (1 null)
-    dimensions: 'x0', 'x1'
     0 / x0 (2): 0 to 1
     1 / x1 (2): 1 to 2
     array([[  2.,   3.],
@@ -139,14 +148,14 @@ def dropna(a, axis=0, minvalid=None, na=np.nan):
 #            a = dropna(a, axis=dim, minvalid=minvalid)
 #        return a
 
-    idx, name = a._get_axis_info(axis)
+    idx, name = self._get_axis_info(axis)
 
-    if a.ndim == 1:
-        return  a[~_isnan(a.values, na=na)]
+    if self.ndim == 1:
+        return  self[~_isnan(self.values, na=na)]
 
     else:
-        nans = isnan(a, na=na) 
-        nans = nans.group([dim for dim in a.dims if dim != name], insert=0) # in first position
+        nans = isnan(self, na=na) 
+        nans = nans.group([dim for dim in self.dims if dim != name], insert=0) # in first position
         count_nans_axis = nans.sum(axis=0) # number of points valid along that axis
         count_vals_axis = (~nans).sum(axis=0) # number of points valid along that axis
         #count_nans_axis = nans.sum(axis=[dim for dim in a.dims if dim != name]) # number of points valid along that axis
@@ -160,4 +169,4 @@ def dropna(a, axis=0, minvalid=None, na=np.nan):
 
     indices = count_nans_axis <= maxna
 
-    return a.take(indices, axis=idx)
+    return self.take(indices, axis=idx)

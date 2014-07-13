@@ -4,21 +4,26 @@ Operation and axis aligmnent
 import numpy as np
 
 from align import align_dims, align_axes
-from tools import is_DimArray
+from dimarray.tools import is_DimArray
 
 def operation(func, o1, o2, reindex=True, broadcast=True, constructor=None):
-    """ operation on LaxArray objects
+    """ binary operation involving a DimArray objects
 
-    input:
-        func        : operator
-        o1            : LHS operand: DimArray
-        o2            : RHS operand: at least: be convertible by np.array())
-        align, optional: if True, use pandas to align the axes
+    Parameters
+    ----------
+    func : operator
+    o1 : LHS operand: DimArray
+    o2 : RHS operand: at least: be convertible by np.array())
+    align : bool, optional
+        if True, use pandas to align the axes
+    constructor : class Constructor, optional
+        if None, o1's class constructor (o1._constructor) is used instead
 
-    output:
-        values: array values
-        dims : dimension names
+    Returns
+    -------
+    DimArray instance
     """
+
     if constructor is None:
         constructor = o1._constructor
 

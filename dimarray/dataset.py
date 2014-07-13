@@ -3,10 +3,15 @@
 from collections import OrderedDict as odict
 import numpy as np
 
+import dimarray as da  # for the doctest, so that they are testable via py.test
+from dimarray.decorators import format_doc
+
 from core import DimArray, array, Axis, Axes
-from core import align_axes 
+from core import align_axes, stack, concatenate
+from core.align import _check_stack_args, _get_axes, stack, concatenate, _check_stack_axis, get_dims as _get_dims
 from core import pandas_obj
 from core.metadata import MetadataDesc
+from core.axes import _doc_reset_axis
 
 class Dataset(odict):
     """ Container for a set of aligned objects
@@ -94,19 +99,17 @@ class Dataset(odict):
     def __setitem__(self, key, val):
         """ Make sure the object is a DimArray with appropriate axes
 
-        Tests:
-        -----
-#        >>> axes = da.Axes.from_tuples(('time',[1, 2, 3]))
+        Examples
+        --------
+#        >>> axes = Axes.from_tuples(('time',[1, 2, 3]))
         >>> ds = Dataset()
         >>> ds
         Dataset of 0 variables
-        dimensions: 
         <BLANKLINE>
         >>> a = DimArray([0, 1, 2], dims=('time',))
         >>> ds['yo'] = a 
         >>> ds['yo']
         dimarray: 3 non-null elements (0 null)
-        dimensions: 'time'
         0 / time (3): 0 to 2
         array([0, 1, 2])
         """
@@ -127,37 +130,38 @@ class Dataset(odict):
 
             # Append new axis
             else:
-                self.axes.append(axis)
+                # NOTE: make a copy so that Dataset's axes are different from individual dimarray's axes
+                # Otherwise confusing things happen.
+                # Other alternative? Make all axes a reference of the Dataset axes
+                # But I could not get this work properly so I gave up. 
+                # Moreover this involves making axis copy when calling __getitem__, which is a
+                # significant deviation from dictionary's behaviour
+                self.axes.append(axis.copy())  
 
         # update name
         val.name = key
         super(Dataset, self).__setitem__(key, val)
 
     def write_nc(self, f, *args, **kwargs):
-        """ Saves dataset in netCDF file.
-        
-        parameters:
-        -----------
-        f : netCDF file name.
-        
-        understood keyword arguments:
-        zlib : Enable zlib compression if True. Default is False (no compression).
-        complevel : integer between 1 and 9 describing the level of compression desired. Ignored if zlib=False.
-        mode : File creation mode. Default is 'w-'. Set to 'w' to overwrite any existing file.
-        format : netCDF file format. Default is 'NETCDF4'.
-        
-        See the netCDF4-python module documentation for more information about the use
-        of keyword arguments to write_nc.
+        """ Save dataset in netCDF file.
+
+        If you see this documentation, it means netCDF4 is not installed on your system 
+        and you will not be able to use this functionality.
         """
         import io.nc as ncio
-        ncio.write_dataset(f, self, *args, **kwargs)
+        ncio._write_dataset(f, self, *args, **kwargs)
 
     write = write_nc
 
     @classmethod
     def read_nc(cls, f, *args, **kwargs):
+        """ Read dataset from netCDF file.
+
+        If you see this documentation, it means netCDF4 is not installed on your system 
+        and you will not be able to use this functionality.
+        """
         import io.nc as ncio
-        return ncio.read_dataset(f, *args, **kwargs)
+        return ncio._read_dataset(f, *args, **kwargs)
 
     read = read_nc
 
@@ -204,37 +208,30 @@ class Dataset(odict):
     def take(self, indices, axis=0, raise_error=True, **kwargs):
         """ analogous to DimArray's take, but for each DimArray of the Dataset
 
-        parameters:
-        -----------
+        Parameters
+        ----------
         indices: scalar, or array-like, or slice
         axis: axis name (str)
         raise_error: raise an error if a variable does not have the desired dimension
         **kwargs: arguments passed to the axis locator, similar to `take`, such as `indexing` or `keepdims`
 
-        parameters:
-        -----------
-
-
-        Examples:
-        ---------
+        Examples
+        --------
         >>> a = DimArray([1,2,3], axes=('time', [1950, 1951, 1952]))
         >>> b = DimArray([11,22,33], axes=('time', [1951, 1952, 1953]))
         >>> ds = Dataset(a=a, b=b)
         >>> ds
         Dataset of 2 variables
-        dimensions: 'time'
         0 / time (4): 1950 to 1953
         a: ('time',)
         b: ('time',)
         >>> ds.take(1951, axis='time')
         Dataset of 2 variables
-        dimensions: 
         <BLANKLINE>
         a: 2.0
         b: 11.0
         >>> ds.take(0, axis='time', indexing='position')
         Dataset of 2 variables
-        dimensions: 
         <BLANKLINE>
         a: 1.0
         b: nan
@@ -288,20 +285,18 @@ class Dataset(odict):
     def mean(self, axis=0, **kwargs):
         """ Apply transformantion on every variable of the Dataset
 
-        Examples:
-        ---------
+        Examples
+        --------
         >>> a = DimArray([1,2,3], axes=('time', [1950, 1951, 1952]))
         >>> b = DimArray([[11,22,33],[44,55,66]], axes=[('items',['a','b']), ('time', [1950, 1951, 1952])])
         >>> ds = Dataset(a=a, b=b)
         >>> ds.mean(axis='time')
         Dataset of 2 variables
-        dimensions: 'items'
         0 / items (2): a to b
         a: 2.0
         b: ('items',)
         >>> ds.mean(axis='items')
         Dataset of 2 variables
-        dimensions: 'time'
         0 / time (3): 1950 to 1952
         a: ('time',)
         b: ('time',)
@@ -332,6 +327,91 @@ class Dataset(odict):
         """ export to ordered dict
         """
         return odict(self)
+
+    @format_doc(**_doc_reset_axis)
+    def set_axis(self, values=None, axis=0, inplace=False, **kwargs):
+        """ (re)set axis values and attributes in all dimarrays present in the dataset
+
+        Parameters
+        ----------
+        {values}
+        {axis}
+        {inplace}
+        {kwargs}
+
+        Returns
+        -------
+        Dataset instance, or None if inplace is True
+
+        Examples
+        --------
+        >>> ds = Dataset()
+        >>> ds['a'] = da.zeros(shape=(3,))  # some dimarray with dimension 'x0'
+        >>> ds['b'] = da.zeros(shape=(3,4)) # dimensions 'x0', 'x1'
+        >>> ds.set_axis(['a','b','c'], axis='x0')
+        Dataset of 2 variables
+        0 / x0 (3): a to c
+        1 / x1 (4): 0 to 3
+        a: ('x0',)
+        b: ('x0', 'x1')
+        """
+        if inplace is False:
+            self = self.copy()
+
+        # update every dimarray in the dict
+        axis_name = self.axes[axis].name
+        for nm in self.keys():
+            if not axis_name in self[nm].dims:
+                continue
+            super(Dataset, self).__setitem__(nm, self[nm].set_axis(values, axis, inplace=False, **kwargs) )
+
+        # update the main axis instance
+        self.axes = self.axes.set_axis(values, axis, inplace=False, **kwargs)
+
+        if inplace is False:
+            return self
+
+    @format_doc(**_doc_reset_axis)
+    def reset_axis(self, axis=0, inplace=False, **kwargs):
+        """ (re)set axis values and attributes in all dimarrays present in the dataset
+
+        Parameters
+        ----------
+        {axis}
+        {inplace}
+        {kwargs}
+
+        Returns
+        -------
+        Dataset instance, or None if inplace is True
+
+        Examples
+        --------
+        >>> ds = Dataset()
+        >>> ds['a'] = da.zeros(axes=[['a','b','c']])  # some dimarray with dimension 'x0'
+        >>> ds['b'] = da.zeros(axes=[['a','b','c'], [11,22,33,44]]) # dimensions 'x0', 'x1'
+        >>> ds.reset_axis(axis='x0')
+        Dataset of 2 variables
+        0 / x0 (3): 0 to 2
+        1 / x1 (4): 11 to 44
+        a: ('x0',)
+        b: ('x0', 'x1')
+        """
+        if inplace is False:
+            self = self.copy()
+
+        # update every dimarray in the dict
+        axis_name = self.axes[axis].name
+        for nm in self.keys():
+            if not axis_name in self[nm].dims:
+                continue
+            super(Dataset, self).__setitem__(nm, self[nm].reset_axis(axis, inplace=False, **kwargs) )
+
+        # update the main axis instance
+        self.axes = self.axes.reset_axis(axis, inplace=False, **kwargs)
+
+        if inplace is False:
+            return self
 
     #def dropna(self, axis=0, **kwargs): return self._apply_dimarray_axis('dropna', axis=axis, **kwargs)
 
@@ -390,52 +470,124 @@ def _get_list_arrays(data, keys):
     else:
         for i, v in enumerate(data):
             if not hasattr(v,'name') or not v.name:
-                v.name = "v%i"%(i)
+                v.name = i
+                #v.name = "v%i"%(i)
 
     return data
 
-def test():
+
+def stack_ds(datasets, axis, keys=None, align=False):
+    """ stack dataset along a new dimension
+
+    Parameters
+    ----------
+    datasets: sequence or dict of datasets
+    axis: str, new dimension along which to stack the dataset 
+    keys, optional: stack axis values, useful if dataset is a sequence, or a non-ordered dictionary
+    align, optional: if True, align axes (via reindexing) prior to stacking
+
+    Returns
+    -------
+    stacked dataset
+
+    See Also
+    --------
+    concatenate_ds
+
+    Examples
+    --------
+    >>> a = DimArray([1,2,3], dims=('dima',))
+    >>> b = DimArray([11,22], dims=('dimb',))
+    >>> ds = Dataset({'a':a,'b':b}) # dataset of 2 variables from an experiment
+    >>> ds2 = Dataset({'a':a*2,'b':b*2}) # dataset of 2 variables from a second experiment
+    >>> stack_ds([ds, ds2], axis='stackdim', keys=['exp1','exp2'])
+    Dataset of 2 variables
+    0 / stackdim (2): exp1 to exp2
+    1 / dima (3): 0 to 2
+    2 / dimb (2): 0 to 1
+    a: ('stackdim', 'dima')
+    b: ('stackdim', 'dimb')
     """
-    >>> data = test() 
-    >>> data['test2'] = da.DimArray([0,3],('source',['greenland','antarctica'])) # doctest: +IGNORE_EXCEPTION_DETAIL
-    Traceback (most recent call last):
-        ...
-    ValueError: axes values do not match, align data first.                            
-    Dataset: source(1)=greenland:greenland, 
-    Got: source(2)=greenland:antarctica
-    >>> data['ts']
-    dimarray: 5 non-null elements (5 null)
-    dimensions: 'time'
-    0 / time (10): 1950 to 1959
-    array([  0.,   1.,   2.,   3.,   4.,  nan,  nan,  nan,  nan,  nan])
-    >>> data.to_array(axis='items')
-    dimarray: 12250 non-null elements (1750 null)
-    dimensions: 'items', 'lon', 'lat', 'time', 'source'
-    0 / items (4): mymap to test
-    1 / lon (50): -180.0 to 180.0
-    2 / lat (7): -90.0 to 90.0
-    3 / time (10): 1950 to 1959
-    4 / source (1): greenland to greenland
-    array(...)
+    #if not isinstance(axis, str): raise TypeError("axis parameter must be str")
+
+    # make a sequence of datasets
+    datasets, keys = _check_stack_args(datasets, keys) 
+
+    # make sure the stacking dimension is ok
+    dims = _get_dims(*datasets)
+    axis = _check_stack_axis(axis, dims) 
+
+    # find the list of variables common to all datasets
+    variables = None
+    for ds in datasets:
+        # check that stack axis is not already present
+        assert axis not in ds.dims, axis+" already exists in the dataset" 
+
+        # check that variables have the same variables
+        if variables is None:
+            variables = ds.keys()
+        else:
+            assert sorted(ds.keys()) == sorted(variables), "variables differ across datasets"
+
+    # Compute stacked dataset
+    dataset = Dataset()
+    for v in variables:
+        arrays = [ds[v] for ds in datasets]
+        array = stack(arrays, axis=axis, keys=keys, align=align)
+        dataset[v] = array
+
+    return dataset
+
+
+def concatenate_ds(datasets, axis=0):
+    """ concatenate two datasets along an existing dimension
+
+    Parameters
+    ----------
+    datasets: sequence of datasets 
+    axis: axis along which to concatenate
+
+    Returns
+    -------
+    joint Dataset along axis
+
+    NOTE: will raise an error if variables are there which do not contain the required dimension
+
+    See Also
+    --------
+    stack_ds
+
+    Examples
+    --------
+    >>> a = da.zeros(axes=[list('abc')], dims=('x0',))  # 1-D DimArray
+    >>> b = da.zeros(axes=[list('abc'), [1,2]], dims=('x0','x1')) # 2-D DimArray
+    >>> ds = Dataset({'a':a,'b':b}) # dataset of 2 variables from an experiment
+    >>> a2 = da.ones(axes=[list('def')], dims=('x0',)) 
+    >>> b2 = da.ones(axes=[list('def'), [1,2]], dims=('x0','x1')) # 2-D DimArray
+    >>> ds2 = Dataset({'a':a2,'b':b2}) # dataset of 2 variables from a second experiment
+    >>> concatenate_ds([ds, ds2])
+    Dataset of 2 variables
+    0 / x0 (6): a to f
+    1 / x1 (2): 1 to 2
+    a: ('x0',)
+    b: ('x0', 'x1')
     """
-    import dimarray as da
-    axes = da.Axes.from_tuples(('time',[1, 2, 3]))
-    ds = da.Dataset()
-    a = da.DimArray([[0, 1],[2, 3]], dims=('time','items'))
-    ds['yo'] = a.reindex_like(axes)
+    # find the list of variables common to all datasets
+    variables = None
+    for ds in datasets:
 
-    np.random.seed(0)
-    mymap = da.DimArray.from_kw(np.random.randn(50,7), lon=np.linspace(-180,180,50), lat=np.linspace(-90,90,7))
-    ts = da.DimArray(np.arange(5), ('time',np.arange(1950,1955)))
-    ts2 = da.DimArray(np.arange(10), ('time',np.arange(1950,1960)))
+        # check that variables have the same variables
+        if variables is None:
+            variables = ds.keys()
+        else:
+            assert sorted(ds.keys()) == sorted(variables), "variables differ across datasets"
 
-    # Define a Dataset made of several variables
-    data = da.Dataset({'ts':ts, 'ts2':ts2, 'mymap':mymap})
-    #data = da.Dataset([ts, ts2, mymap], keys=['ts','ts2','mymap'])
+    # Compute concatenated dataset
+    dataset = Dataset()
+    for v in variables:
+        arrays = [ds[v] for ds in datasets]
+        array = concatenate(arrays, axis=axis)
+        dataset[v] = array
 
-    assert np.all(data['ts'].time == data['ts2'].time),"Dataset: pb data alignment" 
+    return dataset
 
-    data['test'] = da.DimArray([0],('source',['greenland']))  # new axis
-    #data
-
-    return data

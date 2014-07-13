@@ -7,36 +7,43 @@ from collections import OrderedDict
 import functools
 
 from axes import Axis, Axes, GroupedAxis
-from tools import is_DimArray
+from dimarray.tools import is_DimArray
 
 #
 # Broadcast
 #
 def broadcast(self, other):
-    """ broadcast the array along a set of axes by repeating it as necessay
+    """ repeat array to match target dimensions
 
-    other             : DimArray or Axes objects or ordered Dictionary of axis values
+    Parameters
+    ----------
+    other : DimArray or Axes objects or ordered Dictionary of axis values
 
-    Examples:
+    Returns
+    -------
+    DimArray
+
+    Examples
     --------
     Create some dummy data:
     # ...create some dummy data:
+
+    >>> import dimarray as da
     >>> lon = np.linspace(10, 30, 2)
     >>> lat = np.linspace(10, 50, 3)
     >>> time = np.arange(1950,1955)
     >>> ts = da.DimArray.from_kw(np.arange(5), time=time)
     >>> cube = da.DimArray.from_kw(np.zeros((3,2,5)), lon=lon, lat=lat, time=time)  # lat x lon x time
     >>> cube.axes  
-    dimensions: 'lat', 'lon', 'time'
     0 / lat (3): 10.0 to 50.0
     1 / lon (2): 10.0 to 30.0
     2 / time (5): 1950 to 1954
 
     # ...broadcast timeseries to 3D data
+
     >>> ts3D = ts.broadcast(cube) #  lat x lon x time
     >>> ts3D
     dimarray: 30 non-null elements (0 null)
-    dimensions: 'lat', 'lon', 'time'
     0 / lat (3): 10.0 to 50.0
     1 / lon (2): 10.0 to 30.0
     2 / time (5): 1950 to 1954
@@ -88,21 +95,31 @@ def transpose(self, *dims):
     
     Analogous to numpy, but also allows axis names
 
-    See also:
+    Parameters
+    ----------
+    *dims : int or str
+        variable list of dimensions
+
+    Returns
+    -------
+    transposed_array : DimArray
+
+    See also
     ---------
     reshape, group, ungroup, newaxis
 
+    Examples
+    --------
+    >>> import dimarray as da
     >>> a = da.DimArray(np.zeros((2,3)), ['x0','x1'])
     >>> a          
     dimarray: 6 non-null elements (0 null)
-    dimensions: 'x0', 'x1'
     0 / x0 (2): 0 to 1
     1 / x1 (3): 0 to 2
     array([[ 0.,  0.,  0.],
            [ 0.,  0.,  0.]])
     >>> a.T       
     dimarray: 6 non-null elements (0 null)
-    dimensions: 'x1', 'x0'
     0 / x1 (3): 0 to 2
     1 / x0 (2): 0 to 1
     array([[ 0.,  0.],
@@ -131,14 +148,23 @@ def transpose(self, *dims):
     newaxes = [self.axes[i] for i in newshape]
     return self._constructor(result, newaxes)
 
-def swapaxes(a, axis1, axis2):
-    """ analogous to numpy's swapaxes, but can provide axes by name
+def swapaxes(self, axis1, axis2):
+    """ Swap two axes
+    
+    analogous to numpy's swapaxes, but can provide axes by name
 
-    a        : DimArray (if used as function), or self (to be ignored) if used as method
-    axis1, axis2: `int` or `str`, axes to swap (transpose)
+    Parameters
+    ----------
+    axis1, axis2 : int or str
+        axes to swap (transpose)
 
-    Examples:
-    ---------
+    Returns
+    -------
+    transposed_array : DimArray
+
+    Examples
+    --------
+    >>> from dimarray import DimArray
     >>> a = DimArray(np.arange(2*3*4).reshape(2,3,4))
     >>> a.dims
     ('x0', 'x1', 'x2')
@@ -148,48 +174,51 @@ def swapaxes(a, axis1, axis2):
     >>> b.shape
     (4, 3, 2)
     """
-    pos, _ = a._get_axes_info([axis1, axis2])
+    pos, _ = self._get_axes_info([axis1, axis2])
     axis1, axis2 = pos  # axis positions
     newshape = []
-    for i in range(a.ndim):
+    for i in range(self.ndim):
         if i == axis1:
             newshape.append(axis2)
         elif i == axis2:
             newshape.append(axis1)
         else:
             newshape.append(i)
-    return transpose(a, newshape)
+    return transpose(self, newshape)
 
 #
 # Repeat the array along *existing* axis
 #
 def repeat(self, values, axis=None):
-    """ expand the array along axis: analogous to numpy's repeat
+    """ expand the array along an existing axis
+    
+    Parameters
+    ----------
+    values : int or ndarray or Axis instance
+        int: size of new axis
+        ndarray: values  of new axis 
+    axis : int or str 
+        refer to the dimension along which to repeat
 
-    Signature: repeat(values=None, axis=None, **kwaxes)
+    **kwaxes : key-word arguments
+        alternatively, axes may be passed as keyword arguments 
 
-    input:
-        values  : integer (size of new axis) or ndarray (values  of new axis) 
-                  or Axis object
-        axis    : int or str (refer to the dimension along which to repeat)
+    Returns
+    -------
+    DimArray
 
-        **kwaxes: alternatively, axes may be passed as keyword arguments 
-
-    output:
-        DimArray
-
-    Sea Also:
-    ---------
+    Sea Also
+    --------
     newaxis
 
-    Examples:
+    Examples
     --------
+    >>> import dimarray as da
     >>> a = da.DimArray(np.arange(3), labels = [[1950., 1951., 1952.]], dims=('time',))
     >>> a2d = a.newaxis('lon', pos=1) # lon is now singleton dimension
 
     >>> a2d.repeat(2, axis="lon")  
     dimarray: 6 non-null elements (0 null)
-    dimensions: 'time', 'lon'
     0 / time (3): 1950.0 to 1952.0
     1 / lon (2): 0 to 1
     array([[0, 0],
@@ -198,7 +227,6 @@ def repeat(self, values, axis=None):
 
     >>> a2d.repeat([30., 50.], axis="lon")  
     dimarray: 6 non-null elements (0 null)
-    dimensions: 'time', 'lon'
     0 / time (3): 1950.0 to 1952.0
     1 / lon (2): 30.0 to 50.0
     array([[0, 0],
@@ -241,16 +269,28 @@ def repeat(self, values, axis=None):
 
 
 def newaxis(self, name, values=None, pos=0):
-    """ add a new axis, ready to broadcast
+    """ add a new axis
 
-    name: `str`, axis name
-    values: optional, if provided, broadcast the array along the new axis
+    Add a singleton axis to ease broadcasting, 
+    and repeat array along this axis if required.
+
+    Parameters
+    ----------
+    name : str
+        axis name
+    values: array-like, optional
+            if provided, broadcast the array along the new axis
             call `repeat(name, values)` after inserting the new singleton 
             dimension (see `repeat`) for more information.
-    pos: `int`, optional: axis position, default 0 (first axis)
+    pos : int, optional
+        axis position, default 0 (first axis)
 
-    Notes:
-    ------
+    Returns
+    -------
+    DimArray
+
+    Notes
+    -----
     Numpy provides a np.newaxis constant (equal to None), to augment the array 
     dimensions with new singleton axes. In dimarray, newaxis has been 
     implemented as an array method, which requires to indicate axis name and 
@@ -258,28 +298,26 @@ def newaxis(self, name, values=None, pos=0):
     Additionally, passing providing values will repeat the array along that 
     dimension as many times as necessary.
 
-    See Also:
-    ---------
+    See Also
+    --------
     squeeze, repeat
 
-    Examples:
-    ---------
+    Examples
+    --------
+    >>> from dimarray import DimArray
     >>> a = DimArray([1,2])
     >>> a
     dimarray: 2 non-null elements (0 null)
-    dimensions: 'x0'
     0 / x0 (2): 0 to 1
     array([1, 2])
     >>> a.newaxis('new', pos=1)
     dimarray: 2 non-null elements (0 null)
-    dimensions: 'x0', 'new'
     0 / x0 (2): 0 to 1
     1 / new (1): None to None
     array([[1],
            [2]])
     >>> a.newaxis('new', values=['a','b'],pos=1)
     dimarray: 4 non-null elements (0 null)
-    dimensions: 'x0', 'new'
     0 / x0 (2): 0 to 1
     1 / new (2): a to b
     array([[1, 1],
@@ -315,24 +353,36 @@ def newaxis(self, name, values=None, pos=0):
 # Remove / add singleton axis
 #
 def squeeze(self, axis=None):
-    """ Analogous to numpy, but also allows axis name
+    """ Squeeze singleton axes
+    
+    Analogous to numpy, but also allows axis name
 
+    Parameters:
+    -----------
+    axis : int or str or None 
+        axis to squeeze
+        default is None, to remove all singleton axes
+
+    Returns:
+    --------
+    squeezed_array : DimArray
+
+    Examples
+    --------
+    >>> import dimarray as da
     >>> a = da.DimArray([[[1,2,3]]])
     >>> a
     dimarray: 3 non-null elements (0 null)
-    dimensions: 'x0', 'x1', 'x2'
     0 / x0 (1): 0 to 0
     1 / x1 (1): 0 to 0
     2 / x2 (3): 0 to 2
     array([[[1, 2, 3]]])
     >>> a.squeeze()
     dimarray: 3 non-null elements (0 null)
-    dimensions: 'x2'
     0 / x2 (3): 0 to 2
     array([1, 2, 3])
     >>> a.squeeze(axis='x1')
     dimarray: 3 non-null elements (0 null)
-    dimensions: 'x0', 'x2'
     0 / x0 (1): 0 to 0
     1 / x2 (3): 0 to 2
     array([[1, 2, 3]])
@@ -363,35 +413,37 @@ def _ungroup_dims(dims):
 def reshape(self, *newdims, **kwargs):
     """ Add/remove/group dimensions to conform array to new dimensions
     
-    input:
-        newdims: tuple or list or variable list of dimension names {str} 
+    Parameters
+    ----------
+    newdims : tuple or list or variable list of dimension names {str} 
+        Any dimension now present in the array is added as singleton dimension
+        Any dimension name containing a comma is interpreting as a grouping command.
+        All dimensions to group have to exist already.
 
-            Any dimension now present in the array is added as singleton dimension
+    transpose : bool
+        if True, transpose dimensions to match new order (default True)
+        otherwise, raise and Error if tranpose is needed (closer to original numpy's behaviour)
 
-            Any dimension name containing a comma is interpreting as a grouping command.
-            All dimensions to group have to exist already.
+    Returns
+    -------
+    reshaped_array : DimArray 
+        with reshaped_array.dims == tuple(newdims)
 
-        transpose: {bool} if True, transpose dimensions to match new order (default True)
-
-    output:
-        reshape: DimArray with reshape.dims == tuple(newdims)
-
-    See also:
-    ---------
+    See also
+    --------
     group, ungroup, transpose, newaxis
 
-    Examples:
-    ---------
+    Examples
+    --------
+    >>> from dimarray import DimArray
     >>> a = DimArray([7,8])
     >>> a
     dimarray: 2 non-null elements (0 null)
-    dimensions: 'x0'
     0 / x0 (2): 0 to 1
     array([7, 8])
 
     >>> a.reshape(('x0','new'))
     dimarray: 2 non-null elements (0 null)
-    dimensions: 'x0', 'new'
     0 / x0 (2): 0 to 1
     1 / new (1): None to None
     array([[7],
@@ -400,7 +452,6 @@ def reshape(self, *newdims, **kwargs):
     >>> b = DimArray(np.arange(2*2*2).reshape(2,2,2))
     >>> b
     dimarray: 8 non-null elements (0 null)
-    dimensions: 'x0', 'x1', 'x2'
     0 / x0 (2): 0 to 1
     1 / x1 (2): 0 to 1
     2 / x2 (2): 0 to 1
@@ -413,7 +464,6 @@ def reshape(self, *newdims, **kwargs):
     >>> c = b.reshape('x0','x1,x2')
     >>> c
     dimarray: 8 non-null elements (0 null)
-    dimensions: 'x0', 'x1,x2'
     0 / x0 (2): 0 to 1
     1 / x1,x2 (4): (0, 0) to (1, 1)
     array([[0, 1, 2, 3],
@@ -421,7 +471,6 @@ def reshape(self, *newdims, **kwargs):
 
     >>> c.reshape('x0,x1','x2')
     dimarray: 8 non-null elements (0 null)
-    dimensions: 'x0,x1', 'x2'
     0 / x0,x1 (4): (0, 0) to (1, 1)
     1 / x2 (2): 0 to 1
     array([[0, 1],
@@ -502,34 +551,42 @@ def reshape(self, *newdims, **kwargs):
 def group(self, *dims, **kwargs):
     """ group (or flatten) a subset of dimensions
 
-    Input:
-        - dims: list or tuple of axis names
-        - reverse [False]: if True, reverse behaviour: dims are interpreted as 
-            the dimensions to keep, and all the other dimensions are grouped
-        - insert, optional: position where to insert the grouped axis 
-                  (by default, any grouped dimension is inserted at 
-                the position of the first axis involved in grouping)
+    Parameters
+    ----------
+    dims : list or tuple of axis names
+    reverse : bool, optional
+        if True, reverse behaviour: dims are interpreted as 
+        the dimensions to keep, and all the other dimensions are grouped
+        default is False
+    insert : int, optional
+        position where to insert the grouped axis 
+        (by default, any grouped dimension is inserted at 
+        the position of the first axis involved in grouping)
 
-    Output:
-        - DimArray appropriately reshaped, with collapsed dimensions as first axis (tuples)
+    Returns
+    -------
+    grouped_array : DimArray
+        appropriately reshaped, with collapsed dimensions as first axis (tuples)
 
     This is useful to do a regional mean with missing values
 
-    Note: can be passed via the "axis" parameter of the transformation, too
+    Notes
+    -----
+    A tuple of axis names can be passed via the "axis" parameter of the transformation
+    to trigger flattening prior to reducing an axis.
 
-    See also:
-    ---------
+    See also
+    --------
     reshape, transpose
 
-    Example:
+    Examples
     --------
-
+    >>> from dimarray import DimArray
     >>> np.random.seed(0)
     >>> values = np.arange(2*3*4).reshape(2,3,4)
-    >>> v = da.array_kw(values, time=[1950,1955], lat=np.linspace(-90,90,3), lon=np.linspace(-180,180,4))
+    >>> v = DimArray(values, axes=[('time', [1950,1955]), ('lat', np.linspace(-90,90,3)), ('lon', np.linspace(-180,180,4))])
     >>> v
     dimarray: 24 non-null elements (0 null)
-    dimensions: 'time', 'lat', 'lon'
     0 / time (2): 1950 to 1955
     1 / lat (3): -90.0 to 90.0
     2 / lon (4): -180.0 to 180.0
@@ -544,7 +601,6 @@ def group(self, *dims, **kwargs):
     >>> w = v.group(('lat','lon'), insert=1)
     >>> w 
     dimarray: 24 non-null elements (0 null)
-    dimensions: 'time', 'lat,lon'
     0 / time (2): 1950 to 1955
     1 / lat,lon (12): (-90.0, -180.0) to (90.0, 180.0)
     array([[ 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11],
@@ -554,25 +610,25 @@ def group(self, *dims, **kwargs):
     True
 
     But be careful, the order matter !
+
     >>> v.group(('lon','lat'), insert=1)
     dimarray: 24 non-null elements (0 null)
-    dimensions: 'time', 'lon,lat'
     0 / time (2): 1950 to 1955
     1 / lon,lat (12): (-180.0, -90.0) to (180.0, 90.0)
     array([[ 0,  4,  8,  1,  5,  9,  2,  6, 10,  3,  7, 11],
            [12, 16, 20, 13, 17, 21, 14, 18, 22, 15, 19, 23]])
 
     Useful to average over a group of dimensions:
+
     >>> v.group(('lon','lat'), insert=0).mean(axis=0)
     dimarray: 2 non-null elements (0 null)
-    dimensions: 'time'
     0 / time (2): 1950 to 1955
     array([  5.5,  17.5])
 
     is equivalent to:
+
     >>> v.mean(axis=('lon','lat')) 
     dimarray: 2 non-null elements (0 null)
-    dimensions: 'time'
     0 / time (2): 1950 to 1955
     array([  5.5,  17.5])
     """
@@ -643,18 +699,24 @@ def group(self, *dims, **kwargs):
     return new
 
 def flatten(self):
-    """ analogous to numpy's flatten, but conserves axes with a GroupedAxis object
+    """ flatten a DimArray into a 1-D DimArray
+    
+    analogous to numpy's flatten, but conserves axes with a GroupedAxis object
 
-    See also:
-    ---------
+    Returns
+    -------
+    DimArray
+
+    See also
+    --------
     reshape, group, ungroup
 
-    Examples:
-    ---------
+    Examples
+    --------
+    >>> from dimarray import DimArray
     >>> a = DimArray([[1,2,3],[4,5,6]])
     >>> a
     dimarray: 6 non-null elements (0 null)
-    dimensions: 'x0', 'x1'
     0 / x0 (2): 0 to 1
     1 / x1 (3): 0 to 2
     array([[1, 2, 3],
@@ -663,7 +725,6 @@ def flatten(self):
     >>> b = a.flatten()
     >>> b
     dimarray: 6 non-null elements (0 null)
-    dimensions: 'x0,x1'
     0 / x0,x1 (6): (0, 0) to (1, 2)
     array([1, 2, 3, 4, 5, 6])
 
@@ -673,9 +734,18 @@ def flatten(self):
     return self.group(self.dims)
 
 def ungroup(self, axis=None):
-    """ opposite from group
+    """ undo grouping (inflate array)
 
-    axis: axis to ungroup as int or str (default: ungroup all)
+    Parameters
+    ----------
+    axis : int or str or None, optional
+        axis to ungroup
+        default to None to ungroup all
+
+    Returns
+    -------
+    DimArray
+
     """
     # by default, ungroup all
     if axis is None:
@@ -758,19 +828,27 @@ class GroupBy(object):
 def groupby(self, *dims):
     """ group by one or several variables along which stat functions can be applied
 
-    parameters:
-        *dims: variable list of dims to keep, all others are flattened
+    .. note:: EXPERIMENTAL: will probably be removed or renamed in future releases
 
-    returns:
-        GroupBy object
+    Parameters
+    ----------
+    *dims: variable list of dims to keep, all others are flattened
 
-    Examples:
-    ---------
+    Returns
+    -------
+    GroupBy object
+
+    Notes 
+    -----
+    this method is experimental and may change in the future
+
+    Examples
+    --------
+    >>> from dimarray import DimArray
     >>> a = DimArray([[1,2,3],[4,5,6]], [('x',[1,2]), ('items',['a','b','c'])])
     >>> a = a.newaxis('y',4) # add an axis of length 4
     >>> a.groupby('items').mean()
     dimarray: 3 non-null elements (0 null)
-    dimensions: 'items'
     0 / items (3): a to c
     array([ 2.5,  3.5,  4.5])
     """

@@ -1,0 +1,12 @@
+documentation.init.rst
+documentation.indexing.rst
+documentation.operations.rst
+documentation.transform.rst
+documentation.reshape.rst
+documentation.broadcast.rst
+documentation.reindex.rst
+documentation.merge.rst
+documentation.dataset.rst
+documentation.netcdf.rst
+documentation.pandas.rst
+

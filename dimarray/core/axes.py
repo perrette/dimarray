@@ -4,10 +4,32 @@ import string
 import copy
 
 from metadata import MetadataDesc
-from tools import is_DimArray
-from tools import is_array1d_equiv
+from dimarray.tools import is_DimArray, is_array1d_equiv
+from dimarray.decorators import format_doc
 
 __all__ = ["Axis","Axes", "is_regular"]
+
+# generic documentation serving for various functions
+_doc_reset_axis =  dict(
+        values = """
+values : numpy array-like or mapper (callable or dict), optional
+
+                    - array-like : new axis values, must have exactly the same length as original axis
+                    - dict : establish a map between original and new axis values
+                    - callable : transform each axis value into a new one
+                    - if None, axis values are left unchanged
+
+                    Default to None.""".strip(),
+        axis = """
+axis : int or str, optional
+                    axis to be reset""".strip(),
+        inplace="""
+inplace : bool, optional
+                    reset axis values in-place (True) or return copy (False)? (default False)""".strip() ,
+        kwargs="""
+**kwargs : key-word arguments
+                    also reset other axis attributes (e.g. name, modulo, weights, or any metadata)""".strip(),
+        )
 
 def is_regular(values):
     """ test if numeric, monotonically increasing and constant step
@@ -36,34 +58,43 @@ def is_monotonic(values):
     return monotonic
 
 
-def _convert_dtype(dtype):
-    """ convert numpy type in a python type
+def _convert_dtype(values):
+    """ convert Axis type to have "object" instead of string
     """
-    if dtype is np.dtype(int):
-        type_ = int
+    values = np.asarray(values)
 
-    # objects represent strings
-    elif dtype is np.dtype('O'):
-        type_ = str
+    # Treat the particular case of a sequence of sequences, leads to a 2-D array
+    # ==> convert to a list of tuples
+    if values.ndim == 2: 
+        val = np.empty(values.shape[0], dtype=object)
+        val[:] = zip(*values.T.tolist()) # pass a list of tuples
+        values = val
 
     else:
-        type_ = float
+        # convert strings to object type
+        #if values.dtype not in (np.dtype(float), np.dtype(int), np.dtype(long)):
+        if values.dtype.type == np.string_ or \
+                values.dtype.type == np.unicode_: 
+            values = np.asarray(values, dtype=object)
 
-    return type_
+    return values
+
 
 class Descriptor(object):
     """ Property descriptor: set class attributes
     """
     def __init__(self, name, default=None):
         """ 
-        name: name where attribute value is stored
+        Parameters
+        ----------
+        name : name where attribute value is stored
             Warning: must be different from API class attribute
             e.g. prefixed by '_'
 
         default: default value of the attribute name
 
-        Examples:
-        ---------
+        Examples
+        --------
         class A:
             tol = Descriptor('_tol') 
         """
@@ -89,16 +120,18 @@ class Descriptor(object):
 class Axis(object):
     """ Axis
 
-    values: numpy array (or list) 
-    name  : name (attribute)
+    Attributes
+    ----------
+    values : numpy array (or list) 
+    name : name (attribute)
 
-    weights: [None] associated list of weights 
-    modulo: [None] if not None, consider axis values as being defined +/- n*modulo, where n is an integer
+    weights : [None] associated list of weights 
+    modulo : [None] if not None, consider axis values as being defined +/- n*modulo, where n is an integer
             this modify `loc` behaviour only, but does not impose any constraint on actual axis values
 
-    tol: [None], if not None, attempt a nearest neighbour search with specified tolerance
+    tol : [None], if not None, attempt a nearest neighbour search with specified tolerance
 
-    + metadata
+    _metadata : property which returns a dictionary of metadata
     """
     _metadata = MetadataDesc(exclude = ["values", "name"]) # variables which are NOT metadata
 
@@ -108,8 +141,6 @@ class Axis(object):
     modulo = Descriptor('_modulo')
 
     def __init__(self, values, name="", weights=None, modulo=None, dtype=None, _monotonic=None, tol=None, **kwargs):
-        """ 
-        """
         if not name:
             assert hasattr(values, "name"), "unnamed dimension !"
             name = values.name # e.g pandas axis
@@ -119,23 +150,13 @@ class Axis(object):
         if np.isscalar(values):
             raise TypeError("an axis cannot be a scalar value !")
 
+        # make sure the type is right
         values = np.asarray(values, dtype)
-
-        # Treat the particular case of a sequence of sequences, leads to a 2-D array
-        # ==> convert to a list of tuples
-        if values.ndim == 2: 
-            val = np.empty(values.shape[0], dtype=object)
-            val[:] = zip(*values.T.tolist()) # pass a list of tuples
-            values = val
+        values = _convert_dtype(values)
 
         # check
         if values.ndim != 1:
             raise ValueError("an Axis object can only be 1-D, check-out GroupedAxis")
-
-        # convert strings to object type
-        #if values.dtype not in (np.dtype(float), np.dtype(int), np.dtype(long)):
-        if values.dtype.type == np.string_: 
-            values = np.asarray(values, dtype=object)
 
         self.values = values 
         self.name = name 
@@ -166,12 +187,133 @@ class Axis(object):
 
         return Axis(values, self.name, weights=weights, tol=self.tol, **self._metadata)
 
+    def __setitem__(self, item, value):
+        """ do some type checking/conversion before setting new axis values
+
+        Examples
+        --------
+        >>> a = Axis([1, 2, 3], name='dummy')
+        >>> a.values
+        array([1, 2, 3])
+        >>> a[0] = 1.2  # convert to float
+        >>> a.values
+        array([ 1.2,  2. ,  3. ])
+        >>> a[0] = 'a'  # convert to object dtype
+        >>> a.values
+        array(['a', 2.0, 3.0], dtype=object)
+        """
+        # check numpy-equivalent dtype
+        dtype = _convert_dtype(value).dtype
+
+        # dtype comparison seems to be a good indicator of when type conversion works
+        # e.g. dtype('O') > dtype(int) , dtype('O') > dtype(str) and dtype(float) > dtype(int) all return True
+        # first convert Axis datatype to new values's type, if needed
+        if self.values.dtype < dtype:
+            self.values = np.asarray(self.values, dtype=dtype)
+
+        # otherwise (no ordering relationship), just define an object type
+        elif not (self.values.dtype  >= dtype):
+            self.values = np.asarray(self.values, dtype=object)  
+
+        # now can proceed to asignment
+        self.values[item] = value
+
+        # here could do some additional check about _monotoic and other axis attributes
+        # for now just set to None
+        self._monotonic = None
+
+    def set(self, values=None, inplace=False, **kwargs):
+        """ Set axis values and / or attributes
+
+        Parameters
+        ----------
+        {values}
+        {inplace}
+        {kwargs}
+
+        Returns
+        -------
+        Axis instance, or None if inplace is True
+        """
+        # if values is a dictionary, use it to create a mapper
+        if isinstance(values, dict):
+            def mapper(x):
+                if x in values.keys():
+                    return values[x] 
+                else:
+                    return x
+            values = [mapper(x) for x in self.values]
+
+        elif callable(values):
+            mapper = values
+            values = [mapper(x) for x in self.values]
+
+        if inplace: 
+            ax = self
+        else: 
+            ax = self.copy()
+
+        # At this point values must be an array of size equal to values
+        if values is not None:
+            values = np.asarray(values)
+            assert values.size == self.values.size, "size cannot be changed"
+
+            # does necessary type checking
+            ax[:] = values
+
+        for k in kwargs:
+            setattr(ax, k, kwargs[k])
+
+        if not inplace: 
+            return ax
+
+    def reset(self, inplace=False, **kwargs):
+        """ Reset to default axis values and attributes
+
+        Parameters
+        ----------
+        {inplace}
+        {kwargs}
+
+        Returns
+        -------
+        Axis instance, or None if inplace is True
+        """
+        # if values is not provided, reset axis values
+        values = kwargs.pop('values', None)
+        name = kwargs.pop('name', self.name)
+
+        if values is None:
+            values = np.arange(self.size)
+
+        # If values is False, do not change values (e.g. to change only some keyword arguments)
+        elif values is False:
+            values = self.values.copy()
+
+        # by default, all other attributes are also re-set
+        newaxis = self.__class__(values, name, **kwargs)
+
+        if inplace:
+            # delete non-standard attributes
+            for k in self.__dict__:
+                if k not in newaxis.__dict__:
+                    delattr(self, k)
+
+            # update attributes
+            self.__dict__.update(newaxis.__dict__)
+
+        else:
+            return newaxis
+
     def union(self, other):
         """ join two Axis objects
+        
+        Notes
+        -----
+        This removes singletons by default
 
-        Examples:
-        ---------
-
+        Examples
+        --------
         >>> ax1 = Axis([0, 1, 2, 3, 4], name='myaxis')
         >>> ax2 = Axis([-3, 2, 3, 6], name='myaxis')
         >>> ax3 = ax1.union(ax2)
@@ -187,8 +329,22 @@ class Axis(object):
         if np.all(self.values == other.values):
             # TODO: check other attributes such as weights
             return self.copy()
+        elif self.values.size == 0:
+            return other
+        elif other.values.size == 0:
+            return self
 
-        joined = np.unique(np.concatenate([self.values, [val for val in other.values if val not in self.values]]))
+        ### concatenate two axes (minus missing elements)
+        ##if self.other.size < self.values.size:
+        ##    l1 = self.values
+        ##    l2 = [val for val in other.values if val not in self.values]
+        ##else:
+        ##    l1 = [val for val in self.values if val not in other.values]
+        ##    l2 = other.values
+        ## joined = np.concatenate((l1, l2))
+
+        # use unique and concatenate to make things simpler
+        joined = np.unique(np.concatenate((self.values, other.values)))
 
         # join two sorted axes?
         if self.is_monotonic() and other.is_monotonic():
@@ -256,6 +412,9 @@ class Axis(object):
         >>> ax = Axis([1,2,3],'x0')
         >>> ax.is_numeric()
         True
+        >>> ax = Axis([1.,2.,3.],'x0')
+        >>> ax.is_numeric()
+        True
         >>> ax = Axis(['a','b','c'],'x0')
         >>> ax.is_numeric()
         False
@@ -269,12 +428,15 @@ class Axis(object):
     def is_numeric(self):
         """ numeric type?
         """
-        return self.values.dtype in (np.dtype(int), np.dtype(long), np.dtype(float))
-        #try:
-        #    self.values[0] + 1
-        #    return True
-        #except:
-        #    return False
+        syms = [int,long,float,'int32', 'float32','int64','float64']
+        numtypes = [np.dtype(sym) for sym in syms]
+        return self.values.dtype in numtypes
+        # Or could use something more general like:
+        # try:
+        #     self.values[0] + 1
+        #     return True
+        # except:
+        #     return False
 
     def __eq__(self, other):
         #return hasattr(other, "name") and hasattr(other, "values") and np.all(other.values == self.values) and self.name == other.name
@@ -299,7 +461,11 @@ class Axis(object):
         return "{}({})={}:{}".format(self.name, self.size, *self._bounds())
 
     def copy(self):
-        return copy.copy(self)
+        #tmp = copy.copy(self) # shallow copy
+        tmp = copy.deepcopy(self) # deep copy: everything in the definition is copied
+        #tmp.values = self.values.copy() # copy of axis values
+        #tmp.weights = copy.copy(self.weights) # axis weights
+        return tmp
 
     # a few array-like properties
     @property
@@ -308,7 +474,6 @@ class Axis(object):
 
     @property
     def dtype(self): 
-        #return _convert_dtype(np.array(self.values).dtype)
         return self.values.dtype
 
     @property
@@ -319,8 +484,14 @@ class Axis(object):
     def __len__(self): 
         return self.values.__len__
 
-    def get_weights(self, weights=None):
+    def _get_weights(self, weights=None):
         """ return axis weights as a DimArray
+
+        Parameters
+        ----------
+        weights : array-like or callable, optional
+            if provided, will be used instead of self.weights
+            used in weighted transformations (see doc in there)
         """
         from dimarraycls import DimArray
 
@@ -341,7 +512,7 @@ class Axis(object):
 
         # already an array of weights
         else:
-            weights = np.array(weights, copy=False)
+            weights = np.asarray(weights)
 
         # index on one dimension
         ax = Axis(self.values, name=self.name)
@@ -397,14 +568,12 @@ class GroupedAxis(Axis):
         """ Combine the weights as a product of the individual axis weights
         """
         if self._weights is None:
-            self._weights = self._get_weights()
+            #self._weights = self._get_weights()
+            if np.all([ax.weights is None for ax in self.axes]):
+                self._weights = None
+            else:
+                self._weights =_flatten(*[ax._get_weights() for ax in self.axes]).prod(axis=1)
         return self._weights
-
-    def _get_weights(self):
-        if np.all([ax.weights is None for ax in self.axes]):
-            return None
-        else:
-            return _flatten(*[ax.get_weights() for ax in self.axes]).prod(axis=1)
 
     @property
     def size(self): 
@@ -610,9 +779,10 @@ class Axes(list):
         """ string representation
         """
         #header = "dimensions: "+ " x ".join([repr(ax.name) for ax in self])
-        header = "dimensions: "+ ", ".join([repr(ax.name) for ax in self])
+        #header = "dimensions: "+ ", ".join([repr(ax.name) for ax in self])
         body = "\n".join(["{} / {}".format(i, repr(ax).split('\n')[0]) for i,ax in enumerate(self)])
-        return "\n".join([header, body])
+        #return "\n".join([header, body])
+        return body
 
     def sort(self, dims):
         """ sort IN PLACE according to the order in "dims"
@@ -624,7 +794,8 @@ class Axes(list):
         super(Axes, self).sort(key=lambda x: dims.index(x.name))
 
     def copy(self):
-        return copy.copy(self)
+        #return copy.copy(self)
+        return copy.deepcopy(self) # not only the list but the elements of the list are copied
 
     def get_idx(self, axis):
         """ always return axis integer location
@@ -642,6 +813,60 @@ class Axes(list):
     @property
     def loc(self):
         return LocatorAxes(self)
+
+
+    @format_doc(**_doc_reset_axis)
+    def set_axis(self, values=None, axis=0, inplace=False, **kwargs):
+        """ Set axis values and attributes
+
+        Parameters
+        ----------
+        {values}
+        {axis}
+        {inplace}
+        {kwargs}
+
+        Returns
+        -------
+        Axes instance, or None if inplace is True
+
+        See Also
+        --------
+        Axes.reset_axis, Axis.set
+        """
+        axis = self.get_idx(axis)
+        ax = self[axis].set(values, inplace=inplace, **kwargs)
+
+        if not inplace:
+            axes = self.copy()
+            axes[axis] = ax
+            return axes
+
+    @format_doc(**_doc_reset_axis)
+    def reset_axis(self, axis=0, inplace=False, **kwargs):
+        """ Reset axis values and attributes
+
+        Parameters
+        ----------
+        {axis}
+        {inplace}
+        {kwargs}
+
+        Returns
+        -------
+        Axes instance, or None if inplace is True
+
+        See Also
+        --------
+        Axes.set_axis, Axis.reset
+        """
+        axis = self.get_idx(axis)
+        ax = self[axis].reset(inplace=inplace, **kwargs)
+
+        if not inplace:
+            axes = self.copy()
+            axes[axis] = ax
+            return axes
 
 
 def _init_axes(axes=None, dims=None, labels=None, shape=None, raise_warning=True):
@@ -778,6 +1003,7 @@ class LocatorAxis(object):
         self.raise_error = raise_error
         self.position_index = position_index
         self.keepdims = keepdims 
+        self._list = None   # store axis value as a list
 
         # check parameter values (default to False)
 #        if self._check_params:
@@ -791,6 +1017,13 @@ class LocatorAxis(object):
         assert not hasattr(self, 'indexing')
 
         #self.__dict__.update(opt) # update default options
+
+    def tolist(self):
+        """ return axis values as a list
+        """
+        if self._list is None:
+            self._list = self.values.tolist()
+        return self._list
 
     #
     # wrapper mode: __getitem__ and __call__
@@ -829,6 +1062,7 @@ class LocatorAxis(object):
 
         elif self._islist(ix):
             res = map(self.locate, ix)
+            #res = [self.locate(i) for i in ix]
 
         else:
             res = self.locate(ix)
@@ -843,11 +1077,13 @@ class LocatorAxis(object):
     def __call__(self, ix, **kwargs):
         """ general wrapper method
         
-        input:
-            ix: int, list, slice, tuple (on integer index or axis values)
-            **kwargs: see help on LocatorAxis
+        Parameters
+        ----------
+        ix : int, list, slice, tuple (on integer index or axis values)
+        **kwargs: see help on LocatorAxis
 
-        return:
+        Returns
+        -------
             `int`, list of `int` or slice of `int`
         
         """
@@ -902,9 +1138,13 @@ class LocatorAxis(object):
     def slice(self, slice_, include_last=True):
         """ Return a slice_ object
 
-        slice_            : slice or tuple 
-        include_last: include last element 
+        Parameters
+        ----------
+        slice_ : slice or tuple 
+        include_last : include last element 
 
+        Notes
+        -----
         Note bound checking is automatically done via "locate" mode
         This is in contrast with slicing in numpy arrays.
         """
@@ -937,7 +1177,7 @@ class ObjLocator(LocatorAxis):
         """ find a string
         """
         try:
-            return self.values.tolist().index(val)
+            return self.tolist().index(val)
         except ValueError, msg:
             raise IndexError(msg)
 
@@ -945,8 +1185,8 @@ class ObjLocator(LocatorAxis):
 class NumLocator(LocatorAxis):
     """ Locator for axis of integers or floats to be treated as numbers (with tolerance parameters)
 
-    Examples:
-    ---------
+    Examples
+    --------
     >>> values = np.arange(1950.,2000.)
     >>> values  # doctest: +ELLIPSIS
     array([ 1950., ... 1999.])
@@ -1025,7 +1265,7 @@ class NumLocator(LocatorAxis):
 
         else:
             try:
-                loc = values.tolist().index(val)
+                loc = self.tolist().index(val)
             except ValueError, msg:
                 raise IndexError("{}. Try setting axis `tol` parameter for nearest neighbor search.".format(msg))
 
@@ -1169,7 +1409,8 @@ class LocatorAxes(object):
     def __call__(self, indices, axis=0, **opt):
         """ Convert to N-D tuple
 
-        >>> a = da.array(np.arange(2*3*4).reshape(2,3,4))
+        >>> import dimarray as da
+        >>> a = da.DimArray(np.arange(2*3*4).reshape(2,3,4))
         >>> b = a.group('x1','x2')
         >>> c = b.take((0,1), axis=1)
         >>> np.all(a.take({'x1':0,'x2':1}) == c)
@@ -1214,20 +1455,3 @@ class LocatorAxes(object):
         kwargs = self.opt.copy()
         kwargs.update(opt)
         return LocatorAxes(self.axes, **kwargs)[indices]
-
-
-def test():
-    """ test module
-    """
-    import doctest
-    import axes
-    #reload(axes)
-    #globs = {'Locator':Locator}
-    #doctest.debug_src(Locator.__doc__)
-    doctest.testmod(axes, optionflags=doctest.ELLIPSIS)
-
-
-if __name__ == "__main__":
-    test()
-
-
