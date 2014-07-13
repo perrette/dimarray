@@ -60,8 +60,6 @@ def is_array1d_equiv(a):
     " test if a is convertible to a 1-D array of scalar"
     if isinstance(a, np.ndarray) and a.ndim == 1:
         res = True
-    elif type(a) is list:
-        res = False
     else:
         try:
             a = np.asarray(a)
