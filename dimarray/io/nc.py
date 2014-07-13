@@ -519,6 +519,13 @@ def _write_dataset(f, obj, mode='w-', indices=None, axis=0, format=FORMAT, verbo
     # set metadata for the whole dataset
     meta = obj._metadata
     for k in meta.keys():
+        if meta[k] == "" or meta[k] is None: 
+            # do not write empty attribute
+            # but delete any existing attribute 
+            # of the same name
+            if k in f.ncattrs:
+                f.delncattr(k) 
+            continue
         f.setncattr(k, meta[k])
 
     if close: f.close()
@@ -590,6 +597,13 @@ def _write_variable(f, obj=None, name=None, mode='a+', format=FORMAT, indices=No
     meta = obj._metadata
     for k in meta.keys():
         if k == "name": continue # 
+        if meta[k] == "" or meta[k] is None: 
+            # do not write empty attribute
+            # but delete any existing attribute 
+            # of the same name
+            if k in f.variables[name].ncattrs:
+                f.variables[name].delncattr(k) 
+            continue
 
         # write grid_mapping in a separate variable
         if k == 'grid_mapping' and share_grid_mapping \
@@ -756,6 +770,13 @@ def _check_dimensions(f, axes, **verb):
         meta = ax._metadata
         for k in meta.keys():
             if k == "name": continue # 
+            if meta[k] == "" or meta[k] is None: 
+                # do not write empty attribute
+                # but delete any existing attribute 
+                # of the same name
+                if k in f.variables[name].ncattrs:
+                    f.variables[name].delncattr(k) 
+                continue
             try:
                 f.variables[dim].setncattr(k, meta[k])
 
