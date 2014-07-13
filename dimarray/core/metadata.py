@@ -12,7 +12,7 @@ import json
 from collections import OrderedDict as odict
 
 #
-# ;ethods how to access an element
+# methods how to access an element
 #
 def _set_metadata(obj, k, val):
     """ set one metadata
@@ -28,13 +28,13 @@ def _set_metadata(obj, k, val):
         obj._metadata_extras[k] = val
         return
     
-    elif k in obj.__metadata_exclude__:
+    elif k in obj.__metadata_exclude__ or (k.startswith('_') and not k in obj.__metadata_include__): # two '__' are not ok
         warnings.warn("{} is a protected name, store in _metadata_extras".format(k))
         obj._metadata_extras[k] = val
         return
 
-    elif is_class_attribute:
-        warnings.warn("{} is a class attrbute (now overwritten)".format(k))
+    #elif is_class_attribute:
+    #    warnings.warn("{} is a class attrbute (now overwritten)".format(k))
 
     setattr(obj, k, val)
 
@@ -49,12 +49,14 @@ def _get_metadata(obj, k):
     else:
         raise ValueError("Metadata not found: {}".format(k))
 
-def del_metadata(obj, k):
+def _del_metadata(obj, k):
     _check_extras(obj)
     if k in obj._metadata_extras:
         del obj._metadata_extras
     elif hasattr(obj, k):
-        delattr(obj, k)
+        if k in obj.__dict__:
+            delattr(obj, k)
+            # otherwise class attribute, won't work
     else:
         raise ValueError("Metadata not found: {}".format(k))
 
@@ -69,6 +71,7 @@ def _keys(obj):
     """
     candidates = obj.__dict__.keys()
     candidates.extend(obj.__metadata_include__) # for class attributes which are not in obj __dict__
+    candidates = set(candidates) # remove doubles
     test = lambda k : k not in obj.__metadata_exclude__ \
             and (not k.startswith('_') or k in obj.__metadata_include__)
 
@@ -83,6 +86,7 @@ def _keys(obj):
     # check...
     if len(set(keys) ) != len(keys):
         warnings.warn("metadata present both in __dict__ and in _metadata_extras !")
+        #1/0
         # will be accessed and destroyed first from metadata
 
     return keys
