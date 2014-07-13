@@ -31,6 +31,13 @@ class GeoArray(DimArray):
     - lon recognized as 360-modulo-axis: indexing -180 is the same as +180
     - can input time, lat, lon as keyword arguments in addition to the standard way
     """
+    __metadata_include__ = ['grid_mapping', 'long_name', 'units', 'standard_name']
+
+    units = ""
+    long_name = ""
+    standard_name = ""
+
+    grid_mapping = None
 
     def __init__(self, values=None, axes=None, 
             time=None, lat=None, lon=None, z=None, y=None, x=None, 
@@ -71,7 +78,7 @@ class GeoArray(DimArray):
         dimarray.geo.Latitude, dimarray.geo.Longitude
         dimarray.geo.Z, dimarray.geo.Y, dimarray.geo.X
         """
-        keyword = (time is not None or lat is not None or lon is not None)
+        keyword = (time is not None or lat is not None or lon is not None or x is not None or y is not None or z is not None)
         assert not (axes is not None and keyword), "can't input both `axes=` and keyword arguments!"
         assert not ((lon is not None or lat is not None) and (x is not None or y is not None)), "can't have both lon,lat and x,y horizontal coordinates"
 
@@ -103,7 +110,7 @@ class GeoArray(DimArray):
         if standard_name: metadata['standard_name'] = standard_name
         if long_name: metadata['long_name'] = long_name
 
-        # Transform axes to "geo" axes based on name and metadat
+        # Do some guessing to define coordinates
         for i, ax in enumerate(self.axes):
             if isinstance(ax, Coordinate):
                 pass
@@ -116,13 +123,13 @@ class GeoArray(DimArray):
             if is_time(ax.name):
                 self.axes[i] = Time.from_axis(ax)
             # 'x', 'y', 'z' are too general to be used.
-            if (hasattr(ax, 'standard_name') \
+            if ax.name == 'x' or (hasattr(ax, 'standard_name') \
                     and ax.standard_name == 'projection_x_coordinate'):
                 self.axes[i] = X.from_axis(ax)
-            if (hasattr(ax, 'standard_name') \
+            if ax.name == 'y' or (hasattr(ax, 'standard_name') \
                     and ax.standard_name == 'projection_y_coordinate'):
                 self.axes[i] = Y.from_axis(ax)
-            if ax.name in ('height','depth'):
+            if ax.name in ('z','height','depth'):
                 self.axes[i] = Z.from_axis(ax)
 
         # check 
@@ -131,21 +138,51 @@ class GeoArray(DimArray):
     def __print__(self): return super(GeoArray, self).__print__().replace("dimarray","geoarray")
     def __str__(self): return super(GeoArray, self).__str__().replace("dimarray","geoarray")
 
+#    def _plot2D(self, function, *args, **kwargs):
+#        import matplotlib.pyplot as plt
+#        import dimarray.geo as geo
+#
+#        # transform the data prior to plotting?
+#        # (has additional ability of reading own attributes)
+#        transform = kwargs.pop('transform', None)
+#        if transform:
+#            self = geo.transform(self, to_grid_mapping=transform) # transform the data
+#
+#        # use a canvas suited to the coordinate system?
+#        if ax not in kwargs:
+#            if hasattr(self, 'grid_mapping'):
+#                try:
+#                    projection = get_grid_mapping(self.grid_mapping)
+#                except:
+#                    projection = None
+#
+#            # input has priority
+#            projection = kwargs.pop('projection', projection)
+#
+#            if projection is not None:
+#                kwargs['projection'] = projection
+#
+#        else:
+#            assert projection is None, "can't have both ax and projection"
+#
+#        super(GeoArray, self)._plot2D(function, *args, **kwargs)
+
+
 
 
 # define Latitude and Longitude axes
 class Coordinate(Axis):
     """ Axis with a geophysical meaning, following the netCDF CF conventions
     """
+    __metadata_include__  = ['standard_name', 'long_name', 'units'] # may be defined as class attributes
     def __init__(self, values, name=None, dtype=float, standard_name="", long_name="", units="", **kwargs):
-        #if metadata is None: metadata = {}
 
-        metadata = dict()
-        metadata.update(self.__class__.__dict__) # add class metadata to metadata
+        #metadata = dict()
+        metadata = self._metadata
+        #metadata.update(self.__class__.__dict__) # add class metadata to metadata
 
-        def_name = metadata.pop('name', None)
         if name is None:
-            name = def_name
+            name = self.name # class attribute
 
         if long_name: 
             metadata['long_name'] = long_name
@@ -177,6 +214,7 @@ class Coordinate(Axis):
     def __repr__(self):
         return super(Coordinate, self).__repr__()+" (Coord-{})".format(self.__class__.__name__)
 
+
 class Time(Coordinate):
     """ Time coordinate
 
@@ -186,7 +224,42 @@ class Time(Coordinate):
     """
     name = "time"
 
-class Latitude(Coordinate):
+#
+# Spatial coordinates
+# 
+class X(Coordinate):
+    """ X-horizontal coordinate on the projection plane
+
+    Reference
+    ---------
+    http://cfconventions.org/1.6#grid-mappings-and-projections
+    """
+    name = 'x'
+    long_name = "horizontal x coordinate"
+
+class Y(Coordinate):
+    """ Y-horizontal coordinate on the projection plane
+
+    Reference
+    ---------
+    http://cfconventions.org/1.6#grid-mappings-and-projections
+    """
+    name = 'y'
+    long_name = "horizontal y coordinate"
+
+class Z(Coordinate):
+    """ Vertical coordinate
+
+    Reference
+    ---------
+    http://cfconventions.org/1.6#vertical-coordinate "
+    """
+    name = 'z'
+    long_name = "vertical z coordinate"
+
+# Longitude and Latitude as subclasses
+
+class Latitude(Y):
     """ Latitude Coordinate
 
     Reference
@@ -197,9 +270,15 @@ class Latitude(Coordinate):
     long_name = "latitude"
     units = "degrees_north"
     standard_name = "latitude"
-    weights = lambda x: np.cos(np.radians(x))
+
+    def __init__(self, *args, **kwargs):
+        # TODO: may need to perform additional test on sorted axes and so on
+        # weighted mean with cos(lat) does not make sense for a sample of latitude
+        if not 'weights' in kwargs:
+            kwargs['weights'] = lambda x: np.cos(np.radians(x))
+        return super(Latitude, self).__init__(*args, **kwargs)
          
-class Longitude(Coordinate):
+class Longitude(X):
     """ Longitude Coordinate
 
     Reference
@@ -212,40 +291,6 @@ class Longitude(Coordinate):
     standard_name="longitude" 
     modulo=360.
 
-# To handle projection systems
-class X(Coordinate):
-    """ X-horizontal coordinate on the projection plane
-
-    Reference
-    ---------
-    http://cfconventions.org/1.6#grid-mappings-and-projections
-    """
-    name = 'x'
-    long_name = "x distance"
-    #long_name = "x distance on the projection plane from the origin";
-    #standard_name = "projection_x_coordinate";
-    #units = "km";
-
-class Y(Coordinate):
-    """ Y-horizontal coordinate on the projection plane
-
-    Reference
-    ---------
-    http://cfconventions.org/1.6#grid-mappings-and-projections
-    """
-    name = 'y'
-    long_name = "y distance"
-    #long_name = "y distance on the projection plane from the origin";
-    #standard_name = "projection_y_coordinate";
-
-class Z(Coordinate):
-    """ Vertical coordinate
-
-    Reference
-    ---------
-    http://cfconventions.org/1.6#vertical-coordinate "
-    """
-    name = 'z'
 
 #def _get_geoarray_cls(dims, globs=None):
 #    """ look whether a particular pre-defined array matches the dimensions

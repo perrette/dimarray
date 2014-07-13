@@ -22,22 +22,22 @@ def _check_horizontal_coordinates(geo_array, horizontal_coordinates=None, add_gr
     else:
         xs = filter(lambda x: isinstance(x, X), geo_array.axes)
         ys = filter(lambda x: isinstance(x, Y), geo_array.axes)
-        longs = filter(lambda x: isinstance(x, Longitude), geo_array.axes)
-        lats = filter(lambda x: isinstance(x, Latitude), geo_array.axes)
 
         if len(xs) == 1:
             x0 = xs[0]
-        elif len(longs) == 1:
-            x0 = longs[0]
+        elif len(xs) > 1:
+            raise ValueError("Several X-coordinates found. Please provide horizontal_coordinates parameter.")
         else:
-            raise Exception("Could not find X-coordinate among GeoArray axes")
+            warnings.warn("Could not find X-coordinate among GeoArray axes. Use dimension 1 by default.")
+            x0 = geo_array.axes[1]
 
         if len(ys) == 1:
             y0 = ys[0]
-        elif len(lats) == 1:
-            y0 = lats[0]
+        elif len(ys) > 1:
+            raise ValueError("Several Y-coordinates found. Please provide horizontal_coordinates parameter.")
         else:
-            raise Exception("Could not find Y-coordinate among GeoArray axes")
+            warnings.warn("Could not find Y-coordinate among GeoArray axes. Use dimension 0 by default.")
+            y0 = geo_array.axes[0]
 
     # Add grid mapping to GeoArray if Coordinates are Geodetic (long/lat)
     if add_grid_mapping and (not hasattr(geo_array, 'grid_mapping') or geo_array.grid_mapping is None) \
@@ -47,54 +47,52 @@ def _check_horizontal_coordinates(geo_array, horizontal_coordinates=None, add_gr
     return x0, y0
 
 
-def _check_grid_mapping(grid_mapping=None, geo_array=None):
-    """ make sure the grid mapping is a CRS instance, 
-    or convert it to a CRS instance
+def _get_crs(grid_mapping=None, geo_array=None):
+    """ Get CRS instance corresponding to a grid mapping
+
+    Parameters
+    ----------
+    grid_mapping : PROJ.4 str or CF dict or CRS instance
+    geo_array : geoarray
+    add a "cf_params" attribute if possible, to help add metadata
     """
     import cartopy.crs as ccrs
-    from dimarray.geo.crs import get_grid_mapping, CF_CRS
+    from dimarray.geo.crs import get_crs
 
-    if grid_mapping is None and geo_array is not None \
-        and hasattr(geo_array, 'grid_mapping'):
-            grid_mapping = geo_array.grid_mapping
+    if isinstance(grid_mapping, ccrs.CRS):
+        crs_obj = grid_mapping
 
-    if grid_mapping is None: 
-        raise ValueError("grid mapping not provided")
+    else:
+        if grid_mapping is None and geo_array is not None \
+            and hasattr(geo_array, 'grid_mapping'):
+                grid_mapping = geo_array.grid_mapping
 
-    ## already a CRS instance : do nothing
-    #if isinstance(grid_mapping, ccrs.CRS):
-    #    return grid_mapping
+        if grid_mapping is None: 
+            raise ValueError("grid mapping not provided")
 
-    # if dict remove name
-    if isinstance(grid_mapping, dict) and 'name' in grid_mapping.keys():
-        del grid_mapping['name'] # typical case via ._metadata after reading from a dataset
+        crs_obj = get_crs(grid_mapping)
 
-    grid_mapping = get_grid_mapping(grid_mapping)
-
-    # now add a cf_params attribute if needed
-    # NOTE: for now just do not force conversion from Cartopy
-    # since the CF version is still experimental
-    if not isinstance(grid_mapping, CF_CRS):
-        try:
-            crs = get_grid_mapping(grid_mapping, cf_conform=True)
-            grid_mapping.cf_params = grid_mapping
-        except:
-            raise
-
-    return grid_mapping
+    return crs_obj
 
 
-def _add_grid_mapping_metadata(a, grid_mapping):
+def _add_grid_mapping_metadata(a, crs):
     """ add grid_mapping metadata to an array
     """
+    # Try to add CF-conforming parameters
+    # A few CF_CRS classes exist that do the mapping between PROJ.4 and 
+    # CF-parameters, and are implemented as cartopy.crs.CRS sub-classes
+    # (regardless of whether a proper Cartopy projection exists for that 
+    # particular transform)
+    from dimarray.geo.crs import get_cf_params
     try:
-        cf_params = grid_mapping.cf_params
+        cf_params = get_cf_params(crs)
+        # TODO: do not write some basic metadata?
         a.grid_mapping = cf_params
     except:
         warnings.warn("cannot convert grid mapping to CF-conform metadata")
         if hasattr(a, 'grid_mapping'): del a.grid_mapping # remove old metadata
 
-def _make_projection_coordinate(xt, yt, grid_mapping):
+def _create_Axes_with_metadata(xt, yt, grid_mapping):
     """ create new projection coordinates based on grid mapping
 
     xt, yt : array-like
@@ -131,7 +129,7 @@ def _make_projection_coordinate(xt, yt, grid_mapping):
         if hasattr(grid_mapping, '_y_metadata'):
             meta = grid_mapping._x_metadata
             name = meta.pop('name', 'y')
-            yt = Y(xt, name)
+            yt = Y(yt, name)
             yt._metadata = meta
 
         else:
@@ -142,53 +140,77 @@ def _make_projection_coordinate(xt, yt, grid_mapping):
 #
 # Transformations involving changes in Coordinate Reference System
 #
-def transform_coords(from_grid_mapping, to_grid_mapping, x0, y0, xt=None, yt=None):
-    """ project coordinates
+def _inverse_transform_coords(from_crs, to_crs, xt=None, yt=None, x0=None, y0=None):
+    """ Provide 2-D grid in from_crs whose transform in to_crs is regular
+
+    This function is called by transform and transform_vectors, to ease interpolation
+    of the arrays onto a regular grid in to_crs.
 
     Parameters
     ----------
-    from_grid_mapping, to_grid_mapping 
-    x0, y0 : horiztonal coordinates in from_grid_mapping
-    xt, yt : Axis instances or ndarrays, optional
-        transformed axes to interpolate on
-        (otherwise they will be determined) 
+    from_crs, to_crs : cartopy.crs.CRS instances
+        coordinate systems ("from" and "to" refer to calling function)
+    xt, yt : 1-D, array-like, optional
+        target regular coordinates in to_crs to inverse-transform into from_crs
+        If not provided, xt and yt will be determined by first gridding and 
+        and transforming x0 and y0 from from_crs into to_crs and 
+        looking for min / max bounds. 
+    x0, y0 : 1-D array-like, optional
+        original, regular coordinates in from_crs
+        only used if xt, yt are not provided
 
     Return
     ------
-    xt, yt : new Axis instances
-    x0_interp, y0_interp : coordinate in original grid mapping that yield a regular transformed grid
-    """
-    # Transform coordinates 
-    x0 = np.asarray(x0)
-    y0 = np.asarray(y0)
-    assert x0.ndim ==  1 and y0.ndim == 1
-    x0_2d, y0_2d = np.meshgrid(x0, y0) # make 2-D coordinates
-    trans = to_grid_mapping.transform_points(from_grid_mapping, x0_2d, x0_2d)
-    xt_2d, yt_2d, zt_2d = np.rollaxis(trans,-1) # last dimension first
+    x0_interp, y0_interp : 2-D ndarrays 
+        coordinates in from_crs whose transform in to_crs yields meshgrid(xt, yt)
+    xt, yt : Axis instances
+        1-D coordinates in to_crs, Axis version of input parameter xt and yt
 
-    # Make regular grid in new coordinate system for interpolation
-    if xt is None:
-        xt = np.linspace(xt_2d.min(), xt_2d.max(), x0.size) # keep about the same size
-    if yt is None:
-        yt = np.linspace(yt_2d.min(), yt_2d.max(), y0.size) # keep about the same size
+    Examples
+    --------
+    >>> import cartopy.crs as ccrs
+    >>> from_crs = ccrs.NorthPolarStereo(true_scale_latitude=71.)
+    >>> to_crs = ccrs.Geodetic()
+    >>> xt = np.linspace(-50, 10, 5) # desired lon range
+    >>> yt = np.linspace(60, 85, 5)  # desired lat range
+    >>> x0_i, y0_i, Xt, Yt  = _inverse_transform_coords(from_crs, to_crs, xt, yt)
+    >>> x0_i.shape == x0_i.shape == (5,5)
+    True
+    >>> from numpy.testing import assert_allclose
+    >>> trans = to_crs.transform_points(from_crs, x0_i, y0_i)
+    >>> assert_allclose((trans[:,:,0], trans[:,:,1]), np.meshgrid(xt, yt))
+    """
+    # Determine xt and yt
+    if xt is None or yt is None:
+
+        assert x0 is not None and y0 is not None, "x0 and y0 must be provided"
+        x0 = np.asarray(x0)
+        y0 = np.asarray(y0)
+        assert x0.ndim ==  1 and y0.ndim == 1
+        x0_2d, y0_2d = np.meshgrid(x0, y0) # make 2-D coordinates
+        pts_xyz = to_crs.transform_points(from_crs, x0_2d, y0_2d)
+        xt_2d, yt_2d = pts_xyz[..., 0], pts_xyz[..., 1]
+
+        # Make regular grid in new coordinate system for interpolation
+        if xt is None:
+            xt = np.linspace(xt_2d.min(), xt_2d.max(), x0.size) # keep about the same size
+        if yt is None:
+            yt = np.linspace(yt_2d.min(), yt_2d.max(), y0.size) # keep about the same size
 
     assert xt.ndim == 1 and yt.ndim == 1, 'transformed coordinates must be 1-D'
 
-    # make it 2D
+    # Transform back to from_crs
+    # ...make it 2D
     xt_2dr, yt_2dr = np.meshgrid(xt, yt) # regular 2-D grid
-
-    # transform regular grid back to the original CRS for interpolation 
-    # (need regular grid as first argument)
-    tmp = from_grid_mapping.transform_points(to_grid_mapping, xt_2dr, yt_2dr)
-    x0_int, y0_int, z0_int = np.rollaxis(tmp, -1) # roll last axis first
+    # ...transform
+    pts_xyz = from_crs.transform_points(to_crs, xt_2dr, yt_2dr)
+    x0_int, y0_int = pts_xyz[..., 0], pts_xyz[..., 1]
 
     # Create new axes with appropriate metadata (unless alread Axis instances are provided)
-    if isinstance(xt, Axis) and isinstance(yt, Axis):
-        return 
+    if not (isinstance(xt, Axis) and isinstance(yt, Axis)):
+        xt, yt = _create_Axes_with_metadata(xt, yt, to_crs)
 
-    xt, yt =_make_projection_coordinate(xt, yt, to_grid_mapping)
-
-    return xt, yt, x0_int, y0_int
+    return x0_int, y0_int, xt, yt
 
 #
 #
@@ -220,13 +242,12 @@ def transform(geo_array, to_grid_mapping, from_grid_mapping=None, \
     ------
     transformed : GeoArray
         new GeoArray transformed
+        Attempt is made to document the projection with CF-conform metadata
 
     Examples
     --------
     """ 
     # local import since it's quite heavy
-    from dimarray.geo.crs import get_grid_mapping  
-
     if not isinstance(geo_array, DimArray):
         raise TypeError("geo_array must be a DimArray instance")
     if not isinstance(geo_array, GeoArray):
@@ -243,13 +264,11 @@ def transform(geo_array, to_grid_mapping, from_grid_mapping=None, \
     #assert geo_array.dims.index(x0.name) > geo_array.axes[
 
     # get cartopy.crs.CRS instances
-    from_grid_mapping = _check_grid_mapping(from_grid_mapping, geo_array)
-    to_grid_mapping = _check_grid_mapping(to_grid_mapping)
-    #from_grid_mapping = _get_grid_mapping(geoarray, from_grid_mapping)
-    #to_grid_mapping = get_grid_mapping(to_grid_mapping)
+    from_crs = _get_crs(from_grid_mapping, geo_array)
+    to_crs = _get_crs(to_grid_mapping)
 
     # Transform coordinates and prepare regular grid for interpolation
-    xt, yt, x0_interp, y0_interp = transform_coords(from_grid_mapping, to_grid_mapping, x0, y0, xt, yt)
+    x0_interp, y0_interp, xt, yt = _inverse_transform_coords(from_crs, to_crs, xt, yt, x0, y0)
 
     if geo_array.ndim == 2:
         #newvalues = interp(geo_array.values, xt_2d, yt_2d, xt_2dr, yt_2dr)
@@ -281,7 +300,7 @@ def transform(geo_array, to_grid_mapping, from_grid_mapping=None, \
 
     # add metadata
     transformed._metadata = geo_array._metadata
-    _add_grid_mapping_metadata(transformed, to_grid_mapping)
+    _add_grid_mapping_metadata(transformed, to_crs)
 
     return transformed
 
@@ -330,18 +349,18 @@ def transform_vectors(u, v, to_grid_mapping, from_grid_mapping=None, \
         assert hasattr(v, 'grid_mapping') and u.grid_mapping == v.grid_mapping, 'u and v must have the same grid mapping'
 
     # get grid mapping instances
-    from_grid_mapping = _check_grid_mapping(from_grid_mapping, u)
-    to_grid_mapping = _check_grid_mapping(to_grid_mapping)
+    from_crs = _get_crs(from_grid_mapping, u)
+    to_crs = _get_crs(to_grid_mapping)
 
     # find horizontal coordinates
     x0, y0 = _check_horizontal_coordinates(u, horizontal_coordinates)
 
     # Transform coordinates and prepare regular grid for interpolation
-    xt, yt, x0_interp, y0_interp = transform_coords(from_grid_mapping, to_grid_mapping, x0, y0, xt, yt)
+    x0_interp, y0_interp, xt, yt = _inverse_transform_coords(from_crs, to_crs, xt, yt, x0, y0)
 
     # Transform vector components
     x0_2d, y0_2d = np.meshgrid(x0, y0)
-    ut, vt = to_grid_mapping.transform_vectors(from_grid_mapping, x0_2d, y0_2d, u.values, v.values)
+    ut, vt = to_crs.transform_vectors(from_crs, x0_2d, y0_2d, u.values, v.values)
 
     if u.ndim == 2:
         newu = interp(u.values, x0.values, y0.values, x0_interp, y0_interp)
@@ -368,7 +387,7 @@ def transform_vectors(u, v, to_grid_mapping, from_grid_mapping=None, \
     # add metadata
     ut._metadata = u._metadata
     vt._metadata = v._metadata
-    _add_grid_mapping_metadata(ut, to_grid_mapping)
-    _add_grid_mapping_metadata(vt, to_grid_mapping)
+    _add_grid_mapping_metadata(ut, to_crs)
+    _add_grid_mapping_metadata(vt, to_crs)
 
     return ut, vt

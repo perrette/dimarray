@@ -173,8 +173,7 @@ class CF_CRS(object):
             #super(CRSproj, self)(**cartopy_params)
 
         except Exception as error:
-            msg = _error_message(error, self._cartopy)
-            raise error.__class__(msg)
+            raise 
 
         # check that init went well
         assert isinstance(self, ccrs.CRS)
@@ -217,7 +216,7 @@ class CF_CRS(object):
 
 
 #
-# NOTE: the grid_mapping_name is 'longitude_latitude' and not 'geodetic'
+# NOTE: the grid_mapping_name is 'latitude_longitude' and not 'geodetic'
 #
 class Geodetic(CF_CRS, ccrs.Geodetic):
     """ Same as cartopy.crs.Geodetic but accept netCDF parameters as arguments
@@ -558,7 +557,28 @@ def _get_cf_crs_class(grid_mapping_name):
     return found[0] # 0: class name, 1: class
 
 
-def get_grid_mapping(grid_mapping, cf_conform=False):
+def get_cf_params(grid_mapping):
+    """ Return netCDF parameters from a variety of objects
+
+    Parameters
+    ----------
+    grid_mapping : PROJ.4 str or cartopy.crs.CRS instance or CF-params dict
+        grid_mapping from which to extract CF-params
+        a dict of CF-params will be checked for by initializing 
+        a pre-defined CRS-class, or will raise an error if no matching
+        class is defined
+
+    Returns
+    -------
+    a dictionary of CF-conform parameters
+
+    See Also
+    --------
+    get_crs
+    """
+    return get_crs(grid_mapping, cf_conform=True).cf_params
+
+def get_crs(grid_mapping, cf_conform=False):
     """ Get a cartopy's CRS instance from a variety of key-word parameters
 
     Parameters
@@ -602,11 +622,11 @@ def get_grid_mapping(grid_mapping, cf_conform=False):
 
     >>> grid_mapping = ccrs.Geodetic() # cartopy
     >>> grid_mapping = "geodetic"  # cartopy class name
-    >>> grid_mapping = {'grid_mapping_name':'longitude_latitude'} # CF-1.4
+    >>> grid_mapping = {'grid_mapping_name':'latitude_longitude'} # CF-1.4
 
     Other coordinates systems onto which lon and lat can be projected onto
 
-    >>> from dimarray.geo.crs import get_grid_mapping
+    >>> from dimarray.geo.crs import get_crs
 
     North Polar Stereographic Projection over Greenland
 
@@ -641,14 +661,14 @@ def get_grid_mapping(grid_mapping, cf_conform=False):
     ...     false_northing = 0., 
     ...     ellipsoid = 'WGS84', 
     ...     )  # CF-1.4
-    >>> crs = get_grid_mapping(grid_mapping)
+    >>> crs = get_crs(grid_mapping)
     >>> crs.transform_point(70, -40, ccrs.Geodetic())
     (24969236.85758362, 8597597.732836112)
 
     ... PROJ.4 equivalent, with all parameters
 
     >>> proj4_init = "+ellps=WGS84 +proj=stere +lat_0=90.0 +lon_0=-39.0 +x_0=0.0 +y_0=0.0 +lat_ts=71.0"
-    >>> crs = get_grid_mapping(proj4_init)
+    >>> crs = get_crs(proj4_init)
     >>> crs.transform_point(70, -40, ccrs.Geodetic())
     (24969236.85758362, 8597597.732836112)
     """
@@ -680,7 +700,7 @@ def get_grid_mapping(grid_mapping, cf_conform=False):
             grid_mapping = cls()
 
     elif not isinstance(grid_mapping, ccrs.CRS):
-        #msg = 80*'-'+'\n'+get_grid_mapping.__doc__+'\n'+80*'-'+'\n\n'
+        #msg = 80*'-'+'\n'+get_crs.__doc__+'\n'+80*'-'+'\n\n'
         msg = 'grid_mapping: must be str or dict or cartopy.crs.CRS instance, got: {}'.format(grid_mapping)
         raise TypeError(msg)
 
@@ -723,8 +743,8 @@ def get_grid_mapping(grid_mapping, cf_conform=False):
 ###     dimarray.geo.GeoArray.transform
 ###     dimarray.geo.GeoArray.transform_vectors
 ###     """
-###     grid_mapping1 = get_grid_mapping(grid_mapping1)
-###     grid_mapping2 = get_grid_mapping(grid_mapping2)
+###     grid_mapping1 = get_crs(grid_mapping1)
+###     grid_mapping2 = get_crs(grid_mapping2)
 ### 
 ###     if np.isscalar(x):
 ###         xt, yt = grid_mapping2.transform_point(x, y, grid_mapping1)
@@ -757,8 +777,8 @@ def get_grid_mapping(grid_mapping, cf_conform=False):
 ###     --------
 ###     geo.transform_coords
 ###     """
-###     grid_mapping1 = get_grid_mapping(grid_mapping1)
-###     grid_mapping2 = get_grid_mapping(grid_mapping2)
+###     grid_mapping1 = get_crs(grid_mapping1)
+###     grid_mapping2 = get_crs(grid_mapping2)
 ### 
 ###     ut, vt = grid_mapping2.transform_vectors(grid_mapping1, x, y, u, v)
 ### 
