@@ -1156,7 +1156,7 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         assert self.ndim <= 2, "only support plotting for 1- and 2-D objects"
         return self.to_pandas().plot(*args, **kwargs)
     
-    def _plot2D(self, function, *args, **kwargs):
+    def _plot2D(self, funcname, *args, **kwargs):
         """ generic plotting function for 2-D plots
         """
         if len(self.dims) != 2:
@@ -1164,10 +1164,17 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 
         import matplotlib.pyplot as plt
         
-        ax = plt.gca()
+        #ax = plt.gca()
+        if 'ax' in kwargs: 
+            ax = kwargs.pop('ax')
+
+        else:
+            ax = plt.gca()
+
+        function = getattr(ax, funcname)
         pc = function(self.labels[1], self.labels[0], self.values, **kwargs)
-        plt.xlabel(self.dims[1])
-        plt.ylabel(self.dims[0])
+        ax.set_xlabel(self.dims[1])
+        ax.set_ylabel(self.dims[0])
             
         return pc
 
@@ -1189,7 +1196,7 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 
         import matplotlib.pyplot as plt
 
-        return self._plot2D(plt.pcolormesh, *args, **kwargs)
+        return self._plot2D('pcolormesh', *args, **kwargs)
 
     def contourf(self, *args, **kwargs):
         """ Plot filled 2-D contours. 
@@ -1209,7 +1216,7 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 
         import matplotlib.pyplot as plt
 
-        return self._plot2D(plt.contourf, *args, **kwargs)
+        return self._plot2D('contourf', *args, **kwargs)
 
     def contour(self, *args, **kwargs):
         """ Plot 2-D contours. 
@@ -1229,7 +1236,7 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 
         import matplotlib.pyplot as plt
 
-        return self._plot2D(plt.contour, *args, **kwargs)
+        return self._plot2D('contour', *args, **kwargs)
         
     # (re)set axis values and attributes
     @format_doc(**_doc_reset_axis)
