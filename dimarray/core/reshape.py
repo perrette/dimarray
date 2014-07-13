@@ -147,7 +147,7 @@ def transpose(self, *dims):
 
     result = self.values.transpose(newshape)
     newaxes = [self.axes[i] for i in newshape]
-    return self._constructor(result, newaxes)
+    return self._constructor(result, newaxes, **self._metadata)
 
 def swapaxes(self, axis1, axis2):
     """ Swap two axes
