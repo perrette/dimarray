@@ -103,38 +103,6 @@ def _check_private(obj):
         obj._metadata_private = {} # initialize
 
     
-
-
-# 
-# Descriptor to handle metadata
-# It will probably be replaced by a function
-# to increase clarity.
-#
-class MetadataDescDeprec(object):
-    """ descriptor to set/get metadata
-
-    """ 
-    def __get__(self, obj, cls=None):
-        """ just get 
-        """ 
-        if obj is None: return self # when the class is accessed
-        return {k:_get_metadata(obj, k) for k in _keys(obj)}
-
-    def __set__(self, obj, meta):
-        """ HERE could add another attribute _metadata_extra to obj 
-
-        Only called with assignments like:
-        a._metadata = {'long_name':'paul', 'units':67}
-        """
-        assert isinstance(meta, dict), "metadata can only be a dictionary"
-
-        # first delete everything
-        for k in self.__get__(obj).keys():
-            _del_metadata(obj, k)
-
-        for k in meta:
-            _set_metadata(obj, k, meta[k])
-
 # Function to set/get all metadata
 def _metadata(obj, metadata=None):
     """ if metadata is provided, set 
@@ -182,7 +150,8 @@ class _Metadata(dict):
 
     def __repr__(self):
         warnings.warn("Please use _metadata() as a method.",DeprecationWarning)
-        return super(_Metadata, self).__repr__()
+        return dict.__repr__(self)
+        #return super(_Metadata, self).__repr__()
 
     def __call__(self, metadata=None):
         if metadata is None:

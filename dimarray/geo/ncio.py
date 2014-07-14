@@ -14,9 +14,9 @@ def read_nc(*args, **kwargs):
     if isinstance(a, da.DimArray):
         a = GeoArray(a)
     elif isinstance(a, da.Dataset):
-        meta = a._metadata
+        meta = a._metadata()
         a = Dataset(a) # Geo-Dataset
-        a._metadata = meta
+        a._metadata(meta)
     return a
 
 # update the doc

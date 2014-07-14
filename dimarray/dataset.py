@@ -64,15 +64,14 @@ class Dataset(odict, MetadataBase):
         """
         return [ax.name for ax in self.axes]
 
-    def __repr__(self):
+    def _repr(self, metadata=True):
         """ string representation
         """
         lines = []
         header = "Dataset of %s variables" % (len(self))
         if len(self) == 1: header = header.replace('variables','variable')
         lines.append(header)
-        axes = repr(self.axes)
-        lines.append(axes)
+        lines.append(self.axes._repr(metadata=metadata))
         for nm in self.keys():
             dims = self[nm].dims
             shape = self[nm].shape
@@ -80,7 +79,15 @@ class Dataset(odict, MetadataBase):
             repr_dims = repr(dims)
             if repr_dims == "()": repr_dims = self[nm].values
             lines.append("{}: {}".format(nm,repr_dims))
+            if metadata and len(self[nm]._metadata()) > 0:
+                lines.append(self[nm]._metadata_summary())
         return "\n".join(lines)
+
+    def summary(self):
+        return self._repr(metadata=True)
+
+    def __repr__(self):
+        return self._repr(metadata=False)
 
     def __delitem__(self, item):
         """ 
