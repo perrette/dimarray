@@ -1,6 +1,7 @@
 """ collection of base obeje
 """
 from collections import OrderedDict as odict
+import warnings
 import numpy as np
 
 import dimarray as da  # for the doctest, so that they are testable via py.test
@@ -12,6 +13,31 @@ from core.align import _check_stack_args, _get_axes, stack, concatenate, _check_
 from core import pandas_obj
 from core.metadata import MetadataBase
 from core.axes import _doc_reset_axis
+
+class Variable(MetadataBase):
+    """ A variable class just contains values, dims and metadata information
+    It is the object internally stored in a Dataset, while axes are centralized
+    """
+    __metadata_exclude__ = ['values', 'dims']
+    def __init__(self, values, dims, metadata):
+        self.values = values
+        self.dims = dims
+        self._metadata(metadata)
+
+    def _repr(self, metadata=True):
+        dims = self.dims
+        shape = self.values.shape
+        #print nm,":", ", ".join(dims)
+        repr_dims = repr(dims)
+        if repr_dims == "()": repr_dims = self.values
+        lines = []
+        lines.append("{}".format(repr_dims))
+        if metadata and len(self._metadata()) > 0:
+            lines.append(self._metadata_summary())
+        return "\n".join(lines)
+
+    def __repr__(self):
+        return self._repr(metadata=True)
 
 class Dataset(odict, MetadataBase):
     """ Container for a set of aligned objects
@@ -73,14 +99,8 @@ class Dataset(odict, MetadataBase):
         lines.append(header)
         lines.append(self.axes._repr(metadata=metadata))
         for nm in self.keys():
-            dims = self[nm].dims
-            shape = self[nm].shape
-            #print nm,":", ", ".join(dims)
-            repr_dims = repr(dims)
-            if repr_dims == "()": repr_dims = self[nm].values
-            lines.append("{}: {}".format(nm,repr_dims))
-            if metadata and len(self[nm]._metadata()) > 0:
-                lines.append(self[nm]._metadata_summary())
+             v = dict.__getitem__(self, nm) # just get the Variable object stored in the dataset
+             lines.append(nm+': '+v._repr(metadata=metadata))
         return "\n".join(lines)
 
     def summary(self):
@@ -104,6 +124,26 @@ class Dataset(odict, MetadataBase):
                     continue
             if not found:
                 self.axes.remove(ax)
+
+    def __getitem__(self, key):
+        """ get a dimarray and copy centralized informations such as 
+        axes and grid_mapping
+        """
+        v = dict.__getitem__(self, key) # Variable type
+        axes = Axes([self.axes[nm].copy() for nm in v.dims])
+        metadata = v._metadata()
+        a = self._constructor(v.values, axes, **metadata)
+
+        # copy grid_mapping if needed
+        gm = metadata.pop('grid_mapping', None)
+        if gm is not None and (isinstance(gm, str) or type(gm) is unicode) \
+                and gm in self.keys():
+            try:
+                a.grid_mapping = self[gm]._metadata()
+            except error, msg:
+                warnings.warn("could not attach grid mapping:"+msg.message)
+
+        return a
 
     def __setitem__(self, key, val):
         """ Make sure the object is a DimArray with appropriate axes
@@ -139,17 +179,12 @@ class Dataset(odict, MetadataBase):
 
             # Append new axis
             else:
-                # NOTE: make a copy so that Dataset's axes are different from individual dimarray's axes
-                # Otherwise confusing things happen.
-                # Other alternative? Make all axes a reference of the Dataset axes
-                # But I could not get this work properly so I gave up. 
-                # Moreover this involves making axis copy when calling __getitem__, which is a
-                # significant deviation from dictionary's behaviour
                 self.axes.append(axis.copy())  
 
-        # update name
-        # val.name = key # DON'T : annoying e.g. grid_mapping metadata 
-        super(Dataset, self).__setitem__(key, val)
+        # Transform to variable
+        variable = Variable(val.values, val.dims, val._metadata())
+
+        super(Dataset, self).__setitem__(key, variable)
 
     def write_nc(self, f, *args, **kwargs):
         """ Save dataset in netCDF file.
@@ -172,7 +207,7 @@ class Dataset(odict, MetadataBase):
         import io.nc as ncio
         return ncio._read_dataset(f, *args, **kwargs)
 
-    read = read_nc
+    #read = read_nc
 
     def to_array(self, axis=None, keys=None):
         """ Convert to DimArray
@@ -213,15 +248,15 @@ class Dataset(odict, MetadataBase):
         return self._constructor(data, axes)
 
 
-    def take(self, indices, axis=0, raise_error=True, **kwargs):
+    def take(self, indices, axis=0, raise_error=False, **kwargs):
         """ analogous to DimArray's take, but for each DimArray of the Dataset
 
         Parameters
         ----------
-        indices: scalar, or array-like, or slice
-        axis: axis name (str)
-        raise_error: raise an error if a variable does not have the desired dimension
-        **kwargs: arguments passed to the axis locator, similar to `take`, such as `indexing` or `keepdims`
+        indices : scalar, or array-like, or slice
+        axis : axis name (str)
+        raise_error : raise an error if a variable does not have the desired dimension
+        **kwargs : arguments passed to the axis locator, similar to `take`, such as `indexing` or `keepdims`
 
         Examples
         --------
@@ -244,31 +279,20 @@ class Dataset(odict, MetadataBase):
         a: 1.0
         b: nan
         """
-        assert isinstance(axis, str), "axis must be a string"
-        ii = self.axes[axis].loc(indices, **kwargs)
-        newdata = self.copy() # copy the dict
+        # first find the index for the shared axes
+        kw_indices = {self.axes[i].name:ind for i,ind in enumerate(self.axes.loc(indices, axis=axis, **kwargs))}
+
+        # then apply take in 'position' mode
+        newdata = self.__class__()
         for k in self.keys():
-            if axis not in self[k].dims: 
+            v = self[k]
+            if axis not in v.dims: 
                 if raise_error: 
                     raise ValueError("{} does not have dimension {} ==> set raise_error=False to keep this variable unchanged".format(k, axis))
                 else:
-                    continue
-            a = self[k].take(ii, axis=axis, indexing='position')
-            if not isinstance(a, DimArray):
-                a = self._constructor(a)
-            odict.__setitem__(newdata, k, a)
-
-        # update the axis
-        newaxis = self.axes[axis][ii]
-        if type(axis) is not int: axis = self.dims.index(axis) # axis is int
-
-        # remove if axis collapsed
-        if not isinstance(newaxis, Axis):
-            del newdata.axes[axis]
-
-        # otherwise update
-        else:
-            newdata.axes[axis] = newaxis
+                    #continue
+                    newdata[k] = v
+            newdata[k] = self[k].take(kw_indices, indexing='position')
 
         return newdata
 
@@ -281,7 +305,7 @@ class Dataset(odict, MetadataBase):
         if axis is not None: axis = self.axes[axis].name
         kwargs['axis'] = axis
 
-        d = odict(self)
+        d = self.to_odict()
         for k in self.keys():
             if axis is not None and axis not in self[k].dims: 
                 continue
@@ -329,12 +353,12 @@ class Dataset(odict, MetadataBase):
     def to_dict(self):
         """ export to dict
         """
-        return dict(self)
+        return dict({nm:self[nm] for nm in self.keys()})
 
     def to_odict(self):
         """ export to ordered dict
         """
-        return odict(self)
+        return odict([(nm, self[nm]) for nm in self.keys()])
 
     @format_doc(**_doc_reset_axis)
     def set_axis(self, values=None, axis=0, inplace=False, **kwargs):
@@ -365,13 +389,12 @@ class Dataset(odict, MetadataBase):
         """
         if inplace is False:
             self = self.copy()
-
-        # update every dimarray in the dict
-        axis_name = self.axes[axis].name
-        for nm in self.keys():
-            if not axis_name in self[nm].dims:
-                continue
-            super(Dataset, self).__setitem__(nm, self[nm].set_axis(values, axis, inplace=False, **kwargs) )
+        ## update every dimarray in the dict
+        #axis_name = self.axes[axis].name
+        #for nm in self.keys():
+        #    if not axis_name in self[nm].dims:
+        #        continue
+        #    super(Dataset, self).__setitem__(nm, self[nm].set_axis(values, axis, inplace=False, **kwargs) )
 
         # update the main axis instance
         self.axes = self.axes.set_axis(values, axis, inplace=False, **kwargs)
@@ -408,12 +431,12 @@ class Dataset(odict, MetadataBase):
         if inplace is False:
             self = self.copy()
 
-        # update every dimarray in the dict
-        axis_name = self.axes[axis].name
-        for nm in self.keys():
-            if not axis_name in self[nm].dims:
-                continue
-            super(Dataset, self).__setitem__(nm, self[nm].reset_axis(axis, inplace=False, **kwargs) )
+        ## update every dimarray in the dict
+        #axis_name = self.axes[axis].name
+        #for nm in self.keys():
+        #    if not axis_name in self[nm].dims:
+        #        continue
+        #    super(Dataset, self).__setitem__(nm, self[nm].reset_axis(axis, inplace=False, **kwargs) )
 
         # update the main axis instance
         self.axes = self.axes.reset_axis(axis, inplace=False, **kwargs)

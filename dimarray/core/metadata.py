@@ -132,12 +132,14 @@ class _Metadata(dict):
     method-like (call) access in next versions.
     """
     def __init__(self, obj): #*args, **kwargs):
-        super(_Metadata, self).__init__(_metadata(obj))
+        #super(_Metadata, self).__init__(_metadata(obj))
+        dict.__init__(self, _metadata(obj))
         self.obj = obj
 
     def __getitem__(self, key):
         #warnings.warn("Please use _metadata() as a method.")
         warnings.warn("Please use _metadata() as a method.",DeprecationWarning)
+        #1/0
         return self[key]
 
     def __setitem__(self, key, value):
@@ -192,14 +194,16 @@ class MetadataBase(object):
     # _metadata will become a function
     # for now a python trick is used to keep allowing 
     # both dict-like and function-like access.
+    #def _metadata(self, metadata=None):
+    #    return _metadata(self, metadata)
+
     @property
     def _metadata(self):
         return _Metadata(self)
 
     @_metadata.setter
     def _metadata(self, metadata):
-        warnings.warn("Please use _metadata() as a method.",DeprecationWarning)
-        _metadata(self, metadata)
+        self._metadata(metadata)
 
     def _metadata_summary(self):
         return "\n".join([" "*8+"{} : {}".format(key, value) for key, value  in self._metadata.iteritems()])

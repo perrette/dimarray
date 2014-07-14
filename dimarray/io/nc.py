@@ -100,7 +100,7 @@ def read_nc(f, nms=None, *args, **kwargs):
         if True, any "grid_mapping" attribute pointing to another variable 
         present in the dataset will be replaced by that variable's metadata
         as a dictionary. This can ease transformations.
-        Default is True.
+        Default is False for a variable, True for a Dataset.
 
     Returns
     -------
@@ -259,7 +259,7 @@ def read_dimensions(f, name=None, ix=slice(None), verbose=False):
         # add metadata
         if dim in f.variables.keys():
             meta = _read_attributes(f, dim)
-            axis._metadata = meta
+            axis._metadata(meta)
 
         axes.append(axis)
 
@@ -297,7 +297,7 @@ def _extract_kw(kwargs, argnames, delete=True):
     return kw
 
 @format_doc(indexing=_doc_indexing)
-def _read_variable(f, name, indices=None, axis=0, verbose=False, copy_grid_mapping=True, **kwargs):
+def _read_variable(f, name, indices=None, axis=0, verbose=False, copy_grid_mapping=False, **kwargs):
     """ Read one variable from netCDF4 file 
 
     Parameters
@@ -310,6 +310,7 @@ def _read_variable(f, name, indices=None, axis=0, verbose=False, copy_grid_mappi
         if True, any "grid_mapping" attribute pointing to another variable 
         present in the dataset will be replaced by that variable's metadata
         as a dictionary. This can ease transformations.
+        Default is True
 
     Returns
     -------
@@ -361,7 +362,7 @@ def _read_variable(f, name, indices=None, axis=0, verbose=False, copy_grid_mappi
         gm = obj.grid_mapping
         try:
             mapping = _read_variable(f, gm, copy_grid_mapping=False)
-            obj.grid_mapping = mapping._metadata
+            obj.grid_mapping = mapping._metadata()
 
         except Exception as error:
             warnings.warn(error.message +"\n ==> could not read grid mapping")
@@ -391,6 +392,10 @@ def _read_dataset(f, nms=None, **kwargs):
     """
     kw = _extract_kw(kwargs, ('verbose',))
     f, close = _check_file(f, 'r', **kw)
+
+    # when reading a dataset keep grid_mapping as a string
+    if 'copy_grid_mapping' not in kwargs:
+        kwargs['copy_grid_mapping'] = False
 
     # automatically read all variables to load (except for the dimensions)
     if nms is None:
@@ -517,7 +522,7 @@ def _write_dataset(f, obj, mode='w-', indices=None, axis=0, format=FORMAT, verbo
         _write_variable(f, obj[nm], nm, **kwargs)
 
     # set metadata for the whole dataset
-    meta = obj._metadata
+    meta = obj._metadata()
     for k in meta.keys():
         if meta[k] is None: 
             # do not write empty attribute
@@ -594,7 +599,7 @@ def _write_variable(f, obj=None, name=None, mode='a+', format=FORMAT, indices=No
             f.close()
         return
 
-    meta = obj._metadata
+    meta = obj._metadata()
     for k in meta.keys():
         if k == "name": continue # 
         if meta[k] is None: 
@@ -767,7 +772,7 @@ def _check_dimensions(f, axes, **verb):
             v[:] = ax.values
 
         # add metadata if any
-        meta = ax._metadata
+        meta = ax._metadata()
         for k in meta.keys():
             if k == "name": continue # 
             if meta[k] is None: 

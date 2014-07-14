@@ -301,7 +301,7 @@ class DimArray(MetadataBase):
         #for k in kwargs:
         #    setncattr(self, k, kwargs[k]) # perform type-checking and store in self._metadata
         metadata.update(kwargs)
-        self._metadata = metadata
+        self._metadata(metadata)
 
         # Check consistency between axes and values
         inferred = tuple([ax.size for ax in self.axes])
