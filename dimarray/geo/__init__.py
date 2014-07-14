@@ -5,9 +5,10 @@
 from dimarray import *
 
 # Add GeoArray to the list
-from geoarray import GeoArray, Coordinate, Latitude, Longitude, Time, X, Y, Z
+from dimarray.geo.geoarray import GeoArray, Coordinate, Latitude, Longitude, Time, X, Y, Z
 
-from projection import transform, transform_vectors
+from dimarray.geo.projection import transform, transform_vectors
 
 # Overwrite with specific GeoArray functions
-from ncio import *
+from dimarray.geo.dataset import Dataset
+from dimarray.geo.ncio import read_nc

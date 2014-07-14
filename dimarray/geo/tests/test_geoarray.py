@@ -4,7 +4,7 @@ import pytest
 import numpy as np
 from numpy.random import randn
 from dimarray.geo import GeoArray, ones
-from dimarray import Dataset
+from dimarray.geo import Dataset
 
 @pytest.fixture(params=[(3,2)])
 def shape(request):

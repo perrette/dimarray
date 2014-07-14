@@ -132,26 +132,28 @@ class _Metadata(dict):
     method-like (call) access in next versions.
     """
     def __init__(self, obj): #*args, **kwargs):
-        #super(_Metadata, self).__init__(_metadata(obj))
-        dict.__init__(self, _metadata(obj))
+        #super(_Metadata, self).__init__()
+        super(_Metadata, self).__init__(_metadata(obj))
         self.obj = obj
 
     def __getitem__(self, key):
-        #warnings.warn("Please use _metadata() as a method.")
-        warnings.warn("Please use _metadata() as a method.",DeprecationWarning)
-        #1/0
-        return self[key]
+        warnings.warn("Please use _metadata() as a method.")
+        #warnings.warn("Please use _metadata() as a method.",DeprecationWarning)
+        return super(_Metadata, self).__getitem__(key)
 
     def __setitem__(self, key, value):
-        warnings.warn("Please use set_metadata() method.",DeprecationWarning)
+        warnings.warn("Please use set_metadata() method.")
+        #warnings.warn("Please use set_metadata() method.",DeprecationWarning)
         return _set_metadata(self.obj, key, value)
 
     def __delitem__(self, key):
-        warnings.warn("Please use del_metadata() method.",DeprecationWarning)
-        return _det_metadata(self.obj, key)
+        warnings.warn("Please use del_metadata() method.")
+        #warnings.warn("Please use del_metadata() method.",DeprecationWarning)
+        return _del_metadata(self.obj, key)
 
     def __repr__(self):
-        warnings.warn("Please use _metadata() as a method.",DeprecationWarning)
+        warnings.warn("Please use _metadata() as a method.")
+        #warnings.warn("Please use _metadata() as a method.",DeprecationWarning)
         return dict.__repr__(self)
         #return super(_Metadata, self).__repr__()
 
@@ -203,7 +205,7 @@ class MetadataBase(object):
 
     @_metadata.setter
     def _metadata(self, metadata):
-        self._metadata(metadata)
+        self._metadata(metadata.copy())
 
     def _metadata_summary(self):
         return "\n".join([" "*8+"{} : {}".format(key, value) for key, value  in self._metadata.iteritems()])

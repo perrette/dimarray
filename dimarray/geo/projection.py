@@ -40,7 +40,7 @@ def _check_horizontal_coordinates(geo_array, horizontal_coordinates=None, add_gr
             y0 = geo_array.axes[0]
 
     # Add grid mapping to GeoArray if Coordinates are Geodetic (long/lat)
-    if add_grid_mapping and (not hasattr(geo_array, 'grid_mapping') or geo_array.grid_mapping is None) \
+    if add_grid_mapping and geo_array.grid_mapping is None \
         and isinstance(x0, Longitude) and isinstance(y0, Latitude):
             geo_array.grid_mapping = {'grid_mapping_name':'latitude_longitude'}
 

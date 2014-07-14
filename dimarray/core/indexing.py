@@ -937,7 +937,7 @@ def reindex_axis(self, values, axis=0, method='exact', repna=True, fill_value=np
         pandasobj = self.to_pandas()
         newpandas = pandasobj.reindex_axis(values, axis=axis_id, fill_value=fill_value)
         newobj = self.from_pandas(newpandas) # use class method from_pandas
-        newobj._metadata = self._metadata    # add metadata back
+        newobj._metadata(self._metadata())    # add metadata back
         newobj.axes[axis_id].name = axis_nm  # give back original name
 
     # indices along which to sample

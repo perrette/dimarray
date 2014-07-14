@@ -110,23 +110,23 @@ class GeoArray(DimArray):
         # Do some guessing to define coordinates
         for i, ax in enumerate(self.axes):
             if isinstance(ax, Coordinate):
-                pass
-            if is_latitude(ax.name) or (hasattr(ax, 'standard_name') \
+                continue
+            elif is_latitude(ax.name) or (hasattr(ax, 'standard_name') \
                     and ax.standard_name == 'latitude'):
                 self.axes[i] = Latitude.from_axis(ax)
-            if is_longitude(ax.name) or (hasattr(ax, 'standard_name') \
+            elif is_longitude(ax.name) or (hasattr(ax, 'standard_name') \
                     and ax.standard_name == 'longitude'):
                 self.axes[i] = Longitude.from_axis(ax)
-            if is_time(ax.name):
+            elif is_time(ax.name):
                 self.axes[i] = Time.from_axis(ax)
             # 'x', 'y', 'z' are too general to be used.
-            if ax.name == 'x' or (hasattr(ax, 'standard_name') \
+            elif ax.name == 'x' or (hasattr(ax, 'standard_name') \
                     and ax.standard_name == 'projection_x_coordinate'):
                 self.axes[i] = X.from_axis(ax)
-            if ax.name == 'y' or (hasattr(ax, 'standard_name') \
+            elif ax.name == 'y' or (hasattr(ax, 'standard_name') \
                     and ax.standard_name == 'projection_y_coordinate'):
                 self.axes[i] = Y.from_axis(ax)
-            if ax.name in ('z','height','depth'):
+            elif ax.name in ('z','height','depth'):
                 self.axes[i] = Z.from_axis(ax)
 
     def __repr__(self): return super(GeoArray, self).__repr__().replace("dimarray","geoarray")
@@ -179,8 +179,8 @@ class Coordinate(Axis):
         " define a Coordinate from an Axis object "
         return cls(ax.values, ax.name, **ax._metadata)
 
-    def __repr__(self):
-        return super(Coordinate, self).__repr__()+" ({})".format(self.__class__.__name__)
+    def _repr(self, metadata=None):
+        return super(Coordinate, self)._repr(metadata)+" ({})".format(self.__class__.__name__)
 
 
 class Time(Coordinate):

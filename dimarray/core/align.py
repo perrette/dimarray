@@ -252,7 +252,7 @@ def _check_stack_axis(axis, dims, default='unnamed'):
                 i+=1
             axis = default+"_{}".format(i)
 
-    elif isinstance(axis, int):
+    elif type(axis) is int:
         raise TypeError("axis must be a str (new axis name)")
 
     if axis in dims:

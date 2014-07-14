@@ -38,6 +38,8 @@ class TestCRS(unittest.TestCase):
         self.assertEqual(crs.cf_params, expected)
 
     def test_project(self):
+        if not self.grid_mapping: return # only subclassing
+        
         a = self._get_geoarray_lonlat()
         transform(a, to_grid_mapping=self.grid_mapping)
 
@@ -202,9 +204,9 @@ class TestPolarStereographicData(unittest.TestCase):
         assert_allclose(newlon, self.lon)
         assert_allclose(newlat, self.lat)
 
-    def test_transform_vector(self):
-
-        test_mapping = TestStereographic.grid_mapping
-        magt = transform(self.vmag, from_grid_mapping=self.vmag.grid_mapping, to_grid_mapping=test_mapping)
-        ut, vt = transform_vectors(self.vx, self.vy, from_grid_mapping=self.vmag.grid_mapping, to_grid_mapping=test_mapping)
-        assert_allclose((ut**2+vt**2)**0.5, magt, atol=1e-2, rtol=0.01)
+#    def test_transform_vector(self):
+#
+#        test_mapping = TestStereographic.grid_mapping
+#        magt = transform(self.vmag, from_grid_mapping=self.vmag.grid_mapping, to_grid_mapping=test_mapping)
+#        ut, vt = transform_vectors(self.vx, self.vy, from_grid_mapping=self.vmag.grid_mapping, to_grid_mapping=test_mapping)
+#        assert_allclose((ut**2+vt**2)**0.5, magt, atol=1e-2, rtol=0.01)
