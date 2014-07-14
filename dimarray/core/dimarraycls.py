@@ -136,7 +136,8 @@ class DimArray(MetadataBase):
     """
     _order = None  # set a general ordering relationship for dimensions
 
-    __metadata_exclude__ = ["values", "axes"]
+    # so that it does not appear in metadata
+    __metadata_exclude__ = ['values','axes']
 
     #
     # NOW MAIN BODY OF THE CLASS
@@ -1060,6 +1061,9 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     #
 
     def __repr__(self):
+        return self._repr(metadata=False)
+
+    def _repr(self, metadata=True):
         """ pretty printing
         """
         try:
@@ -1079,14 +1083,18 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         line = "dimarray: {} non-null elements ({} null)".format(nonnull, self.size-nonnull)
         lines.append(line)
 
-        # # show metadata as well?
-        # If len(self.ncattrs()) > 0:
-        #     line = self.repr_meta()
-        #     lines.append(line)
-
+        # Axes
         if True: #self.size > 1:
-            line = repr(self.axes)
+            line = self.axes._repr(metadata=metadata)
             lines.append(line)
+
+        # Metadata
+        if metadata:
+            meta = self._metadata()
+            if len(meta) > 0:
+                lines.append("metadata:")
+                line = self._metadata_summary()
+                lines.append(line)
 
         if self.size < get_option('display.max'):
             line = repr(self.values)
@@ -1095,6 +1103,11 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         lines.append(line)
 
         return "\n".join(lines)
+
+    def summary(self):
+        """ Summary string representation including metadata
+        """
+        return self._repr(metadata=True)
 
 
     #

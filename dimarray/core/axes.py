@@ -80,40 +80,6 @@ def _convert_dtype(values):
     return values
 
 
-class Descriptor(object):
-    """ Property descriptor: set class attributes
-    """
-    def __init__(self, name, default=None):
-        """ 
-        Parameters
-        ----------
-        name : name where attribute value is stored
-            Warning: must be different from API class attribute
-            e.g. prefixed by '_'
-
-        default: default value of the attribute name
-
-        Examples
-        --------
-        class A:
-            tol = Descriptor('_tol') 
-        """
-        self.name = name
-        self.default = default 
-
-    def __get__(self, obj, cls=None):
-        if hasattr(obj, self.name):
-            return getattr(obj, self.name)
-        else:
-            return self.default
-
-    def __set__(self, obj, value):
-        setattr(obj, self.name, value)
-
-    def __delete__(self, obj):
-        if hasattr(obj, self.name):
-            delattr(obj, self.name)
-
 #
 # Axis class
 #
@@ -133,12 +99,11 @@ class Axis(MetadataBase):
 
     _metadata : property which returns a dictionary of metadata
     """
-    __metadata_exclude__ = ["values", "name"]
-
-    # Descriptor: define attributes which are inherited by any sub-class (default to None)
-    # in order to avoid the necessity of manual definition when subclassing
-    tol = Descriptor('_tol')
-    modulo = Descriptor('_modulo')
+    __metadata_exclude__ = ['values','name','tol','modulo','weights']
+    values = None
+    tol = None
+    modulo = None
+    weights = None
 
     def __init__(self, values, name="", weights=None, modulo=None, dtype=None, _monotonic=None, tol=None, **kwargs):
         if not name:
@@ -161,11 +126,14 @@ class Axis(MetadataBase):
         self.values = values 
         self.name = name 
         self.weights = weights 
-        self.modulo = modulo
-        self.tol = None # tolerance, when searching an axis
+        self.modulo = modulo or self.modulo # default class attribute
+        self.tol = tol or self.tol # tolerance, when searching an axis
         self._monotonic = _monotonic
 
         self._metadata = kwargs
+
+        assert self.values is not None
+        assert self.name 
 
     def __getitem__(self, item):
         """ access values elements & return an axis object
@@ -443,9 +411,16 @@ class Axis(MetadataBase):
         return isinstance(other, Axis) and np.all(other.values == self.values) and self.name == other.name
 
     def __repr__(self):
-        """ string representation for printing to screen
-        """ 
-        return "{} ({}): {} to {}".format(self.name, self.size, *self._bounds())
+        return self._repr(metadata=False)
+
+    def _repr(self, metadata=True):
+        lines = ["{} ({}): {} to {}".format(self.name, self.size, *self._bounds())]
+        if metadata and len(self._metadata()) > 0:
+            lines.append(self._metadata_summary())
+        return "\n".join(lines)
+
+    def summary(self):
+        return self._repr(metadata=True)
 
     def _bounds(self):
         if self.values.size == 0:
@@ -532,9 +507,7 @@ class Axis(MetadataBase):
 class GroupedAxis(Axis):
     """ an Axis which is a grouping of several axes flattened together
     """
-    modulo = None
-
-    __metadata_exclude__ = ["values", "name","axes"]
+    __metadata_exclude__ = Axis.__metadata_exclude__ + ['axes']
 
     def __init__(self, *axes):
         """
@@ -592,7 +565,7 @@ class GroupedAxis(Axis):
         """
         return [ax.values for ax in self.axes]
 
-    def __repr__(self):
+    def _repr(self, metadata=True):
         """ string representation
         """ 
         first, last = zip(*[ax._bounds() for ax in self.axes])
@@ -667,12 +640,12 @@ class Axes(list):
     @staticmethod
     def _init(*args, **kwargs):
         # try to catch errors one level higher
-        try:
-            axes = _init_axes(*args, **kwargs)
-        except TypeError, msg:
-            raise TypeError(msg)
-        except ValueError, msg:
-            raise ValueError(msg)
+#        try:
+        axes = _init_axes(*args, **kwargs)
+#        except TypeError, msg:
+#            raise TypeError(msg)
+#        except ValueError, msg:
+#            raise ValueError(msg)
         return axes
 
     @classmethod
@@ -776,13 +749,13 @@ class Axes(list):
         return list.__setitem__(self, k, item)
 
     def __repr__(self):
-        """ string representation
-        """
-        #header = "dimensions: "+ " x ".join([repr(ax.name) for ax in self])
-        #header = "dimensions: "+ ", ".join([repr(ax.name) for ax in self])
-        body = "\n".join(["{} / {}".format(i, repr(ax).split('\n')[0]) for i,ax in enumerate(self)])
-        #return "\n".join([header, body])
-        return body
+        return self._repr(metadata=False)
+
+    def _repr(self, metadata=True):
+        return "\n".join(["{} / {}".format(i,ax._repr(metadata=metadata)) for i,ax in enumerate(self)])
+
+    def summary(self):
+        return self._repr(metadata=True)
 
     def sort(self, dims):
         """ sort IN PLACE according to the order in "dims"

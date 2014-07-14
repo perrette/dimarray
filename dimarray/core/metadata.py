@@ -11,48 +11,84 @@ import copy
 import json
 from collections import OrderedDict as odict
 
+# 
+# Determine what is a metadata
+#
+def _keys(obj):
+    """ returns metadata variable names of a MetadataBase instance
+    """
+    candidates = obj.__dict__.keys()
+    #candidates.extend(obj.__metadata_include__) # for class attributes which are not in obj __dict__
+    #candidates = set(candidates) # remove doubles
+    test = lambda k : k in obj.__metadata_include__ or \
+            (k not in obj.__metadata_exclude__ \
+            #and (not hasattr(obj.__class__, k)) \ # remove that one, need explicit exclusion via __metadata_exclude__
+            and (not k.startswith('_')))
+            # do not include class attributes (even modified) as attribute
+            # unless explicitly specified
+
+    keys = [k for k in candidates if hasattr(obj, k) and test(k)]
+
+    # check for additional metadata 
+    if not hasattr(obj, "_metadata_private"):
+        obj._metadata_private = {} # initialize
+
+    keys.extend(obj._metadata_private.keys())
+
+    # check...
+    if len(set(keys) ) != len(keys):
+        warnings.warn("metadata present both in __dict__ and in _metadata_private !")
+        #1/0
+        # will be accessed and destroyed first from metadata
+
+    return keys
+
+
 #
 # methods how to access an element
 #
-def _set_metadata(obj, k, val):
+def _set_metadata(obj, k, val, warn=True):
     """ set one metadata
     """
-    # check for additional metadata 
-    _check_extras(obj)
+    # make sure _metadata_private attribute exists
+    _check_private(obj)
 
     is_class_attribute = hasattr(obj.__class__, k)
     is_class_method = is_class_attribute and callable(getattr(obj, k))
 
-    if is_class_method:
-        warnings.warn("{} is a class method, store in _metadata_extras".format(k))
-        obj._metadata_extras[k] = val
-        return
-    
-    elif k in obj.__metadata_exclude__ or (k.startswith('_') and not k in obj.__metadata_include__): # two '__' are not ok
-        warnings.warn("{} is a protected name, store in _metadata_extras".format(k))
-        obj._metadata_extras[k] = val
-        return
+    if is_class_method \
+            or k in obj.__metadata_exclude__ \
+            or ' ' in k \
+            or (k.startswith('_') and not k in obj.__metadata_include__): 
+        if warn : 
+            warnings.warn("{} is private or protected name, store in _metadata_private".format(k))
+        obj._metadata_private[k] = val
 
-    #elif is_class_attribute:
-    #    warnings.warn("{} is a class attrbute (now overwritten)".format(k))
+    else:
+        try:
+            setattr(obj, k, val)
+        except AttributeError:
+            if warn:
+                warnings.warn("{} is private or protected name, store in _metadata_private".format(k))
+            obj._metadata_private[k] = val
 
-    setattr(obj, k, val)
+    return
 
 def _get_metadata(obj, k):
     """ get one metadata
     """
-    _check_extras(obj)
-    if k in obj._metadata_extras:
-        return obj._metadata_extras[k]
+    _check_private(obj)
+    if k in obj._metadata_private:
+        return obj._metadata_private[k]
     elif hasattr(obj, k):
         return getattr(obj, k)
     else:
         raise ValueError("Metadata not found: {}".format(k))
 
 def _del_metadata(obj, k):
-    _check_extras(obj)
-    if k in obj._metadata_extras:
-        del obj._metadata_extras
+    _check_private(obj)
+    if k in obj._metadata_private:
+        del obj._metadata_private
     elif hasattr(obj, k):
         if k in obj.__dict__:
             delattr(obj, k)
@@ -60,58 +96,23 @@ def _del_metadata(obj, k):
     else:
         raise ValueError("Metadata not found: {}".format(k))
 
-def _check_extras(obj):
-    """ add _metadata_extras attribute
+def _check_private(obj):
+    """ add _metadata_private attribute
     """
-    if not hasattr(obj, "_metadata_extras"):
-        obj._metadata_extras = {} # initialize
-
-def _keys(obj):
-    """ returns metadata variable names of a MetadataBase instance
-    """
-    candidates = obj.__dict__.keys()
-    candidates.extend(obj.__metadata_include__) # for class attributes which are not in obj __dict__
-    candidates = set(candidates) # remove doubles
-    test = lambda k : k not in obj.__metadata_exclude__ \
-            and (not k.startswith('_') or k in obj.__metadata_include__)
-
-    keys = [k for k in candidates if hasattr(obj, k) and test(k)]
-
-    # check for additional metadata 
-    if not hasattr(obj, "_metadata_extras"):
-        obj._metadata_extras = {} # initialize
-
-    keys.extend(obj._metadata_extras.keys())
-
-    # check...
-    if len(set(keys) ) != len(keys):
-        warnings.warn("metadata present both in __dict__ and in _metadata_extras !")
-        #1/0
-        # will be accessed and destroyed first from metadata
-
-    return keys
+    if not hasattr(obj, "_metadata_private"):
+        obj._metadata_private = {} # initialize
 
     
 
 
 # 
-# Attribute Descriptor
+# Descriptor to handle metadata
+# It will probably be replaced by a function
+# to increase clarity.
 #
-class MetadataDesc(object):
+class MetadataDescDeprec(object):
     """ descriptor to set/get metadata
 
-    >>> class A(MetadataBase):
-    ...     __metadata_exclude__ = ['b']
-    ...     __metadata_include__ = ['e']
-    ...     c = 3
-    ...     d = 7
-    ...     e = 8
-    >>> a = A()
-    >>> a.a = 2
-    >>> a.b = 3
-    >>> a.c = 4
-    >>> a._metadata
-    {'a': 2, 'c': 4, 'e': 8}
     """ 
     def __get__(self, obj, cls=None):
         """ just get 
@@ -127,31 +128,113 @@ class MetadataDesc(object):
         """
         assert isinstance(meta, dict), "metadata can only be a dictionary"
 
-        delattr(obj, '_metadata')  # first delete everything
+        # first delete everything
+        for k in self.__get__(obj).keys():
+            _del_metadata(obj, k)
 
         for k in meta:
             _set_metadata(obj, k, meta[k])
 
-    def __delete__(self, obj):
-        """ delete all metadata
-        """
-        for k in self.__get__(obj).keys():
-            _del_metadata(obj, k)
+# Function to set/get all metadata
+def _metadata(obj, metadata=None):
+    """ if metadata is provided, set 
+    otherwise, get metadata.
+    """
+    # return metadata
+    if metadata is None:
+        return {k:_get_metadata(obj, k) for k in _keys(obj)}
 
+    # otherwise set metadata
+    assert isinstance(metadata, dict), "metadata can only be a dictionary"
+
+    # first delete everything
+    for k in _keys(obj):
+        _del_metadata(obj, k)
+
+    # then set new metadata
+    for k in metadata:
+        _set_metadata(obj, k, metadata[k])
+
+#
+# Temporary !!
+#
+class _Metadata(dict):
+    """ dict instance used to help transition
+    between current dictionary access and future 
+    method-like (call) access in next versions.
+    """
+    def __init__(self, obj): #*args, **kwargs):
+        super(_Metadata, self).__init__(_metadata(obj))
+        self.obj = obj
+
+    def __getitem__(self, key):
+        #warnings.warn("Please use _metadata() as a method.")
+        warnings.warn("Please use _metadata() as a method.",DeprecationWarning)
+        return self[key]
+
+    def __setitem__(self, key, value):
+        warnings.warn("Please use set_metadata() method.",DeprecationWarning)
+        return _set_metadata(self.obj, key, value)
+
+    def __delitem__(self, key):
+        warnings.warn("Please use del_metadata() method.",DeprecationWarning)
+        return _det_metadata(self.obj, key)
+
+    def __repr__(self):
+        warnings.warn("Please use _metadata() as a method.",DeprecationWarning)
+        return super(_Metadata, self).__repr__()
+
+    def __call__(self, metadata=None):
+        if metadata is None:
+            return dict(self) # return a proper dictionary
+
+        else:
+            return _metadata(self.obj, metadata)
 
 class MetadataBase(object):
-    """ class to ease dealing with metadata such as 
-    """
-    # control the type of variables accepted as metadata
-    __metadata_exclude__ = []  # instance dict that do not show up
-    __metadata_include__ = []  # show up even though it has "_FillValues" 
-    __metadata_extras__ = []   # will be directed to _metadata_extras
-    __metadata_types__ = None   
+    """ It contains a _metadata method that check for all 
+    instance attributes which are not private. This behaviour
+    can be modified by the class attributes 
+    __metadata_exclude__ and __metadata_include__.
 
-    _metadata = MetadataDesc()
+    >>> class A(MetadataBase):
+    ...     __metadata_exclude__ = ['b']
+    ...     __metadata_include__ = ['e','_f']
+    ...     c = 3
+    ...     d = 7
+    ...     e = 8
+    >>> a = A()
+    >>> a.a = 2
+    >>> a.b = 3
+    >>> a.c = 4
+    >>> a._f = 5
+    >>> a._g = 6
+    >>> a._metadata()
+    {'a': 2, '_f': 5, 'c': 4}
+    >>> a._metadata({'a':45,'_f':22,'b':11}) # set new attribute
+    >>> a._metadata()
+    {'a': 45, '_f': 22, 'b': 11}
+    >>> a._f
+    22
+    """
+    __metadata_exclude__ = []  # instance dict that do not show up
+    __metadata_include__ = []  # show up even though it is private
+
+    # _metadata will become a function
+    # for now a python trick is used to keep allowing 
+    # both dict-like and function-like access.
+    @property
+    def _metadata(self):
+        return _Metadata(self)
+
+    @_metadata.setter
+    def _metadata(self, metadata):
+        warnings.warn("Please use _metadata() as a method.",DeprecationWarning)
+        _metadata(self, metadata)
 
     def _metadata_summary(self):
-        return "\n".join(["    {} : {}".format(key, value) for key, value  in self._metadata.iteritems()])
+        return "\n".join([" "*8+"{} : {}".format(key, value) for key, value  in self._metadata.iteritems()])
+        #return repr(self._metadata())
 
     def summary(self):
         """ summary string representation (with metadata)
@@ -163,12 +246,12 @@ class MetadataBase(object):
     def set_metadata(self, key, value):
         """ set single metadata, with name check
         """
-        _set_metadata(self, key, value)
+        _set_metadata(self, key, value, warn=False)
 
     def get_metadata(self, key):
         """ get single metadata, with name check
         """
-        _get_metadata(self, key)
+        return _get_metadata(self, key)
 
     def del_metadata(self, key):
         """ delete single metadata, with name check

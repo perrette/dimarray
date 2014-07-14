@@ -33,17 +33,16 @@ class GeoArray(DimArray):
     """
     __metadata_include__ = ['grid_mapping', 'long_name', 'units', 'standard_name']
 
-    units = ""
-    long_name = ""
-    standard_name = ""
+    units = None
+    long_name = None
+    standard_name = None
 
     grid_mapping = None
 
     def __init__(self, values=None, axes=None, 
-            time=None, lat=None, lon=None, z=None, y=None, x=None, 
+            time=None, z=None, y=None, x=None, lat=None, lon=None, 
             dims=None, 
-            standard_name="", long_name="", units="",
-            #metadata = None,
+            standard_name=None, long_name=None, units=None,
             **kwargs):
         """ 
         Parameters
@@ -104,11 +103,9 @@ class GeoArray(DimArray):
         super(GeoArray, self).__init__(values, axes, **kwargs) # order dimensions
 
         # add metadata
-        #if metadata is None: metadata = {}
-        metadata = {}
-        if units: metadata['units'] = units
-        if standard_name: metadata['standard_name'] = standard_name
-        if long_name: metadata['long_name'] = long_name
+        if units: self.units = units
+        if standard_name: self.standard_name = standard_name
+        if long_name: self.long_name = long_name
 
         # Do some guessing to define coordinates
         for i, ax in enumerate(self.axes):
@@ -132,54 +129,25 @@ class GeoArray(DimArray):
             if ax.name in ('z','height','depth'):
                 self.axes[i] = Z.from_axis(ax)
 
-        # check 
-
     def __repr__(self): return super(GeoArray, self).__repr__().replace("dimarray","geoarray")
     def __print__(self): return super(GeoArray, self).__print__().replace("dimarray","geoarray")
     def __str__(self): return super(GeoArray, self).__str__().replace("dimarray","geoarray")
-
-#    def _plot2D(self, function, *args, **kwargs):
-#        import matplotlib.pyplot as plt
-#        import dimarray.geo as geo
-#
-#        # transform the data prior to plotting?
-#        # (has additional ability of reading own attributes)
-#        transform = kwargs.pop('transform', None)
-#        if transform:
-#            self = geo.transform(self, to_grid_mapping=transform) # transform the data
-#
-#        # use a canvas suited to the coordinate system?
-#        if ax not in kwargs:
-#            if hasattr(self, 'grid_mapping'):
-#                try:
-#                    projection = get_grid_mapping(self.grid_mapping)
-#                except:
-#                    projection = None
-#
-#            # input has priority
-#            projection = kwargs.pop('projection', projection)
-#
-#            if projection is not None:
-#                kwargs['projection'] = projection
-#
-#        else:
-#            assert projection is None, "can't have both ax and projection"
-#
-#        super(GeoArray, self)._plot2D(function, *args, **kwargs)
-
-
 
 
 # define Latitude and Longitude axes
 class Coordinate(Axis):
     """ Axis with a geophysical meaning, following the netCDF CF conventions
     """
+    standard_name = None
+    long_name = None
+    units = None
+
     __metadata_include__  = ['standard_name', 'long_name', 'units'] # may be defined as class attributes
+
     def __init__(self, values, name=None, dtype=float, standard_name="", long_name="", units="", **kwargs):
 
-        #metadata = dict()
-        metadata = self._metadata
-        #metadata.update(self.__class__.__dict__) # add class metadata to metadata
+        # Initialize the metadata with non-None class values
+        metadata = {k:getattr(self, k) for k in self.__metadata_include__ if getattr(self, k) is not None}
 
         if name is None:
             name = self.name # class attribute
@@ -212,7 +180,7 @@ class Coordinate(Axis):
         return cls(ax.values, ax.name, **ax._metadata)
 
     def __repr__(self):
-        return super(Coordinate, self).__repr__()+" (Coord-{})".format(self.__class__.__name__)
+        return super(Coordinate, self).__repr__()+" ({})".format(self.__class__.__name__)
 
 
 class Time(Coordinate):

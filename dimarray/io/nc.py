@@ -519,7 +519,7 @@ def _write_dataset(f, obj, mode='w-', indices=None, axis=0, format=FORMAT, verbo
     # set metadata for the whole dataset
     meta = obj._metadata
     for k in meta.keys():
-        if meta[k] == "" or meta[k] is None: 
+        if meta[k] is None: 
             # do not write empty attribute
             # but delete any existing attribute 
             # of the same name
@@ -597,7 +597,7 @@ def _write_variable(f, obj=None, name=None, mode='a+', format=FORMAT, indices=No
     meta = obj._metadata
     for k in meta.keys():
         if k == "name": continue # 
-        if meta[k] == "" or meta[k] is None: 
+        if meta[k] is None: 
             # do not write empty attribute
             # but delete any existing attribute 
             # of the same name
@@ -770,7 +770,7 @@ def _check_dimensions(f, axes, **verb):
         meta = ax._metadata
         for k in meta.keys():
             if k == "name": continue # 
-            if meta[k] == "" or meta[k] is None: 
+            if meta[k] is None: 
                 # do not write empty attribute
                 # but delete any existing attribute 
                 # of the same name

@@ -5,7 +5,7 @@
 from dimarray import *
 
 # Add GeoArray to the list
-from geoarray import GeoArray
+from geoarray import GeoArray, Coordinate, Latitude, Longitude, Time, X, Y, Z
 
 from projection import transform, transform_vectors
 
