@@ -101,6 +101,9 @@ class Dataset(odict, MetadataBase):
         for nm in self.keys():
              v = dict.__getitem__(self, nm) # just get the Variable object stored in the dataset
              lines.append(nm+': '+v._repr(metadata=metadata))
+        if metadata and len(self._metadata()) > 0:
+            lines.append('//global attributes:')
+            lines.append(self._metadata_summary())
         return "\n".join(lines)
 
     def summary(self):
@@ -134,14 +137,14 @@ class Dataset(odict, MetadataBase):
         metadata = v._metadata()
         a = self._constructor(v.values, axes, **metadata)
 
-        # copy grid_mapping if needed
-        gm = metadata.pop('grid_mapping', None)
-        if gm is not None and (isinstance(gm, str) or type(gm) is unicode) \
-                and gm in self.keys():
-            try:
-                a.grid_mapping = self[gm]._metadata()
-            except error, msg:
-                warnings.warn("could not attach grid mapping:"+msg.message)
+        ## copy grid_mapping ?
+        #gm = metadata.pop('grid_mapping', None)
+        #if gm is not None and (isinstance(gm, str) or type(gm) is unicode) \
+        #        and gm in self.keys():
+        #    try:
+        #        a.grid_mapping = self[gm]._metadata()
+        #    except error, msg:
+        #        warnings.warn("could not attach grid mapping:"+msg.message)
 
         return a
 
