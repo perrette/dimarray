@@ -671,38 +671,6 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     fillna = missingvalues.fillna
     setna = missingvalues.setna
 
-    # change array values
-    def clip(self, lo=None, hi=None):
-        """ Clip (limit) the values in an array.
-
-        Parameters
-        ----------
-        lo, hi : low and high bounds to clip to
-
-        Returns
-        -------
-        clipped : new array with all values between lo and hi
-
-        Examples
-        --------
-        >>> a = DimArray(np.arange(10))
-        >>> a.clip(1,8)
-        dimarray: 10 non-null elements (0 null)
-        0 / x0 (10): 0 to 9
-        array([1, 1, 2, 3, 4, 5, 6, 7, 8, 8])
-        """
-        if lo is None and hi is None:
-            raise ValueError("both hi and lo are None")
-        elif lo is not None and hi is not None and lo > hi:
-            raise ValueError("must have hi > lo")
-
-        a = self.copy()
-        if lo is not None:
-            a.values[(a.values<lo)] = lo
-        if hi is not None:
-            a.values[(a.values>hi)] = hi
-        return a
-
     # BASIC OPERATTIONS
     #
     def _operation(self, func, other):
