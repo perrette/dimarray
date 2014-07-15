@@ -46,6 +46,8 @@ array([[[ 1.,  1.,  1.,  1.],
 
 .. note :: For now there is no constraint on the coordinate axis. This might change in the future, by imposing a strict ordering relationship. 
 
+Functions and methods under dimarray.geo are identical or modified from standard dimarray to account for 
+
 .. _Coordinate_classes:
 
 Coordinate classes
