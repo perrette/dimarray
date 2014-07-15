@@ -223,14 +223,14 @@ It is possible to define and access metadata via the standard `.` syntax to acce
 >>> a.units = 'meters'
 
 
-The `_metadata` property returns a dictionary of metadata:
+The `_metadata` method scans the DimArray's `__dict__` and returns a dictionary of metadata:
 
->>> a._metadata  # doctest: +SKIP
+>>> a._metadata()  # doctest: +SKIP
 {'name': 'myarray', 'units': 'meters'}
 
 Metadata can also be defined for :class:`dimarray.Dataset` and :class:`dimarray.Axis` instances, and will be written to / read from netCDF files. 
 
-.. note:: Metadata cannot start with an underscore `_` and cannot use any protected class attribute as name (e.g. `values`, `axes`, `dims` and so on). 
+.. note:: Metadata that start with an underscore `_` or use any protected class attribute as name (e.g. `values`, `axes`, `dims` and so on) can be set and accessed using :meth:`set_metadata`, :meth:`get_metadata` and  :meth:`del_metadata` methods.
 
 .. seealso:: :ref:`page_metadata` for more information.
 
@@ -370,7 +370,7 @@ dimarray comes with basic plotting facility. For 1-D and 2-D data, it simplies i
 >>> %matplotlib inline # doctest: +SKIP 
 >>> a = dataset['combined_data']
 >>> a.plot() # doctest: +SKIP
-<matplotlib.axes.AxesSubplot at 0x7f3c4df0f490>
+<matplotlib.axes.AxesSubplot at 0x7f6c22c92dd0>
 
 .. image:: tutorial_files/figure_82-1.png
 
@@ -388,7 +388,7 @@ In addition, it can also display 2-D data via its methods `contour`, `contourf` 
 >>> # plot the data
 >>> a.contourf() # doctest: +SKIP
 >>> a.contour(colors='k') # doctest: +SKIP
-<matplotlib.contour.QuadContourSet instance at 0x7f3c4de1cbd8>
+<matplotlib.contour.QuadContourSet instance at 0x7f6c22c98e18>
 
 .. image:: tutorial_files/figure_84-1.png
 
@@ -396,7 +396,7 @@ In addition, it can also display 2-D data via its methods `contour`, `contourf` 
 
 >>> # plot the data
 >>> a.pcolor() # doctest: +SKIP
-<matplotlib.collections.QuadMesh at 0x7f3c4dc99350>
+<matplotlib.collections.QuadMesh at 0x7f6c22a21c10>
 
 .. image:: tutorial_files/figure_85-1.png
 
