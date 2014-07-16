@@ -126,14 +126,15 @@ class TestPolarStereographic(TestCRS):
     proj4_init = '+ellps=WGS84 +proj=stere +lat_0=90.0 +lon_0=-39.0 +x_0=0.0 +y_0=0.0 +lat_ts=71.0'
 
 
-class TestGeodetic(TestCRS):
+class TestLatitudeLongitude(TestCRS):
 
     grid_mapping = dict(
         grid_mapping_name = 'latitude_longitude', 
         ellipsoid = 'WGS84', 
+        longitude_of_prime_meridian = 0.,
         )  # CF-1.4
 
-    proj4_init = '+ellps=WGS84 +proj=lonlat'
+    proj4_init = '+ellps=WGS84 +proj=eqc +lon_0=0.0'
 
     _test_vector = False # not a plane system: does not work
 

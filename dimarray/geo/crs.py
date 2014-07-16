@@ -92,13 +92,6 @@ class CF_CRS(object):
         
     To be subclassed
     """
-    # CF to cartopy format
-    _cartopy_globe = dict(datum='datum', ellipsoid='ellipse', 
-            semi_major_axis='semimajor_axis', 
-            semi_minor_axis='semiminor_axis', 
-            flattening='flattening', inverse_flattening='inverse_flattening', 
-            towgs84='towgs84', nadgrids='nadgrids')
-
     _cartopy = {} # correspondence between netCDF and Cartopy names
 
     # proj4 and CF format
@@ -144,24 +137,20 @@ class CF_CRS(object):
         self._check_params(kwargs)
 
         cartopy_params = {}
-        globe_params = {} # also Cartopy format
+
+        # extract globe parameters
+        globe, kwargs = self._filter_globe(**kwargs)
+
+        # now extract parameters specific to the transformation
+
+        cartopy_params = {'globe':globe} # also Cartopy format
         #globe_kwargs = {}
         for k in kwargs.keys(): # CF-1.4 format
             if k in self._cartopy.keys():
                 cartopy_params[self._cartopy[k]] = kwargs[k]
-            elif k in self._cartopy_globe.keys():
-                globe_params[self._cartopy_globe[k]] = kwargs[k]
             else:
-                msg = "{} unexpected. Accepted parameters: {}".format(k, self._cartopy.keys()+self._cartopy_globe.keys())
+                msg = "{} unexpected. Accepted parameters: {}".format(k, self._cartopy.keys())+' (and globe parameters)'
                 raise ValueError(msg)
-
-        # Initialize a globe
-        try:
-            globe = ccrs.Globe(**globe_params)
-            cartopy_params['globe'] = globe
-        except Exception as error:
-            msg = _error_message(error, self._cartopy_globe)
-            raise error.__class__(msg)
 
         # Initialize cartopy coordinate system
         try:
@@ -185,6 +174,32 @@ class CF_CRS(object):
 
     def _check_params(self, kwargs):
         pass
+
+    def _filter_globe(self, **kwargs):
+        """ filter globe parameters and return
+        a ccrs.Globe instance and remaining parameters
+        """
+        # CF to cartopy format
+        _cartopy_globe = dict(datum='datum', ellipsoid='ellipse', 
+                semi_major_axis='semimajor_axis', 
+                semi_minor_axis='semiminor_axis', 
+                flattening='flattening', inverse_flattening='inverse_flattening', 
+                towgs84='towgs84', nadgrids='nadgrids')
+
+        globe_params = {} # also Cartopy format
+        #globe_kwargs = {}
+        for k in kwargs.keys(): # CF-1.4 format
+            if k in _cartopy_globe.keys():
+                globe_params[_cartopy_globe[k]] = kwargs.pop(k)
+
+        # Initialize a globe
+        try:
+            globe = ccrs.Globe(**globe_params)
+        except Exception as error:
+            msg = _error_message(error, _cartopy_globe)
+            raise error.__class__(msg)
+
+        return globe, kwargs
 
     @classmethod
     def _proj4_to_cf_params(cls, proj4_params):
@@ -215,15 +230,14 @@ class CF_CRS(object):
         return cls(**cf_params)
 
 
-#
-# NOTE: the grid_mapping_name is 'latitude_longitude' and not 'geodetic'
-#
-class Geodetic(CF_CRS, ccrs.Geodetic):
-    """ Same as cartopy.crs.Geodetic but accept netCDF parameters as arguments
+class LatitudeLongitude(CF_CRS, ccrs.PlateCarree):
+    """ Same as cartopy.crs.PlateCarree but is initialized via CF parameters
     """
     grid_mapping_name = 'latitude_longitude'
-    _proj4_def = '+proj=lonlat'
-    _cartopy = {} # no parameter apart from "globe"
+
+    _proj4_def = '+proj=lonlat +proj=longlat +proj=eqc +lon_0=longitude_of_prime_meridian' # several possibilities
+    _cartopy = dict(
+            longitude_of_prime_meridian='central_longitude')
 
     _x_metadata = dict(
         name = 'lon',
@@ -238,6 +252,10 @@ class Geodetic(CF_CRS, ccrs.Geodetic):
         units = "degrees_north",
         standard_name = "latitude",
         )
+
+    #def __init__(self,  longitude_of_prime_meridian = 0.0, **kwargs):
+    #    globe, kwargs = self.
+
 
 
 class Stereographic(CF_CRS, ccrs.Stereographic):
