@@ -474,8 +474,8 @@ mismatch between values and axes""".format(inferred, self.values.shape)
             do stuff
         """
         # iterate over axis values
-        for k in self.axes[axis].values:
-            val = self.take(k, axis=axis) # cross-section
+        for i, k in enumerate(self.axes[axis].values):
+            val = self.take(i, axis=axis, indexing='position') # cross-section
             yield k, val
 
     #

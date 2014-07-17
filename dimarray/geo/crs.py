@@ -244,9 +244,10 @@ class RotatedPole(CF_CRS, ccrs.RotatedPole):
 
         globe = Globe(**kwargs)
 
-        ccrs.RotatedPole(pole_latitude=grid_north_pole_latitude,
+        ccrs.RotatedPole.__init__(self, pole_latitude=grid_north_pole_latitude,
                 pole_longitude=grid_north_pole_longitude,
                 globe=globe)
+
 
 class TransverseMercator(CF_CRS, ccrs.TransverseMercator):
     grid_mapping_name = "transverse_mercator"
@@ -278,8 +279,36 @@ class TransverseMercator(CF_CRS, ccrs.TransverseMercator):
                 globe=globe)
 
 #
-# Class to perform projections purely based on PROJ.4 parameters
+# Perform projections purely based on PROJ.4 parameters
 #
+class Proj4(ccrs.CRS):
+    """ cartopy.crs.CRS instance initialize from a PROJ.4 string
+
+    NOTE: transform vector will not work to that class
+    """
+    def __init__(self, proj4_init=None, **proj4_params):
+        """ initialize a CRS instance based on PROJ.4 parameters
+
+        Examples
+        --------
+        >>> prj = Proj4("+ellps=WGS84 +proj=stere +lat_0=90.0 +lon_0=-39.0 +x_0=0.0 +y_0=0.0 +lat_ts=71.0")
+        """
+        assert proj4_init is not None or len(proj4_params) > 0, "no argument provided"
+        assert not (proj4_init is not None and len(proj4_params) > 0), "must provide EITHER a string of key-word arguments"
+        if len(proj4_params) == 0:
+            proj4_params = _parse_proj4(proj4_init) # key, value pair
+            proj4_params = odict(proj4_params)
+
+        # filter globe parameters
+        globe_params = {k:proj4_params.pop(k) for k in proj4_params.keys() \
+                if "+{}=".format(k) in Globe._proj4_def}
+
+        globe = Globe.from_proj4(globe_params)
+
+        # initialize CRS instance
+        super(Proj4, self).__init__(proj4_params, globe=globe)
+
+
 def _parse_proj4(proj4_init):
     """ convert proj4 string to (key, value) pairs
     """
@@ -309,35 +338,6 @@ def _parse_proj4(proj4_init):
             pass
 
     return zip(keys, values)
-
-
-
-class Proj4(ccrs.CRS):
-    """ cartopy.crs.CRS instance initialize from a PROJ.4 string
-
-    NOTE: transform vector will not work to that class
-    """
-    def __init__(self, proj4_init=None, **proj4_params):
-        """ initialize a CRS instance based on PROJ.4 parameters
-
-        Examples
-        --------
-        >>> prj = Proj4("+ellps=WGS84 +proj=stere +lat_0=90.0 +lon_0=-39.0 +x_0=0.0 +y_0=0.0 +lat_ts=71.0")
-        """
-        assert proj4_init is not None or len(proj4_params) > 0, "no argument provided"
-        assert not (proj4_init is not None and len(proj4_params) > 0), "must provide EITHER a string of key-word arguments"
-        if len(proj4_params) == 0:
-            proj4_params = _parse_proj4(proj4_init) # key, value pair
-            proj4_params = odict(proj4_params)
-
-        # filter globe parameters
-        globe_params = {k:proj4_params.pop(k) for k in proj4_params.keys() \
-                if "+{}=".format(k) in Globe._proj4_def}
-
-        globe = Globe.from_proj4(globe_params)
-
-        # initialize CRS instance
-        super(Proj4, self).__init__(proj4_params, globe=globe)
 
 
 #
@@ -525,102 +525,3 @@ def get_crs(grid_mapping, cf_conform=False):
     assert isinstance(coord_sys, ccrs.CRS), 'something went wrong'
 
     return coord_sys
-
-
-
-### #
-### # now do the actual projection
-### # 
-### @format_doc(grid_mapping=_doc_grid_mapping)
-### def transform_coords(x, y, grid_mapping1, grid_mapping2):
-###     """ Transform coordinates pair into another coordinate system
-### 
-###     This is a wrapper around cartopy.crs.CRS.transform_point(s)
-### 
-###     Parameters
-###     ----------
-###     x, y : coordinates in grid_mapping1 (scalar or array-like)
-###     grid_mapping1 : coordinate system of input x and y (str or dict or cartopy.crs.CRS instance)
-###     grid_mapping2 : target coordinate system (str or dict or cartopy.crs.CRS instance)
-### 
-###     Returns
-###     -------
-###     xt, yt : (transformed) coordinates in grid_mapping2 
-### 
-###     Note
-###     ----
-###     {grid_mapping}
-### 
-###     See Also
-###     --------
-###     dimarray.geo.GeoArray.transform
-###     dimarray.geo.GeoArray.transform_vectors
-###     """
-###     grid_mapping1 = get_crs(grid_mapping1)
-###     grid_mapping2 = get_crs(grid_mapping2)
-### 
-###     if np.isscalar(x):
-###         xt, yt = grid_mapping2.transform_point(x, y, grid_mapping1)
-###     else:
-###         xt, yt = grid_mapping2.transform_points(grid_mapping1, x, y)
-### 
-###     return xt, yt
-### 
-### 
-### def transform_vectors(x, y, u, v, grid_mapping1, grid_mapping2):
-###     """ Transform vectors from one coordinate system to another
-### 
-###     This is a wrapper around cartopy.crs.CRS.transform_vectors
-### 
-###     Parameter
-###     ---------
-###     x, y : source coordinates in grid_mapping1
-###     u, v : source vector components in grid_mapping1
-###     grid_mapping1, grid_mapping2 : source and destination grid mappings
-### 
-###     Returns
-###     -------
-###     ut, vt : transformed vector components 
-### 
-###     Note
-###     ----
-###     Need to transform coordinates separately
-### 
-###     See Also
-###     --------
-###     geo.transform_coords
-###     """
-###     grid_mapping1 = get_crs(grid_mapping1)
-###     grid_mapping2 = get_crs(grid_mapping2)
-### 
-###     ut, vt = grid_mapping2.transform_vectors(grid_mapping1, x, y, u, v)
-### 
-###     return ut, vt
-### 
-### 
-### def project_coords(lon, lat, grid_mapping, inverse=False):
-###     """ Project lon / lat onto a grid mapping
-### 
-###     This is a wrapper around cartopy.crs.CRS.transform_point(s)
-### 
-###     Parameters
-###     ----------
-###     lon, lat : longitude and latitude (if not inverse)
-###     grid_mapping : dict of netcdf-conforming grid mapping specification, or cartopy's CRS instance
-###     inverse : bool, optional
-###         if True, do the reverse transformation from x, y into lon, lat
-### 
-###     Return
-###     ------
-###     x, y : coordinates on the projection plane
-### 
-###     See Also
-###     --------
-###     dimarray.geo.transform_coords
-###     """
-###     if inverse:
-###         x, y = transform_coords(lon, lat, grid_mapping, ccrs.Geodetic())
-###     else:
-###         x, y = transform_coords(lon, lat, ccrs.Geodetic(), grid_mapping)
-### 
-###     return x, y

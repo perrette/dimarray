@@ -5,7 +5,7 @@ from __future__ import division
 import unittest
 import numpy as np
 from numpy.testing import assert_allclose
- dimarray as da
+import dimarray as da
 from dimarray.geo.crs import get_crs, Proj4
 from dimarray.geo import GeoArray, transform, transform_vectors
 
@@ -24,23 +24,9 @@ class TestCRS(unittest.TestCase):
         expected = self.proj4_init + ' +no_defs'
         self.assertEqual(crs.proj4_init, expected)
 
-        # just in case
-        expected = self.grid_mapping
-        self.assertEqual(crs.cf_params, expected)
-
-    def test_project(self):
-        if not self.grid_mapping: return # only subclassing
-        
-        a = self._get_geoarray_lonlat()
-        transform(a, to_grid_mapping=self.grid_mapping)
-
-    @staticmethod
-    def _get_geoarray_lonlat():
-        shape = 5,5
-        ni, nj = shape # full globe
-        x = np.linspace(-180, 180, nj)
-        y = np.linspace(-85, 85, ni)
-        return GeoArray(np.random.randn(*shape), lat=y, lon=x)
+        ## just in case
+        #expected = self.grid_mapping
+        #self.assertEqual(crs.cf_params, expected)
 
 # Test removed as support from from_proj4 was removed
 #    def test_from_proj4(self):
@@ -143,7 +129,7 @@ class TestPolarStereographicData(unittest.TestCase):
         self.vy = grl['surfvely']
         self.lon = grl['lon']
         self.lat = grl['lat']
-        self.mapping = grl['mapping']._metadata
+        self.mapping = grl['mapping']._metadata()
 
     def test_coords(self):
         if self.grl is None: return
@@ -160,9 +146,45 @@ class TestPolarStereographicData(unittest.TestCase):
         assert_allclose(newlon, self.lon)
         assert_allclose(newlat, self.lat)
 
-#    def test_transform_vector(self):
-#
-#        test_mapping = TestStereographic.grid_mapping
-#        magt = transform(self.vmag, from_grid_mapping=self.vmag.grid_mapping, to_grid_mapping=test_mapping)
-#        ut, vt = transform_vectors(self.vx, self.vy, from_grid_mapping=self.vmag.grid_mapping, to_grid_mapping=test_mapping)
-#        assert_allclose((ut**2+vt**2)**0.5, magt, atol=1e-2, rtol=0.01)
+    def test_transform(self):
+        shape = 5,5
+        ni, nj = shape # full globe
+        x = np.linspace(-180, 180, nj)
+        y = np.linspace(-85, 85, ni)
+        a = GeoArray(np.random.randn(*shape), lat=y, lon=x)
+
+        # basic transform
+        at = transform(a, to_crs=self.mapping)
+
+        # multi-dimensional
+        a3d = a.newaxis('dummy_axis', [0, 1, 2])
+        a3dt = transform(a3d, to_crs=self.mapping)
+
+        expected = at
+        assert_allclose(a3dt[0], expected)
+
+    def test_vector(self):
+        shape = 5,5
+        ni, nj = shape # full globe
+
+        # need some kind of plane projection, not long-lat for vectors
+        crs = self.mapping.copy()
+        crs['standard_parallel'] = 50
+        crs['straight_vertical_longitude_from_pole'] = 70
+        x = np.linspace(-5000e3, 5000e3, nj)
+        y = np.linspace(-4000e3, 4000e3, ni)
+        u = GeoArray(np.random.randn(*shape), y=y, x=x)
+        v = GeoArray(np.random.randn(*shape), y=y, x=x)
+        #u.mapping = crs
+        #v.mapping = crs
+
+        # basic transform
+        ut,vt = transform_vectors(u,v, from_crs=crs, to_crs=self.mapping)
+
+        # multi-dimensional
+        u3d = u.newaxis('dummy_axis', [0, 1, 2])
+        v3d = v.newaxis('dummy_axis', [0, 1, 2])
+        u3dt, v3dt = transform_vectors(u3d,v3d, from_crs=crs, to_crs=self.mapping)
+
+        assert_allclose(u3dt[0], ut)
+        assert_allclose(v3dt[0], vt)

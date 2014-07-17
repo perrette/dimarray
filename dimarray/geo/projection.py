@@ -74,24 +74,6 @@ def _get_crs(grid_mapping=None, geo_array=None):
 
     return crs_obj
 
-
-def _add_grid_mapping_metadata(a, crs):
-    """ add grid_mapping metadata to an array
-    """
-    # Try to add CF-conforming parameters
-    # A few CF_CRS classes exist that do the mapping between PROJ.4 and 
-    # CF-parameters, and are implemented as cartopy.crs.CRS sub-classes
-    # (regardless of whether a proper Cartopy projection exists for that 
-    # particular transform)
-    from dimarray.geo.crs import get_cf_params
-    try:
-        cf_params = get_cf_params(crs)
-        # TODO: do not write some basic metadata?
-        a.grid_mapping = cf_params
-    except:
-        warnings.warn("cannot convert grid mapping to CF-conform metadata")
-        if hasattr(a, 'grid_mapping'): del a.grid_mapping # remove old metadata
-
 def _create_Axes_with_metadata(xt, yt, grid_mapping):
     """ create new projection coordinates based on grid mapping
 
@@ -130,7 +112,7 @@ def _create_Axes_with_metadata(xt, yt, grid_mapping):
             meta = grid_mapping._x_metadata
             name = meta.pop('name', 'y')
             yt = Y(yt, name)
-            yt._metadata = meta
+            yt._metadata(meta)
 
         else:
             yt = Y(yt, 'y')
@@ -215,7 +197,7 @@ def _inverse_transform_coords(from_crs, to_crs, xt=None, yt=None, x0=None, y0=No
 #
 #
 #
-def transform(geo_array, to_grid_mapping, from_grid_mapping=None, \
+def transform(geo_array, to_crs, from_crs=None, \
         xt=None, yt=None, horizontal_coordinates=None):
     """ Transform scalar field array into a new coordinate system and \
             interpolate values onto a new regular grid
@@ -223,11 +205,11 @@ def transform(geo_array, to_grid_mapping, from_grid_mapping=None, \
     Parameters
     ----------
     geo_array : GeoArray or other DimArray instance
-    to_grid_mapping : str or dict or cartopy.crs.CRS instance
+    to_crs : str or dict or cartopy.crs.CRS instance
         grid mapping onto which the transformation should be done
         str : PROJ.4 str or cartopy.crs.CRS class name
         dict : CF parameters
-    from_grid_mapping : idem, optional
+    from_crs : idem, optional
         original grid mapping, to be provided only when no grid_mapping 
         attribute is defined or when the axes are something else than 
         Longitude and Latitude
@@ -264,8 +246,8 @@ def transform(geo_array, to_grid_mapping, from_grid_mapping=None, \
     #assert geo_array.dims.index(x0.name) > geo_array.axes[
 
     # get cartopy.crs.CRS instances
-    from_crs = _get_crs(from_grid_mapping, geo_array)
-    to_crs = _get_crs(to_grid_mapping)
+    from_crs = _get_crs(from_crs, geo_array)
+    to_crs = _get_crs(to_crs)
 
     # Transform coordinates and prepare regular grid for interpolation
     x0_interp, y0_interp, xt, yt = _inverse_transform_coords(from_crs, to_crs, xt, yt, x0, y0)
@@ -276,13 +258,13 @@ def transform(geo_array, to_grid_mapping, from_grid_mapping=None, \
         transformed = geo_array._constructor(newvalues, [yt, xt])
 
     else:
-        # first reshape to 3-D, flattening everything except vertical coordinates
+        # first reshape to 3-D, flattening everything except horizontal_coordinates coordinates
         # TODO: optimize by computing and re-using weights?
-        obj = geo_array.group((x0.name, xt.name), reverse=True, insert=0)  
+        obj = geo_array.group((x0.name, y0.name), reverse=True, insert=0)  
         newvalues = []
         for k, suba in obj.iter(axis=0): # iterate over the first dimension
             #newval = interp(suba.values, xt_2d, yt_2d, xt_2dr, yt_2dr)
-            newval = interp(geo_array.values, x0.values, y0.values, x0_interp, y0_interp)
+            newval = interp(suba.values, x0.values, y0.values, x0_interp, y0_interp)
             newvalues.append(newval)
 
         # stack the arrays together
@@ -299,13 +281,14 @@ def transform(geo_array, to_grid_mapping, from_grid_mapping=None, \
     transformed = transformed.transpose(dims_orig)
 
     # add metadata
-    transformed._metadata = geo_array._metadata
+    transformed._metadata(geo_array._metadata())
+
     _add_grid_mapping_metadata(transformed, to_crs)
 
     return transformed
 
 
-def transform_vectors(u, v, to_grid_mapping, from_grid_mapping=None, \
+def transform_vectors(u, v, to_crs, from_crs=None, \
         xt=None, yt=None, horizontal_coordinates=None):
     """ Transform vector field array into a new coordinate system and \
             interpolate values onto a new regular grid
@@ -316,11 +299,11 @@ def transform_vectors(u, v, to_grid_mapping, from_grid_mapping=None, \
     ----------
     u, v : GeoArray or other DimArray instances
         x- and y- vector components
-    to_grid_mapping : str or dict or cartopy.crs.CRS instance
+    to_crs : str or dict or cartopy.crs.CRS instance
         grid mapping onto which the transformation should be done
         str : PROJ.4 str or cartopy.crs.CRS class name
         dict : CF parameters
-    from_grid_mapping : idem, optional
+    from_crs : idem, optional
         original grid mapping, to be provided only when no grid_mapping 
         attribute is defined or when the axes are something else than 
         Longitude and Latitude
@@ -345,12 +328,12 @@ def transform_vectors(u, v, to_grid_mapping, from_grid_mapping=None, \
 
     # consistency check between u and v
     assert u.axes == v.axes , "u and v must have the same axes"
-    if from_grid_mapping is None and hasattr(u, 'grid_mapping'):
+    if from_crs is None and hasattr(u, 'grid_mapping'):
         assert hasattr(v, 'grid_mapping') and u.grid_mapping == v.grid_mapping, 'u and v must have the same grid mapping'
 
     # get grid mapping instances
-    from_crs = _get_crs(from_grid_mapping, u)
-    to_crs = _get_crs(to_grid_mapping)
+    from_crs = _get_crs(from_crs, u)
+    to_crs = _get_crs(to_crs)
 
     # find horizontal coordinates
     x0, y0 = _check_horizontal_coordinates(u, horizontal_coordinates)
@@ -360,7 +343,6 @@ def transform_vectors(u, v, to_grid_mapping, from_grid_mapping=None, \
 
     # Transform vector components
     x0_2d, y0_2d = np.meshgrid(x0, y0)
-    ut, vt = to_crs.transform_vectors(from_crs, x0_2d, y0_2d, u.values, v.values)
 
     if u.ndim == 2:
         newu = interp(u.values, x0.values, y0.values, x0_interp, y0_interp)
@@ -369,14 +351,14 @@ def transform_vectors(u, v, to_grid_mapping, from_grid_mapping=None, \
         vt = v._constructor(newv, [yt, xt])
 
     else:
-        # first reshape to 3-D components, flattening everything except vertical coordinates
+        # first reshape to 3-D components, flattening everything except horizontal coordinates
         # TODO: optimize by computing and re-using weights?
         obj = stack([u, v], axis='vector_components', keys=['u','v'])
-        obj = obj.group((x0.name, xt.name), reverse=True, insert=0) # 
+        obj = obj.group(('vector_components', x0.name, y0.name), reverse=True, insert=0) # 
         newvalues = []
         for k, suba in obj.iter(axis=0): # iterate over the first dimension
             newu = interp(suba.values[0], x0.values, y0.values, x0_interp, y0_interp)
-            newv = interp(suba.values[0], x0.values, y0.values, x0_interp, y0_interp)
+            newv = interp(suba.values[1], x0.values, y0.values, x0_interp, y0_interp)
             newvalues.append(np.array([newu, newv]))
 
         # stack the arrays together
@@ -385,9 +367,18 @@ def transform_vectors(u, v, to_grid_mapping, from_grid_mapping=None, \
         ut, vt = grouped_obj.ungroup(axis=0).swapaxes('vector_components',0)
 
     # add metadata
-    ut._metadata = u._metadata
-    vt._metadata = v._metadata
+    ut._metadata(u._metadata())
+    vt._metadata(v._metadata())
+
     _add_grid_mapping_metadata(ut, to_crs)
     _add_grid_mapping_metadata(vt, to_crs)
 
     return ut, vt
+
+def _add_grid_mapping_metadata(a, crs):
+    """ add grid_mapping metadata to an array
+    """
+    # for now, just delete grid_mapping attribute, if any
+    # TODO: systematic conversion from crs to CF-parameters
+    #if hasattr(a, 'grid_mapping'): del a.grid_mapping # remove old metadata
+    if 'grid_mapping' in a.__dict__: del a.grid_mapping # remove old metadata
