@@ -38,6 +38,8 @@ import cartopy.crs as ccrs
 #from cartopy.crs import Projection, Globe
 import dimarray.compat.cartopy as compat_crs
 
+from collections import OrderedDict as odict
+
 from dimarray.decorators import format_doc
 from dimarray.info import file_an_issue_message
 
@@ -57,347 +59,8 @@ def _check_cartopy_version():
 
 _check_cartopy_version()
 
-
 #
-# Util functions used in Globe and Projection
-#
-def _assert_alternate_params(kwargs, params):
-    """ check for redundant parameters
-    """
-    matching = []
-    for k in kwargs:
-        if k in params:
-            matching.append(k)
-
-    if len(matching) > 1:
-        raise ValueError("Redundant parameter definition, please use only one of: "+", ".join(matching))
-
-def _error_message(error, table):
-    " make a typical error message when initializing a Cartopy projection fails"
-    msg = "Cartopy Exception:\n\n"
-    msg += error.message
-    msg += "\n\n----------------------------------------------------"
-    msg += "\n"
-    msg += "\nProblem when initializing Cartopy's projection class"
-    msg += "\nSee corresponding Cartopy documentation for more info"
-    msg += "\nThe table of correspondence between netCDF and Cartopy"
-    msg += "\nparameters is {}.".format(table)
-    msg += "\n"
-    msg += "\n"+file_an_issue_message()
-    return msg
-
-
-class CF_CRS(object):
-    """ Projection class to map Cartopy's implementation onto netCDF parameter names
-        
-    To be subclassed
-    """
-    _cartopy = {} # correspondence between netCDF and Cartopy names
-
-    # proj4 and CF format
-    _proj4_def = " "
-
-    _proj4_def_globe = """  +datum=datum 
-                        +ellps=ellipsoid 
-                        +a=semi_major_axis 
-                        +b=semi_minor_axis
-                        +f=flattening
-                        +rf=inverse_flattening
-                        +towgs84=towgs84
-                        +nadgrids=nadgrids
-                    """
-
-    grid_mapping_name = None
-
-    # can define a dictioary containing standard metadata for the coordinates
-    # only standard_name is enforced by CF
-    _x_metadata = dict(
-        name = 'x',
-        long_name = "x distance on the projection plane from the origin",
-        standard_name = "projection_x_coordinate",
-        units = "meters", # at least in cartopy
-        )
-
-    _y_metadata = dict(
-        name = 'y',
-        long_name = "y distance on the projection plane from the origin",
-        standard_name = "projection_y_coordinate",
-        units = "meters", # at least in cartopy
-        )
-    _z_metadata = None
-
-    def __init__(self, **kwargs):
-        """ Initialize a projection class with CF-1.4 conforming parameters
-
-        See class's `_cartopy` and `_cartopy_globe` attribute for correspondence 
-        between CF-1.4 and Cartopy parameters
-        """
-        assert isinstance(self, ccrs.CRS), "dimarray.geo.CF_CRS class must be subclassed with another cartopy.crs.CRS instance"
-
-        self._check_params(kwargs)
-
-        cartopy_params = {}
-
-        # extract globe parameters
-        globe, kwargs = self._filter_globe(**kwargs)
-
-        # now extract parameters specific to the transformation
-
-        cartopy_params = {'globe':globe} # also Cartopy format
-        #globe_kwargs = {}
-        for k in kwargs.keys(): # CF-1.4 format
-            if k in self._cartopy.keys():
-                cartopy_params[self._cartopy[k]] = kwargs[k]
-            else:
-                msg = "{} unexpected. Accepted parameters: {}".format(k, self._cartopy.keys())+' (and globe parameters)'
-                raise ValueError(msg)
-
-        # Initialize cartopy coordinate system
-        try:
-            # find cartopy.crs.CRS ancestor:
-            CRSproj = self.__class__
-            while np.issubclass_(CRSproj, CF_CRS):
-                CRSproj = filter(lambda x : np.issubclass_(x, ccrs.CRS), CRSproj.__bases__)[0]
-            CRSproj.__init__(self, **cartopy_params)
-            #super(CRSproj, self)(**cartopy_params)
-
-        except Exception as error:
-            raise 
-
-        # check that init went well
-        assert isinstance(self, ccrs.CRS)
-        assert self.proj4_init is not None
-        assert self.proj4_params is not None
-
-        # initialize dict of cf_params
-        self.cf_params = self._proj4_to_cf_params(self.proj4_params)
-
-    def _check_params(self, kwargs):
-        pass
-
-    def _filter_globe(self, **kwargs):
-        """ filter globe parameters and return
-        a ccrs.Globe instance and remaining parameters
-        """
-        # CF to cartopy format
-        _cartopy_globe = dict(datum='datum', ellipsoid='ellipse', 
-                semi_major_axis='semimajor_axis', 
-                semi_minor_axis='semiminor_axis', 
-                flattening='flattening', inverse_flattening='inverse_flattening', 
-                towgs84='towgs84', nadgrids='nadgrids')
-
-        globe_params = {} # also Cartopy format
-        #globe_kwargs = {}
-        for k in kwargs.keys(): # CF-1.4 format
-            if k in _cartopy_globe.keys():
-                globe_params[_cartopy_globe[k]] = kwargs.pop(k)
-
-        # Initialize a globe
-        try:
-            globe = ccrs.Globe(**globe_params)
-        except Exception as error:
-            msg = _error_message(error, _cartopy_globe)
-            raise error.__class__(msg)
-
-        return globe, kwargs
-
-    @classmethod
-    def _proj4_to_cf_params(cls, proj4_params):
-        # get CF-parameters from PROJ.4, based on parsing cls._proj4_def
-        # works well for standard cases
-        # but can be subclassed for complicated cases
-        proj4_def = cls._proj4_def + " " + cls._proj4_def_globe
-        table = dict(_parse_proj4(proj4_def))
-
-        # Convert PROJ.4 into CF parameters using the lookup table
-        cf_params = {'grid_mapping_name':cls.grid_mapping_name}
-
-        for k, val in proj4_params.iteritems(): # cartopy property
-            if k == 'proj': continue
-            nm_cf = table[k]
-            #if val == 'IGNORE': continue
-            if nm_cf == 'IGNORE': continue
-            cf_params[nm_cf] = val
-
-        return cf_params
-
-    @classmethod
-    def from_proj4(cls, proj4_params):
-        """ initialize instance based on a dict of proj4_parameters
-        """
-        cf_params = cls._proj4_to_cf_params(proj4_params)
-        del cf_params['grid_mapping_name']
-        return cls(**cf_params)
-
-
-class LatitudeLongitude(CF_CRS, ccrs.PlateCarree):
-    """ Same as cartopy.crs.PlateCarree but is initialized via CF parameters
-    """
-    grid_mapping_name = 'latitude_longitude'
-
-    _proj4_def = '+proj=lonlat +proj=longlat +proj=eqc +lon_0=longitude_of_prime_meridian' # several possibilities
-    _cartopy = dict(
-            longitude_of_prime_meridian='central_longitude')
-
-    _x_metadata = dict(
-        name = 'lon',
-        long_name = "longitude",
-        units = "degrees_east",
-        standard_name = "longitude",
-        )
-
-    _y_metadata = dict(
-        name = 'lat',
-        long_name = "latitude",
-        units = "degrees_north",
-        standard_name = "latitude",
-        )
-
-    #def __init__(self,  longitude_of_prime_meridian = 0.0, **kwargs):
-    #    globe, kwargs = self.
-
-
-
-class Stereographic(CF_CRS, ccrs.Stereographic):
-
-    grid_mapping_name = "stereographic"
-
-    # correspondence cartopy between netCDF and Cartopy parameters
-    _cartopy = dict(
-            longitude_of_projection_origin = 'central_longitude',
-            latitude_of_projection_origin = 'central_latitude',
-            false_easting = 'false_easting',
-            false_northing = 'false_northing',
-            scale_factor_at_projection_origin = 'scale_factor',
-            #standard_parallel = 'true_scale_latitude', # this is not the preferred way according to CF-1.4
-            )
-
-    _proj4_def = """+proj=stere
-                +lon_0=longitude_of_projection_origin
-                +lat_0=latitude_of_projection_origin
-                +x_0=false_easting
-                +y_0=false_northing
-                +k_0=scale_factor_at_projection_origin
-                +lat_ts=standard_parallel
-                """
-
-#
-#
-#
-class PolarStereographic(Stereographic):
-
-    grid_mapping_name = "polar_stereographic"
-
-    # correspondence table between netCDF and Cartopy parameters
-    _cartopy = dict(
-            straight_vertical_longitude_from_pole = 'central_longitude',  # preferred?
-            #longitude_of_projection_origin = 'central_longitude', # also accepted
-            latitude_of_projection_origin = 'central_latitude',
-            standard_parallel = 'true_scale_latitude',
-            scale_factor_at_projection_origin = 'scale_factor',
-            false_easting = 'false_easting',
-            false_northing = 'false_northing',
-            )
-
-    _proj4_def = """+proj=stere
-                +lon_0=straight_vertical_longitude_from_pole
-                +lat_0=latitude_of_projection_origin
-                +x_0=false_easting
-                +y_0=false_northing
-                +lat_ts=standard_parallel
-                +k_0=scale_factor_at_projection_origin
-            """
-
-    def _check_params(self, kwargs):
-        msg = "need to provide latitude_of_projection_origin (+lat_0) with -90 or +90"
-        if not 'latitude_of_projection_origin' in kwargs \
-                or kwargs['latitude_of_projection_origin'] not in (-90, 90):
-            raise ValueError(msg)
-
-
-class RotatedPole(CF_CRS, ccrs.RotatedPole):
-
-    grid_mapping_name = "rotated_latitude_longitude"
-
-    _cartopy = dict( 
-            grid_north_pole_longitude ='pole_longitude', 
-            grid_north_pole_latitude ='pole_latitude')
-
-    _proj4_def = """
-        +proj=ob_tran
-        """
-    # other arguments are not used here
-    #    +o_proj=latlon
-    #    +o_lon_p=0
-    #    +o_lat_p=grid_north_pole_latitude
-    #    +lon_0=180 + grid_north_pole_longitude
-    #    +to_meter=0.017453292519943295
-
-    _x_metadata = dict(
-            name = 'rlon',
-            standard_name = 'grid_longitude',
-            long_name = "longitude in rotated pole grid",
-            units = "degrees",
-            )
-
-    _y_metadata = dict(
-            name = 'rlat',
-            standard_name = 'grid_latitude',
-            long_name = "latitude in rotated pole grid",
-            units = "degrees",
-            )
-
-    @classmethod
-    def _proj4_to_cf_params(cls, proj4_params):
-        # can't just parse _proj4_def
-        proj4_params = proj4_params.copy()
-        import math
-        assert proj4_params.pop('proj') == 'ob_tran'
-        assert proj4_params.pop('o_lon_p',0) == 0.
-        assert proj4_params.pop('o_proj','latlon') == 'latlon'
-        assert abs(proj4_params.pop('to_meter',math.radians(1)) - math.radians(1)) < 1e-6
-
-        cf = {}
-        #cf['grid_north_pole_latitude'] = proj4_params.pop('o_lat_p', None)
-
-        if 'o_lat_p' in proj4_params:
-            cf['grid_north_pole_latitude'] = proj4_params.pop('o_lat_p')
-        if 'lon_0' in proj4_params:
-            cf['grid_north_pole_longitude'] = proj4_params.pop('lon_0') - 180.
-
-        cf['grid_mapping_name'] = cls.grid_mapping_name
-
-        if len(proj4_params) > 0:
-            warnings.warn("some params left: {}".format(proj4_params))
-
-        return cf
-
-class TransverseMercator(CF_CRS, ccrs.TransverseMercator):
-    grid_mapping_name = "transverse_mercator"
-
-    _cartopy = dict(
-            scale_factor_at_central_meridian = "scale_factor", 
-            longitude_of_central_meridian = "central_longitude",
-            latitude_of_projection_origin = "central_latitude",
-            false_northing = "false_northing",
-            false_easting = "false_easting",
-            )
-
-    _proj4_def = """+ellps=ellipsoid +proj=tmerc 
-                    +lon_0=longitude_of_central_meridian 
-                    +lat_0=latitude_of_projection_origin 
-                    +k=scale_factor_at_central_meridian 
-                    +x_0=false_easting
-                    +y_0=false_northing
-                    +units=IGNORE
-                 """
-
-
-#def _check_default(kwargs, nm, val):
-#    assert not nm in kwargs or kwargs[nm] == val
-
-# They are also based on inspection of this module's CF_CRS classes and
-# in particular their attributes _proj4_def to match back pro4_params to CF params
+# Functions to ease matching between PROJ.4 and CF-Params
 #
 def _parse_proj4(proj4_init):
     """ convert proj4 string to (key, value) pairs
@@ -429,6 +92,341 @@ def _parse_proj4(proj4_init):
 
     return zip(keys, values)
 
+def _proj4_to_cf_params(proj4_def, proj4_init=None, **proj4_params):
+    """ convert PROJ.4 to netCDF parameters, given a pattern of 
+    matching PROJ.4 and netCDF parameters 
+    
+    This function is a convenience which only works in 
+    certain cases where there is exact match.
+    """
+    assert proj4_init is not None or len(proj4_params) > 0, "no argument provided"
+    assert proj4_init is not None or len(proj4_params) > 0, "no argument provided"
+    assert not (proj4_init is not None and len(proj4_params) > 0), "must provide EITHER a string of key-word arguments"
+
+    if len(proj4_params) == 0:
+        proj4_params = _parse_proj4(proj4_init) # key, value pair
+        proj4_params = odict(proj4_params)
+#    else:
+#        proj4_params = zip(proj4_params.keys(), proj4_params.values())
+
+    # get potential +proj names
+    proj4_def_tuple = _parse_proj4(proj4_def)
+    proj4_names = [proj for nm,proj in proj4_def_tuple if nm == 'proj']
+
+    # dictionary of matching parameters
+    table = dict(proj4_def_tuple)
+
+    # Check for a specific projection name
+    if len(proj4_names) > 0:
+        if 'proj' not in proj4_params:
+            raise ValueError("+proj not provided")
+        proj = proj4_params.pop('proj')
+        if proj not in proj4_name:
+            msg = "Expected one of {}. Got +proj={}".format(proj4_names, proj)
+            raise ValueError(msg)
+
+    cf_params = {}
+    for k, val in proj4_params.iteritems(): # cartopy property
+        if k not in table.keys():
+            raise ValueError("invalid PROJ.4 parameter: "+str(k))
+        nm_cf = table[k]
+        cf_params[nm_cf] = val
+
+    return cf_params
+
+class Globe(ccrs.Globe):
+
+    _proj4_def = """+datum=datum +ellps=ellipsoid +a=semi_major_axis
+                    +b=semi_minor_axis +f=flattening +rf=inverse_flattening
+                    +towgs84=towgs84 +nadgrids=nadgrids """
+
+    def __init__(self, datum=None, ellipsoid='WGS84',
+                 semi_major_axis=None, semi_minor_axis=None,
+                 flattening=None, inverse_flattening=None,
+                 towgs84=None, nadgrids=None):
+
+        super(Globe, self).__init__( 
+                datum=datum, ellipse=ellipsoid,
+                semimajor_axis=semi_major_axis, 
+                semiminor_axis=semi_minor_axis, 
+                flattening=flattening, inverse_flattening=inverse_flattening, 
+                towgs84=towgs84, nadgrids=nadgrids)
+
+    @classmethod
+    def from_proj4(cls, proj4_params):
+        """ initialize a Globe object from PROJ.4 parameters
+        """
+        cf_params = _proj4_to_cf_params(cls._proj4_def, **proj4_params)
+        return Globe(**cf_params)
+
+class CF_CRS(object):
+    """ Projections initialized with CF-compatible parameters
+    """
+    grid_mapping_name = None
+
+    # can define a dictioary containing standard metadata for the coordinates
+    # only standard_name is enforced by CF
+    _x_metadata = dict(
+        name = 'x',
+        long_name = "x distance on the projection plane from the origin",
+        standard_name = "projection_x_coordinate",
+        units = "meters", # at least in cartopy
+        )
+
+    _y_metadata = dict(
+        name = 'y',
+        long_name = "y distance on the projection plane from the origin",
+        standard_name = "projection_y_coordinate",
+        units = "meters", # at least in cartopy
+        )
+    _z_metadata = None
+
+    @classmethod
+    def from_proj4(cls, proj4_params):
+        """ initialize instance based on a dict of proj4_parameters
+        """
+        proj4_def = cls._proj4_def + " " + Globe._proj4_def
+        cf_params = _proj4_to_cf_params(proj4_def, **proj4_params)
+        return cls(**cf_params)
+
+#
+# Now the actual Projection classes
+#
+
+class LatitudeLongitude(CF_CRS, ccrs.PlateCarree):
+    """ Same as cartopy.crs.PlateCarree but is initialized via CF parameters
+    """
+    grid_mapping_name = 'latitude_longitude'
+
+    _proj4_def = '+proj=lonlat +proj=longlat +proj=eqc +lon_0=longitude_of_prime_meridian' # several possibilities
+
+    _x_metadata = dict(
+        name = 'lon',
+        long_name = "longitude",
+        units = "degrees_east",
+        standard_name = "longitude",
+        )
+
+    _y_metadata = dict(
+        name = 'lat',
+        long_name = "latitude",
+        units = "degrees_north",
+        standard_name = "latitude",
+        )
+
+    def __init__(self,  longitude_of_prime_meridian = 0.0, **kwargs):
+        globe = Globe(**kwargs)
+        ccrs.PlateCarree.__init__(self,
+                central_longitude=longitude_of_prime_meridian, 
+                globe=globe)
+
+
+class Stereographic(CF_CRS, ccrs.Stereographic):
+
+    grid_mapping_name = "stereographic"
+
+    # initialize from PROJ.4
+    _proj4_def = """+proj=stere
+                +lat_0=latitude_of_projection_origin
+                +lon_0=longitude_of_projection_origin
+                +x_0=false_easting
+                +y_0=false_northing
+                +k_0=scale_factor_at_projection_origin
+                """
+
+    def __init__(self, 
+            latitude_of_projection_origin=0.0, 
+            longitude_of_projection_origin=0.0, 
+            false_easting=0.0, false_northing=0.0, 
+            scale_factor_at_projection_origin=None, 
+            **kwargs):
+
+        globe = Globe(**kwargs)
+
+        # standard_parallel is not in the CF-conventions
+        ccrs.Stereographic.__init__(self, 
+                central_longitude=longitude_of_projection_origin,
+                central_latitude=latitude_of_projection_origin,
+                false_northing=false_northing, false_easting=false_easting,
+                scale_factor=scale_factor_at_projection_origin,
+                globe=globe)
+
+#
+#
+#
+class PolarStereographic(Stereographic):
+
+    grid_mapping_name = "polar_stereographic"
+
+    _proj4_def = """+proj=stere
+                +lon_0=straight_vertical_longitude_from_pole
+                +lat_0=latitude_of_projection_origin
+                +x_0=false_easting
+                +y_0=false_northing
+                +lat_ts=standard_parallel
+                +k_0=scale_factor_at_projection_origin
+            """
+
+    # correspondence table between netCDF and Cartopy parameters
+    def __init__(self, latitude_of_projection_origin=90., 
+            straight_vertical_longitude_from_pole=0.0, 
+            false_easting=0.0, false_northing=0.0, 
+            scale_factor_at_projection_origin=None, 
+            standard_parallel=None, **kwargs):
+
+        if latitude_of_projection_origin not in (-90, 90):
+            msg = "latitude_of_projection_origin must be -90 or +90"
+            raise ValueError(msg)
+
+        globe = Globe(**kwargs)
+
+        ccrs.Stereographic.__init__(self, 
+                central_latitude=latitude_of_projection_origin,
+                central_longitude=straight_vertical_longitude_from_pole,
+                false_northing=false_northing, false_easting=false_easting,
+                scale_factor=scale_factor_at_projection_origin,
+                true_scale_latitude=standard_parallel,
+                globe=globe)
+
+
+class RotatedPole(CF_CRS, ccrs.RotatedPole):
+
+    grid_mapping_name = "rotated_latitude_longitude"
+
+    _proj4_def = """
+        +proj=ob_tran
+        """
+    # other arguments are not used here
+    #    +o_proj=latlon
+    #    +o_lon_p=0
+    #    +o_lat_p=grid_north_pole_latitude
+    #    +lon_0=180 + grid_north_pole_longitude
+    #    +to_meter=0.017453292519943295
+
+    _x_metadata = dict(
+            name = 'rlon',
+            standard_name = 'grid_longitude',
+            long_name = "longitude in rotated pole grid",
+            units = "degrees",
+            )
+
+    _y_metadata = dict(
+            name = 'rlat',
+            standard_name = 'grid_latitude',
+            long_name = "latitude in rotated pole grid",
+            units = "degrees",
+            )
+
+    def __init__(self, 
+            grid_north_pole_longitude=0.0, 
+            grid_north_pole_latitude=90.0,
+            **kwargs):
+
+        globe = Globe(**kwargs)
+
+        ccrs.RotatedPole(pole_latitude=grid_north_pole_latitude,
+                pole_longitude=grid_north_pole_longitude,
+                globe=globe)
+
+
+    @classmethod
+    def from_proj4(cls, proj4_params):
+        # can't just parse _proj4_def
+        proj4_params = proj4_params.copy()
+        import math
+        assert proj4_params.pop('proj') == 'ob_tran'
+        assert proj4_params.pop('o_lon_p',0) == 0.
+        assert proj4_params.pop('o_proj','latlon') == 'latlon'
+        assert abs(proj4_params.pop('to_meter',math.radians(1)) - math.radians(1)) < 1e-6
+
+        cf = {}
+        #cf['grid_north_pole_latitude'] = proj4_params.pop('o_lat_p', None)
+
+        if 'o_lat_p' in proj4_params:
+            cf['grid_north_pole_latitude'] = proj4_params.pop('o_lat_p')
+        if 'lon_0' in proj4_params:
+            cf['grid_north_pole_longitude'] = proj4_params.pop('lon_0') - 180.
+
+        if len(proj4_params) > 0:
+            warnings.warn("some params left: {}".format(proj4_params))
+
+        return cls(**cf)
+
+class TransverseMercator(CF_CRS, ccrs.TransverseMercator):
+    grid_mapping_name = "transverse_mercator"
+
+    _proj4_def = """+ellps=ellipsoid +proj=tmerc 
+                    +lon_0=longitude_of_central_meridian 
+                    +lat_0=latitude_of_projection_origin 
+                    +k=scale_factor_at_central_meridian 
+                    +x_0=false_easting
+                    +y_0=false_northing
+                    +units=IGNORE
+                 """
+
+    def __init__(self, 
+            longitude_of_central_meridian=0.0,
+            latitude_of_projection_origin=0.0,
+            false_northing=0.0,
+            false_easting=0.0,
+            scale_factor_at_central_meridian=1.0,
+            **kwargs):
+
+        globe = Globe(**kwargs)
+
+        ccrs.TransverseMercator.__init__(self, 
+                central_longitude=longitude_of_central_meridian, 
+                central_latitude=latitude_of_projection_origin,
+                false_easting=false_easting, false_northing=false_northing,
+                scale_factor=scale_factor_at_central_meridian, 
+                globe=globe)
+
+    @classmethod
+    def from_proj4(cls, proj4_params):
+        units = proj4_params.pop('units','m')
+        assert units == 'm', 'only meters supported'
+        return CF_CRS.from_proj4(cls, proj4_params)
+
+
+#
+# Class to perform projections purely based on PROJ.4 parameters
+#
+
+class Proj4(ccrs.CRS):
+    """ cartopy.crs.CRS instance initialize from a PROJ.4 string
+
+    NOTE: transform vector will not work to that class
+    """
+    def __init__(self, proj4_init=None, **proj4_params):
+        """ initialize a CRS instance based on PROJ.4 parameters
+
+        Examples
+        --------
+        >>> prj = Proj4("+ellps=WGS84 +proj=stere +lat_0=90.0 +lon_0=-39.0 +x_0=0.0 +y_0=0.0 +lat_ts=71.0")
+        """
+        assert proj4_init is not None or len(proj4_params) > 0, "no argument provided"
+        assert not (proj4_init is not None and len(proj4_params) > 0), "must provide EITHER a string of key-word arguments"
+        if len(proj4_params) == 0:
+            proj4_params = _parse_proj4(proj4_init) # key, value pair
+            proj4_params = odict(proj4_params)
+
+        # filter globe parameters
+        globe_params = {k:proj4_params.pop(k) for k in proj4_params.keys() \
+                if "+{}=".format(k) in Globe._proj4_def}
+
+        globe = Globe.from_proj4(globe_params)
+
+        # initialize CRS instance
+        super(Proj4, self).__init__(proj4_params, globe=globe)
+
+    def to_cf(self):
+        """ transform to a CF_CRS instance, or raise an error if not possible
+        """
+        return _init_from_proj4(proj4_params, strict=True)
+
+#
+# Initialize a class from PROJ.4 parameters, but try to find matching CF-class
+#
 def _init_from_proj4(proj4_params, strict=False):
     """ Find CF_CRS class corresponding to a dict of PROJ.4 parameters
 
@@ -474,52 +472,11 @@ def _init_from_proj4(proj4_params, strict=False):
     try: 
         crs = valid_crs[0]
     except:
-        msg = "{} matching (but failed) CRS classes for +proj={} ".format(len(classes), proj)
-        msg += "initialize default Proj4 instance (no CF- equivalent)"
-        print(msg)
-        if strict : raise
+        if strict : 
+            raise ValueError("Could not find matching CF_CRS class")
         crs = Proj4(**proj4_params) 
 
     return crs
-
-
-class Proj4(ccrs.CRS):
-    """ cartopy.crs.CRS instance initialize from a PROJ.4 string
-    """
-    def __init__(self, proj4_init=None, **proj4_params):
-        """ initialize a CRS instance based on PROJ.4 parameters
-
-        Examples
-        --------
-        >>> prj = Proj4("+ellps=WGS84 +proj=stere +lat_0=90.0 +lon_0=-39.0 +x_0=0.0 +y_0=0.0 +lat_ts=71.0")
-        """
-        table_globe = dict([['datum', 'datum'], ['ellps', 'ellipse'],
-                        ['a', 'semimajor_axis'], ['b', 'semiminor_axis'],
-                        ['f', 'flattening'], ['rf', 'inverse_flattening'],
-                        ['towgs84', 'towgs84'], ['nadgrids', 'nadgrids']])
-
-    
-        assert proj4_init is not None or len(proj4_params) > 0, "no argument provided"
-        assert not (proj4_init is not None and len(proj4_params) > 0), "must provide EITHER a string of key-word arguments"
-        if len(proj4_params) == 0:
-            proj4_params = _parse_proj4(proj4_init) # key, value pair
-        else:
-            proj4_params = zip(proj4_params.keys(), proj4_params.values())
-
-        # split parameters between globe and non-globe parameters
-        globe_params = {table_globe[k]:v for k,v in proj4_params if k in table_globe.keys()}
-        proj4_params = [(k,v) for k,v in proj4_params if k not in table_globe.keys()]
-
-        # initialize Globe instance
-        globe = ccrs.Globe(**globe_params)
-
-        # initialize CRS instance
-        super(Proj4, self).__init__(proj4_params, globe=globe)
-
-    def to_cf(self, strict=True):
-        """ transform to a CF_CRS instance
-        """
-        return _init_from_proj4(proj4_params, strict=strict)
 
 #
 # Inspect the CF_CRS instances
