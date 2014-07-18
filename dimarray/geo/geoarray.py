@@ -166,7 +166,7 @@ class Coordinate(Axis):
 
     __metadata_include__  = ['standard_name', 'long_name', 'units'] # may be defined as class attributes
 
-    def __init__(self, values, name=None, dtype=float, standard_name="", long_name="", units="", **kwargs):
+    def __init__(self, values, name=None, dtype=float, **kwargs):
 
         # Initialize the metadata with non-None class values
         metadata = {k:getattr(self, k) for k in self.__metadata_include__ if getattr(self, k) is not None}
@@ -174,27 +174,9 @@ class Coordinate(Axis):
         if name is None:
             name = self.name # class attribute
 
-        if long_name: 
-            metadata['long_name'] = long_name
-
-        if units: # user-provided
-            metadata['units'] = units
-
-        if standard_name: 
-            metadata['standard_name'] = standard_name
-
-        # NOTE: This may change in the future as metadata may be provided 
-        # as separate `metadata` parameter
-        # There would be a need then to separate parameters (e.g. weights)
-        # from metadata (e.g. units)
         metadata.update(kwargs)
 
-        #cls = self.__class__
-        #module = sys.modules[__name__]
-        #cls = getattr(module, self.__class__.__name__) # ?
-        #print name
         super(Coordinate, self).__init__(values, name, dtype=dtype, **metadata)
-        #Axis.__init__(self, values, name, dtype=dtype, **metadata) 
 
     @classmethod
     def from_axis(cls, ax):
