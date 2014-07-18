@@ -485,7 +485,7 @@ def _read_multinc(fnames, nms=None, axis=None, keys=None, align=False, concatena
 
     # Join dataset
     if axis in dimensions:
-        if keys is None: warnings.warn('keys argument is not used')
+        if keys is not None: warnings.warn('keys argument will be ignored.')
         ds = concatenate_ds(datasets, axis=axis)
 
     else:
