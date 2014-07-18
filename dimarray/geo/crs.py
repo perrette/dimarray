@@ -45,6 +45,9 @@ from dimarray.info import file_an_issue_message
 
 # check cartopy version
 def _check_cartopy_version():
+    from types import ModuleType
+    if not isinstance(cartopy, ModuleType):
+        return # readthedocs's Mock
     M = cartopy.__version__.split('.')[0]
     m = cartopy.__version__.split('.')[1]
     if int(M) == 0 and int(m) < 11:
@@ -406,8 +409,8 @@ def get_crs(grid_mapping, cf_conform=False):
     -------
     cartopy's CRS instance 
 
-    Note
-    ----
+    Notes
+    -----
     A grid mapping can be defined in one of the following ways:
     - providing a cartopy.crs.CRS instance directly
     - provide a cartopy.crs.CRS subclass name, for initialization with 

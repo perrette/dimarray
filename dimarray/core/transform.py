@@ -633,8 +633,8 @@ _doc_weights = dict(
         or integer ranks, and values one of the accepted types.""".strip(),
 
         note = """
-    Note
-    ----
+    Notes
+    -----
     The weights actually used in the transformation can be checked 
     via the DimArray._get_weights() method (experimental)""".strip(),
 

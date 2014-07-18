@@ -63,13 +63,14 @@ class GeoArray(DimArray):
         **kwargs : keyword arguments, optional
             Passed to dimarray.DimArray
 
-        Note
-        ----
-        Note that when coordinate axes are passed via keyword arguments 
+        Notes
+        -----
+        When coordinate axes are passed via keyword arguments 
         it is assumed that the array shape follows the CF-conventions:
         time, vertical coordinate (z), northing coordinate (y or lat), 
         easting coordinate (x or lon).
-        If it is not the case, please indicate the `dims` parameters or provide
+        If it is not the case, please indicate the `dims` parameters or 
+        pass axes via the `axes=` parameter instead of keyword arguments.
 
         See Also
         --------

@@ -141,8 +141,8 @@ def _inverse_transform_coords(from_crs, to_crs, xt=None, yt=None, x0=None, y0=No
         original, regular coordinates in from_crs
         only used if xt, yt are not provided
 
-    Return
-    ------
+    Returns
+    -------
     x0_interp, y0_interp : 2-D ndarrays 
         coordinates in from_crs whose transform in to_crs yields meshgrid(xt, yt)
     xt, yt : Axis instances
@@ -220,8 +220,8 @@ def transform(geo_array, to_crs, from_crs=None, \
         provide horizontal coordinates by name if not an instance of 
         Latitude, Longitude, X or Y
 
-    Return
-    ------
+    Returns
+    -------
     transformed : GeoArray
         new GeoArray transformed
         Attempt is made to document the projection with CF-conform metadata
@@ -314,8 +314,8 @@ def transform_vectors(u, v, to_crs, from_crs=None, \
         provide horizontal coordinates by name if not an instance of 
         Latitude, Longitude, X or Y
 
-    Return
-    ------
+    Returns
+    -------
     transformed : GeoArray
         new 3-D GeoArray transformed and interpolated
     """ 

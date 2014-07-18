@@ -312,6 +312,6 @@ class Mock(object):
         else:
             return Mock()
 
-MOCK_MODULES = ['netCDF4','cartopy','iris']
+MOCK_MODULES = ['netCDF4','cartopy','cartopy.crs','iris','iris.util','iris.coords','iris.cube']
 for mod_name in MOCK_MODULES:
     sys.modules[mod_name] = Mock()
