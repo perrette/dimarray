@@ -49,25 +49,27 @@ class GeoArray(DimArray):
         ----------
         values : array-like
         axes : list of array-like or Axis objects, optional
-        time, lat, lon, x, y, z : spatiotemporal coordinates, optional
-           This form is a convenience that can be used instead of the `axes` 
-           parameter, when applicable.
-           It is not possible to mix-up these keyword arguments and 
-           the `axes` parameter.
-           Note it is assumed that the array shape follow the same order 
-           as listed above. Otherwise use the `dims` parameter.
-           Choose `lon` and `lat` for longitude and latitude (geodesic
-           coordinate system), or `x` or `y` for other horizontal 
-           coordinate systems such as in the projection plane.
+        time, z, y, x, lat, lon: spatiotemporal coordinates, optional
+           These keyword arguments are provided for convenience. They
+           can be used instead of (but not in addition to) the `axes` 
+           parameter. See notes below about implied array shape.
         dims : sequence, optional
             sequence of axis names (dimensions)
             This is needed when axes are defined via keywords but 
-            array-shape does not conform.
+            array-shape does not conform with CF-conventions.
         standard_name, long_name, units : str, optional
             standard attributes according to the CF-1.4 netCDF 
             conventions. Will be added to metadata.
         **kwargs : keyword arguments, optional
             Passed to dimarray.DimArray
+
+        Note
+        ----
+        Note that when coordinate axes are passed via keyword arguments 
+        it is assumed that the array shape follows the CF-conventions:
+        time, vertical coordinate (z), northing coordinate (y or lat), 
+        easting coordinate (x or lon).
+        If it is not the case, please indicate the `dims` parameters or provide
 
         See Also
         --------
@@ -77,22 +79,26 @@ class GeoArray(DimArray):
         dimarray.geo.Latitude, dimarray.geo.Longitude
         dimarray.geo.Z, dimarray.geo.Y, dimarray.geo.X
         """
-        keyword = (time is not None or lat is not None or lon is not None or x is not None or y is not None or z is not None)
-        assert not (axes is not None and keyword), "can't input both `axes=` and keyword arguments!"
-        assert not ((lon is not None or lat is not None) and (x is not None or y is not None)), "can't have both lon,lat and x,y horizontal coordinates"
+        keyword = (time is not None or lat is not None or lon is not None 
+                or x is not None or y is not None or z is not None)
+        if axes is not None and keyword:
+            msg = "Axes can be provided EITHER via `axes=` OR keyword arguments"
+            raise ValueError(msg)
 
         # construct the axes
         if keyword:
             axes = Axes()
-            if time is not None: axes.append(time if isinstance(time, Axis) else Time(time, 'time'))
-            if lat is not None: axes.append(lat if isinstance(lat, Axis) else Latitude(lat, 'lat'))
-            if lon is not None: axes.append(lon if isinstance(lon, Axis) else Longitude(lon, 'lon'))
-            if z is not None: axes.append(z if isinstance(z, Axis) else Z(z, 'z'))
-            if y is not None: axes.append(y if isinstance(y, Axis) else Y(y, 'y'))
-            if x is not None: axes.append(x if isinstance(x, Axis) else X(x, 'x'))
+            if time is not None: axes.append(Time(time, 'time'))
+            if z is not None: axes.append(Z(z, 'z'))
+            if y is not None: axes.append(Y(y, 'y'))
+            if lat is not None: axes.append(Latitude(lat, 'lat'))
+            if x is not None: axes.append(X(x, 'x'))
+            if lon is not None: axes.append(Longitude(lon, 'lon'))
             if dims is not None:
-                assert len(dims) == len(axes), "dims ({}) and axes ({}) \
-                        lengths do not match".format(len(dims), len(axes))
+                if len(dims) != len(axes):
+                    msg = "dims ({}) and axes ({}) lengths \
+                            do not match".format(len(dims), len(axes))
+                    raise ValueError(msg)
                 axes = [axes[nm] for nm in dims]
 
         #if metadata is not None:
@@ -128,6 +134,22 @@ class GeoArray(DimArray):
                 self.axes[i] = Y.from_axis(ax)
             elif ax.name in ('z','height','depth'):
                 self.axes[i] = Z.from_axis(ax)
+
+
+        # Check unicity of coordinates.
+        time_coords = filter(lambda ax : isinstance(ax, Time), self.axes)
+        x_coords = filter(lambda ax : isinstance(ax, X), self.axes)
+        y_coords = filter(lambda ax : isinstance(ax, Y), self.axes)
+        z_coords = filter(lambda ax : isinstance(ax, Z), self.axes)
+
+        if len(time_coords) > 1:
+            raise ValueError("More than one time coordinate found")
+        if len(x_coords) > 1:
+            raise ValueError("More than one x coordinate found")
+        if len(y_coords) > 1:
+            raise ValueError("More than one y coordinate found")
+        if len(z_coords) > 1:
+            raise ValueError("More than one z coordinate found")
 
     def __repr__(self): return super(GeoArray, self).__repr__().replace("dimarray","geoarray")
     def __print__(self): return super(GeoArray, self).__print__().replace("dimarray","geoarray")
