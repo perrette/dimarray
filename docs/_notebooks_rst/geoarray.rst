@@ -46,7 +46,7 @@ array([[[ 1.,  1.,  1.,  1.],
 
 .. note :: For now there is no constraint on the coordinate axis. This might change in the future, by imposing a strict ordering relationship. 
 
-Functions and methods under dimarray.geo are identical or modified from standard dimarray to account for 
+All standard dimarray functions are available under dimarray.geo, and a few functions or classes such as :func:`read_nc` or :class:`Dataset` are modified to return :class:`GeoArray` instead of :class:`DimArray` instances.
 
 .. _Coordinate_classes:
 
@@ -68,7 +68,7 @@ For example, the inheritance relations of Latitude is: :class:`Latitude` -> :cla
 
 The advantage of this architecture is that specific properties such as weights or 360-modulo indexing are automatically defined. 
 
->>> a.axes['lat'].weights  # lat -> cos(lat) weighted mean
+>>> a.axes['lat'].weights  # lat -> cos(lat) weighted mean # doctest: +SKIP
 <function dimarray.geo.geoarray.<lambda>>
 
 >>> a.axes['lon'].modulo
@@ -76,7 +76,7 @@ The advantage of this architecture is that specific properties such as weights o
 
 In the case of Latitude and Longitude, some metadata are also provided by default.
 
->>> a.axes['lat']._metadata()
+>>> a.axes['lat']._metadata()  # doctest: +SKIP
 {'long_name': 'latitude',
  'standard_name': 'latitude',
  'units': 'degrees_north'}

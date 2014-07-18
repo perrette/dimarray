@@ -12,6 +12,8 @@ Coordinate systems and Projections
 :download:`Download notebook </notebooks/projection.ipynb>` 
 
 
+.. versionadded:: 0.1.9
+
 .. contents::
     :local:
 
@@ -82,7 +84,7 @@ They are obviously projection coordinates. 2-dimensional longitude and latitude 
 
 Examining closer the attributes of 'surfvelmag' variable, a "grid_mapping" attribute is present:
 
->>> ds['surfvelmag']._metadata()
+>>> ds['surfvelmag']._metadata() # doctest: +SKIP
 {'grid_mapping': u'mapping',
  'long_name': u'Surface Velocity Magnitude',
  'note': u'Ian Joughin notes that "Having any papers that use the data we provided to searise cite this paper [the reference provided] gives us something we can track through ISI and report to NASA to satisfy their metrics requirements, which is a necessary evil to ensure continued production of such data sets.  So ... any publication of results based on this data should cite the above paper."',
@@ -92,7 +94,7 @@ Examining closer the attributes of 'surfvelmag' variable, a "grid_mapping" attri
 "grid_mapping" is a string which points to another variable in the dataset, here "mapping". This is according to CF-conventions. *mapping* is a dummy variable whose attributes contain the information needed to define a coordinate reference system. 
 
 >>> grid_mapping = ds['mapping']._metadata()
->>> grid_mapping
+>>> grid_mapping # doctest: +SKIP
 {'ellipsoid': u'WGS84',
  'false_easting': 0.0,
  'false_northing': 0.0,
@@ -105,22 +107,22 @@ We can use matplotlib's contourf to get a feeling for what that all mean. Below 
 
 >>> v = ds['surfvelmag']  # velopcity magnitude
 >>> h = log(clip(v,1e-3,inf)).contourf() # logarithm of velocity
->>> colorbar(h)
+>>> colorbar(h)  # doctest: +SKIP
 >>> ax = gca() # get plot axis
 >>> ax.set_aspect('equal') # equal aspect ratio
->>> _ = ax.set_xticks([-500e3,0,500e3]) # ticks every 500 km # doctest: +SKIP
+>>> ax.set_xticks([-500e3,0,500e3]) # ticks every 500 km  # doctest: +SKIP
 
 
-.. image:: projection_files/figure_19-0.png
+.. image:: projection_files/figure_20-0.png
 
 
 
 And now plotting versus lon and lat (irregular, 2-D grid in this case):
 
->>> contourf(ds['lon'], ds['lat'], log(clip(v, 1e-3,inf))); colorbar() # doctest: +SKIP
+>>> contourf(ds['lon'], ds['lat'], log(clip(v, 1e-3,inf))); colorbar()  # doctest: +SKIP
 <matplotlib.colorbar.Colorbar instance at 0x7f93239891b8>
 
-.. image:: projection_files/figure_21-1.png
+.. image:: projection_files/figure_22-1.png
 
 
 
@@ -137,7 +139,7 @@ The :func:`get_crs` function returns the most adequate projection class:
 
 
 >>> stere = get_crs(grid_mapping)
->>> stere
+>>> stere # doctest: +SKIP
 <dimarray.geo.crs.PolarStereographic at 0x7f9323af8410>
 
 All projection classes defined in dimarray inherit from :class:cartopy.crs.CRS. A few common transformations have a Cartopy equivalent, and are defined as subclass, where possible.
@@ -194,11 +196,11 @@ array(...)
 
 Double-check against earlier figures, this looks all right:
 
->>> h = log(clip(vt,1e-3,inf)).contourf(levels=np.linspace(-7.5, 10, 8))
+>>> h = log(clip(vt,1e-3,inf)).contourf(levels=np.linspace(-7.5, 10, 8))  # doctest: +SKIP
 >>> colorbar(h) # doctest: +SKIP
 <matplotlib.colorbar.Colorbar instance at 0x7f9322975dd0>
 
-.. image:: projection_files/figure_43-1.png
+.. image:: projection_files/figure_44-1.png
 
 
 
@@ -215,24 +217,24 @@ That is the original field on the projection plane.
 
 >>> vx = ds['surfvelx']
 >>> vy = ds['surfvely']
->>> log(clip(v,1e-3,inf)).contourf()
->>> streamplot(vx.x1, vx.y1, vx.values, vy.values, color='k')
+>>> log(clip(v,1e-3,inf)).contourf()   # doctest: +SKIP
+>>> streamplot(vx.x1, vx.y1, vx.values, vy.values, color='k')   # doctest: +SKIP
 >>> ax = gca()
 >>> ax.set_aspect('equal') # equal aspect ratio
->>> _ = ax.set_xticks([-500e3,0,500e3]) # ticks every 500 km # doctest: +SKIP
+>>> ax.set_xticks([-500e3,0,500e3]) # ticks every 500 km  # doctest: +SKIP
 
 
-.. image:: projection_files/figure_48-0.png
+.. image:: projection_files/figure_49-0.png
 
 
 
 Transforming vectors in longitude latitude coordinates does not make much sense because the angles cannot be conserved. Let's rather use a polar stereographic projection focused on the north-east side of Greenland.
 
 >>> grid_mapping = {'ellipsoid': 'WGS84',
->>>  'grid_mapping_name': 'polar_stereographic',
->>>  'latitude_of_projection_origin': 90.0, # +90 or -90 are accepted with this class 
->>>  'standard_parallel': 71.0,
->>>  'straight_vertical_longitude_from_pole': -20}
+...   'grid_mapping_name': 'polar_stereographic',
+...   'latitude_of_projection_origin': 90.0, # +90 or -90 are accepted with this class 
+...   'standard_parallel': 71.0,
+...   'straight_vertical_longitude_from_pole': -20}
 >>> 
 >>> stere_ne = get_crs(grid_mapping)
 
@@ -245,15 +247,15 @@ Transforming vectors in longitude latitude coordinates does not make much sense 
 >>> vt = transform(v, from_crs=stere, to_crs=stere_ne)
 >>> vxt, vyt = transform_vectors(vx,vy, from_crs=stere, to_crs=stere_ne)
 >>> 
->>> log(clip(vt,1e-3,inf)).contourf()
->>> streamplot(vxt.x, vxt.y, vxt.values, vyt.values, color='k')
+>>> log(clip(vt,1e-3,inf)).contourf()   # doctest: +SKIP
+>>> streamplot(vxt.x, vxt.y, vxt.values, vyt.values, color='k')   # doctest: +SKIP
 >>> 
 >>> ax = gca()
 >>> ax.set_aspect('equal') # equal aspect ratio
->>> _ = ax.set_xticks([-1000e3,0]) # ticks every 1000 km # doctest: +SKIP
+>>> ax.set_xticks([-1000e3,0]) # ticks every 1000 km  # doctest: +SKIP
 
 
-.. image:: projection_files/figure_53-0.png
+.. image:: projection_files/figure_54-0.png
 
 
 

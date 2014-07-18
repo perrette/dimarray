@@ -81,7 +81,7 @@ Note that :meth:`set_metadata` will first try to use python's :func:`setattr` fu
 
 >>> a.set_metadata('long_name','this is not a private attribute')
 >>> a.set_metadata('long name','but that one is')
->>> a._metadata()
+>>> a._metadata() # doctest: +SKIP
 {'long name': 'but that one is',
  'long_name': 'this is not a private attribute',
  'name': 'distance',
