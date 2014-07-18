@@ -285,12 +285,20 @@ class TransverseMercator(CF_CRS, ccrs.TransverseMercator):
 # Perform projections purely based on PROJ.4 parameters
 #
 class Proj4(ccrs.CRS):
-    """ cartopy.crs.CRS instance initialize from a PROJ.4 string
+    """ Inherit from cartopy.crs.CRS, initialized from a PROJ.4 string
 
-    NOTE: transform vector will not work to that class
+    Notes
+    -----
+    :meth:`transform_vectors` method will not work, because no x_limits 
+    and y_limits are defined.
     """
     def __init__(self, proj4_init=None, **proj4_params):
         """ initialize a CRS instance based on PROJ.4 parameters
+
+        Parameters
+        ----------
+        proj4_init : PROJ.4 string, optional
+        **proj4_params : PROJ.4 parameters as keyword arguments, optional
 
         Examples
         --------
@@ -396,38 +404,39 @@ def _get_cf_crs_class(grid_mapping_name):
 
     return found[0] # 0: class name, 1: class
 
-def get_crs(grid_mapping, cf_conform=False):
+def get_crs(grid_mapping):
     """ Get a cartopy's CRS instance from a variety of key-word parameters
 
     Parameters
     ----------
     grid_mapping : str or dict or cartopy.crs.CRS instance
-        See below
-    cf_conform : if True, only returns dimarray.geo.CF_CRS instances
+        See notes below.
 
     Returns
     -------
-    cartopy's CRS instance 
+    cartopy.crs.CRS instance 
 
     Notes
     -----
     A grid mapping can be defined in one of the following ways:
+
     - providing a cartopy.crs.CRS instance directly
     - provide a cartopy.crs.CRS subclass name, for initialization with 
       default parameters
     - providing a dictionary of netCDF-conform parameters (CF-1.4)
     - provide a PROJ.4 string, with parameters preceded by '+' (EXPERIMENTAL)
 
-    This will be converted into a cartopy.crs.CRS instance.
+    References
+    ----------
+    - CF-conventions : http://cfconventions.org
+        See `Appendix F on grid mapping <http://cfconventions.org/1.4.html#appendix-grid-mappings>`_
 
-    Information on netcdf-conforming parameters can be found here:
-    http://cfconventions.org/1.4.html#appendix-grid-mappings
-    (CF-1.6 also exists, in track-change mode w.r.t CF-1.4)
+    - PROJ.4 projections : http://www.remotesensing.org/geotiff/proj_list
 
-    Information on PROJ.4 projections and parameters here:
-    https://trac.osgeo.org/proj/wiki/GenParms
-    with a list of transformations (and some explanations) there:
-    http://www.remotesensing.org/geotiff/proj_list
+    - PROJ.4 parameters : https://trac.osgeo.org/proj/wiki/GenParms
+
+    - Cartopy projections: 
+        http://scitools.org.uk/cartopy/docs/latest/crs/projections.html
 
     Examples
     --------

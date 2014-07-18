@@ -23,13 +23,12 @@ def is_time(nm):
    return nm.lower() in ("time",) # experimental, may be extended
 
 class GeoArray(DimArray):
-    """ array for geophysical application
+    """ Subclass of DimArray specialized for geo-scientific use
     
-    recognize longitude / latitude:
-    - automatically assign a weight to lon varying with cos of lat, so that mean() 
-    returns a good approximation to a calculation in spherical coordinates.
-    - lon recognized as 360-modulo-axis: indexing -180 is the same as +180
-    - can input time, lat, lon as keyword arguments in addition to the standard way
+    Its main features are :
+
+    - recognizes space-time coordinates (e.g. lon, lat)
+    - add convenience key-word arguments for coordinate axes and metadata
     """
     __metadata_include__ = ['grid_mapping', 'long_name', 'units', 'standard_name']
 
@@ -159,7 +158,7 @@ class GeoArray(DimArray):
 
 # define Latitude and Longitude axes
 class Coordinate(Axis):
-    """ Axis with a geophysical meaning, following the netCDF CF conventions
+    """ Subclass of Axis representing a space-time coordinate.
     """
     standard_name = None
     long_name = None
@@ -208,10 +207,6 @@ class Coordinate(Axis):
 
 class Time(Coordinate):
     """ Time coordinate
-
-    Reference
-    ---------
-    http://cfconventions.org/1.6#time-coordinate
     """
     name = "time"
 
@@ -220,30 +215,18 @@ class Time(Coordinate):
 # 
 class X(Coordinate):
     """ X-horizontal coordinate on the projection plane
-
-    Reference
-    ---------
-    http://cfconventions.org/1.6#grid-mappings-and-projections
     """
     name = 'x'
     long_name = "horizontal x coordinate"
 
 class Y(Coordinate):
     """ Y-horizontal coordinate on the projection plane
-
-    Reference
-    ---------
-    http://cfconventions.org/1.6#grid-mappings-and-projections
     """
     name = 'y'
     long_name = "horizontal y coordinate"
 
 class Z(Coordinate):
     """ Vertical coordinate
-
-    Reference
-    ---------
-    http://cfconventions.org/1.6#vertical-coordinate "
     """
     name = 'z'
     long_name = "vertical z coordinate"
@@ -252,10 +235,6 @@ class Z(Coordinate):
 
 class Latitude(Y):
     """ Latitude Coordinate
-
-    Reference
-    ---------
-    http://cfconventions.org/1.6#latitude-coordinate
     """
     name = 'lat'
     long_name = "latitude"
@@ -271,10 +250,6 @@ class Latitude(Y):
          
 class Longitude(X):
     """ Longitude Coordinate
-
-    Reference
-    ---------
-    http://cfconventions.org/1.6#longitude-coordinate
     """
     name='lon' 
     long_name="longitude" 

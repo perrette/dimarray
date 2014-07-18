@@ -399,14 +399,14 @@ def squeeze(self, axis=None):
     
     Analogous to numpy, but also allows axis name
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     axis : int or str or None 
         axis to squeeze
         default is None, to remove all singleton axes
 
-    Returns:
-    --------
+    Returns
+    -------
     squeezed_array : DimArray
 
     Examples

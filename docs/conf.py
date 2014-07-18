@@ -289,6 +289,11 @@ intersphinx_mapping = {'http://docs.python.org/': None}
 # to list module and class members in the order they appear in the source 
 autodoc_member_order = 'bysource'
 
+# docstring of both class and __init__ method
+autoclass_content = "both"
+
+# do not show class members with autoclass
+numpydoc_show_class_members = False
 
 # to short-cut netCDF4 when reading the doc
 class Mock(object):
