@@ -51,8 +51,8 @@ _doc_write_nc = """
     **kwargs : key-word arguments
         Any additional keyword arguments accepted by `netCDF4.Dataset.CreateVariable`
     
-    Notes:
-    ------
+    Notes
+    -----
     See the netCDF4-python module documentation for more information about the use
     of keyword arguments to write_nc.
 """.strip().format(format=FORMAT)

@@ -210,9 +210,9 @@ def transform(geo_array, to_crs, from_crs=None, \
         str : PROJ.4 str or cartopy.crs.CRS class name
         dict : CF parameters
     from_crs : idem, optional
-        original grid mapping, to be provided only when no grid_mapping 
-        attribute is defined or when the axes are something else than 
-        Longitude and Latitude
+        original grid mapping. Can be omitted if the grid_mapping attribute
+        already contains the appropriate information, or if the horizontal
+        coordinates are longitude and latitude.
     xt, yt : array-like (1-D), optional
         new coordinates to interpolate the array on
         will be deduced as min and max of new coordinates if not provided
@@ -304,9 +304,9 @@ def transform_vectors(u, v, to_crs, from_crs=None, \
         str : PROJ.4 str or cartopy.crs.CRS class name
         dict : CF parameters
     from_crs : idem, optional
-        original grid mapping, to be provided only when no grid_mapping 
-        attribute is defined or when the axes are something else than 
-        Longitude and Latitude
+        original grid mapping. Can be omitted if the grid_mapping attribute
+        already contains the appropriate information, or if the horizontal
+        coordinates are longitude and latitude.
     xt, yt : array-like (1-D), optional
         new coordinates to interpolate the array on
         will be deduced as min and max of new coordinates if not provided

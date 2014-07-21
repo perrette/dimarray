@@ -249,7 +249,7 @@ def repeat(self, values, axis=None):
     -------
     DimArray
 
-    Sea Also
+    See Also
     --------
     newaxis
 

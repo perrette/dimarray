@@ -14,7 +14,6 @@ Under construction...
    _notebooks_rst/metadata.rst
    _notebooks_rst/netcdf.rst
    _notebooks_rst/geoarray.rst
-   _notebooks_rst/projection.rst
 
 ..   _notebooks_rst/reindexing.rst
 ..   _notebooks_rst/reshape.rst

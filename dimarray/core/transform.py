@@ -668,8 +668,8 @@ def _get_weights(self, axis=None, mirror_nans=True, weights=None):
     --------
     DimArray.mean, DimArray.var, DimArray.std
 
-    Example
-    -------
+    Examples
+    --------
 
     Simpler examples are found Dimarray.mean's doc.
     These are mostly meant as doctest.
@@ -879,8 +879,8 @@ def mean(self, axis=None, skipna=False, weights=None):
     --------
     DimArray.var, DimArray.std, DimArray._get_weights
 
-    Example
-    -------
+    Examples
+    --------
     >>> from dimarray import DimArray
     >>> np.random.seed(0) # to make results reproducible
     >>> v = DimArray(np.random.rand(3,2), axes=[[-80, 0, 80], [-180, 180]], dims=['lat','lon'])

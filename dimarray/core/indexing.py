@@ -200,8 +200,8 @@ def take(self, indices, axis=0, indexing="label", tol=TOLERANCE, keepdims=False,
     -------
     indexed_array : DimArray instance or scalar
 
-    See Also:
-    ---------
+    See Also
+    --------
     put
 
     Examples

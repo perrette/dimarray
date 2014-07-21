@@ -7,8 +7,8 @@
 
 .. _projection:
 
-Coordinate systems and Projections
-==================================
+Cookbook: read and transform Greenland data
+===========================================
 :download:`Download notebook </notebooks/projection.ipynb>` 
 
 
@@ -16,30 +16,6 @@ Coordinate systems and Projections
 
 .. contents::
     :local:
-
-dimarray.geo is shipped with :func:`dimarray.geo.transform` and :func:`dimarray.geo.transform_vectors` functions to handle transformations across coordinate reference systems. They are based on `cartopy.crs` methods, themselves built on `PROJ.4` library.
-
-In contrast to cartopy/PROJ.4, dimarray.geo functions perform both coordinate transforms and regridding onto a regular grid in the new coordinate system. This is because of the structure of DimArray and GeoArray classes, which only accept regular grids (in the sense of a collection of 1-D axes).
-
-.. _Coordinate_systems__CF-conventions,_PROJ.4,_cartopy:
-
-Coordinate systems: CF-conventions, PROJ.4, cartopy
----------------------------------------------------
-
-A typical software to make projections is PROJ.4. Python bindings exist, such as pyproj. One problem is that PROJ.4 parameters differ from those present in the netCDF file.
-
-The grid mapping attributes in netCDF files are defined according to a set of `CF conventions <http://cfconventions.org/Data/cf-convetions/cf-conventions-1.7/build/cf-conventions.html#appendix-grid-mappings>`_. Following the indications in this document, and given some understanding of the underlying projection, it is not too difficult to find the matching PROJ.4 parameters.
-
-A good understanding may still require a bit of time, though. And when it comes to plotting this may not be enough ! basemap is actually pretty close to PROJ.4 in term of parameter names (but not one to one) so the PROJ.4 to basemap step is small. Other tools, like the younger `cartopy <http://scitools.org.uk/cartopy/>`_ introduces its own parameter names, which are also slightly different from those introduced by another sister project from the Met' Office, `iris <http://scitools.org.uk/iris/>`_. Note that under the hood both projects use cartopy's own bindings to PROJ.4.  
-
-:mod:`dimarray.geo.crs` attempts to ease mapping between CF-convention and PROJ.4 parameters by defining a few common projection classes. These classes inherit from the generic class :class:`cartopy.crs.CRS`, but are not limited to the projection list defined by cartopy (which add another layer on top of PROJ.4 / CRS to help plotting). In fact, the :class:`dimarray.geo.crs.Proj4` class can be initialized by any PROJ.4 string.
-
-.. note :: Why cartopy and not just pyproj? Pyproj would be just fine, and is more minimalistic, but cartopy also implements vector transformas and offers other useful features related to plotting, reading shapefiles, download online data and so on, which come in handy. Moreover it feels more `"pythonic" <http://legacy.python.org/dev/peps/pep-0008>`_, is actively developed with support from the Met' Office, and is related to another interesting project, iris. It builds on other powerful packages such as shapely and it feels like in the long (or not so long) run it might grow toward something even more useful.
-
-.. _A_practical_example:
-
-A practical example
--------------------
 
 .. _Explore_the_data:
 
@@ -113,7 +89,7 @@ We can use matplotlib's contourf to get a feeling for what that all mean. Below 
 >>> ax.set_xticks([-500e3,0,500e3]) # ticks every 500 km  # doctest: +SKIP
 
 
-.. image:: projection_files/figure_20-0.png
+.. image:: projection_files/figure_16-0.png
 
 
 
@@ -122,7 +98,7 @@ And now plotting versus lon and lat (irregular, 2-D grid in this case):
 >>> contourf(ds['lon'], ds['lat'], log(clip(v, 1e-3,inf))); colorbar()  # doctest: +SKIP
 <matplotlib.colorbar.Colorbar instance at 0x7f93239891b8>
 
-.. image:: projection_files/figure_22-1.png
+.. image:: projection_files/figure_18-1.png
 
 
 
@@ -133,7 +109,7 @@ The polar stereographic projection (top) represent real distances in kilometers 
 Grid mapping to CRS class
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The :func:`get_crs` function returns the most adequate projection class:
+The :func:`dimarray.geo.crs.get_crs` function returns the most adequate projection class:
 
 >>> from dimarray.geo.crs import get_crs
 
@@ -200,7 +176,7 @@ Double-check against earlier figures, this looks all right:
 >>> colorbar(h) # doctest: +SKIP
 <matplotlib.colorbar.Colorbar instance at 0x7f9322975dd0>
 
-.. image:: projection_files/figure_44-1.png
+.. image:: projection_files/figure_40-1.png
 
 
 
@@ -224,7 +200,7 @@ That is the original field on the projection plane.
 >>> ax.set_xticks([-500e3,0,500e3]) # ticks every 500 km  # doctest: +SKIP
 
 
-.. image:: projection_files/figure_49-0.png
+.. image:: projection_files/figure_45-0.png
 
 
 
@@ -255,7 +231,7 @@ Transforming vectors in longitude latitude coordinates does not make much sense 
 >>> ax.set_xticks([-1000e3,0]) # ticks every 1000 km  # doctest: +SKIP
 
 
-.. image:: projection_files/figure_54-0.png
+.. image:: projection_files/figure_50-0.png
 
 
 
