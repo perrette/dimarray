@@ -4,7 +4,6 @@ Documentation
 .. toctree::
    :maxdepth: 3
              
-   cookbook_projection.rst
    create_dimarray.rst
    data_structure_dimarray.rst
    generic_function.rst

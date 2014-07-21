@@ -13,7 +13,7 @@ from dimarray.compat.basemap import interp
 def _check_horizontal_coordinates(geo_array, horizontal_coordinates=None, add_grid_mapping=True):
     """ return horizontal coordinates
     """
-    if horizontal_coordinates: 
+    if horizontal_coordinates is not None: 
         assert len(horizontal_coordinates) == 2, "horizontal_coordinates must be a sequence of length 2"
         x0nm, y0nm = horizontal_coordinates
         x0 = geo_array.axes[x0nm]
@@ -23,21 +23,20 @@ def _check_horizontal_coordinates(geo_array, horizontal_coordinates=None, add_gr
         xs = filter(lambda x: isinstance(x, X), geo_array.axes)
         ys = filter(lambda x: isinstance(x, Y), geo_array.axes)
 
-        if len(xs) == 1:
+        if len(xs) > 0:
             x0 = xs[0]
-        elif len(xs) > 1:
-            raise ValueError("Several X-coordinates found. Please provide horizontal_coordinates parameter.")
+            assert len(xs) == 1, "Several X-coordinates found." # this should not happen
         else:
             warnings.warn("Could not find X-coordinate among GeoArray axes. Use dimension 1 by default.")
             x0 = geo_array.axes[1]
 
-        if len(ys) == 1:
+        if len(ys) > 0:
             y0 = ys[0]
-        elif len(ys) > 1:
-            raise ValueError("Several Y-coordinates found. Please provide horizontal_coordinates parameter.")
+            assert len(ys) == 1, "Several Y-coordinates found." # this should not happen
         else:
             warnings.warn("Could not find Y-coordinate among GeoArray axes. Use dimension 0 by default.")
             y0 = geo_array.axes[0]
+
 
     # Add grid mapping to GeoArray if Coordinates are Geodetic (long/lat)
     if add_grid_mapping and geo_array.grid_mapping is None \
@@ -198,7 +197,7 @@ def _inverse_transform_coords(from_crs, to_crs, xt=None, yt=None, x0=None, y0=No
 #
 #
 def transform(geo_array, to_crs, from_crs=None, \
-        xt=None, yt=None, horizontal_coordinates=None):
+        xt=None, yt=None):
     """ Transform scalar field array into a new coordinate system and \
             interpolate values onto a new regular grid
 
@@ -216,9 +215,6 @@ def transform(geo_array, to_crs, from_crs=None, \
     xt, yt : array-like (1-D), optional
         new coordinates to interpolate the array on
         will be deduced as min and max of new coordinates if not provided
-    horizontal_coordinates : sequence with 2 str, optional
-        provide horizontal coordinates by name if not an instance of 
-        Latitude, Longitude, X or Y
 
     Returns
     -------
@@ -236,7 +232,7 @@ def transform(geo_array, to_crs, from_crs=None, \
         geo_array = GeoArray(geo_array) 
 
     # find horizontal coordinates
-    x0, y0 = _check_horizontal_coordinates(geo_array, horizontal_coordinates)
+    x0, y0 = _check_horizontal_coordinates(geo_array)
 
     # transpose the array to shape .., y0, x0 (cartesian convention needed for meshgrid)
     dims_orig = geo_array.dims
@@ -289,7 +285,7 @@ def transform(geo_array, to_crs, from_crs=None, \
 
 
 def transform_vectors(u, v, to_crs, from_crs=None, \
-        xt=None, yt=None, horizontal_coordinates=None):
+        xt=None, yt=None):
     """ Transform vector field array into a new coordinate system and \
             interpolate values onto a new regular grid
 
@@ -310,9 +306,6 @@ def transform_vectors(u, v, to_crs, from_crs=None, \
     xt, yt : array-like (1-D), optional
         new coordinates to interpolate the array on
         will be deduced as min and max of new coordinates if not provided
-    horizontal_coordinates : sequence with 2 str, optional
-        provide horizontal coordinates by name if not an instance of 
-        Latitude, Longitude, X or Y
 
     Returns
     -------
@@ -336,7 +329,7 @@ def transform_vectors(u, v, to_crs, from_crs=None, \
     to_crs = _get_crs(to_crs)
 
     # find horizontal coordinates
-    x0, y0 = _check_horizontal_coordinates(u, horizontal_coordinates)
+    x0, y0 = _check_horizontal_coordinates(u)
 
     # Transform coordinates and prepare regular grid for interpolation
     x0_interp, y0_interp, xt, yt = _inverse_transform_coords(from_crs, to_crs, xt, yt, x0, y0)
