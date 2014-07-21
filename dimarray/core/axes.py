@@ -1,7 +1,8 @@
-import numpy as np
+import warnings
 from collections import OrderedDict as odict
 import string
 import copy
+import numpy as np
 
 from metadata import MetadataBase
 from dimarray.tools import is_DimArray, is_array1d_equiv
@@ -689,7 +690,7 @@ class Axes(list):
         return cls.from_tuples(*zip(dims, arrays))
 
     @classmethod
-    def from_dict(cls, kwaxes, dims=None, shape=None, raise_warning=True):
+    def from_dict(cls, kwaxes, dims=None, shape=None, check_order=True):
         """ infer dimensions from key-word arguments
         """
         # if no key-word argument is given, just return default axis
@@ -723,8 +724,9 @@ class Axes(list):
             current_shape = tuple([ax.size for ax in axes])
             assert current_shape == shape, "dimensions mismatch (axes shape: {} != values shape: {}".format(current_shape, shape)
 
-        elif raise_warning:
-            raise Warning("no shape information: random order")
+        elif check_order:
+            #warnings.warn("no shape information: random axis order")
+            raise ValueError("no shape information: random order")
 
         dims = [ax.name for ax in axes]
         assert len(set(dims)) == len(dims), "what's wrong??"
@@ -842,7 +844,7 @@ class Axes(list):
             return axes
 
 
-def _init_axes(axes=None, dims=None, labels=None, shape=None, raise_warning=True):
+def _init_axes(axes=None, dims=None, labels=None, shape=None, check_order=True):
     """ initialize axis instance with many different ways
 
     axes:
@@ -885,7 +887,7 @@ def _init_axes(axes=None, dims=None, labels=None, shape=None, raise_warning=True
         kwaxes = axes
         if isinstance(kwaxes, odict) and dims is None:
             dims = kwaxes.keys()
-        axes = Axes.from_dict(kwaxes, dims=dims, shape=shape, raise_warning=raise_warning)
+        axes = Axes.from_dict(kwaxes, dims=dims, shape=shape, check_order=check_order)
         return axes
 
     else:
