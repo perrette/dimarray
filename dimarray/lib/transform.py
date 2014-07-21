@@ -74,13 +74,13 @@ def interp1d_numpy(obj, values=None, axis=0, left=np.nan, right=np.nan):
 
     Parameters
     ----------
-        obj : DimArray
-        newaxis_values: 1d array, or Axis object
-        newaxis_name, optional: `str` (axis name), required if newaxis is an array
+    obj : DimArray
+    newaxis_values : 1d array, or Axis object
+    newaxis_name, optional : `str` (axis name), required if newaxis is an array
 
     Returns
     -------
-        interpolated data (n-d)
+    interpolated data (n-d)
     """
     newaxis = Axis(values, axis)
 
@@ -105,34 +105,109 @@ def interp1d(obj, values=None, axis=0, order=1, **kwargs):
         raise NotImplementedError('order: '+repr(order))
         #return obj.reindex_axis(values, axis, method=method **kwargs)
 
-def interp2d(obj, newaxes, dims=None, order=1):
-    """ bilinear interpolation: wrapper around mpl_toolkits.basemap.interp
+def interp2d(dim_array, newaxes, dims=(-2, -1), order=1):
+    """ bilinear interpolation
 
     Parameters
     ----------
-        obj : DimArray
-        newaxes: list of Axis object, or list of 1d arrays
-        dims, optional: list of str (axis names), required if newaxes is a list of arrays
+    dim_array : DimArray instance
+    newaxes : sequence of two array-like, or dict.
+        axes on which to interpolate
+    dims : sequence of two axis names or integer rank, optional
+        Indicate which dimensions arrays in `newaxes` correspond
+        By default dims -2 and -1 (last two dimensions)
+    order : int, optional
+        order of the interpolation (default 1 for linear)
 
     Returns
     -------
-        interpolated data (n-d)
+    dim_array_int : DimArray instance
+        interpolated array
+
+    Examples
+    --------
+
+    >>> from dimarray import DimArray, interp2d
+    >>> x = np.array([0, 1, 2])
+    >>> y = np.array([0, 10])
+    >>> a = DimArray([[0,0,1],[1,0.,0.]], [('y',y),('x',x)])
+    >>> a
+    dimarray: 6 non-null elements (0 null)
+    0 / y (2): 0 to 10
+    1 / x (3): 0 to 2
+    array([[ 0.,  0.,  1.],
+           [ 1.,  0.,  0.]])
+    >>> newx = [0.5, 1.5]
+    >>> newy = np.linspace(0,10,5)
+    >>> ai = interp2d(a, [newy, newx])
+    >>> ai
+    dimarray: 10 non-null elements (0 null)
+    0 / y (5): 0.0 to 10.0
+    1 / x (2): 0.5 to 1.5
+    array([[ 0.   ,  0.5  ],
+           [ 0.125,  0.375],
+           [ 0.25 ,  0.25 ],
+           [ 0.375,  0.125],
+           [ 0.5  ,  0.   ]])
+
+    Use dims keyword argument if new axes order does not match array dimensions
+    >>> (ai == interp2d(a, [newx, newy], dims=('x','y'))).all()
+    True
     """
+    # provided as a dictionary
+    if isinstance(newaxes, dict):
+        dims = newaxes.keys()
+        newaxes = newaxes.values()
 
-    # make sure input axes have the valid format
-    newaxes = Axes._init(newaxes, dims) # valid format
-    newaxes.sort(obj.dims) # re-order according to object's dimensions
-    x, y = newaxes  # 2-d interpolation
+    if not isinstance(newaxes, list) or isinstance(newaxes, tuple):
+        raise TypeError("newaxes must be a sequence of axes to interpolate on")
 
-    # make new grid 2-D
-    x1, x1 = np.meshgrid(x.values, y.values, indexing='ij')
+    if len(newaxes) != 2:
+        raise ValueError("must provide two axis values to interpolate on")
 
-    def interp2d(obj, order=1):
-        """ 2-D interpolation function appled recursively on the object
-        """
-        x0, y0 = obj.axes[x.name].values, obj.axes[y.name].values
-        res = interp(obj.values, x0, y0, x1, y1, order=order)
-        return obj._constructor(res, newaxes, **obj._metadata)
+    if len(dims) != 2: 
+        raise ValueError("must provide two axis names to interpolate on")
 
-    result = apply_recursive(obj, (x.name, y.name), interp2d)
-    return result.transpose(obj.dims) # transpose back to original dimensions
+    x0 = dim_array.axes[dims[0]]
+    y0 = dim_array.axes[dims[1]]
+
+    # new axes
+    xi, yi = newaxes
+    xi2, yi2 = np.meshgrid(xi, yi) # requires 2-D grid
+    xi = Axis(xi, x0.name) # convert to Axis
+    yi = Axis(yi, y0.name)
+
+
+    # transpose the array to shape .., y0, x0 (cartesian convention needed for interp)
+    dims_orig = dim_array.dims
+    dims_new = [d for d in dim_array.dims if d not in [x0.name, y0.name]] + [y0.name, x0.name]
+    dim_array = dim_array.transpose(dims_new) 
+
+    if dim_array.ndim == 2:
+        newvalues = interp(dim_array.values, x0.values, y0.values, xi2, yi2)
+        dim_array_int = dim_array._constructor(newvalues, [yi, xi])
+
+    else:
+        # first reshape to 3-D, flattening everything except horizontal_coordinates coordinates
+        # TODO: optimize by computing and re-using weights?
+        dim_array = dim_array.group((x0.name, y0.name), reverse=True, insert=0)  
+        newvalues = []
+        for k, suba in dim_array.iter(axis=0): # iterate over the first dimension
+            newval = interp(suba.values, x0.values, y0.values, xi2, yi2)
+            newvalues.append(newval)
+
+        # stack the arrays together
+        newvalues = np.array(newvalues)
+        grouped_dim_array = dim_array._constructor(newvalues, [dim_array.axes[0], yi, xi])
+        dim_array_int = grouped_dim_array.ungroup(axis=0)
+
+    # reshape back
+    # ...replace old axis names by new ones of the projection
+    dims_orig = list(dims_orig)
+    # ...transpose
+    dim_array_int = dim_array_int.transpose(dims_orig)
+
+    # add metadata
+    dim_array_int._metadata(dim_array._metadata())
+
+    return dim_array_int
