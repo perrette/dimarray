@@ -13,6 +13,7 @@ OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 """
 import numpy as np
+import numpy.ma as ma
 
 def interp(datain,xin,yin,xout,yout,checkbounds=False,masked=False,order=1):
     """

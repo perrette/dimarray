@@ -153,6 +153,11 @@ def interp2d(dim_array, newaxes, dims=(-2, -1), order=1):
     Use dims keyword argument if new axes order does not match array dimensions
     >>> (ai == interp2d(a, [newx, newy], dims=('x','y'))).all()
     True
+
+    >>> newx = [-1, 1]
+    >>> newy = [-5, 0, 10]
+    >>> ai = interp2d(a, [newy, newx])
+    >>> ai
     """
     # provided as a dictionary
     if isinstance(newaxes, dict):
@@ -184,7 +189,7 @@ def interp2d(dim_array, newaxes, dims=(-2, -1), order=1):
     dim_array = dim_array.transpose(dims_new) 
 
     if dim_array.ndim == 2:
-        newvalues = interp(dim_array.values, x0.values, y0.values, xi2, yi2)
+        newvalues = interp(dim_array.values, x0.values, y0.values, xi2, yi2, masked=True)
         dim_array_int = dim_array._constructor(newvalues, [yi, xi])
 
     else:
@@ -193,7 +198,7 @@ def interp2d(dim_array, newaxes, dims=(-2, -1), order=1):
         dim_array = dim_array.group((x0.name, y0.name), reverse=True, insert=0)  
         newvalues = []
         for k, suba in dim_array.iter(axis=0): # iterate over the first dimension
-            newval = interp(suba.values, x0.values, y0.values, xi2, yi2)
+            newval = interp(suba.values, x0.values, y0.values, xi2, yi2, masked=True)
             newvalues.append(newval)
 
         # stack the arrays together
