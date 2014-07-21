@@ -105,7 +105,7 @@ def interp1d(obj, values=None, axis=0, order=1, **kwargs):
         raise NotImplementedError('order: '+repr(order))
         #return obj.reindex_axis(values, axis, method=method **kwargs)
 
-def interp2d(dim_array, newaxes, dims=(-2, -1), order=1):
+def interp2d(dim_array, newaxes, dims=(-2, -1), order=1, clip=False):
     """ bilinear interpolation
 
     Parameters
@@ -118,6 +118,9 @@ def interp2d(dim_array, newaxes, dims=(-2, -1), order=1):
         By default dims -2 and -1 (last two dimensions)
     order : int, optional
         order of the interpolation (default 1 for linear)
+    clip : bool, optional
+        if True, values in newaxes outside the range are clipped to closest
+        values
 
     Returns
     -------
@@ -156,8 +159,20 @@ def interp2d(dim_array, newaxes, dims=(-2, -1), order=1):
 
     >>> newx = [-1, 1]
     >>> newy = [-5, 0, 10]
-    >>> ai = interp2d(a, [newy, newx])
-    >>> ai
+    >>> interp2d(a, [newy, newx])
+    dimarray: 2 non-null elements (4 null)
+    0 / y (3): -5 to 10
+    1 / x (2): -1 to 1
+    array([[ nan,  nan],
+           [ nan,   0.],
+           [ nan,   0.]])
+    >>> interp2d(a, [newy, newx], clip=True)
+    dimarray: 6 non-null elements (0 null)
+    0 / y (3): -5 to 10
+    1 / x (2): -1 to 1
+    array([[ 0.,  0.],
+           [ 0.,  0.],
+           [ 1.,  0.]])
     """
     # provided as a dictionary
     if isinstance(newaxes, dict):
@@ -189,7 +204,7 @@ def interp2d(dim_array, newaxes, dims=(-2, -1), order=1):
     dim_array = dim_array.transpose(dims_new) 
 
     if dim_array.ndim == 2:
-        newvalues = interp(dim_array.values, x0.values, y0.values, xi2, yi2, masked=True)
+        newvalues = interp(dim_array.values, x0.values, y0.values, xi2, yi2, masked=not clip)
         dim_array_int = dim_array._constructor(newvalues, [yi, xi])
 
     else:
@@ -198,7 +213,7 @@ def interp2d(dim_array, newaxes, dims=(-2, -1), order=1):
         dim_array = dim_array.group((x0.name, y0.name), reverse=True, insert=0)  
         newvalues = []
         for k, suba in dim_array.iter(axis=0): # iterate over the first dimension
-            newval = interp(suba.values, x0.values, y0.values, xi2, yi2, masked=True)
+            newval = interp(suba.values, x0.values, y0.values, xi2, yi2, masked=not clip)
             newvalues.append(newval)
 
         # stack the arrays together
