@@ -34,7 +34,7 @@ _doc_indexing = """
         by by position on the axis ('position'), in particular when 
         the first (0) or last (-1) values are requested.
     tol : None or float
-       floating point tolerance when indexing float-arrays (default to None for exact match) 
+        floating point tolerance when indexing float-arrays (default to None for exact match) 
 """.strip()
 
 _doc_indexing_write = """
@@ -55,14 +55,15 @@ _doc_write_nc = """
     -----
     See the netCDF4-python module documentation for more information about the use
     of keyword arguments to write_nc.
-""".strip().format(format=FORMAT)
+""".strip().format(format=FORMAT)+'\n'
 
 _doc_write_modes = """Several write modes are available:
 
         - 'w' : write, overwrite if file if present (clobber=True)
         - 'w-': create new file, but raise Exception if file is present (clobber=False)
         - 'a' : append, raise Exception if file is not present
-        - 'a+': append if file is present, otherwise create"""
+        - 'a+': append if file is present, otherwise create
+        """
 
 
 @format_doc(indexing=_doc_indexing)
@@ -537,7 +538,7 @@ def _write_dataset(f, obj, mode='w-', indices=None, axis=0, format=FORMAT, verbo
 
 
 @format_doc(netCDF4=_doc_write_nc, indexing=_doc_indexing_write, write_modes=_doc_write_modes)
-def _write_variable(f, obj=None, name=None, mode='a+', format=FORMAT, indices=None, axis=0, verbose=False, share_grid_mapping=True, **kwargs):
+def _write_variable(f, obj=None, name=None, mode='a+', format=FORMAT, indices=None, axis=0, verbose=False, share_grid_mapping=False, **kwargs):
     """ Write DimArray instance to file
 
     Parameters
@@ -551,9 +552,10 @@ def _write_variable(f, obj=None, name=None, mode='a+', format=FORMAT, indices=No
     {netCDF4}
     {indexing}
     share_grid_mapping : bool, optional
-        if True (the default), write any grid mapping attribute as a 
+        if True, write any grid mapping attribute as a 
         separate variable in the dataset, accordingly to CF-conventions
-        in order to share that information across several variables
+        in order to share that information across several variables.
+        Default is False.
 
     See Also
     --------
@@ -710,22 +712,35 @@ def _createVariable(f, name, axes, dims=None, dtype=float, verbose=False, mode='
 ##
 ## write to file
 ##
-@format_doc(dimarray=_write_variable.__doc__, dataset=_write_dataset.__doc__, axes=_createVariable.__doc__)
+@format_doc(netCDF4=_doc_write_nc, indexing=_doc_indexing_write, write_modes=_doc_write_modes)
 def write_nc(f, obj=None, *args, **kwargs):
     """  Write DimArray or Dataset to file or Create Empty netCDF file
 
+    This function is a wrapper whose accepted parameters vary depending
+    on the object to write.
+
     Parameters
     ----------
-    Expected parameters depend on object to write.
+    f : file name or netCDF file handle
+    obj : DimArray or Dataset or Axes instance
+        An Axes instance will create an empty variable.
+    name : str, optional, ONLY IF obj is a DimArray  
+        variable name, optional if `name` attribute is already defined.
+    dtype : variable type, optional, ONLY IF obj is an Axes object
+    mode : `str`, optional
+        {write_modes}
+        default is 'a+'
+    {indexing}
+    share_grid_mapping : bool, optional
+        if True, replace any dict-type grid mapping attribute 
+        by a string alias, and write the original dict as a separate variable 
+        in the dataset. This is accordingly to CF-conventions, in order to 
+        share that information across several variables. Default is False.
+    {netCDF4}
 
-    ### Create Empty netCDF file  ###
-    {axes}
-
-    ### DimArray ###
-    {dimarray}
-
-    ### Dataset ###
-    {dataset}
+    See Also
+    --------
+    read_nc, DimArray.write_nc, Dataset.write_nc
     """
     if isinstance(obj, Dataset):
         _write_dataset(f, obj, *args, **kwargs)

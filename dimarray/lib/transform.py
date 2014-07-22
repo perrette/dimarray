@@ -114,8 +114,8 @@ def interp2d(dim_array, newaxes, dims=(-2, -1), order=1, clip=False):
     newaxes : sequence of two array-like, or dict.
         axes on which to interpolate
     dims : sequence of two axis names or integer rank, optional
-        Indicate which dimensions arrays in `newaxes` correspond
-        By default dims -2 and -1 (last two dimensions)
+        Indicate dimensions which match `newaxes`.
+        By default (-2, -1) (last two dimensions).
     order : int, optional
         order of the interpolation (default 1 for linear)
     clip : bool, optional

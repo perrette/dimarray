@@ -49,6 +49,16 @@ Align
 .. autofunction:: dimarray.broadcast_arrays
 
 
+Interpolate
+-----------
+
+.. autofunction:: dimarray.interp2d
+
+Stats
+-----
+
+.. autofunction:: dimarray.percentile
+
 Read netCDF data
 ----------------
 
