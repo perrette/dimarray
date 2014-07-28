@@ -270,8 +270,9 @@ class DimArray(MetadataBase):
         #
         # Initialize the axes
         # 
-        if axes is None and labels is None:
-            assert values is not None, "values= or/and axes=, labels= required to determine dimensions"
+        #if axes is None and labels is None:
+        #    if values is None: #, "values= or/and axes=, labels= required to determine dimensions"
+        #        axes = Axes._init(dims=dims, shape=shape)
 
         if not isinstance(axes, Axes):
             axes = Axes._init(axes, dims=dims, labels=labels, shape=values.shape if values is not None else None)
@@ -1069,7 +1070,7 @@ mismatch between values and axes""".format(inferred, self.values.shape)
             if self.ndim > 0:
                 nonnull = np.size(self.values[~np.isnan(self.values)])
             else:
-                nonnull = ~np.isnan(self.values)
+                nonnull = int(~np.isnan(self.values))
 
         except TypeError: # e.g. object
             nonnull = self.size
@@ -1085,7 +1086,8 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         # Axes
         if True: #self.size > 1:
             line = self.axes._repr(metadata=metadata)
-            lines.append(line)
+            if line:
+                lines.append(line)
 
         # Metadata
         if metadata:
@@ -1561,7 +1563,7 @@ def empty(axes=None, dims=None, shape=None, dtype=float):
 
     values = np.empty(shape, dtype=dtype)
 
-    return DimArray(values, axes=axes, dims=dims)
+    return DimArray(values, axes=axes)
 
 def empty_like(a, dtype=None):
     """ alias for empty(a.axes, dtype=a.dtype)

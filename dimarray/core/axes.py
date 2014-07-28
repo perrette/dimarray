@@ -877,7 +877,13 @@ def _init_axes(axes=None, dims=None, labels=None, shape=None, check_order=True):
 
     # axis not provided: check whether values has an axes field
     if axes is None:
-        assert shape is not None, "at least shape must be provided (if axes are not)"
+        if shape is None:
+            if dims is None:
+                shape = ()
+            else:
+                shape = [0 for i in dims] # add 0-size axes
+
+            #raise ValueError("at least shape must be provided (if axes are not)")
 
         # define a default set of axes if not provided
         axes = Axes.from_shape(shape, dims=dims)
