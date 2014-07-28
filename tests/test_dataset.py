@@ -4,6 +4,22 @@ import numpy as np
 import dimarray as da
 from dimarray import Dataset
 
+def test_metadata():
+    ds = Dataset()
+    a = da.zeros(shape=(4,5))
+    a.units = 'meters'
+    ds['a'] = a
+
+    # metadata are conserved
+    assert ds['a'].units == 'meters'
+
+    # copy / reference behaviour 
+    ds['a'].units = 'millimeters'
+    assert ds['a'].units != 'millimeters' 
+
+    ds.data['a'].units = 'millimeters'
+    assert ds['a'].units == 'millimeters' 
+
 def test():
     """ Test Dataset functionality
 

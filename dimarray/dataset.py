@@ -1,7 +1,7 @@
 """ collection of base obeje
 """
 from collections import OrderedDict as odict
-import warnings
+import warnings, copy
 import numpy as np
 
 import dimarray as da  # for the doctest, so that they are testable via py.test
@@ -39,11 +39,27 @@ class Variable(MetadataBase):
     def __repr__(self):
         return self._repr(metadata=True)
 
-class Dataset(odict, MetadataBase):
+class Dataset(MetadataBase):
     """ Container for a set of aligned objects
     """
     # will not appear as metadata
-    __metadata_exclude__ = ['axes']
+    #__metadata_exclude__ = ['data', 'axes']
+
+    @property
+    def data(self):
+        return self._data
+
+    @data.setter
+    def data(self, data):
+        self._data = data
+
+    @property
+    def axes(self):
+        return self._axes
+
+    @axes.setter
+    def axes(self, axes):
+        self._axes = axes
 
     _constructor = DimArray
 
@@ -56,16 +72,17 @@ class Dataset(odict, MetadataBase):
         assert not {'axes','keys'}.issubset(kwargs.keys()) # just to check bugs due to back-compat ==> TO BE REMOVED AFTER DEBUGGING
 
         # check input arguments: same init as odict
-        kwargs = odict(*args, **kwargs)
+        data = odict(*args, **kwargs)
 
         # Basic initialization
         self.axes = Axes()
 
         # initialize an ordered dictionary
-        super(Dataset, self).__init__()
+        #super(Dataset, self).__init__()
+        self.data = odict()
 
-        values = kwargs.values()
-        keys = kwargs.keys()
+        values = data.values()
+        keys = data.keys()
 
         # Check everything is a DimArray
         #for key, value in zip(keys, values):
@@ -99,7 +116,7 @@ class Dataset(odict, MetadataBase):
         lines.append(header)
         lines.append(self.axes._repr(metadata=metadata))
         for nm in self.keys():
-             v = dict.__getitem__(self, nm) # just get the Variable object stored in the dataset
+             v = self.data[nm] # just get the Variable object stored in the dataset
              lines.append(nm+': '+v._repr(metadata=metadata))
         if metadata and len(self._metadata()) > 0:
             lines.append('//global attributes:')
@@ -112,11 +129,14 @@ class Dataset(odict, MetadataBase):
     def __repr__(self):
         return self._repr(metadata=False)
 
+    #
+    # overload dictionary methods
+    #
     def __delitem__(self, item):
         """ 
         """
         axes = self[item].axes
-        super(Dataset, self).__delitem__(item)
+        del self.data[item]
 
         # update axes
         for ax in axes:
@@ -129,22 +149,12 @@ class Dataset(odict, MetadataBase):
                 self.axes.remove(ax)
 
     def __getitem__(self, key):
-        """ get a dimarray and copy centralized informations such as 
-        axes and grid_mapping
+        """ get a dimarray and copy axes
         """
-        v = dict.__getitem__(self, key) # Variable type
+        v = self.data[key]
         axes = Axes([self.axes[nm].copy() for nm in v.dims])
         metadata = v._metadata()
         a = self._constructor(v.values, axes, **metadata)
-
-        ## copy grid_mapping ?
-        #gm = metadata.pop('grid_mapping', None)
-        #if gm is not None and (isinstance(gm, str) or type(gm) is unicode) \
-        #        and gm in self.keys():
-        #    try:
-        #        a.grid_mapping = self[gm]._metadata()
-        #    except error, msg:
-        #        warnings.warn("could not attach grid mapping:"+msg.message)
 
         return a
 
@@ -153,7 +163,6 @@ class Dataset(odict, MetadataBase):
 
         Examples
         --------
-#        >>> axes = Axes.from_tuples(('time',[1, 2, 3]))
         >>> ds = Dataset()
         >>> ds
         Dataset of 0 variables
@@ -187,8 +196,24 @@ class Dataset(odict, MetadataBase):
         # Transform to variable
         variable = Variable(val.values, val.dims, val._metadata())
 
-        super(Dataset, self).__setitem__(key, variable)
+        #super(Dataset, self).__setitem__(key, variable)
+        self.data[key] =  variable
 
+    def keys(self):
+        return self.data.keys()
+
+    def __iter__(self):
+        return iter(self.data)
+
+    def __len__(self):
+        return len(self.data)
+
+    def copy(self):
+        return copy.deepcopy(self)
+
+    #
+    #
+    #
     def write_nc(self, f, *args, **kwargs):
         """ Save dataset in netCDF file.
 
