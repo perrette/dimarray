@@ -868,9 +868,9 @@ def _summary_repr(fname):
     for i, dim in enumerate(f.dimensions.keys()):
         size = len(f.dimensions[dim]) # dimension size
         try:
-            first, last = f.variables[dim][0], f.variables[dim][-1]
-        except KeyError:
-            first, last = '?','?'
+            first, last = f.variables[dim][0], f.variables[dim][size-1]
+        except KeyError: # if no variable is found
+            first, last = 0, size-1
         line = "{i} / {dim} ({size}): {first} to {last}".format(**locals())
         lines.append(line)
 
