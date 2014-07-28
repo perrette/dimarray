@@ -2,6 +2,8 @@
 
 """ array with physical dimensions (named and valued axes)
 """
+from __future__ import absolute_import
+
 import numpy as np
 import copy
 import warnings
@@ -11,15 +13,16 @@ from dimarray.tools import anynan, pandas_obj
 from dimarray.config import get_option
 from dimarray.decorators import format_doc
 
-from metadata import MetadataBase
-from axes import Axis, Axes, GroupedAxis, _doc_reset_axis
+from .metadata import MetadataBase
+from .axes import Axis, Axes, GroupedAxis, _doc_reset_axis
 
-import transform as _transform  # numpy along-axis transformations, interpolation
-import reshape as _reshape      # change array shape and dimensions
-import indexing as _indexing    # perform slicing and indexing operations
-import operation as _operation  # operation between DimArrays
-import missingvalues # operation between DimArrays
-from align import broadcast_arrays, align_axes, stack
+from dimarray import plotting
+from . import transform as _transform  # numpy along-axis transformations, interpolation
+from . import reshape as _reshape      # change array shape and dimensions
+from . import indexing as _indexing    # perform slicing and indexing operations
+from . import operation as _operation  # operation between DimArrays
+from . import missingvalues # operation between DimArrays
+from .align import broadcast_arrays, align_axes, stack
 
 __all__ = ["DimArray", "array"]
 

@@ -1,5 +1,7 @@
 """ Plotting methods for dimarray class
 """
+import numpy as np
+
 def plot(self, *args, **kwargs):
     """ by default, use pandas for plotting (for now at least)
 
@@ -42,6 +44,7 @@ def pcolor(self, *args, **kwargs):
     
     Examples
     --------
+    >>> from dimarray import DimArray
     >>> x = DimArray(np.zeros([100,40]))
     >>> x.pcolor() # doctest: +SKIP
     >>> x.T.pcolor() # to flip horizontal/vertical axes  # doctest: +SKIP
@@ -60,6 +63,7 @@ def contourf(self, *args, **kwargs):
     
     Examples
     --------
+    >>> from dimarray import DimArray
     >>> x = DimArray(np.zeros([100,40])) 
     >>> x[:50,:20] = 1.
     >>> x.contourf() # doctest: +SKIP
@@ -78,6 +82,7 @@ def contour(self, *args, **kwargs):
     
     Examples
     --------
+    >>> from dimarray import DimArray
     >>> x = DimArray(np.zeros([100,40])) 
     >>> x[:50,:20] = 1.
     >>> x.contour() # doctest: +SKIP
