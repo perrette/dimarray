@@ -87,16 +87,18 @@ We can use matplotlib's contourf to get a feeling for what that all mean. Below 
 >>> ax = gca() # get plot axis
 >>> ax.set_aspect('equal') # equal aspect ratio
 >>> ax.set_xticks([-500e3,0,500e3]) # ticks every 500 km  # doctest: +SKIP
+[<matplotlib.axis.XTick at 0x7f26d3c89b10>,
+ <matplotlib.axis.XTick at 0x7f26d3beb090>,
+ <matplotlib.axis.XTick at 0x7f26d3b1ae50>]
 
-
-.. image:: projection_files/figure_16-0.png
+.. image:: projection_files/figure_16-1.png
 
 
 
 And now plotting versus lon and lat (irregular, 2-D grid in this case):
 
 >>> contourf(ds['lon'], ds['lat'], log(clip(v, 1e-3,inf))); colorbar()  # doctest: +SKIP
-<matplotlib.colorbar.Colorbar instance at 0x7f93239891b8>
+<matplotlib.colorbar.Colorbar instance at 0x7f26d3989560>
 
 .. image:: projection_files/figure_18-1.png
 
@@ -116,7 +118,7 @@ The :func:`dimarray.geo.crs.get_crs` function returns the most adequate projecti
 
 >>> stere = get_crs(grid_mapping)
 >>> stere # doctest: +SKIP
-<dimarray.geo.crs.PolarStereographic at 0x7f9323af8410>
+<dimarray.geo.crs.PolarStereographic at 0x7f26d3aff590>
 
 All projection classes defined in dimarray inherit from :class:cartopy.crs.CRS. A few common transformations have a Cartopy equivalent, and are defined as subclass, where possible.
 
@@ -174,7 +176,7 @@ Double-check against earlier figures, this looks all right:
 
 >>> h = log(clip(vt,1e-3,inf)).contourf(levels=np.linspace(-7.5, 10, 8))  # doctest: +SKIP
 >>> colorbar(h) # doctest: +SKIP
-<matplotlib.colorbar.Colorbar instance at 0x7f9322975dd0>
+<matplotlib.colorbar.Colorbar instance at 0x7f26d296ef80>
 
 .. image:: projection_files/figure_40-1.png
 
@@ -198,9 +200,11 @@ That is the original field on the projection plane.
 >>> ax = gca()
 >>> ax.set_aspect('equal') # equal aspect ratio
 >>> ax.set_xticks([-500e3,0,500e3]) # ticks every 500 km  # doctest: +SKIP
+[<matplotlib.axis.XTick at 0x7f26d32f4490>,
+ <matplotlib.axis.XTick at 0x7f26d2838950>,
+ <matplotlib.axis.XTick at 0x7f26d1e77410>]
 
-
-.. image:: projection_files/figure_45-0.png
+.. image:: projection_files/figure_45-1.png
 
 
 
@@ -220,7 +224,7 @@ Transforming vectors in longitude latitude coordinates does not make much sense 
 >>> from dimarray.geo import transform_vectors
 
 
->>> vt = transform(v, from_crs=stere, to_crs=stere_ne)
+>>> vt = transform(v, from_crs=stere, to_crs=stere_ne, masked=True)
 >>> vxt, vyt = transform_vectors(vx,vy, from_crs=stere, to_crs=stere_ne)
 >>> 
 >>> log(clip(vt,1e-3,inf)).contourf()   # doctest: +SKIP
@@ -229,9 +233,10 @@ Transforming vectors in longitude latitude coordinates does not make much sense 
 >>> ax = gca()
 >>> ax.set_aspect('equal') # equal aspect ratio
 >>> ax.set_xticks([-1000e3,0]) # ticks every 1000 km  # doctest: +SKIP
+[<matplotlib.axis.XTick at 0x7f26d1890a50>,
+ <matplotlib.axis.XTick at 0x7f26d1832950>]
 
-
-.. image:: projection_files/figure_50-0.png
+.. image:: projection_files/figure_50-1.png
 
 
 

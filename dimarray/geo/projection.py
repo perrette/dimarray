@@ -197,7 +197,7 @@ def _inverse_transform_coords(from_crs, to_crs, xt=None, yt=None, x0=None, y0=No
 #
 #
 def transform(geo_array, to_crs, from_crs=None, \
-        xt=None, yt=None):
+        xt=None, yt=None, masked=False):
     """ Transform scalar field array into a new coordinate system and \
             interpolate values onto a new regular grid
 
@@ -215,6 +215,15 @@ def transform(geo_array, to_crs, from_crs=None, \
     xt, yt : array-like (1-D), optional
         new coordinates to interpolate the array on
         will be deduced as min and max of new coordinates if not provided
+    masked : bool or number, optional
+        If False, interpolated values outside the range of input grid
+        will be clipped to values on boundary of input grid 
+        If True, points outside the range of input grid
+        are masked (set to NaN)
+        If masked is set to a number, then
+        points outside the range of xin and yin will be
+        set to that number.
+        Default is False.
 
     Returns
     -------
@@ -250,7 +259,7 @@ def transform(geo_array, to_crs, from_crs=None, \
 
     if geo_array.ndim == 2:
         #newvalues = interp(geo_array.values, xt_2d, yt_2d, xt_2dr, yt_2dr)
-        newvalues = interp(geo_array.values, x0.values, y0.values, x0_interp, y0_interp)
+        newvalues = interp(geo_array.values, x0.values, y0.values, x0_interp, y0_interp, masked=masked)
         transformed = geo_array._constructor(newvalues, [yt, xt])
 
     else:
@@ -260,7 +269,7 @@ def transform(geo_array, to_crs, from_crs=None, \
         newvalues = []
         for k, suba in obj.iter(axis=0): # iterate over the first dimension
             #newval = interp(suba.values, xt_2d, yt_2d, xt_2dr, yt_2dr)
-            newval = interp(suba.values, x0.values, y0.values, x0_interp, y0_interp)
+            newval = interp(suba.values, x0.values, y0.values, x0_interp, y0_interp, masked=masked)
             newvalues.append(newval)
 
         # stack the arrays together
@@ -285,7 +294,7 @@ def transform(geo_array, to_crs, from_crs=None, \
 
 
 def transform_vectors(u, v, to_crs, from_crs=None, \
-        xt=None, yt=None):
+        xt=None, yt=None, masked=False):
     """ Transform vector field array into a new coordinate system and \
             interpolate values onto a new regular grid
 
@@ -306,6 +315,15 @@ def transform_vectors(u, v, to_crs, from_crs=None, \
     xt, yt : array-like (1-D), optional
         new coordinates to interpolate the array on
         will be deduced as min and max of new coordinates if not provided
+    masked : bool or number, optional
+        If False, interpolated values outside the range of input grid
+        will be clipped to values on boundary of input grid 
+        If True, points outside the range of input grid
+        are masked (set to NaN)
+        If masked is set to a number, then
+        points outside the range of xin and yin will be
+        set to that number.
+        Default is False.
 
     Returns
     -------
@@ -338,9 +356,9 @@ def transform_vectors(u, v, to_crs, from_crs=None, \
     x0_2d, y0_2d = np.meshgrid(x0, y0)
 
     if u.ndim == 2:
-        newu = interp(u.values, x0.values, y0.values, x0_interp, y0_interp)
+        newu = interp(u.values, x0.values, y0.values, x0_interp, y0_interp, masked=masked)
         ut = u._constructor(newu, [yt, xt])
-        newv = interp(v.values, x0.values, y0.values, x0_interp, y0_interp)
+        newv = interp(v.values, x0.values, y0.values, x0_interp, y0_interp, masked=masked)
         vt = v._constructor(newv, [yt, xt])
 
     else:
@@ -350,8 +368,8 @@ def transform_vectors(u, v, to_crs, from_crs=None, \
         obj = obj.group(('vector_components', x0.name, y0.name), reverse=True, insert=0) # 
         newvalues = []
         for k, suba in obj.iter(axis=0): # iterate over the first dimension
-            newu = interp(suba.values[0], x0.values, y0.values, x0_interp, y0_interp)
-            newv = interp(suba.values[1], x0.values, y0.values, x0_interp, y0_interp)
+            newu = interp(suba.values[0], x0.values, y0.values, x0_interp, y0_interp, masked=masked)
+            newv = interp(suba.values[1], x0.values, y0.values, x0_interp, y0_interp, masked=masked)
             newvalues.append(np.array([newu, newv]))
 
         # stack the arrays together
