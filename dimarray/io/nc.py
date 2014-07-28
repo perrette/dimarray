@@ -97,6 +97,11 @@ def read_nc(f, nms=None, *args, **kwargs):
 
         Only when reading multiple files and align==True
 
+    dimensions_mapping : dict, optional
+        mapping between netCDF dimensions and variables in the file
+        Keys are dimensions names, values are corresponding variable names.
+        if not provided, look for variables with same name as dimension.
+
     copy_grid_mapping : bool, optional
         if True, any "grid_mapping" attribute pointing to another variable 
         present in the dataset will be replaced by that variable's metadata
@@ -211,7 +216,7 @@ def read_nc(f, nms=None, *args, **kwargs):
 # read from file
 # 
 
-def read_dimensions(f, name=None, ix=slice(None), verbose=False):
+def read_dimensions(f, name=None, ix=slice(None), dimensions_mapping=None, verbose=False):
     """ return an Axes object
 
     Parameters
@@ -219,6 +224,8 @@ def read_dimensions(f, name=None, ix=slice(None), verbose=False):
     name : str, optional
         variable name
     ix : integer (position) index
+    dimensions_mapping : dict, optional
+        mapping between dimension and variable names
 
     Returns
     -------
@@ -241,10 +248,15 @@ def read_dimensions(f, name=None, ix=slice(None), verbose=False):
     # load axes
     axes = Axes()
     for dim in dims:
-
-        if dim in f.variables.keys():
+        if dimensions_mapping is not None:
+            # user-provided mapping between dimensions and variable name
+            dim_name = dimensions_mapping[dim]
+            values = f.variables[dim_name][ix]
+        elif dim in f.variables.keys():
+            # assume that the variable and dimension have the same name
             values = f.variables[dim][ix]
         else:
+            # default, dummy dimension axis
             msg = "'{}' dimension not found, define integer range".format(dim)
             warnings.warn(msg)
             values = np.arange(len(f.dimensions[dim]))
@@ -298,7 +310,7 @@ def _extract_kw(kwargs, argnames, delete=True):
     return kw
 
 @format_doc(indexing=_doc_indexing)
-def _read_variable(f, name, indices=None, axis=0, verbose=False, copy_grid_mapping=False, **kwargs):
+def _read_variable(f, name, indices=None, axis=0, verbose=False, dimensions_mapping=None, copy_grid_mapping=False, **kwargs):
     """ Read one variable from netCDF4 file 
 
     Parameters
@@ -306,7 +318,10 @@ def _read_variable(f, name, indices=None, axis=0, verbose=False, copy_grid_mappi
     f  : file name or file handle
     name : netCDF variable name to extract
     {indexing}
-
+    dimensions_mapping : dict, optional
+        mapping between netCDF dimensions and variables in the file
+        Keys are dimensions names, values are corresponding variable names.
+        if not provided, look for variables with same name as dimension.
     copy_grid_mapping : bool, optional
         if True, any "grid_mapping" attribute pointing to another variable 
         present in the dataset will be replaced by that variable's metadata
@@ -324,7 +339,7 @@ def _read_variable(f, name, indices=None, axis=0, verbose=False, copy_grid_mappi
     f, close = _check_file(f, mode='r', verbose=verbose)
 
     # Construct the indices
-    axes = read_dimensions(f, name)
+    axes = read_dimensions(f, name, dimensions_mapping=dimensions_mapping)
 
     if indices is None:
         newaxes = axes
@@ -376,13 +391,17 @@ def _read_variable(f, name, indices=None, axis=0, verbose=False, copy_grid_mappi
 
 #read_nc.__doc__ += _read_variable.__doc__
 
-def _read_dataset(f, nms=None, **kwargs):
+def _read_dataset(f, nms=None, dimensions_mapping=None, **kwargs):
     """ Read several (or all) variable from a netCDF file
 
     Parameters
     ----------
     f : file name or (netcdf) file handle
     nms : list of variables to read (default None for all variables)
+    dimensions_mapping : dict, optional
+        mapping between netCDF dimensions and variables in the file
+        Keys are dimensions names, values are corresponding variable names.
+        if not provided, look for variables with same name as dimension.
     **kwargs
 
     Returns
@@ -402,12 +421,15 @@ def _read_dataset(f, nms=None, **kwargs):
     if nms is None:
         nms, dims = _scan(f)
 
+        if dimensions_mapping is not None:
+            nms = [nm for nm in nms if nm not in dimensions_mapping.values()]
+
 #    if nms is str:
 #        nms = [nms]
 
     data = odict()
     for nm in nms:
-        data[nm] = _read_variable(f, nm, **kwargs)
+        data[nm] = _read_variable(f, nm, dimensions_mapping=dimensions_mapping, **kwargs)
 
     data = Dataset(data)
 
