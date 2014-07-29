@@ -447,6 +447,17 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         """
         return tuple([ax.values for ax in self.axes])
 
+    @labels.setter
+    def labels(self, newlabels):
+        """ change all labels at once
+        """
+        if not np.iterable(newlabels): 
+            raise TypeError("new labels must be iterable")
+        if not len(newlabels) == self.ndim:
+            raise ValueError("dimension mistmatch")
+        for i, lab in enumerate(newlabels):
+            self.axes[i][:] = lab
+
     #
     # misc
     #
