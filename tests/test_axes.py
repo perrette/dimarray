@@ -30,3 +30,12 @@ def test_copy(axes):
     axes_n = axes.copy()
     axes_n[0][0] = 'c'
     assert axes != axes_n
+
+def test_append(ax0, ax1):
+    # test copy/ref behaviour when appending an object
+    axes = Axes()
+    axes.append(ax0)
+    assert ax0 is axes[0]
+    axes.append(ax1)
+    assert ax1 is axes[1]
+

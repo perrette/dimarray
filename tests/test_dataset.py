@@ -2,76 +2,116 @@
 """
 import numpy as np
 from numpy.testing import assert_array_equal
+import unittest
 import pytest
 import dimarray as da
 from dimarray import Dataset
 
 
-def test_init():
+class Structure(unittest.TestCase):
+    """ Test dataset's structure
+    """
+    def setUp(self):
+        """ initialize a dataset
+        """
+        a = da.zeros(axes=[['a','b'],[11.,22.,33.]], dims=['d0','d1'])
+        b = da.ones(axes=[['a','b']], dims=['d0'])
+        c = da.zeros(axes=[[1,2,3]], dims=['d2'])
 
-    # test initialization
-    a = da.zeros(axes=[['a','b'],[11.,22.,33.]], dims=['d0','d1'])
-    b = da.ones(axes=[['a','b']], dims=['d0'])
-    c = da.zeros(axes=[[1,2,3]], dims=['d2'])
-    d = da.ones(axes=[['a','b','c']], dims=['d0'])
+        self.ds = Dataset([('aa',a),('cc',c)]) # like an ordered dict
+        self.ds['bb'] = b  # axis 'd0' will be checked
+        self.ds['cc'] = c  # axis 'd0' will be checked
 
-    ds = Dataset(a=a, b=b, c=c, d=d)
-    assert set(ds.dims) == set(('d0','d1','d2'))
-    assert_array_equal( ds.d0, ['a','b','c'])
+    def test_repr(self):
 
-    # test repr
-    expected_repr = """ 
-Dataset of 4 variables
-0 / d0 (3): a to c
+        # test repr
+        expected_repr = """ 
+Dataset of 3 variables
+0 / d0 (2): a to b
 1 / d1 (3): 11.0 to 33.0
 2 / d2 (3): 1 to 3
-a: ('d0', 'd1')
-c: ('d2',)
-b: ('d0',)
-d: ('d0',)
-""".strip()
+aa: ('d0', 'd1')
+cc: ('d2',)
+bb: ('d0',)
+    """.strip()
 
-    assert repr(ds) == expected_repr
+        assert repr(self.ds) == expected_repr
 
-def test_getsetdel():
-    a = da.zeros(axes=[['a','b'],[11.,22.,33.]], dims=['d0','d1'])
-    b = da.ones(axes=[['a','b']], dims=['d0'])
-    c = da.zeros(axes=[[1,2,3]], dims=['d2'])
-    d = da.ones(axes=[['a','b','c']], dims=['d0'])
+    def test_axes(self):
 
-    # first assingment
-    ds = Dataset()
-    ds['a'] = a
-    assert ds.axes == a.axes, "this should be equal"
-    assert ds.axes is not a.axes, 'this should be a copy'
+        ds = self.ds
 
-    ds['b'] = b
-    ds['c'] = c
-    del ds['a'] 
-    assert ds.dims == ('d0','d2'), "d1 should have been deleted, got {}".format(ds.dims)
+        # "shallow" equality
+        assert set(ds.dims) == set(('d0','d1','d2'))
+        assert np.all( ds.d0 == ['a','b'])
+        assert np.all( ds['bb'].d0 == ['a','b'])
 
-    # this should raise value error because axes are not aligned
-    with pytest.raises(ValueError):
-        ds['d'] = d 
+        # test copy/ref behaviour
+        assert ds.axes['d0'] is ds['aa'].axes['d0']
+        assert ds.axes['d0'] is ds['bb'].axes['d0']
+        assert ds.axes['d2'] is ds['cc'].axes['d2']
 
-    ds['d'] = d.reindex_like(ds)
+        # delete
+        assert self.ds.dims == ('d0','d1','d2')
+        del self.ds['cc'] 
+        assert self.ds.dims == ('d0','d1'), "axis not deleted"
 
-def test_axes():
-    """ test copy / ref behaviour of axes
-    """
-    a = da.zeros(axes=[['a','b'],[11.,22.,33.]], dims=['d0','d1'])
-    b = da.ones(axes=[['a','b']], dims=['d0'])
+        # modify datasets' axis values
+        ds.axes['d0'][1] = 'yo'
+        assert ds['aa'].d0[1] == 'yo'
+        assert ds['bb'].d0[1] == 'yo'
 
-    ds = Dataset(a=a, b=b)
-    ds.axes['d0'][1] = 'yo'
-    assert ds['a'].d0[1] == 'yo'
-    assert ds['b'].d0[1] == 'yo'
+        # modify axis names, single
+        ds.axes['d0'].name = 'new_d0'
+        assert ds.dims == ('new_d0', 'd1')
+        assert ds['aa'].dims == ('new_d0', 'd1')
+        assert ds['bb'].dims == ('new_d0',)
 
-    # individual axes are equal but copies
-    assert ds['a'].axes['d0'] == ds.axes['d0']
-    assert ds['a'].axes['d0'] is not ds.axes['d0']
-    assert ds['b'].axes['d0'] == ds.axes['d0']
-    assert ds['b'].axes['d0'] is not ds.axes['d0']
+        # modify axes names (dims), bulk
+        ds.dims = ('d0n','d1n')
+        assert ds.dims == ('d0n','d1n')
+        assert ds['aa'].dims == ('d0n','d1n')
+        assert ds['bb'].dims == ('d0n',)
+
+    def test_copy(self):
+
+        ds = self.ds
+        ds.units = 'myunits'
+
+        ds2 = ds.copy()
+        assert isinstance(ds2, Dataset)
+        assert ds2.axes == ds.axes
+        assert ds2.axes is not ds.axes
+        assert hasattr(ds2, 'units')
+        assert ds2.units == ds.units
+
+        assert ds == ds2
+
+        ds2['aa']['b',22.] = -99
+        assert np.all(ds['aa'] == ds2['aa']) # shallow copy ==> elements are just references
+
+        ds2['bb'] = ds['bb'] + 33 
+        assert np.all(ds['bb'] != ds2['bb']), 'shallow copy'
+
+    def test_reindexing(self):
+
+        ds = self.ds
+        d = da.ones(axes=[['a','b','c'],[33,44]], dims=['d0','d5'])
+
+        # raises exception when setting an array with unaligned axes
+        with pytest.raises(ValueError):
+            ds['dd'] = d
+
+        # that works
+        ds['dd'] = d.reindex_like(ds)
+        assert np.all( ds.d0 == ['a','b'])
+
+        # on-the-fly reindexing at initialization
+        ds2 = Dataset( aa=ds['aa'], dd=d)
+
+        assert np.all( ds2.d0 == ['a','b','c'])
+        assert np.all( ds2['aa'].d0 == ['a','b','c'])
+
 
 def test_metadata():
     ds = Dataset()
@@ -86,29 +126,11 @@ def test_metadata():
     ds['a'].units = 'millimeters'
     assert ds['a'].units == 'millimeters' 
 
-def test_copy():
 
-    a = da.zeros(axes=[['a','b'],[11.,22.,33.]], dims=['d0','d1'])
-    b = da.ones(axes=[['a','b']], dims=['d0'])
-    ds = Dataset(a=a, b=b)
-    ds.units = 'myunits'
-
-    ds2 = ds.copy()
-    assert isinstance(ds2, Dataset)
-    assert ds2.axes == ds.axes
-    assert ds2.axes is not ds.axes
-    assert hasattr(ds2, 'units')
-    assert ds2.units == ds.units
-
-    assert ds == ds2
-
-    ds2['a']['b',22.] = -99
-    assert np.all(ds['a'] == ds2['a']) # shallow copy ==> elements are just references
-
-    ds2['b'] = ds['b'] + 33 
-    assert np.all(ds['b'] != ds2['b']), 'shallow copy'
-
-
+#
+# Older tests
+#
+#@pytest.mark.last
 def test():
     """ Test Dataset functionality
 

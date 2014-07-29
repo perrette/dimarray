@@ -2,14 +2,22 @@
 """
 import pytest
 import numpy as np
-from dimarray import DimArray
+from dimarray import DimArray, Axis
 
 @pytest.fixture
-def a():
-    values = np.random.randn(2,3)
+def ax0():
     x0 = ['a','b']
+    return Axis(x0,'d0')
+
+@pytest.fixture
+def ax1():
     x1 = [11., 22., 33.]
-    a = DimArray(values, axes=[x0, x1], dims=['d0','d1'])
+    return Axis(x1,'d1')
+
+@pytest.fixture
+def a(ax0, ax1):
+    values = np.random.randn(ax0.size, ax1.size)
+    a = DimArray(values, axes=[ax0, ax1])
     a.units = 'meters'
     a.mutable_att = ['a1','a2']
     return a
@@ -43,3 +51,22 @@ def test_copy(a):
     # ... including mutable attributes
     b.mutable_att[0] = 'new_att'
     assert a.mutable_att != b.mutable_att
+
+def test_dims(a):
+    """ update dimensions
+    """
+    assert a.dims == ('d0','d1')
+    a.dims = ('newa','newb')
+    assert a.dims == ('newa','newb')
+    assert a.axes[0].name == 'newa'
+    assert a.axes[1].name == 'newb'
+
+def test_labels(a, ax0, ax1):
+    """ update labels
+    """
+    assert a.labels == (ax0.values, ax1.values)
+    new0 = ['c','d']
+    new1 = [0.,0.,0.]
+    a.labels = [ new0, new1 ]
+    assert np.all(a.axes['d0'].values == new0)
+    assert np.all(a.axes['d1'].values == new1)
