@@ -179,6 +179,13 @@ class Dataset(odict, MetadataBase):
         ds2._metadata(self._metadata())
         return ds2
 
+    def __eq__(self, other):
+        """ test equality but bypass annoying numpy's __eq__ method
+        """
+        return isinstance(other, Dataset) and self.keys() == other.keys() \
+                and self.axes == other.axes \
+                and np.all([np.all(self[k] == other[k]) for k in self.keys()])
+
     #
     #
     #
