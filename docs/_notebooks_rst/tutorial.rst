@@ -158,7 +158,8 @@ array([[  0,   0],
 dataset
 -------
 
-As a commodity, the **`Dataset`** class is an ordered dictionary of DimArrays which also maintains axis aligment
+.. versionchanged :: 0.1.9
+As a commodity, the **`Dataset`** class is an ordered dictionary of DimArray instances which all share a common set of axes. 
 
 >>> dataset = Dataset({'combined_data':combined_data, 'yearly_data':yearly_data,'seasonal_data':seasonal_data})
 >>> dataset
@@ -169,23 +170,9 @@ seasonal_data: ('season',)
 combined_data: ('year', 'season')
 yearly_data: ('year',)
 
-It is one step away from creating a new DimArray from these various arrays, by broadcasting dimensions as needed:
+At initialization, the arrays are aligned on-the-fly. Later on, it is up to the user to reindex the arrays to match the Dataset axes.
 
->>> dataset.to_array(axis='variable')
-dimarray: 18 non-null elements (0 null)
-0 / variable (3): seasonal_data to yearly_data
-1 / season (2): winter to summer
-2 / year (3): 1950 to 1970
-array([[[ 10,  10,  10],
-        [100, 100, 100]],
-<BLANKLINE>
-       [[  0,  10,  20],
-        [  0, 100, 200]],
-<BLANKLINE>
-       [[  0,   1,   2],
-        [  0,   1,   2]]])
-
-Note that they are various ways of combining DimArray instances. In many case (when no dimension broadcasting is involved), it is simpler to just use the :py:func:`dimarray.stack` method.
+.. note :: since Dataset elements share the same axes, any axis modification will also impact all contained DimArray instances. If this behaviour is not desired, a copy should be made.
 
 .. _netCDF_reading_and_writing:
 
@@ -345,7 +332,7 @@ A D
   1  21  23  25  27  29  31  33  35  37  39
 
 .. raw:: html
-     :file: tutorial_files/output_77-0.html
+     :file: tutorial_files/output_75-0.html
 
 
 
@@ -370,9 +357,9 @@ dimarray comes with basic plotting facility. For 1-D and 2-D data, it simplies i
 >>> %matplotlib inline # doctest: +SKIP 
 >>> a = dataset['combined_data']
 >>> a.plot() # doctest: +SKIP
-<matplotlib.axes.AxesSubplot at 0x7f6c22c92dd0>
+<matplotlib.axes.AxesSubplot at 0x7f3fc4787410>
 
-.. image:: tutorial_files/figure_82-1.png
+.. image:: tutorial_files/figure_80-1.png
 
 
 
@@ -388,17 +375,17 @@ In addition, it can also display 2-D data via its methods `contour`, `contourf` 
 >>> # plot the data
 >>> a.contourf() # doctest: +SKIP
 >>> a.contour(colors='k') # doctest: +SKIP
-<matplotlib.contour.QuadContourSet instance at 0x7f6c22c98e18>
+<matplotlib.contour.QuadContourSet instance at 0x7f3fc44c51b8>
 
-.. image:: tutorial_files/figure_84-1.png
+.. image:: tutorial_files/figure_82-1.png
 
 
 
 >>> # plot the data
 >>> a.pcolor() # doctest: +SKIP
-<matplotlib.collections.QuadMesh at 0x7f6c22a21c10>
+<matplotlib.collections.QuadMesh at 0x7f3fc42921d0>
 
-.. image:: tutorial_files/figure_85-1.png
+.. image:: tutorial_files/figure_83-1.png
 
 
 
