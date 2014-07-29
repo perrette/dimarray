@@ -172,23 +172,12 @@ class Dataset(odict, MetadataBase):
             else:
                 self.axes.append(axis.copy())  
 
-        # Transform to variable
-        #variable = Variable(val.values, val.dims, val._metadata())
-
         super(Dataset, self).__setitem__(key, val)
-        #self.data[key] =  val
 
-    #def keys(self):
-    #    return self.data.keys()
-
-    #def __iter__(self):
-    #    return iter(self.data)
-
-    #def __len__(self):
-    #    return len(self.data)
-
-    #def copy(self):
-    #    return copy.deepcopy(self)
+    def copy(self):
+        ds2 = super(Dataset, self).copy() # odict method, copy axes but not metadata
+        ds2._metadata(self._metadata())
+        return ds2
 
     #
     #
