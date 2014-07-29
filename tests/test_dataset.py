@@ -1,8 +1,37 @@
 """
 """
 import numpy as np
+from numpy.testing import assert_equal
+import pytest
 import dimarray as da
 from dimarray import Dataset
+
+
+def test_init():
+
+    # test initialization
+    a = da.zeros(axes=[['a','b'],[11.,22.,33.]], dims=['d0','d1'])
+    b = da.ones(axes=[['a','b']], dims=['d0'])
+    c = da.zeros(axes=[[1,2,3]], dims=['d2'])
+    d = da.ones(axes=[['a','b','c']], dims=['d0'])
+
+    ds = Dataset(a=a, b=b, c=c, d=d)
+    assert set(ds.dims) == set(('d0','d1','d2'))
+    assert_equal( ds.d0, ['a','b','c'])
+
+    # test repr
+    expected_repr = """ 
+Dataset of 4 variables
+0 / d0 (3): a to c
+1 / d1 (3): 11.0 to 33.0
+2 / d2 (3): 1 to 3
+a: ('d0', 'd1')
+c: ('d2',)
+b: ('d0',)
+d: ('d0',)
+""".strip()
+
+    assert repr(ds) == expected_repr
 
 def test_metadata():
     ds = Dataset()
@@ -15,10 +44,47 @@ def test_metadata():
 
     # copy / reference behaviour 
     ds['a'].units = 'millimeters'
-    assert ds['a'].units != 'millimeters' 
-
-    ds.data['a'].units = 'millimeters'
     assert ds['a'].units == 'millimeters' 
+
+def test_getsetdel():
+    a = da.zeros(axes=[['a','b'],[11.,22.,33.]], dims=['d0','d1'])
+    b = da.ones(axes=[['a','b']], dims=['d0'])
+    c = da.zeros(axes=[[1,2,3]], dims=['d2'])
+    d = da.ones(axes=[['a','b','c']], dims=['d0'])
+
+    # first assingment
+    ds = Dataset()
+    ds['a'] = a
+    assert ds.axes == a.axes, "this should be equal"
+    assert ds.axes is not a.axes, 'this should be a copy'
+
+    ds['b'] = b
+    ds['c'] = c
+    del ds['a'] 
+    assert ds.dims == ('d0','d2'), "d1 should have been deleted, got {}".format(ds.dims)
+
+    # this should raise value error because axes are not aligned
+    with pytest.raises(ValueError):
+        ds['d'] = d 
+
+    ds['d'] = d.reindex_like(ds)
+
+def test_axes():
+    """ test copy / ref behaviour of axes
+    """
+    a = da.zeros(axes=[['a','b'],[11.,22.,33.]], dims=['d0','d1'])
+    b = da.ones(axes=[['a','b']], dims=['d0'])
+
+    ds = Dataset(a=a, b=b)
+    ds.axes['d0'][1] = 'yo'
+    assert ds['a'].d0[1] == 'yo'
+    assert ds['b'].d0[1] == 'yo'
+
+    # individual axes are equal but copies
+    assert ds['a'].axes['d0'] == ds.axes['d0']
+    assert ds['a'].axes['d0'] is not ds.axes['d0']
+    assert ds['b'].axes['d0'] == ds.axes['d0']
+    assert ds['b'].axes['d0'] is not ds.axes['d0']
 
 def test():
     """ Test Dataset functionality

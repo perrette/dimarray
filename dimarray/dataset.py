@@ -14,45 +14,9 @@ from core import pandas_obj
 from core.metadata import MetadataBase
 from core.axes import _doc_reset_axis
 
-class Variable(MetadataBase):
-    """ A variable class just contains values, dims and metadata information
-    It is the object internally stored in a Dataset, while axes are centralized
-    """
-    __metadata_exclude__ = ['values', 'dims']
-    def __init__(self, values, dims, metadata):
-        self.values = values
-        self.dims = dims
-        self._metadata(metadata)
-
-    def _repr(self, metadata=True):
-        dims = self.dims
-        shape = self.values.shape
-        #print nm,":", ", ".join(dims)
-        repr_dims = repr(dims)
-        if repr_dims == "()": repr_dims = self.values
-        lines = []
-        lines.append("{}".format(repr_dims))
-        if metadata and len(self._metadata()) > 0:
-            lines.append(self._metadata_summary())
-        return "\n".join(lines)
-
-    def __repr__(self):
-        return self._repr(metadata=True)
-
-class Dataset(MetadataBase):
+class Dataset(odict, MetadataBase):
     """ Container for a set of aligned objects
     """
-    # will not appear as metadata
-    #__metadata_exclude__ = ['data', 'axes']
-
-    @property
-    def data(self):
-        return self._data
-
-    @data.setter
-    def data(self, data):
-        self._data = data
-
     @property
     def axes(self):
         return self._axes
@@ -78,8 +42,8 @@ class Dataset(MetadataBase):
         self.axes = Axes()
 
         # initialize an ordered dictionary
-        #super(Dataset, self).__init__()
-        self.data = odict()
+        super(Dataset, self).__init__()
+        #self.data = odict()
 
         values = data.values()
         keys = data.keys()
@@ -103,9 +67,9 @@ class Dataset(MetadataBase):
 
     @property
     def dims(self):
-        """ list of dimensions contained in the Dataset, consistently with DimArray's `dims`
+        """ tuple of dimensions contained in the Dataset, consistently with DimArray's `dims`
         """
-        return [ax.name for ax in self.axes]
+        return tuple([ax.name for ax in self.axes])
 
     def _repr(self, metadata=True):
         """ string representation
@@ -115,12 +79,22 @@ class Dataset(MetadataBase):
         if len(self) == 1: header = header.replace('variables','variable')
         lines.append(header)
         lines.append(self.axes._repr(metadata=metadata))
+
+        # display single variables
         for nm in self.keys():
-             v = self.data[nm] # just get the Variable object stored in the dataset
-             lines.append(nm+': '+v._repr(metadata=metadata))
+            v = self[nm]
+            repr_dims = repr(v.dims)
+            if repr_dims == "()": repr_dims = v.values
+            vlines = []
+            vlines.append("{}".format(repr_dims))
+            if metadata and len(v._metadata()) > 0:
+                vlines.append(v._metadata_summary())
+            lines.append(nm+': '+"\n".join(vlines))
+
         if metadata and len(self._metadata()) > 0:
             lines.append('//global attributes:')
             lines.append(self._metadata_summary())
+
         return "\n".join(lines)
 
     def summary(self):
@@ -136,7 +110,9 @@ class Dataset(MetadataBase):
         """ 
         """
         axes = self[item].axes
-        del self.data[item]
+        #del self.data[item]
+        super(Dataset, self).__delitem__(item)
+        #del super(Dataset, self)[item]
 
         # update axes
         for ax in axes:
@@ -151,12 +127,15 @@ class Dataset(MetadataBase):
     def __getitem__(self, key):
         """ get a dimarray and copy axes
         """
-        v = self.data[key]
-        axes = Axes([self.axes[nm].copy() for nm in v.dims])
-        metadata = v._metadata()
-        a = self._constructor(v.values, axes, **metadata)
+        v = super(Dataset, self).__getitem__(key)
+        #v = self.data[key]
 
-        return a
+        # simply copy the axes from the Dataset
+        v.axes = Axes([self.axes[nm].copy() for nm in v.dims])
+
+        assert tuple([ax.size for ax in v.axes]) == v.shape, "sizes do not match !!"
+
+        return v
 
     def __setitem__(self, key, val):
         """ Make sure the object is a DimArray with appropriate axes
@@ -194,22 +173,22 @@ class Dataset(MetadataBase):
                 self.axes.append(axis.copy())  
 
         # Transform to variable
-        variable = Variable(val.values, val.dims, val._metadata())
+        #variable = Variable(val.values, val.dims, val._metadata())
 
-        #super(Dataset, self).__setitem__(key, variable)
-        self.data[key] =  variable
+        super(Dataset, self).__setitem__(key, val)
+        #self.data[key] =  val
 
-    def keys(self):
-        return self.data.keys()
+    #def keys(self):
+    #    return self.data.keys()
 
-    def __iter__(self):
-        return iter(self.data)
+    #def __iter__(self):
+    #    return iter(self.data)
 
-    def __len__(self):
-        return len(self.data)
+    #def __len__(self):
+    #    return len(self.data)
 
-    def copy(self):
-        return copy.deepcopy(self)
+    #def copy(self):
+    #    return copy.deepcopy(self)
 
     #
     #
@@ -275,7 +254,9 @@ class Dataset(MetadataBase):
 
         return self._constructor(data, axes)
 
-
+    # 
+    # REMOVE THESE FUNCTIONS AS NON-ESSENTIAL ???
+    #
     def take(self, indices, axis=0, raise_error=False, **kwargs):
         """ analogous to DimArray's take, but for each DimArray of the Dataset
 
