@@ -124,19 +124,6 @@ class Dataset(odict, MetadataBase):
             if not found:
                 self.axes.remove(ax)
 
-    def __getitem__(self, key):
-        """ get a dimarray and copy axes
-        """
-        v = super(Dataset, self).__getitem__(key)
-        #v = self.data[key]
-
-        # simply copy the axes from the Dataset
-        v.axes = Axes([self.axes[nm].copy() for nm in v.dims])
-
-        assert tuple([ax.size for ax in v.axes]) == v.shape, "sizes do not match !!"
-
-        return v
-
     def __setitem__(self, key, val):
         """ Make sure the object is a DimArray with appropriate axes
 
@@ -159,20 +146,37 @@ class Dataset(odict, MetadataBase):
             else:
                 raise TypeError("can only append DimArray instances")
 
+        # shallow copy of the DimArray so that its axes attribute can be 
+        # modified without affecting the original array
+        val = copy.copy(val)  
+        val.axes = copy.deepcopy(val.axes)
+
         # Check dimensions
-        for axis in val.axes:
+        # make sure axes match those of the dataset
+        for i, newaxis in enumerate(val.axes):
 
             # Check dimensions if already existing axis
-            if axis.name in [ax.name for ax in self.axes]:
-                if not axis == self.axes[axis.name]:
+            if newaxis.name in [ax.name for ax in self.axes]:
+                existing_axis = self.axes[newaxis.name]
+                if not newaxis == existing_axis:
                     raise ValueError("axes values do not match, align data first.\
-                            \nDataset: {}, \nGot: {}".format(self.axes[axis.name], axis))
+                            \nDataset: {}, \nGot: {}".format(existing_axis, newaxis))
+
+                # assign the Dataset axis : they all must share the same axis
+                val.axes[i] = existing_axis
 
             # Append new axis
             else:
-                self.axes.append(axis.copy())  
+                self.axes.append(newaxis)  
+
+            assert val.axes[i] is self.axes[newaxis.name]
 
         super(Dataset, self).__setitem__(key, val)
+
+        # now just checking 
+        test_internal = super(Dataset, self).__getitem__(key)
+        for ax in test_internal.axes:
+            assert self.axes[ax.name] is ax
 
     def copy(self):
         ds2 = super(Dataset, self).copy() # odict method, copy axes but not metadata
