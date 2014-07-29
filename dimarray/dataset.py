@@ -71,6 +71,23 @@ class Dataset(odict, MetadataBase):
         """
         return tuple([ax.name for ax in self.axes])
 
+    @dims.setter
+    def dims(self, newdims):
+        """ rename all axis names at once
+        """
+        if not np.iterable(newdims): 
+            raise TypeError("new dims must be iterable")
+        if not len(newdims) == len(self.axes):
+            raise ValueError("dimension mistmatch")
+
+        # update every element's dimension
+        for i, newname in enumerate(newdims):
+            oldname = self.axes[i].name
+            self.axes[i].name = newname
+
+            # axes in individual items will be updated automatically 
+            # since they are all references of the central axes
+
     def _repr(self, metadata=True):
         """ string representation
         """
