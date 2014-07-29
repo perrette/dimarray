@@ -430,6 +430,17 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         """
         return tuple([ax.name for ax in self.axes])
 
+    @dims.setter
+    def dims(self, newdims):
+        """ rename all axis names at once
+        """
+        if not np.iterable(newdims): 
+            raise TypeError("new dims must be iterable")
+        if not len(newdims) == self.ndim:
+            raise ValueError("dimension mistmatch")
+        for i, d in enumerate(newdims):
+            self.axes[i].name = d
+
     @property
     def labels(self):
         """ axis values 
