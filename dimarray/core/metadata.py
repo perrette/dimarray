@@ -57,6 +57,7 @@ def _set_metadata(obj, k, val, warn=True):
     is_class_method = is_class_attribute and callable(getattr(obj, k))
 
     if is_class_method \
+            or is_class_attribute and isinstance(getattr(obj.__class__, k), property) \
             or k in obj.__metadata_exclude__ \
             or ' ' in k \
             or (k.startswith('_') and not k in obj.__metadata_include__): 
