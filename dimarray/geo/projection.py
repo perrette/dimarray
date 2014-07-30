@@ -178,7 +178,8 @@ def _inverse_transform_coords(from_crs, to_crs, xt=None, yt=None, x0=None, y0=No
         if yt is None:
             yt = np.linspace(yt_2d.min(), yt_2d.max(), y0.size) # keep about the same size
 
-    assert xt.ndim == 1 and yt.ndim == 1, 'transformed coordinates must be 1-D'
+    assert (isinstance(xt, Axis) or xt.ndim == 1) \
+            and (isinstance(yt, Axis) or yt.ndim == 1), 'transformed coordinates must be 1-D'
 
     # Transform back to from_crs
     # ...make it 2D
