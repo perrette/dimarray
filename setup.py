@@ -118,7 +118,7 @@ setup(name='dimarray',
       extras_require = {
           "ncio": ["netCDF4>=1.0.6"],
           "pandas": ["pandas>=0.11.0"],
-          "plotting": ["matplotlib>=1.1", "pandas>=0.11.0"],
+          "plotting": ["matplotlib>=1.1"],
           },
       cmdclass = {'test':MyTests},
       )

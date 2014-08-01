@@ -1170,11 +1170,16 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     #
     # Plotting
     #
-    plot = plotting.plot
     _plot2D = plotting._plot2D
+    _plot1D = plotting._plot1D
+    plot = plotting.plot
+    bar = plotting.bar
+    barh = plotting.barh
+    stackplot = plotting.stackplot
     contourf = plotting.contourf
     contour = plotting.contour
     pcolor = plotting.pcolor
+
     # (re)set axis values and attributes
     @format_doc(**_doc_reset_axis)
     def set_axis(self, values=None, axis=0, inplace=False, **kwargs):
