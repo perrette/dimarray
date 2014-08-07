@@ -40,6 +40,7 @@ def _plot1D(self, funcname, *args, **kwargs):
 
     # keyword argument to indicate legend, for 'plot'
     legend=kwargs.pop('legend', True)
+    legend = legend and self.ndim==2
 
     xval, xticks, xticklab, xlab = _get_axis_labels(self.axes[0])
     if _transpose:
@@ -50,11 +51,6 @@ def _plot1D(self, funcname, *args, **kwargs):
     if xlab is not None: ax.set_xlabel(xlab)
     if xticks is not None: ax.set_xticks(xticks)
     if xticklab is not None: ax.set_xticklabels(xticklab)
-
-    # add legend for 2-D data ?
-    if self.ndim == 2 and legend:
-        _, _, _, lab = _get_axis_labels(self.axes[1])
-        leg = ax.legend(self.labels[1], title=lab)
 
     # add y-labels?
     if hasattr(self, 'name') and hasattr(self, 'units') and self.name is not None and self.units is not None:
@@ -67,6 +63,15 @@ def _plot1D(self, funcname, *args, **kwargs):
         lab = None
     if lab is not None:
         ax.set_ylabel(lab)
+
+    # add labels
+    if self.ndim == 2:
+        for i, line in enumerate(pc):
+            line.set_label(str(self.axes[1].values[i]))
+
+    # add legend
+    if legend:
+        ax.legend()
 
     return pc
 
