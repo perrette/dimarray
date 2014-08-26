@@ -2,6 +2,7 @@
 """
 from __future__ import division
 import numpy as np
+from dimarray.tools import anynan
 
 def _get_axis_labels(dim_axis):
     """ return values, xticklabels and label for an axis
@@ -98,8 +99,14 @@ def _plot2D(self, funcname, *args, **kwargs):
     # set appropriate labels afterwards.
     xval, xticks, xticklab, xlab = _get_axis_labels(self.axes[1])
     yval, yticks, yticklab, ylab = _get_axis_labels(self.axes[0])
+    values = self.values
+
+    # pcolor does not work with nans
+    if (funcname == 'pcolormesh' or funcname == 'pcolor') and anynan(values):
+        values = np.ma.array(values, mask=np.isnan(values))
+
     # make the plot
-    pc = function(xval, yval, self.values, **kwargs)
+    pc = function(xval, yval, values, **kwargs)
     # add labels
     if xlab is not None: ax.set_xlabel(xlab)
     if ylab is not None: ax.set_ylabel(ylab)
