@@ -192,7 +192,7 @@ def read_nc(f, nms=None, *args, **kwargs):
     if not mf:
 
         # single variable ==> DimArray
-        if nms is not None and isinstance(nms, str):
+        if nms is not None and (isinstance(nms, str) or type(nms) is unicode):
             obj = _read_variable(f, nms, *args, **kwargs)
 
         # multiple variable ==> Dataset
