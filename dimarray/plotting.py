@@ -117,7 +117,7 @@ def _plot2D(self, funcname, *args, **kwargs):
 
     # add colorbar?
     if colorbar:
-        ax.colorbar(pc)
+        plt.colorbar(pc, ax=ax)
     return pc
 
 #
