@@ -332,12 +332,11 @@ class Dataset(odict, MetadataBase):
             v = self[k]
             # loop over axes to index on
             for axis in kw_indices.keys():
-                if axis not in v.dims: 
+                if np.ndim(v) == 0 or axis not in v.dims: 
                     if raise_error: 
                         raise ValueError("{} does not have dimension {} ==> set raise_error=False to keep this variable unchanged".format(k, axis))
                     else:
                         continue
-                        newdata[k] = v
                 # slice along one axis
                 v = v.take({axis:kw_indices[axis]}, indexing='position')
             newdata[k] = v

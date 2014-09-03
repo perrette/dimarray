@@ -173,10 +173,19 @@ def align_axes(*arrays):
            [ 2.,  3.],
            [ 4.,  5.]])]
     """
+    # convert any scalar to dimarray
+    from dimarray import DimArray
+    arrays = list(arrays)
+    for i, a in enumerate(arrays):
+        if not isinstance(a, DimArray):
+            if np.isscalar(a):
+                arrays[i] = DimArray(a)
+            else:
+                raise TypeError("can only align DimArray instances")
+
     # find the dimensiosn
     dims = get_dims(*arrays)
 
-    arrays = list(arrays)
     for jj, d in enumerate(dims):
 
         # arrays which have that dimension
