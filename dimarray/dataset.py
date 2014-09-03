@@ -304,21 +304,43 @@ class Dataset(odict, MetadataBase):
         <BLANKLINE>
         a: 1.0
         b: nan
+        >>> ds['c'] = DimArray([[1,2],[11,22],[111,222],[3,4]], axes=[('time', [1950,1951,1952,1953]),('item',['a','b'])])
+        >>> ds.take({'time':1950})
+        Dataset of 3 variables
+        0 / item (2): a to b
+        a: 1.0
+        b: nan
+        c: ('item',)
+        >>> ds.take({'time':1950})['c']
+        dimarray: 2 non-null elements (0 null)
+        0 / item (2): a to b
+        array([1, 2])
+        >>> ds.take({'item':'b'})
+        Dataset of 3 variables
+        0 / time (4): 1950 to 1953
+        a: ('time',)
+        b: ('time',)
+        c: ('time',)
         """
         # first find the index for the shared axes
         kw_indices = {self.axes[i].name:ind for i,ind in enumerate(self.axes.loc(indices, axis=axis, **kwargs))}
 
         # then apply take in 'position' mode
         newdata = self.__class__()
+        # loop over variables
         for k in self.keys():
             v = self[k]
-            if axis not in v.dims: 
-                if raise_error: 
-                    raise ValueError("{} does not have dimension {} ==> set raise_error=False to keep this variable unchanged".format(k, axis))
-                else:
-                    #continue
-                    newdata[k] = v
-            newdata[k] = self[k].take(kw_indices, indexing='position')
+            # loop over axes to index on
+            for axis in kw_indices.keys():
+                if axis not in v.dims: 
+                    if raise_error: 
+                        raise ValueError("{} does not have dimension {} ==> set raise_error=False to keep this variable unchanged".format(k, axis))
+                    else:
+                        continue
+                        newdata[k] = v
+                # slice along one axis
+                v = v.take({axis:kw_indices[axis]}, indexing='position')
+            newdata[k] = v
 
         return newdata
 
