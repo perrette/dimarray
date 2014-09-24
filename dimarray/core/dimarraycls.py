@@ -152,7 +152,7 @@ class DimArray(MetadataBase):
         Parameters
         ----------
 
-        values : numpy-like array, or DimArray instance
+        values : numpy-like array, or DimArray instance, or dict 
                   If `values` is not provided, will initialize an empty array 
                   with dimensions inferred from axes (in that case `axes=` 
                   must be provided).
@@ -242,6 +242,10 @@ class DimArray(MetadataBase):
         >>> a = DimArray([[1,2,3],[4,5,6]], name='test', units='none') 
         
         """
+        # also allow recursive definition of dictionaries
+        if _is_dictlike(values):
+            values = DimArray.from_dict(values, dims)
+
         # check if attached to values (e.g. DimArray object)
         if hasattr(values, "axes") and axes is None:
             axes = values.axes
@@ -347,6 +351,70 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         assert len(args) <= 2, "[values, [dims]]"
 
         return cls(values, axes, dims)
+
+    @classmethod
+    def from_dict(cls, dict_, dims=None, align=True):
+        """ recursive definition of DimArrays
+
+        Parameters
+        ----------
+        dict_ : dict-like 
+            contains other dict-like (for recursive definition)
+            or arrays or dimarrays
+        dims : sequence of dimensions (axis names), optional
+        align : bool, optional
+            automatically align axes when stacking sub-arrays?
+            default to True (see stack for help)
+
+        Returns
+        -------
+        dim_array : DimArray instance
+
+        Examples
+        --------
+        >>> dict_ = {'a': {1:11,2:22,3:33} , 'b': {1:111,2:222,3:333}}
+        >>> DimArray.from_dict(dict_, dims=['dim1','dim2'])
+        dimarray: 6 non-null elements (0 null)
+        0 / dim1 (2): a to b
+        1 / dim2 (3): 1 to 3
+        array([[ 11,  22,  33],
+               [111, 222, 333]])
+
+        Also included in DimArray's standard __init__ method for convenience
+        >>> DimArray(dict_, dims=['dim1','dim2'])
+        dimarray: 6 non-null elements (0 null)
+        0 / dim1 (2): a to b
+        1 / dim2 (3): 1 to 3
+        array([[ 11,  22,  33],
+               [111, 222, 333]])
+        """
+        if not _is_dictlike(dict_):
+            raise TypeError("input data must be dict-like (have keys and __getitem__ methods)")
+
+        if dims is None:
+            dim0 = None
+            subdims = None
+        else:
+            dim0 = dims[0]
+            if len(dims) > 1:
+                subdims = dims[1:]
+            else:
+                subdims = None
+
+        # Iterate over subarrays
+        items = []
+        for k in dict_.keys():
+            item = dict_[k]
+            if _is_dictlike(item):
+                item = cls.from_dict(item, subdims)
+            elif not isinstance(item, DimArray):
+                item = DimArray(item, dims=subdims)
+            items.append(item)
+
+        # stack sub-arrays
+        dim_array = stack(items, keys=dict_.keys(), axis=dim0, align=align)
+        
+        return dim_array
 
     #
     # Internal constructor, useful for subclassing
@@ -1571,4 +1639,8 @@ def zeros_like(a, dtype=None):
     """
     if dtype is None: dtype = a.dtype
     return zeros(a.axes, dtype=dtype)
+
+
+def _is_dictlike(dict_):
+    return hasattr(dict_, 'keys') and hasattr(dict_, '__getitem__')
 
