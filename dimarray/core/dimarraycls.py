@@ -246,8 +246,8 @@ class DimArray(MetadataBase):
         if hasattr(values, "axes") and axes is None:
             axes = values.axes
 
-        if hasattr(values, "_metadata"):
-            metadata = values._metadata.copy() # copy just in case
+        if hasattr(values, "_metadata") and callable(values._metadata):
+            metadata = values._metadata() 
         else:
             metadata = {}
 
