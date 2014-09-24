@@ -242,10 +242,6 @@ class DimArray(MetadataBase):
         >>> a = DimArray([[1,2,3],[4,5,6]], name='test', units='none') 
         
         """
-        # also allow recursive definition of dictionaries
-        if _is_dictlike(values):
-            values = DimArray.from_dict(values, dims)
-
         # check if attached to values (e.g. DimArray object)
         if hasattr(values, "axes") and axes is None:
             axes = values.axes
@@ -271,16 +267,24 @@ class DimArray(MetadataBase):
             except:
                 values = np.ma.asarray(values, dtype=float).filled(np.nan) # fill mask with nans
 
-        if values is not None:
+        ## if not numpy ndarray or DimArray, call nested constructor
+        ## e.g. nested dictionary, or lists and so on
+        elif _contains_dictlike(values):
+            if isinstance(axes, Axes) or np.iterable(axes) and len(axes)>0 and isinstance(axes[0], Axis):
+                raise TypeError("if nested data please use dims and labels instead of axes")
+            elif axes is not None:
+                labels = axes
+
+            dim_array = self.from_nested(values, dims=dims, labels=labels)
+            values = dim_array.values
+            axes = dim_array.axes
+
+        elif values is not None:
             values = np.array(values, copy=copy, dtype=dtype)
 
         #
         # Initialize the axes
         # 
-        #if axes is None and labels is None:
-        #    if values is None: #, "values= or/and axes=, labels= required to determine dimensions"
-        #        axes = Axes._init(dims=dims, shape=shape)
-
         if not isinstance(axes, Axes):
             axes = Axes._init(axes, dims=dims, labels=labels, shape=values.shape if values is not None else None)
         assert type(axes) is Axes
@@ -353,14 +357,16 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         return cls(values, axes, dims)
 
     @classmethod
-    def from_dict(cls, dict_, dims=None, align=True):
-        """ recursive definition of DimArrays
+    def from_nested(cls, nested_data, labels=None, dims=None, align=True):
+        """ recursive definition of DimArray with nested lists or dict
 
         Parameters
         ----------
-        dict_ : dict-like 
-            contains other dict-like (for recursive definition)
+        nested_data : dict-like or list
+            contains other nested data or nd.ndarray or DimArray (for recursive definition)
             or arrays or dimarrays
+        labels : array-like, optional
+            axis values
         dims : sequence of dimensions (axis names), optional
         align : bool, optional
             automatically align axes when stacking sub-arrays?
@@ -372,25 +378,24 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 
         Examples
         --------
-        >>> dict_ = {'a': {1:11,2:22,3:33} , 'b': {1:111,2:222,3:333}}
-        >>> DimArray.from_dict(dict_, dims=['dim1','dim2'])
+        >>> nested_data = [{1:11,2:22,3:33} , {1:111,2:222,3:333}]
+        >>> DimArray.from_nested(nested_data, dims=['dim1','dim2'])
+        dimarray: 6 non-null elements (0 null)
+        0 / dim1 (2): 0 to 1
+        1 / dim2 (3): 1 to 3
+        array([[ 11,  22,  33],
+               [111, 222, 333]])
+
+        Now also included in main DimArray
+
+        >>> DimArray(nested_data, dims=['dim1','dim2'], labels=[['a','b']]) # enough to include the first level label in this case
         dimarray: 6 non-null elements (0 null)
         0 / dim1 (2): a to b
         1 / dim2 (3): 1 to 3
         array([[ 11,  22,  33],
                [111, 222, 333]])
 
-        Also included in DimArray's standard __init__ method for convenience
-        >>> DimArray(dict_, dims=['dim1','dim2'])
-        dimarray: 6 non-null elements (0 null)
-        0 / dim1 (2): a to b
-        1 / dim2 (3): 1 to 3
-        array([[ 11,  22,  33],
-               [111, 222, 333]])
         """
-        if not _is_dictlike(dict_):
-            raise TypeError("input data must be dict-like (have keys and __getitem__ methods)")
-
         if dims is None:
             dim0 = None
             subdims = None
@@ -401,18 +406,43 @@ mismatch between values and axes""".format(inferred, self.values.shape)
             else:
                 subdims = None
 
+        if labels is None:
+            label0 = None
+            sublabels = None
+        else:
+            label0 = labels[0]
+            if len(labels) > 1:
+                sublabels = labels[1:]
+            else:
+                sublabels = None
+
+        # if numpy ndarray, create a new DimArray
+        # if DimArray, just update labels and return it
+        if isinstance(nested_data, DimArray) \
+                or isinstance(nested_data, np.ndarray):
+            return cls(dim_array, dims=dims, labels=labels)
+
+        elif np.isscalar(nested_data):
+            return cls(nested_data)
+
+        # convert dict to sequence if needed
+        if _is_dictlike(nested_data):
+            if label0 is None:
+                label0 = nested_data.keys()
+            if callable(nested_data.values):
+                nested_data = nested_data.values()
+            else:
+                nested_data = nested_data.values
+
         # Iterate over subarrays
         items = []
-        for k in dict_.keys():
-            item = dict_[k]
-            if _is_dictlike(item):
-                item = cls.from_dict(item, subdims)
-            elif not isinstance(item, DimArray):
-                item = DimArray(item, dims=subdims)
+        for item in nested_data:
+            if not isinstance(item, DimArray):
+                item = cls.from_nested(item, labels=sublabels, dims=subdims)
             items.append(item)
 
         # stack sub-arrays
-        dim_array = stack(items, keys=dict_.keys(), axis=dim0, align=align)
+        dim_array = stack(items, keys=label0, axis=dim0, align=align)
         
         return dim_array
 
@@ -1642,5 +1672,10 @@ def zeros_like(a, dtype=None):
 
 
 def _is_dictlike(dict_):
-    return hasattr(dict_, 'keys') and hasattr(dict_, '__getitem__')
+    return hasattr(dict_, 'keys') and hasattr(dict_, '__getitem__') and hasattr(dict_,'values')
 
+def _contains_dictlike(dict_):
+    """ true if a dict or dataframe in dict
+    """
+    return _is_dictlike(dict_) or isinstance(dict_, list) \
+            and np.any([_contains_dictlike(item) for item in dict_])
