@@ -42,3 +42,26 @@ dimarray: 6 non-null elements (0 null)
 1 / time (3): 1950 to 1970
 array([[ 1.,  2.,  3.],
        [ 4.,  5.,  6.]])
+
+.. _Recursive_definition___dict_of_dict:
+
+Recursive definition : dict of dict
+-----------------------------------
+
+.. versionadded :: 0.1.8
+
+It is possible to define a dimarray as a dictionary of dictionary. The only additional parameter needed is a list of dimension names, that should correspond to the dictionary's depth. 
+
+>>> dict_ = {'a': {1:11,
+...                2:22,
+...                3:33},
+...          'b': {1:111,
+...                2:222,
+...                3:333} }
+>>> 
+>>> DimArray(dict_, dims=['dim1','dim2'])
+dimarray: 6 non-null elements (0 null)
+0 / dim1 (2): a to b
+1 / dim2 (3): 1 to 3
+array([[ 11,  22,  33],
+       [111, 222, 333]])

@@ -15,7 +15,7 @@ The geo sub-package
 .. contents::
     :local:
 
-:class:`dimarray.geo.GeoArray` is a subclass of :class:`dimarray.DimArray` that is more specific to geoscientifical applications. The most recognizable features are an automatic check for longitude and latitude coordinates.
+:class:`dimarray.geo.GeoArray` is a subclass of :class:`dimarray.DimArray` that is more specific to geoscientific applications. The most recognizable features are automatic checks for longitude and latitude coordinates.
 
 >>> from dimarray.geo import GeoArray
 
