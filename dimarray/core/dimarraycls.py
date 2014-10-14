@@ -420,7 +420,7 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         # if DimArray, just update labels and return it
         if isinstance(nested_data, DimArray) \
                 or isinstance(nested_data, np.ndarray):
-            return cls(dim_array, dims=dims, labels=labels)
+            return cls(nested_data, dims=dims, labels=labels)
 
         elif np.isscalar(nested_data):
             return cls(nested_data)
