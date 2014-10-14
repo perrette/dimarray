@@ -87,9 +87,9 @@ We can use matplotlib's contourf to get a feeling for what that all mean. Below 
 >>> ax = gca() # get plot axis
 >>> ax.set_aspect('equal') # equal aspect ratio
 >>> ax.set_xticks([-500e3,0,500e3]) # ticks every 500 km  # doctest: +SKIP
-[<matplotlib.axis.XTick at 0x7fbbc2692b50>,
- <matplotlib.axis.XTick at 0x7fbbc2649dd0>,
- <matplotlib.axis.XTick at 0x7fbbc2516f50>]
+[<matplotlib.axis.XTick at 0x7f08e26fd810>,
+ <matplotlib.axis.XTick at 0x7f08e26a88d0>,
+ <matplotlib.axis.XTick at 0x7f08e2512c50>]
 
 .. image:: projection_files/figure_16-1.png
 
@@ -98,7 +98,7 @@ We can use matplotlib's contourf to get a feeling for what that all mean. Below 
 And now plotting versus lon and lat (irregular, 2-D grid in this case):
 
 >>> contourf(ds['lon'], ds['lat'], log(clip(v, 1e-3,inf))); colorbar()  # doctest: +SKIP
-<matplotlib.colorbar.Colorbar instance at 0x7fbbc23934d0>
+<matplotlib.colorbar.Colorbar instance at 0x7f08e23b31b8>
 
 .. image:: projection_files/figure_18-1.png
 
@@ -118,7 +118,7 @@ The :func:`dimarray.geo.crs.get_crs` function returns the most adequate projecti
 
 >>> stere = get_crs(grid_mapping)
 >>> stere # doctest: +SKIP
-<dimarray.geo.crs.PolarStereographic at 0x7fbbc24fd590>
+<dimarray.geo.crs.PolarStereographic at 0x7f08e26b6d70>
 
 All projection classes defined in dimarray inherit from :class:cartopy.crs.CRS. A few common transformations have a Cartopy equivalent, and are defined as subclass, where possible.
 
@@ -156,7 +156,7 @@ Let's do our first transformation with diamrray and cartopy
 >>> v = ds['surfvelmag']
 >>> vt = transform(v, from_crs=stere, to_crs=ccrs.PlateCarree())
 >>> vt
-geoarray: 6893 non-null elements (0 null)
+geoarray: 3208 non-null elements (3685 null)
 0 / y (113): 58.6292691402 to 84.4819014732 (Y)
 1 / x (61): -92.1301023542 to 10.398705355 (X)
 array(...)
@@ -165,7 +165,7 @@ The coordinates are quite messy, let's do something better by providing the fina
 
 >>> vt = transform(v, from_crs=stere, to_crs=ccrs.PlateCarree(), xt=np.arange(-92,10,0.25), yt=np.arange(59,85,0.25))
 >>> vt
-geoarray: 42432 non-null elements (0 null)
+geoarray: 20259 non-null elements (22173 null)
 0 / y (104): 59.0 to 84.75 (Y)
 1 / x (408): -92.0 to 9.75 (X)
 array(...)
@@ -176,7 +176,7 @@ Double-check against earlier figures, this looks all right:
 
 >>> h = log(clip(vt,1e-3,inf)).contourf(levels=np.linspace(-7.5, 10, 8))  # doctest: +SKIP
 >>> colorbar(h) # doctest: +SKIP
-<matplotlib.colorbar.Colorbar instance at 0x7fbbc1377cb0>
+<matplotlib.colorbar.Colorbar instance at 0x7f08e13a57e8>
 
 .. image:: projection_files/figure_40-1.png
 
@@ -200,9 +200,9 @@ That is the original field on the projection plane.
 >>> ax = gca()
 >>> ax.set_aspect('equal') # equal aspect ratio
 >>> ax.set_xticks([-500e3,0,500e3]) # ticks every 500 km  # doctest: +SKIP
-[<matplotlib.axis.XTick at 0x7fbbc12aabd0>,
- <matplotlib.axis.XTick at 0x7fbbc11ebd90>,
- <matplotlib.axis.XTick at 0x7fbbc0880410>]
+[<matplotlib.axis.XTick at 0x7f08e26177d0>,
+ <matplotlib.axis.XTick at 0x7f08e12c3810>,
+ <matplotlib.axis.XTick at 0x7f08e0601f10>]
 
 .. image:: projection_files/figure_45-1.png
 
@@ -224,7 +224,7 @@ Transforming vectors in longitude latitude coordinates does not make much sense 
 >>> from dimarray.geo import transform_vectors
 
 
->>> vt = transform(v, from_crs=stere, to_crs=stere_ne, masked=True)
+>>> vt = transform(v, from_crs=stere, to_crs=stere_ne)
 >>> vxt, vyt = transform_vectors(vx,vy, from_crs=stere, to_crs=stere_ne)
 >>> 
 >>> log(clip(vt,1e-3,inf)).contourf()   # doctest: +SKIP
@@ -233,10 +233,12 @@ Transforming vectors in longitude latitude coordinates does not make much sense 
 >>> ax = gca()
 >>> ax.set_aspect('equal') # equal aspect ratio
 >>> ax.set_xticks([-1000e3,0]) # ticks every 1000 km  # doctest: +SKIP
-[<matplotlib.axis.XTick at 0x7fbbc08a18d0>,
- <matplotlib.axis.XTick at 0x7fbbc0858c90>]
+/home/perrette/anaconda/lib/python2.7/site-packages/numpy/ma/core.py:783: RuntimeWarning: invalid value encountered in greater_equal
+  return umath.absolute(a) * self.tolerance >= umath.absolute(b)
+[<matplotlib.axis.XTick at 0x7f08e10acad0>,
+ <matplotlib.axis.XTick at 0x7f08e060bf50>]
 
-.. image:: projection_files/figure_50-1.png
+.. image:: projection_files/figure_50-2.png
 
 
 

@@ -198,7 +198,7 @@ def _inverse_transform_coords(from_crs, to_crs, xt=None, yt=None, x0=None, y0=No
 #
 #
 def transform(geo_array, to_crs, from_crs=None, \
-        xt=None, yt=None, masked=False):
+        xt=None, yt=None, masked=True):
     """ Transform scalar field array into a new coordinate system and \
             interpolate values onto a new regular grid
 
@@ -224,7 +224,7 @@ def transform(geo_array, to_crs, from_crs=None, \
         If masked is set to a number, then
         points outside the range of xin and yin will be
         set to that number.
-        Default is False.
+        Default is True.
 
     Returns
     -------
@@ -295,7 +295,7 @@ def transform(geo_array, to_crs, from_crs=None, \
 
 
 def transform_vectors(u, v, to_crs, from_crs=None, \
-        xt=None, yt=None, masked=False):
+        xt=None, yt=None, masked=True):
     """ Transform vector field array into a new coordinate system and \
             interpolate values onto a new regular grid
 
@@ -324,7 +324,7 @@ def transform_vectors(u, v, to_crs, from_crs=None, \
         If masked is set to a number, then
         points outside the range of xin and yin will be
         set to that number.
-        Default is False.
+        Default is True.
 
     Returns
     -------
