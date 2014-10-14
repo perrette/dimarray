@@ -108,7 +108,7 @@ def _create_Axes_with_metadata(xt, yt, grid_mapping):
 
         # Make actual Coordinate axes
         if hasattr(grid_mapping, '_y_metadata'):
-            meta = grid_mapping._x_metadata
+            meta = grid_mapping._y_metadata
             name = meta.pop('name', 'y')
             yt = Y(yt, name)
             yt._metadata(meta)
