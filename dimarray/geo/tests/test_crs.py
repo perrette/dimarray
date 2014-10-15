@@ -7,7 +7,7 @@ import numpy as np
 from numpy.testing import assert_allclose
 import dimarray as da
 from dimarray.geo.crs import get_crs, Proj4
-from dimarray.geo import GeoArray, transform, transform_vectors
+from dimarray.geo import GeoArray, transform
 
 class TestCRS(unittest.TestCase):
     """ test netCDF formulation versus Proj.4
@@ -77,8 +77,6 @@ class TestLatitudeLongitude(TestCRS):
 
     proj4_init = '+ellps=WGS84 +proj=eqc +lon_0=0.0'
 
-    _test_vector = False # not a plane system: does not work
-
 class TestRotatedPoles(TestCRS):
 
     grid_mapping = dict(
@@ -87,8 +85,6 @@ class TestRotatedPoles(TestCRS):
             grid_north_pole_latitude =90.)
 
     proj4_init = '+ellps=WGS84 +proj=ob_tran +o_proj=latlon +o_lon_p=0 +o_lat_p=90.0 +lon_0=180.0 +to_meter=0.0174532925199'
-
-    _test_vector = False # not a plane system: does not work
 
 
 class TestTransverseMercator(TestCRS):
@@ -104,8 +100,6 @@ class TestTransverseMercator(TestCRS):
             )
 
     proj4_init = '+ellps=WGS84 +proj=tmerc +lon_0=0.0 +lat_0=0.0 +k=1.0 +x_0=0.0 +y_0=0.0 +units=m'
-
-    _test_vector = False # buggy
 
     def test_project(self):
         pass # bug
@@ -160,31 +154,13 @@ class TestPolarStereographicData(unittest.TestCase):
         a3d = a.newaxis('dummy_axis', [0, 1, 2])
         a3dt = transform(a3d, to_crs=self.mapping)
 
+        got = a3dt[0]
         expected = at
-        assert_allclose(a3dt[0], expected)
+        # print "GOT:"
+        # print got
+        # print "\nEXPECTED:"
+        # print expected
+        # 1/0
+        # expected = a3d[0]
+        assert_allclose(got, expected)
 
-    def test_vector(self):
-        shape = 5,5
-        ni, nj = shape # full globe
-
-        # need some kind of plane projection, not long-lat for vectors
-        crs = self.mapping.copy()
-        crs['standard_parallel'] = 50
-        crs['straight_vertical_longitude_from_pole'] = 70
-        x = np.linspace(-5000e3, 5000e3, nj)
-        y = np.linspace(-4000e3, 4000e3, ni)
-        u = GeoArray(np.random.randn(*shape), y=y, x=x)
-        v = GeoArray(np.random.randn(*shape), y=y, x=x)
-        #u.mapping = crs
-        #v.mapping = crs
-
-        # basic transform
-        ut,vt = transform_vectors(u,v, from_crs=crs, to_crs=self.mapping)
-
-        # multi-dimensional
-        u3d = u.newaxis('dummy_axis', [0, 1, 2])
-        v3d = v.newaxis('dummy_axis', [0, 1, 2])
-        u3dt, v3dt = transform_vectors(u3d,v3d, from_crs=crs, to_crs=self.mapping)
-
-        assert_allclose(u3dt[0], ut)
-        assert_allclose(v3dt[0], vt)

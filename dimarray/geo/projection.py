@@ -198,7 +198,7 @@ def _inverse_transform_coords(from_crs, to_crs, xt=None, yt=None, x0=None, y0=No
 #
 #
 def transform(geo_array, to_crs, from_crs=None, \
-        xt=None, yt=None, masked=True):
+        xt=None, yt=None, masked=np.nan):
     """ Transform scalar field array into a new coordinate system and \
             interpolate values onto a new regular grid
 
@@ -220,11 +220,11 @@ def transform(geo_array, to_crs, from_crs=None, \
         If False, interpolated values outside the range of input grid
         will be clipped to values on boundary of input grid 
         If True, points outside the range of input grid
-        are masked (set to NaN)
+        are set to NaN
         If masked is set to a number, then
         points outside the range of xin and yin will be
         set to that number.
-        Default is True.
+        Default is nan.
 
     Returns
     -------
@@ -257,6 +257,9 @@ def transform(geo_array, to_crs, from_crs=None, \
 
     # Transform coordinates and prepare regular grid for interpolation
     x0_interp, y0_interp, xt, yt = _inverse_transform_coords(from_crs, to_crs, xt, yt, x0, y0)
+
+    if masked is True:
+        masked = np.nan # use NaN instead of MaskedArray
 
     if geo_array.ndim == 2:
         #newvalues = interp(geo_array.values, xt_2d, yt_2d, xt_2dr, yt_2dr)
@@ -295,7 +298,7 @@ def transform(geo_array, to_crs, from_crs=None, \
 
 
 def transform_vectors(u, v, to_crs, from_crs=None, \
-        xt=None, yt=None, masked=True):
+        xt=None, yt=None, masked=np.nan):
     """ Transform vector field array into a new coordinate system and \
             interpolate values onto a new regular grid
 
@@ -324,7 +327,7 @@ def transform_vectors(u, v, to_crs, from_crs=None, \
         If masked is set to a number, then
         points outside the range of xin and yin will be
         set to that number.
-        Default is True.
+        Default is nan.
 
     Returns
     -------
@@ -356,11 +359,18 @@ def transform_vectors(u, v, to_crs, from_crs=None, \
     # Transform vector components
     x0_2d, y0_2d = np.meshgrid(x0, y0)
 
+    if masked is True:
+        masked = np.nan # use NaN instead of MaskedArray
+
+    _constructor = u._constructor 
     if u.ndim == 2:
-        newu = interp(u.values, x0.values, y0.values, x0_interp, y0_interp, masked=masked)
-        ut = u._constructor(newu, [yt, xt])
-        newv = interp(v.values, x0.values, y0.values, x0_interp, y0_interp, masked=masked)
-        vt = v._constructor(newv, [yt, xt])
+        # First transform vector components onto the new coordinate system
+        _ut, _vt = to_crs.transform_vectors(from_crs, x0_2d, y0_2d, u.values, v.values) 
+        # Then interpolate onto regular grid
+        _ui = interp(_ut, x0.values, y0.values, x0_interp, y0_interp, masked=masked)
+        ut = _constructor(_ui, [yt, xt])
+        _vi = interp(_vt, x0.values, y0.values, x0_interp, y0_interp, masked=masked)
+        vt = _constructor(_vi, [yt, xt])
 
     else:
         # first reshape to 3-D components, flattening everything except horizontal coordinates
@@ -369,13 +379,16 @@ def transform_vectors(u, v, to_crs, from_crs=None, \
         obj = obj.group(('vector_components', x0.name, y0.name), reverse=True, insert=0) # 
         newvalues = []
         for k, suba in obj.iter(axis=0): # iterate over the first dimension
-            newu = interp(suba.values[0], x0.values, y0.values, x0_interp, y0_interp, masked=masked)
-            newv = interp(suba.values[1], x0.values, y0.values, x0_interp, y0_interp, masked=masked)
-            newvalues.append(np.array([newu, newv]))
+            # First transform vector components onto the new coordinate system
+            _ut, _vt = to_crs.transform_vectors(from_crs, x0_2d, y0_2d, suba.values[0], suba.values[1]) 
+            # Then interpolate onto regular grid
+            _ui = interp(_ut, x0.values, y0.values, x0_interp, y0_interp, masked=masked)
+            _vi = interp(_vt, x0.values, y0.values, x0_interp, y0_interp, masked=masked)
+            newvalues.append(np.array([_ui, _vi]))
 
         # stack the arrays together
         newvalues = np.array(newvalues) # 4-D : grouped, vector_components, y, x
-        grouped_obj = u._constructor(newvalues, [obj.axes[0], obj.axes[1], yt, xt])
+        grouped_obj = _constructor(newvalues, [obj.axes[0], obj.axes[1], yt, xt])
         ut, vt = grouped_obj.ungroup(axis=0).swapaxes('vector_components',0)
 
     # add metadata
