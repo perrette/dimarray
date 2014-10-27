@@ -116,12 +116,13 @@ class CF_CRS(object):
 # Now the actual Projection classes
 #
 
-class LatitudeLongitude(CF_CRS, ccrs.PlateCarree):
-    """ Same as cartopy.crs.PlateCarree but is initialized via CF parameters
+class LatitudeLongitude(CF_CRS, ccrs.Geodetic):
+    """ Same as cartopy.crs.Geodetic but is initialized via CF parameters
     """
     grid_mapping_name = 'latitude_longitude'
 
-    _proj4_def = '+proj=lonlat +proj=longlat +proj=eqc +lon_0=longitude_of_prime_meridian' # several possibilities
+    _proj4_def = '+proj=lonlat +proj=longlat' # +lon_0=longitude_of_prime_meridian' is gone??
+    # _proj4_def = '+proj=lonlat +proj=longlat +proj=eqc +lon_0=longitude_of_prime_meridian' # several possibilities
 
     _x_metadata = dict(
         name = 'lon',
@@ -137,13 +138,14 @@ class LatitudeLongitude(CF_CRS, ccrs.PlateCarree):
         standard_name = "latitude",
         )
 
+    # def __init__(self,  longitude_of_prime_meridian = 0.0, **kwargs):
     def __init__(self,  longitude_of_prime_meridian = 0.0, **kwargs):
-        if len(kwargs) > 0:
-            warnings.warn("following parameters were ignored in LatitudeLongitude projection: "+",".join([k+': '+kwargs[k] for k in kwargs]))
-        # TODO: include globe parameters
+        # TODO: check out longitude_of_prime_meridian and find a way of including it using Cartopy's projections
+        if longitude_of_prime_meridian != 0:
+            warnings.warn("longitude_of_prime_meridian={} parameter is ignored in LatitudeLongitude transformation".repr(longitude_of_prime_meridian))
+        globe = Globe(**kwargs)
         # for now not possible because PlateCarree initialization depends on whether globe is None or not.
-        ccrs.PlateCarree.__init__(self,
-                central_longitude=longitude_of_prime_meridian)
+        ccrs.Geodetic.__init__(self, globe)
 
 
 class Stereographic(CF_CRS, ccrs.Stereographic):
