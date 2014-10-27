@@ -75,7 +75,7 @@ class TestLatitudeLongitude(TestCRS):
         longitude_of_prime_meridian = 0.,
         )  # CF-1.4
 
-    proj4_init = '+ellps=WGS84 +proj=eqc +lon_0=0.0'
+    proj4_init = '+ellps=WGS84 +a=57.2957795131 +proj=eqc +lon_0=0.0'
 
 class TestRotatedPoles(TestCRS):
 

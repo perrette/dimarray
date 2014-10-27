@@ -138,10 +138,12 @@ class LatitudeLongitude(CF_CRS, ccrs.PlateCarree):
         )
 
     def __init__(self,  longitude_of_prime_meridian = 0.0, **kwargs):
-        globe = Globe(**kwargs)
+        if len(kwargs) > 0:
+            warnings.warn("following parameters were ignored in LatitudeLongitude projection: "+",".join([k+': '+kwargs[k] for k in kwargs]))
+        # TODO: include globe parameters
+        # for now not possible because PlateCarree initialization depends on whether globe is None or not.
         ccrs.PlateCarree.__init__(self,
-                central_longitude=longitude_of_prime_meridian, 
-                globe=globe)
+                central_longitude=longitude_of_prime_meridian)
 
 
 class Stereographic(CF_CRS, ccrs.Stereographic):
