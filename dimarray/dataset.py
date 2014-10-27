@@ -156,10 +156,20 @@ class Dataset(odict, MetadataBase):
         dimarray: 3 non-null elements (0 null)
         0 / time (3): 0 to 2
         array([0, 1, 2])
+        >>> ds['ya'] = a.values  # also accepts numpy array if shape matches
+        >>> ds['ya']
+        dimarray: 3 non-null elements (0 null)
+        0 / time (3): 0 to 2
+        array([0, 1, 2])
         """
         if not isinstance(val, DimArray):
             if np.isscalar(val):
                 val = self._constructor(val)
+            elif hasattr(val, '__array__'):
+                if np.shape(val) == tuple([ax.size for ax in self.axes]):
+                    val = self._constructor(val, axes=self.axes) # make a dimarray with same axes
+                else:
+                    raise ValueError("array_like shape does not match, use DimArray if dimensions vary within the dataset")
             else:
                 raise TypeError("can only append DimArray instances")
 
