@@ -87,9 +87,9 @@ We can use matplotlib's contourf to get a feeling for what that all mean. Below 
 >>> ax = gca() # get plot axis
 >>> ax.set_aspect('equal') # equal aspect ratio
 >>> ax.set_xticks([-500e3,0,500e3]) # ticks every 500 km  # doctest: +SKIP
-[<matplotlib.axis.XTick at 0x7f08e26fd810>,
- <matplotlib.axis.XTick at 0x7f08e26a88d0>,
- <matplotlib.axis.XTick at 0x7f08e2512c50>]
+[<matplotlib.axis.XTick at 0x7f4aeb6a1810>,
+ <matplotlib.axis.XTick at 0x7f4aeb64c8d0>,
+ <matplotlib.axis.XTick at 0x7f4aeb4b8c50>]
 
 .. image:: projection_files/figure_16-1.png
 
@@ -98,7 +98,7 @@ We can use matplotlib's contourf to get a feeling for what that all mean. Below 
 And now plotting versus lon and lat (irregular, 2-D grid in this case):
 
 >>> contourf(ds['lon'], ds['lat'], log(clip(v, 1e-3,inf))); colorbar()  # doctest: +SKIP
-<matplotlib.colorbar.Colorbar instance at 0x7f08e23b31b8>
+<matplotlib.colorbar.Colorbar instance at 0x7f4aeb3571b8>
 
 .. image:: projection_files/figure_18-1.png
 
@@ -118,7 +118,7 @@ The :func:`dimarray.geo.crs.get_crs` function returns the most adequate projecti
 
 >>> stere = get_crs(grid_mapping)
 >>> stere # doctest: +SKIP
-<dimarray.geo.crs.PolarStereographic at 0x7f08e26b6d70>
+<dimarray.geo.crs.PolarStereographic at 0x7f4aeb65bc50>
 
 All projection classes defined in dimarray inherit from :class:cartopy.crs.CRS. A few common transformations have a Cartopy equivalent, and are defined as subclass, where possible.
 
@@ -176,7 +176,7 @@ Double-check against earlier figures, this looks all right:
 
 >>> h = log(clip(vt,1e-3,inf)).contourf(levels=np.linspace(-7.5, 10, 8))  # doctest: +SKIP
 >>> colorbar(h) # doctest: +SKIP
-<matplotlib.colorbar.Colorbar instance at 0x7f08e13a57e8>
+<matplotlib.colorbar.Colorbar instance at 0x7f4aea347b90>
 
 .. image:: projection_files/figure_40-1.png
 
@@ -200,9 +200,9 @@ That is the original field on the projection plane.
 >>> ax = gca()
 >>> ax.set_aspect('equal') # equal aspect ratio
 >>> ax.set_xticks([-500e3,0,500e3]) # ticks every 500 km  # doctest: +SKIP
-[<matplotlib.axis.XTick at 0x7f08e26177d0>,
- <matplotlib.axis.XTick at 0x7f08e12c3810>,
- <matplotlib.axis.XTick at 0x7f08e0601f10>]
+[<matplotlib.axis.XTick at 0x7f4aeaa4fb90>,
+ <matplotlib.axis.XTick at 0x7f4aea22e450>,
+ <matplotlib.axis.XTick at 0x7f4ae95a3f50>]
 
 .. image:: projection_files/figure_45-1.png
 
@@ -235,8 +235,8 @@ Transforming vectors in longitude latitude coordinates does not make much sense 
 >>> ax.set_xticks([-1000e3,0]) # ticks every 1000 km  # doctest: +SKIP
 /home/perrette/anaconda/lib/python2.7/site-packages/numpy/ma/core.py:783: RuntimeWarning: invalid value encountered in greater_equal
   return umath.absolute(a) * self.tolerance >= umath.absolute(b)
-[<matplotlib.axis.XTick at 0x7f08e10acad0>,
- <matplotlib.axis.XTick at 0x7f08e060bf50>]
+[<matplotlib.axis.XTick at 0x7f4aea051c10>,
+ <matplotlib.axis.XTick at 0x7f4aea03db90>]
 
 .. image:: projection_files/figure_50-2.png
 
