@@ -935,7 +935,12 @@ def reindex_axis(self, values, axis=0, method='exact', repna=True, fill_value=np
     # re-index using pandas
     if use_pandas:
         pandasobj = self.to_pandas()
-        newpandas = pandasobj.reindex_axis(values, axis=axis_id, fill_value=fill_value)
+        try:
+            newpandas = pandasobj.reindex_axis(values, axis=axis_id, fill_value=fill_value)
+        except TypeError:
+            # older versions of pandas do not have the fill_value parameter
+            newpandas = pandasobj.reindex_axis(values, axis=axis_id)
+
         newobj = self.from_pandas(newpandas) # use class method from_pandas
         newobj._metadata(self._metadata())    # add metadata back
         newobj.axes[axis_id].name = axis_nm  # give back original name
