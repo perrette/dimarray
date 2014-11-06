@@ -510,7 +510,14 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     def copy(self, shallow=False):
         """ copy of the object and update arguments
 
-        shallow: if True, does not copy values and axes
+        Parameters
+        ----------
+        shallow: if True, does not copy values and axes, only useful to overwrite
+            attributes without affecting the initial array.
+
+        Returns
+        -------
+        DimArray
         """
         import copy
         if shallow:
