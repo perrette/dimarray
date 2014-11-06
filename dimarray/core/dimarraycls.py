@@ -485,6 +485,28 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         else:
             raise AttributeError("{} object has no attribute {}".format(self.__class__.__name__, att))
 
+    def __setattr__(self, name, value):
+        """ modify axis values in place with '.' accessor
+        >>> a = DimArray(axes=[[1,2,3]], dims=['x0'])
+        >>> a.x0 
+        array([1, 2, 3])
+        >>> a.x0 = a.x0*2
+        >>> a.x0
+        array([2, 4, 6])
+        >>> a.x0 = a.x0*1.  # conversion to float
+        >>> a.x0
+        array([ 2.,  4.,  6.])
+        >>> a.x0 = list('abc')  # or any other type
+        >>> a.x0
+        array(['a', 'b', 'c'], dtype=object)
+        """
+        exclude = ['values', 'axes']
+        if not name.startswith('_') and name not in exclude and name in self.dims:
+            self.axes[name][:] = value # the axis class will handle types 
+            # conversion and other subtelties that may come in the future 
+        else:
+            object.__setattr__(self, name, value)
+
     def copy(self, shallow=False):
         """ copy of the object and update arguments
 
