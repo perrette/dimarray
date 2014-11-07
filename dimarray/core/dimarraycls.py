@@ -1168,11 +1168,101 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     # Split along an axis
     def to_odict(self, axis=0):
         """ Return a dictionary of DimArray
+
+        .. deprecated:: 1.9
         """
+        warnings.warn('yo',category=DeprecationWarning)
+
         d = odict()
         for k, val in self.iter(axis):
             d[k] = val
         return d
+
+    def to_jsondict(self):
+        """ return a dictionary representation of a DimArray, which is suitable 
+        for conversion to json format
+        """
+        jsondict = odict([
+            ('values', self.values.tolist()),
+            ('dims', list(self.dims)),
+            ('labels', [ax.values.tolist() for ax in self.axes]),
+            ('shape', list(self.shape)), 
+            ('ndim', self.ndim),
+        ])
+
+        # add metadata
+        # only include metadata that can be converted into json format
+        try:
+            import json
+            jsonimported=True
+        except ImportError:
+            jsonimported=False
+
+        meta = {}
+        for m in self._metadata():
+            try:
+                val = getattr(self, m)
+                if jsonimported: 
+                    _ = json.dumps(val)
+                meta[m] = val
+            except: 
+                warnings.warn("could not jsonify metadata "+m)
+        jsondict['meta'] = meta
+
+        return jsondict
+
+    def to_json(self, separators=(',',':'), **kwargs):
+        """ json representation of a dimarray
+
+        Parameters
+        ----------
+        separators, **kwargs : passed to json.dumps
+
+        Returns
+        -------
+        json string
+
+        Note
+        ----
+        shape and ndim are provided for informative purpose, but are not used
+        when initializing a DimArray from a json string
+
+        Example
+        -------
+        >>> a = DimArray([[1.,2.,3.],[4.,5.,6.]], axes=[[0,1],[10,11,12]], dims=['a','b'])
+        >>> a.to_json()
+        '{"values":[[1.0,2.0,3.0],[4.0,5.0,6.0]],"dims":["a","b"],"labels":[[0,1],[10,11,12]],"shape":[2,3],"ndim":2,"meta":{}}'
+        """
+        import json
+        return json.dumps(self.to_jsondict(), separators=separators, **kwargs)
+
+    @classmethod
+    def from_jsondict(cls, jsondict):
+        """ initialize a DimArray from a json-compatible dictionary
+        """
+        jsondict = jsondict.copy()
+        dima = cls(jsondict.pop('values', None), 
+                   axes=jsondict.pop('labels', None), 
+                   dims=jsondict.pop('dims', None))
+        if 'meta' in jsondict:
+            dima._metadata(jsondict['meta'])
+        return dima
+
+    @classmethod
+    def from_json(cls, s):
+        """ return a DimArray, from a json string
+
+        >>> s = '{"values":[[1.0,2.0,3.0],[4.0,5.0,6.0]],"dims":["a","b"],"labels":[[0,1],[10,11,12]],"shape":[2,3],"ndim":2,"meta":{}}'
+        >>> DimArray.from_json(s)
+        dimarray: 6 non-null elements (0 null)
+        0 / a (2): 0 to 1
+        1 / b (3): 10 to 12
+        array([[ 1.,  2.,  3.],
+               [ 4.,  5.,  6.]])
+        """
+        import json
+        jsondict = json.loads(s)
+        return cls.from_jsondict(jsondict)
 
     def to_dataset(self, axis=0):
         """ split a DimArray into a Dataset object (collection of DimArrays)
