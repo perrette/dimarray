@@ -209,7 +209,7 @@ class MetadataBase(object):
         self._metadata(metadata.copy())
 
     def _metadata_summary(self):
-        return "\n".join([" "*8+"{} : {}".format(key, value) for key, value  in self._metadata.iteritems()])
+        _repr_metadata(self._metadata())
         #return repr(self._metadata())
 
     def summary(self):
@@ -233,6 +233,10 @@ class MetadataBase(object):
         """ delete single metadata, with name check
         """
         _del_metadata(self, key)
+
+
+def _repr_metadata(meta):
+    return "\n".join([" "*8+"{} : {}".format(key, value) for key, value  in meta.iteritems()])
 
 #class Metadata(object):
 #    """ Variable with metadata

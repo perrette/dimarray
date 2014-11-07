@@ -21,7 +21,7 @@ except:
     pass
 
 try:
-    from io.nc import read_nc, summary_nc, write_nc #, read_nc_axes
+    from io.nc import read_nc, summary_nc, write_nc, open_nc #, read_nc_axes
     _ncio = True
 
 except ImportError:
