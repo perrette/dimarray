@@ -417,6 +417,7 @@ mismatch between values and axes""".format(inferred, self.values.shape)
                 sublabels = None
 
         # if Dataset, create a dictionary from it
+        from dimarray.dataset import Dataset
         if isinstance(nested_data, Dataset):
             nested_data = nested_data.to_dict()
 
