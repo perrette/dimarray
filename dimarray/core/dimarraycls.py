@@ -416,9 +416,13 @@ mismatch between values and axes""".format(inferred, self.values.shape)
             else:
                 sublabels = None
 
+        # if Dataset, create a dictionary from it
+        if isinstance(nested_data, Dataset):
+            nested_data = nested_data.to_dict()
+
         # if numpy ndarray, create a new DimArray
         # if DimArray, just update labels and return it
-        if isinstance(nested_data, DimArray) \
+        elif isinstance(nested_data, DimArray) \
                 or isinstance(nested_data, np.ndarray):
             return cls(nested_data, dims=dims, labels=labels)
 
