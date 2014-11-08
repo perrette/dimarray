@@ -88,6 +88,12 @@ class Dataset(odict, MetadataBase):
             # axes in individual items will be updated automatically 
             # since they are all references of the central axes
 
+    @property
+    def labels(self):
+        """ tuple of axis values contained in the Dataset, consistently with DimArray's `labels`
+        """
+        return tuple([ax.values for ax in self.axes])
+
     def _repr(self, metadata=True):
         """ string representation
         """
