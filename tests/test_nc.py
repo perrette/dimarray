@@ -73,22 +73,50 @@ def dim_array(ncvar_shape, ncvar_type, ncdim_type, seed=None):
 
     return da.DimArray(values, axes, **meta)
 
-def test_read():
-    """ test whether the reading of existing data works as expected
+class TestRead(object):
+    """ Test whether the reading of example data works as expected, using read_nc
     """
     ncfile = get_ncfile('cmip5.CSIRO-Mk3-6-0.nc')
-    ds = da.read_nc(ncfile)
-    assert ds.keys() == [u'tsl', u'temp']
-    assert ds.dims == ('time', 'scenario')
-    assert ds.scenario.tolist() == ['historical', 'rcp26', 'rcp45', 'rcp60', 'rcp85']
-    assert_equal( ds.time , np.arange(1850, 2301) )
-    assert ds.time.dtype is np.dtype('int32') 
-    assert ds.model == 'CSIRO-Mk3-6-0' # metadata
-    assert isinstance(ds['tsl'], da.DimArray)
-    assert ds['tsl'].ndim == 2
-    assert ds['tsl'].shape == (451, 5)
-    assert ds['tsl'].size == 451*5
-    assert_almost_equal( ds['tsl'].values[0, :2] , np.array([ 0.00129744,  0.00129744]) )
+
+    @classmethod
+    def setup_class(cls):
+        cls.ds = da.read_nc(cls.ncfile)
+
+    @classmethod
+    def teardown_class(cls):
+        pass
+
+    def test_csiro(self):
+        " manual check for the CSIRO dataset "
+        ds = self.ds 
+        assert ds.keys() == [u'tsl', u'temp']
+        assert ds.dims == ('time', 'scenario')
+        assert ds.scenario.tolist() == ['historical', 'rcp26', 'rcp45', 'rcp60', 'rcp85']
+        assert_equal( ds.time , np.arange(1850, 2301) )
+        assert ds.time.dtype is np.dtype('int32') 
+        assert ds.model == 'CSIRO-Mk3-6-0' # metadata
+        assert ds['tsl'].ndim == 2
+        assert ds['tsl'].shape == (451, 5)
+        assert ds['tsl'].size == 451*5
+        assert_almost_equal( ds['tsl'].values[0, :2] , np.array([ 0.00129744,  0.00129744]) )
+
+class TestReadOpen(TestRead):
+    " read netCDF file with open_nc "
+
+    @classmethod
+    def setup_class(cls):
+        cls.ds = da.open_nc(cls.ncfile)
+
+    @classmethod
+    def teardown_class(cls):
+        cls.ds.close()
+
+    def test_csiro(self):
+        super(TestReadOpen, self).test_csiro()
+        ds = self.ds
+        assert isinstance(ds['tsl'][:], da.DimArray)
+        assert isinstance(ds['tsl'].values[:], np.ndarray)
+
 
 def test_io(dim_array, tmpdir): 
 

@@ -263,7 +263,7 @@ def read_dimensions(f, name=None, ix=slice(None), dimensions_mapping=None, verbo
 
     return axes
 
-def _read_dimension(f, name, ix=slice(None), values_only=False):
+def _read_dimension(f, name, ix=None, values_only=False):
     """ Read one netCDF4 dimension as dimarray.Axis
 
     Parameters
@@ -279,6 +279,8 @@ def _read_dimension(f, name, ix=slice(None), values_only=False):
     -------
     Axis instance
     """
+    if ix is None:
+        ix = slice(None)
     if name in f.variables.keys():
         # assume that the variable and dimension have the same name
         values = f.variables[name][ix]
@@ -1161,15 +1163,11 @@ class DatasetOnDisk(NetCDFOnDisk):
 
     @property
     def dims(self):
-        return self.ds.dimensions.keys()
+        return tuple(self.ds.dimensions.keys())
 
     @property
     def _obj(self):
         return self.ds
-
-    @property
-    def dims(self):
-        return self.ds.dimensions.keys()
 
     def __repr__(self):
         return _summary_repr_dataset(self.ds)
@@ -1213,7 +1211,11 @@ class VariableOnDisk(NetCDFOnDisk):
         return self._obj.size
     @property
     def dims(self):
-        return self._obj.dimensions
+        return tuple(self._obj.dimensions)
+
+    @property
+    def values(self):
+        return self._obj # simply the variable to be indexed and returns values like netCDF4
 
     def read(self, *args, **kwargs):
         """ Equivalent to dimarray.read_nc
