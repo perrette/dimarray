@@ -120,11 +120,7 @@ class Dataset(odict, MetadataBase):
 
         return "\n".join(lines)
 
-    def summary(self):
-        return self._repr(metadata=True)
-
-    def __repr__(self):
-        return self._repr(metadata=False)
+    __repr__ = MetadataBase.__repr__
 
     #
     # overload dictionary methods

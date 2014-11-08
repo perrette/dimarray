@@ -411,17 +411,11 @@ class Axis(MetadataBase):
         #return hasattr(other, "name") and hasattr(other, "values") and np.all(other.values == self.values) and self.name == other.name
         return isinstance(other, Axis) and np.all(other.values == self.values) and self.name == other.name
 
-    def __repr__(self):
-        return self._repr(metadata=False)
-
     def _repr(self, metadata=True):
         lines = ["{} ({}): {} to {}".format(self.name, self.size, *self._bounds())]
         if metadata and len(self._metadata()) > 0:
             lines.append(self._metadata_summary())
         return "\n".join(lines)
-
-    def summary(self):
-        return self._repr(metadata=True)
 
     def _bounds(self):
         if self.values.size == 0:
@@ -756,8 +750,11 @@ class Axes(list):
     def _repr(self, metadata=True):
         return "\n".join(["{} / {}".format(i,ax._repr(metadata=metadata)) for i,ax in enumerate(self)])
 
-    def summary(self):
+    def summary_repr(self):
         return self._repr(metadata=True)
+
+    def summary(self):
+        print self.summary_repr()
 
     def sort(self, dims):
         """ sort IN PLACE according to the order in "dims"

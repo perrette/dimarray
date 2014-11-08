@@ -35,7 +35,7 @@ Metadata are conserved by slicing and along-axis transformation, but are lost wi
 A :meth:`summary` method is also defined that provide an overview of both the data and its metadata.
 
 >>> a.axes[0].units = 'axis units'
->>> print a.summary()
+>>> a.summary()
 dimarray: 3 non-null elements (0 null)
 0 / x0 (3): 0 to 2
         units : axis units

@@ -208,17 +208,6 @@ class MetadataBase(object):
     def _metadata(self, metadata):
         self._metadata(metadata.copy())
 
-    def _metadata_summary(self):
-        _repr_metadata(self._metadata())
-        #return repr(self._metadata())
-
-    def summary(self):
-        """ summary string representation (with metadata)
-        """
-        line = repr(self)
-        line += "\n"+self._metadata_summary()
-        return line
-
     def set_metadata(self, key, value):
         """ set single metadata, with name check
         """
@@ -234,6 +223,35 @@ class MetadataBase(object):
         """
         _del_metadata(self, key)
 
+    # info about the class
+    def _metadata_summary(self):
+        return _repr_metadata(self._metadata())
+        #return repr(self._metadata())
+
+    #
+    # to be overloaded by DimArray, Dataset, Axis
+    #
+    def _repr(self, metadata=False):
+        """ return string representation (with metadata)
+        """
+        lines = [object.__repr__(self)]
+        if metadata:
+            lines.append(self._metadata_summary())
+        return '\n'.join(lines)
+
+    #
+    # to be inherited by DimArray, Dataset, Axis
+    #
+    def __repr__(self):
+        return self._repr(metadata=False)
+
+    def summary_repr(self):
+        return self._repr(metadata=True)
+
+    def summary(self):
+        """ print string representation (with metadata)
+        """
+        print self.summary_repr()
 
 def _repr_metadata(meta):
     return "\n".join([" "*8+"{} : {}".format(key, value) for key, value  in meta.iteritems()])

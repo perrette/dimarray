@@ -155,7 +155,7 @@ def main():
                     output_lines.append('\n\n')
                     #output_lines.extend(output['text'])
 
-                elif output['output_type'] == 'pyout':
+                elif output['output_type'] in ('pyout','stream'):
 
                     # write text output
                     output_lines.extend(output['text'])

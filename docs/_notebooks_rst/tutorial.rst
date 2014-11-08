@@ -354,12 +354,16 @@ plotting
 
 dimarray comes with basic plotting facility. For 1-D and 2-D data, it simplies interfaces pandas' plot command (therefore pandas needs to be installed to use it). From the example above:
 
+>>> %pylab # doctest: +SKIP 
 >>> %matplotlib inline # doctest: +SKIP 
 >>> a = dataset['combined_data']
 >>> a.plot() # doctest: +SKIP
-<matplotlib.axes.AxesSubplot at 0x7f3fc4787410>
+Using matplotlib backend: Qt4Agg
+Populating the interactive namespace from numpy and matplotlib
+[<matplotlib.lines.Line2D at 0x7f4402dbdf10>,
+ <matplotlib.lines.Line2D at 0x7f4402dce1d0>]
 
-.. image:: tutorial_files/figure_80-1.png
+.. image:: tutorial_files/figure_80-2.png
 
 
 
@@ -373,17 +377,18 @@ In addition, it can also display 2-D data via its methods `contour`, `contourf` 
 >>> # define dimarray
 >>> a = DimArray(DATA, axes=[lat, lon], dims=['lat','lon'])
 >>> # plot the data
->>> a.contourf() # doctest: +SKIP
+>>> c = a.contourf()
+>>> colorbar(c)  # explicit colorbar creation  # doctest: +SKIP
 >>> a.contour(colors='k') # doctest: +SKIP
-<matplotlib.contour.QuadContourSet instance at 0x7f3fc44c51b8>
+<matplotlib.contour.QuadContourSet instance at 0x7f4402c73c20>
 
 .. image:: tutorial_files/figure_82-1.png
 
 
 
 >>> # plot the data
->>> a.pcolor() # doctest: +SKIP
-<matplotlib.collections.QuadMesh at 0x7f3fc42921d0>
+>>> a.pcolor(colorbar=True)  # colorbar as keyword argument # doctest: +SKIP
+<matplotlib.collections.QuadMesh at 0x7f4402aee810>
 
 .. image:: tutorial_files/figure_83-1.png
 

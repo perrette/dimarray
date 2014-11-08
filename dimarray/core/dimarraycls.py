@@ -1216,10 +1216,6 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     #
     # pretty printing
     #
-
-    def __repr__(self):
-        return self._repr(metadata=False)
-
     def _repr(self, metadata=True):
         """ pretty printing
         """
@@ -1261,12 +1257,6 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         lines.append(line)
 
         return "\n".join(lines)
-
-    def summary(self):
-        """ Summary string representation including metadata
-        """
-        return self._repr(metadata=True)
-
 
     #
     #  I/O
