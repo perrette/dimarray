@@ -73,14 +73,14 @@ def dim_array(ncvar_shape, ncvar_type, ncdim_type, seed=None):
 
     return da.DimArray(values, axes, **meta)
 
-class TestRead(object):
-    """ Test whether the reading of example data works as expected, using read_nc
+class ReadTest(object):
+    """ Ancestor class for reading netCDF files, to be inherited, is not executed as test
     """
     ncfile = get_ncfile('cmip5.CSIRO-Mk3-6-0.nc')
 
     @classmethod
     def setup_class(cls):
-        cls.ds = da.read_nc(cls.ncfile)
+        pass
 
     @classmethod
     def teardown_class(cls):
@@ -100,7 +100,12 @@ class TestRead(object):
         assert ds['tsl'].size == 451*5
         assert_almost_equal( ds['tsl'].values[0, :2] , np.array([ 0.00129744,  0.00129744]) )
 
-class TestReadOpen(TestRead):
+class TestReadReadNC(ReadTest):
+    @classmethod
+    def setup_class(cls):
+        cls.ds = da.read_nc(cls.ncfile)
+
+class TestReadOpenNC(ReadTest):
     " read netCDF file with open_nc "
 
     @classmethod
@@ -111,12 +116,42 @@ class TestReadOpen(TestRead):
     def teardown_class(cls):
         cls.ds.close()
 
-    def test_csiro(self):
-        super(TestReadOpen, self).test_csiro()
+    def test_access(self):
         ds = self.ds
         assert isinstance(ds['tsl'][:], da.DimArray)
         assert isinstance(ds['tsl'].values[:], np.ndarray)
+        expected = ds.ds.variables['tsl'][:] # netCDF4
+        assert_equal( ds['tsl'][:].values , expected )
+        assert_equal( ds['tsl'].values[:] , expected ) # alternative (more efficient) form
 
+    def test_indexing(self):
+
+        size0 = len(self.ds.ds.dimensions.values()[0])
+
+        boolidx = np.random.rand(size0) > 0.5
+        indices = [5, -1, [0, 1, 2], boolidx, (0,1), slice(None), slice(2,10,2)]
+
+        ds = self.ds
+
+        # position indexing
+        for idx in indices:
+            print "Test index: ", idx
+            expected = ds.ds.variables['tsl'][idx] # netCDF4
+            actual = ds['tsl'].ix[idx].values
+            assert_equal( expected, actual)
+
+        # label indexing
+        labels = [(idx, self.ds.ds.variables['time'][idx]) for idx in indices if type(idx) not in (tuple, slice, np.ndarray)]
+        labels.append(((0,1), (self.ds.ds.variables['time'][0], self.ds.ds.variables['scenario'][1])))
+        labels.append((slice(None), slice(None)))
+        labels.append((slice(2,10,2), slice(self.ds.ds.variables['time'][2],self.ds.ds.variables['time'][10-1],2)))
+        labels.append((boolidx, boolidx))
+
+        for idx, lidx in labels:
+            print "Test labelled index:",idx,':',lidx
+            expected = ds.ds.variables['tsl'][idx] # netCDF4
+            actual = ds['tsl'][lidx].values
+            assert_almost_equal( expected, actual)
 
 def test_io(dim_array, tmpdir): 
 

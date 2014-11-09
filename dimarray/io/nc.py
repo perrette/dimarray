@@ -288,16 +288,16 @@ def _read_dimension(f, name, ix=None, values_only=False):
         # default, dummy dimension axis
         msg = "'{}' dimension not found, define integer range".format(name)
         warnings.warn(msg)
-        values = np.arange(len(f.dimensions[name]))
+        values = np.arange(len(f.dimensions[name]))[ix]
 
-    # replace unicode by str as a temporary bug fix (any string seems otherwise to be treated as unicode in netCDF4)
-    if values.size > 0 and type(values[0]) is unicode:
-        for i, val in enumerate(values):
-            if type(val) is unicode:
-                values[i] = str(val)
+    # # replace unicode by str as a temporary bug fix (any string seems otherwise to be treated as unicode in netCDF4)
+    # if values.size > 0 and type(values[0]) is unicode:
+    #     for i, val in enumerate(values):
+    #         if type(val) is unicode:
+    #             values[i] = str(val)
 
     # do not produce an Axis object
-    if values_only:
+    if values_only or np.isscalar(values):
         return values
 
     axis = Axis(values, name)
@@ -1228,7 +1228,7 @@ class VariableOnDisk(NetCDFOnDisk):
             idx = (idx,)
 
         # load each dimension as necessary
-        indices = []
+        indices = ()
         axes = []
         for i, dim in enumerate(self.dims):
             if i >= len(idx):
@@ -1238,7 +1238,7 @@ class VariableOnDisk(NetCDFOnDisk):
 
             # in case of label-based indexing, need to read the whole dimension
             # and look for the appropriate values
-            if self._indexing != 'position' and ix != slice(None):
+            if self._indexing != 'position' and not (type(ix) is slice and ix == slice(None)):
                 # find the index corresponding to the required axis value
                 lix = ix
                 ax = _read_dimension(self.ds, dim)
@@ -1247,8 +1247,10 @@ class VariableOnDisk(NetCDFOnDisk):
             else:
                 # position index
                 ax = _read_dimension(self.ds, dim, ix=ix)
-            axes.append(ax)
-            indices.append(ix)
+            # if ix is a scalar, the axis is reduced to a scalar as well
+            if isinstance(ax, Axis):
+                axes.append(ax)
+            indices += (ix,)
 
         values = self.ds.variables[self.name][indices]
         dima = self._constructor(values, axes=axes)
