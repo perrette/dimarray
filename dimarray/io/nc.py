@@ -257,7 +257,8 @@ def read_dimensions(f, name=None, ix=slice(None), dimensions_mapping=None, verbo
             dim_name = dim
         axis = _read_dimension(f, dim_name, ix=ix)
 
-        axes.append(axis)
+        if isinstance(axis, Axis): # we may have a scalar
+            axes.append(axis) 
 
     if close: f.close()
 
@@ -375,7 +376,8 @@ def _read_variable(f, name, indices=None, axis=0, verbose=False, dimensions_mapp
         newdata = f.variables[name][:]
 
         # scalar variables come out as arrays ! Fix that.
-        if len(axes) == 0:
+        if len(axes) == 0 and np.ndim(newdata) != 0:
+            # warnings.warn("netCDF4: scalar variables come out as arrays ! Fix that.")
             assert np.size(newdata) == 1, "inconsistency betwwen axes and data"
             assert np.ndim(newdata) == 1, "netCDF seems to have fixed that bug, just remove this line !"
             newdata = newdata[0]
@@ -644,7 +646,17 @@ def _write_variable(f, obj=None, name=None, mode='a+', format=FORMAT, indices=No
             raise IndexError(msg)
 
     # Write Variable
-    v[ix] = np.asarray(obj)
+    try:
+        a = np.asarray(obj)
+        if obj.dtype > np.dtype('S1'):
+            a = np.asarray(a, dtype=object)
+        v[ix] = a
+    except:
+        print np.asarray(obj)
+        print ix
+        print np.asarray(obj).dtype
+        print v.dtype
+        raise
 
     # add metadata if any
     if not isinstance(obj, DimArray):
@@ -753,7 +765,8 @@ def _createVariable(f, name, axes, dims=None, dtype=float, verbose=False, mode='
     _check_dimensions(f, axes)
 
     # Create Variable
-    v = f.createVariable(name, dtype, [ax.name for ax in axes], **kwargs)
+    nctype = _convert_to_nctype(dtype)
+    v = f.createVariable(name, nctype, [ax.name for ax in axes], **kwargs)
 
     if close: 
         f.close()
@@ -809,6 +822,18 @@ def write_nc(f, obj=None, *args, **kwargs):
                 \nGot first argument {}:{}".format(type(obj), obj))
 
 
+def _convert_to_nctype(dtype):
+    """ strings are given "object" type in Axis object
+    ==> assume all objects are actually strings
+    NOTE: this will fail for other object-typed axes such as tuples
+    """
+    # if dtype is np.dtype('O'):
+    if dtype >= np.dtype('S1'): # all strings, this include objects dtype('O')
+        nctype = str 
+    else:
+        nctype = dtype 
+    return nctype
+
 def _check_dimensions(f, axes, **verb):
     """ create dimensions if not already existing
 
@@ -824,17 +849,8 @@ def _check_dimensions(f, axes, **verb):
         dim = ax.name
         if not dim in f.dimensions:
             f.createDimension(dim, ax.size)
-
-            # strings are given "object" type in Axis object
-            # ==> assume all objects are actually strings
-            # NOTE: this will fail for other object-typed axes such as tuples
-            # any other idea welcome
-            if ax.dtype is np.dtype('O'):
-                dtype = str 
-            else:
-                dtype = ax.dtype 
-
-            v = f.createVariable(dim, dtype, dim)
+            nctype = _convert_to_nctype(ax.dtype)
+            v = f.createVariable(dim, nctype, dim)
             v[:] = ax.values
 
         # add metadata if any
@@ -1172,22 +1188,11 @@ class DatasetOnDisk(NetCDFOnDisk):
     def __repr__(self):
         return _summary_repr_dataset(self.ds)
 
-    def __getitem__(self, item):
-        return VariableOnDisk(self.ds, item, _indexing=self._indexing)
+    def __getitem__(self, name):
+        return VariableOnDisk(self.ds, name, _indexing=self._indexing)
 
-    # def __setitem__(self, item, value):
-    #     self[item][:] = value
-    #     v[:] = value
-    #
-    #     if item in self.variables:
-    #         # existing variable
-    #         value = np.asarray(value)
-    #         self.ds.variables[item][:] = value
-    #     else:
-    #         # create new variable
-    #         _write_variable()
-    #     return _write_variable(self.ds, self.name, indices=idx, indexing=self._indexing)
-    #     return VariableOnDisk(self.ds, item, _indexing=self._indexing)
+    def __setitem__(self, name, value):
+        _write_variable(self.ds, value, name)
 
 class VariableOnDisk(NetCDFOnDisk):
     _constructor = DimArray

@@ -8,6 +8,8 @@ from numpy.testing import assert_equal, assert_almost_equal
 
 import dimarray  as da
 from dimarray import DimArray, summary_nc, read_nc, open_nc, write_nc, get_ncfile
+from dimarray.testing import (assert_equal_dimarrays, assert_equal_datasets, assert_equal_axis,
+                              create_dataset, create_dimarray)
 
 curdir = os.path.dirname(__file__)
 
@@ -24,54 +26,17 @@ def pytest_generate_tests(metafunc):
     # if 'ncattr_type' in metafunc.fixturenames:
     #     metafunc.parametrize("ncattr_type", [str, unicode, int, float, list, np.ndarray], indirect=True)
     if 'seed' in metafunc.fixturenames:
-        metafunc.parametrize("seed", [1], indirect=True)
+        metafunc.parametrize("seed", [1])
 
-def generate_array(shape, dtype):
-    """ create an array of desired type """
-    values = np.random.rand(*shape)
-    if dtype is bool:
-        values = values > 0.5
-    else:
-        values = np.asarray(values, dtype=dtype)
-    return values
-
-def generate_array_axis(size, dtype, regular=True):
-    """ create an axis of desired type """
-    values = np.arange(size) + 10*np.random.rand() # random offset
-    if not regular:
-        values = np.random.shuffle(values)
-    return np.asarray(values, dtype=dtype)
-
-def generate_metadata(types=[str, unicode, int, float, list, np.ndarray]):
-    meta = {}
-    letters = list('abcdefghijklmnopqrstuvwxyz')
-    for i, t in enumerate(types):
-        if t in (str, unicode): 
-            val = t('some string')
-        elif t in (list, np.ndarray):
-            val = t([1,2])
-        else:
-            val = t() # will instantiate some default value
-
-        meta[letters[i]] = val
-    return meta
+# to use the function above in a fixture
+@pytest.fixture()
+def dim_array(ncvar_shape, ncvar_type, ncdim_type, seed):
+    return create_dimarray(ncvar_shape, dtype=ncvar_type, axis_dtypes=ncdim_type, seed=seed)
 
 @pytest.fixture()
-def dim_array(ncvar_shape, ncvar_type, ncdim_type, seed=None):
-    """ Parameterized DimArray
-    """
-    np.random.seed(seed) # set random generator
-     
-    # create an array of desired type
-    values = generate_array(ncvar_shape, dtype=ncvar_type)
+def data_set(seed):
+    return create_dataset(seed=seed)
 
-    # create axes
-    axes = [generate_array_axis(s, ncdim_type) for s in ncvar_shape]
-
-    # create metadata
-    meta = generate_metadata()
-
-    return da.DimArray(values, axes, **meta)
 
 class ReadTest(object):
     """ Ancestor class for reading netCDF files, to be inherited, is not executed as test
@@ -151,14 +116,62 @@ class TestReadOpenNC(ReadTest):
             print "Test labelled index:",idx,':',lidx
             expected = ds.ds.variables['tsl'][idx] # netCDF4
             actual = ds['tsl'][lidx].values
-            assert_almost_equal( expected, actual)
+            assert_equal( expected, actual)
+
+class TestIO(object):
+
+    @classmethod
+    def setup_class(cls):
+        cls.ds_var = create_dataset()
+
+        cls.tmpdir = '/tmp'
+        # cls.ncfile = cls.tmpdir.join("test.nc").strpath # have test.nc in some temporary directory
+        cls.ncfile = os.path.join(cls.tmpdir, "test.nc")
+        print "Write test netCDF file to",cls.ncfile
+        cls.ds_var.write_nc(cls.ncfile, mode='w')
+
+    @classmethod
+    def teardown_class(cls):
+        pass
+
+    # @pytest.mark.tryfirst
+    # def test_write_nc_whole(self, tmpdir):
+    #     # write whole dataset to disk
+    #     self.tmpdir = tmpdir
+    #     self.ncfile = self.tmpdir.join("test.nc").strpath # have test.nc in some temporary directory
+    #     print "Write test netCDF file to",self.ncfile
+    #     self.ds_var.write_nc(self.ncfile, mode='w')
+
+    def test_read_nc_whole(self):
+        " check that the netCDF file matches what has been written "
+        actual = da.read_nc(self.ncfile)
+        assert_equal_datasets(actual, self.ds_var)
+
+    def test_open_nc_whole(self, tmpdir):
+        " try writing variable-by-variable with open_nc "
+        # with da.open_nc(self.ncfile) as ds_disk:
+        ds_var = self.ds_var
+        self.ncfile2 = tmpdir.join("test2.nc").strpath # have test.nc in some temporary directory
+        with da.open_nc(self.ncfile2, mode='w', clobber=True) as ds_disk:
+            for k in ds_var.keys():
+                ds_disk[k] = ds_var[k]
+                assert_equal_dimarrays(ds_disk[k].read(), ds_var[k]) # immediate test, before closing file
+            # add dataset metadata
+            ds_disk._metadata(ds_var._metadata())
+
+            actual = da.read_nc(self.ncfile)
+            assert_equal_datasets(actual, self.ds_var)
+
+    # def test_write(self):
+    #     cls.ds_disk = open_nc(cls.ncfile, mode='w', clobber=True) # open netCDF file for writing
+    #     cls.ds.close()
 
 def test_io(dim_array, tmpdir): 
 
     fname = tmpdir.join("test.nc").strpath # have test.nc in some temporary directory
 
-    a = DimArray([1,2], dims='xx0')
-    b = DimArray([3,4,5], dims='xx1')
+    a = DimArray([1,2], dims=['xx0'])
+    b = DimArray([3,4,5], dims=['xx1'])
     a.write_nc(fname,"a", mode='w')
     b.write_nc(fname,"b", mode='a')
     try:
