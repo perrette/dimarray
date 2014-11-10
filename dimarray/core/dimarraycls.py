@@ -23,6 +23,7 @@ from . import indexing as _indexing    # perform slicing and indexing operations
 from . import operation as _operation  # operation between DimArrays
 from . import missingvalues # operation between DimArrays
 from .align import broadcast_arrays, align_axes, stack
+from .prettyprinting import repr_dimarray
 
 __all__ = ["DimArray", "array"]
 
@@ -654,7 +655,7 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         if axis is None:
             return None, None
 
-        if type(axis) is str:
+        if type(axis) in (str, unicode):
             idx = self.dims.index(axis)
 
         elif type(axis) is int:
@@ -1216,47 +1217,7 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     #
     # pretty printing
     #
-    def _repr(self, metadata=True):
-        """ pretty printing
-        """
-        try:
-            if self.ndim > 0:
-                nonnull = np.size(self.values[~np.isnan(self.values)])
-            else:
-                nonnull = int(~np.isnan(self.values))
-
-        except TypeError: # e.g. object
-            nonnull = self.size
-
-        lines = []
-
-        #if self.size < 10:
-        #    line = "dimarray: "+repr(self.values)
-        #else:
-        line = "dimarray: {} non-null elements ({} null)".format(nonnull, self.size-nonnull)
-        lines.append(line)
-
-        # Axes
-        if True: #self.size > 1:
-            line = self.axes._repr(metadata=metadata)
-            if line:
-                lines.append(line)
-
-        # Metadata
-        if metadata:
-            meta = self._metadata()
-            if len(meta) > 0:
-                lines.append("metadata:")
-                line = self._metadata_summary()
-                lines.append(line)
-
-        if self.size < get_option('display.max'):
-            line = repr(self.values)
-        else:
-            line = "array(...)"
-        lines.append(line)
-
-        return "\n".join(lines)
+    _repr = repr_dimarray
 
     #
     #  I/O

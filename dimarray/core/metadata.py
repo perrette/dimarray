@@ -223,11 +223,6 @@ class MetadataBase(object):
         """
         _del_metadata(self, key)
 
-    # info about the class
-    def _metadata_summary(self):
-        return _repr_metadata(self._metadata())
-        #return repr(self._metadata())
-
     #
     # to be overloaded by DimArray, Dataset, Axis
     #
@@ -253,8 +248,9 @@ class MetadataBase(object):
         """
         print self.summary_repr()
 
-def _repr_metadata(meta):
-    return "\n".join([" "*8+"{} : {}".format(key, value) for key, value  in meta.iteritems()])
+    @property
+    def attrs(self):
+        return self._metadata()
 
 #class Metadata(object):
 #    """ Variable with metadata

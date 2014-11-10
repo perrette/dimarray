@@ -13,6 +13,7 @@ from core.align import _check_stack_args, _get_axes, stack, concatenate, _check_
 from core import pandas_obj
 from core.metadata import MetadataBase
 from core.axes import _doc_reset_axis
+from core.prettyprinting import repr_dataset
 
 class Dataset(odict, MetadataBase):
     """ Container for a set of aligned objects
@@ -94,33 +95,7 @@ class Dataset(odict, MetadataBase):
         """
         return tuple([ax.values for ax in self.axes])
 
-    def _repr(self, metadata=True):
-        """ string representation
-        """
-        lines = []
-        header = "Dataset of %s variables" % (len(self))
-        if len(self) == 1: header = header.replace('variables','variable')
-        lines.append(header)
-        lines.append(self.axes._repr(metadata=metadata))
-
-        # display single variables
-        for nm in self.keys():
-            v = self[nm]
-            repr_dims = repr(v.dims)
-            if repr_dims == "()": repr_dims = v.values
-            vlines = []
-            vlines.append("{}".format(repr_dims))
-            if metadata and len(v._metadata()) > 0:
-                vlines.append(v._metadata_summary())
-            lines.append(nm+': '+"\n".join(vlines))
-
-        if metadata and len(self._metadata()) > 0:
-            lines.append('//global attributes:')
-            lines.append(self._metadata_summary())
-
-        return "\n".join(lines)
-
-    __repr__ = MetadataBase.__repr__
+    __repr__ = repr_dataset
 
     #
     # overload dictionary methods
