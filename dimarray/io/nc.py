@@ -340,7 +340,7 @@ def _extract_kw(kwargs, argnames, delete=True):
     return kw
 
 @format_doc(indexing=_doc_indexing)
-def _read_variable(f, name, indices=None, axis=0, verbose=False, dimensions_mapping=None, copy_grid_mapping=False, **kwargs):
+def _read_variable(f, name, indices=None, axis=0, indexing='label', verbose=False, dimensions_mapping=None, copy_grid_mapping=False, **kwargs):
     """ Read one variable from netCDF4 file 
 
     Parameters
@@ -368,41 +368,10 @@ def _read_variable(f, name, indices=None, axis=0, verbose=False, dimensions_mapp
     """
     f, close = _check_file(f, mode='r', verbose=verbose)
 
-    # Construct the indices
-    axes = read_dimensions(f, name, dimensions_mapping=dimensions_mapping)
-
-    if indices is None:
-        newaxes = axes
-        newdata = f.variables[name][:]
-
-        # scalar variables come out as arrays ! Fix that.
-        if len(axes) == 0 and np.ndim(newdata) != 0:
-            # warnings.warn("netCDF4: scalar variables come out as arrays ! Fix that.")
-            assert np.size(newdata) == 1, "inconsistency betwwen axes and data"
-            assert np.ndim(newdata) == 1, "netCDF seems to have fixed that bug, just remove this line !"
-            newdata = newdata[0]
-
-    else:
-
-        try:
-            ix = axes.loc(indices, axis=axis, **kwargs)
-        except IndexError, msg:
-            raise
-            raise IndexError(msg)
-
-        # slice the data and dimensions
-        newaxes_raw = [ax[ix[i]] for i, ax in enumerate(axes)] # also get the appropriate axes
-        newaxes = [ax for ax in newaxes_raw if isinstance(ax, Axis)] # remove singleton values
-        newdata = f.variables[name][ix]
-
-    # initialize a dimarray
-    obj = DimArray(newdata, newaxes)
-    #obj.name = name
-
-    # Read attributes
-    attr = _read_attributes(f, name)
-    for k in attr:
-        setattr(obj, k, attr[k])
+    v = VariableOnDisk(f, name, indexing)
+    if indices is None: 
+        indices = slice(None)
+    obj = v[indices]
 
     # copy grid_mapping?
     if copy_grid_mapping and hasattr(obj, 'grid_mapping'):
@@ -648,7 +617,7 @@ def _write_variable(f, obj=None, name=None, mode='a+', format=FORMAT, indices=No
     # Write Variable
     try:
         a = np.asarray(obj)
-        if obj.dtype > np.dtype('S1'):
+        if a.dtype > np.dtype('S1'):
             a = np.asarray(a, dtype=object)
         v[ix] = a
     except:
@@ -1228,6 +1197,8 @@ class VariableOnDisk(NetCDFOnDisk):
         return _read_variable(self.ds, self.name, *args, **kwargs)
     
     def __getitem__(self, idx):
+        # return self._read_variable(self.ds, self.name, indices=idx, indexing=self._indexing)
+
         # should always be a tuple
         if not isinstance(idx, tuple):
             idx = (idx,)
@@ -1258,6 +1229,14 @@ class VariableOnDisk(NetCDFOnDisk):
             indices += (ix,)
 
         values = self.ds.variables[self.name][indices]
+
+        # scalar variables come out as arrays. 
+        if len(axes) == 0 and np.ndim(values) != 0:
+            # warnings.warn("netCDF4: scalar variables come out as arrays ! Fix that.")
+            assert np.size(values) == 1, "inconsistency betwwen axes and data"
+            assert np.ndim(values) == 1
+            values = values[0]
+
         dima = self._constructor(values, axes=axes)
 
         # add attribute
@@ -1266,6 +1245,23 @@ class VariableOnDisk(NetCDFOnDisk):
         # attach metadata
         return dima
         # return self.read(indexing=self._indexing)
+
+
+    # after xray: add sel, isel, loc, iloc methods
+    def isel(self, **indices):
+        """ Integer selection by keyword
+
+        Examples
+        --------
+        >>> 
+        """
+        # replace int dimensions with str dimensions
+        for k in indices:
+            if type(k) is int:
+                indices[k] = self.dims[k]
+        # build in
+        indices = tuple([indices[d] if d in indices else slice(None) for d in self.dims])
+        return self[indices]
 
     @property
     def ix(self):
@@ -1289,12 +1285,15 @@ def open_nc(file_name, *args, **kwargs):
 
     Returns
     -------
-    dimarray.io.nc.DatasetOnDisk class
+    dimarray.io.nc.DatasetOnDisk class (see help on this class for more info)
 
     Examples
     --------
     >>> ncfile = da.get_ncfile('greenland_velocity.nc')
     >>> ds = da.open_nc(ncfile)
+
+    Informative Display similar to a in-memory Dataset
+
     >>> ds
     Dataset of 6 variables (on disk)
     0 / y1 (113): -3400000.0 to -600000.0
@@ -1305,16 +1304,28 @@ def open_nc(file_name, *args, **kwargs):
     surfvely: (u'y1', u'x1')
     surfvelx: (u'y1', u'x1')
     mapping: ()
+
+    Load variables with [:] syntax, like netCDF4 package
+
     >>> ds['surfvelmag'][:] # load one variable
     dimarray: 6893 non-null elements (0 null)
     0 / y1 (113): -3400000.0 to -600000.0
     1 / x1 (61): -800000.0 to 700000.0
     array(...)
-    >>> ds['surfvelmag'].ix[:10] # load first 10 lines
+
+    Indexing is similar to DimArray, and includes the sel, isel methods
+
+    >>> ds['surfvelmag'].ix[:10, -1] # load first 10 y1 values, and last x1 value
     dimarray: 610 non-null elements (0 null)
     0 / y1 (10): -3400000.0 to -3175000.0
     1 / x1 (61): -800000.0 to 700000.0
     array(...)
+
+    >>> ds['surfvelmag'].sel(x1=700000, y1=-3400000)
+    >>> ds['surfvelmag'].isel(x1=-1, y1=0)
+
+    Need to close the Dataset at the end
+
     >>> ds.close() # close
 
     Also usable as context manager

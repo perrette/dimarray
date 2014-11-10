@@ -92,7 +92,6 @@ class TestReadOpenNC(ReadTest):
     def test_indexing(self):
 
         size0 = len(self.ds.ds.dimensions.values()[0])
-
         boolidx = np.random.rand(size0) > 0.5
         indices = [5, -1, [0, 1, 2], boolidx, (0,1), slice(None), slice(2,10,2)]
 
@@ -147,7 +146,7 @@ class TestIO(object):
         actual = da.read_nc(self.ncfile)
         assert_equal_datasets(actual, self.ds_var)
 
-    def test_open_nc_whole(self, tmpdir):
+    def test_basic_write_and_read(self, tmpdir):
         " try writing variable-by-variable with open_nc "
         # with da.open_nc(self.ncfile) as ds_disk:
         ds_var = self.ds_var
@@ -159,8 +158,49 @@ class TestIO(object):
             # add dataset metadata
             ds_disk._metadata(ds_var._metadata())
 
-            actual = da.read_nc(self.ncfile)
-            assert_equal_datasets(actual, self.ds_var)
+        # read the whole dataset and check for equality
+        with da.open_nc(self.ncfile2) as ds_disk:
+            ds = ds_disk.read()
+        actual, expected = ds, ds_var
+        assert_equal_datasets(actual, expected)
+
+    def test_read_per_variable(self):
+        # read each variable individually
+        with da.open_nc(self.ncfile) as ds_disk:
+            for k in ds_disk.keys():
+                print 'read', k, self.ncfile
+                assert_equal_dimarrays(ds_disk[k][:], self.ds_var[k])
+                assert_equal_dimarrays(ds_disk[k].read(), self.ds_var[k])
+
+    def test_read_position_index(self):
+        # try opening bits of the first variable
+        boolidx = np.random.rand(self.ds_var.axes[0].size) > 0.5
+        indices = [1, -1, [0, 1], boolidx, (0,1), slice(None), slice(1,None,2)]
+
+        # position indexing
+        with da.open_nc(self.ncfile) as ds_disk:
+            v0 = ds_disk.keys()[0]
+            for idx in indices:
+                expected = self.ds_var[v0].ix[idx]
+                actual = ds_disk[v0].ix[idx]
+                assert_equal_dimarrays(actual, expected)
+
+    def test_read_label_index(self):
+        # label indexing: test against DimArray indexing
+        boolidx = np.random.rand(self.ds_var.axes[0].size) > 0.5
+        indices = [1, -1, [0, 1], boolidx, (0,1), slice(None), slice(1,None,2)]
+        labels = [self.ds_var.axes[0].values[idx] for idx in indices if type(idx) not in (tuple, slice, np.ndarray)]
+        labels.append((self.ds_var.axes[0].values[0], self.ds_var.axes[1].values[1]))
+        labels.append((slice(None), slice(None)))
+        labels.append(slice(self.ds_var.axes[0].values[1],None,2))
+        labels.append(boolidx)
+
+        with da.open_nc(self.ncfile) as ds_disk:
+            v0 = ds_disk.keys()[0]
+            for lidx in labels:
+                expected = self.ds_var[v0][lidx]
+                actual = ds_disk[v0][lidx]
+                assert_equal_dimarrays(actual, expected)
 
     # def test_write(self):
     #     cls.ds_disk = open_nc(cls.ncfile, mode='w', clobber=True) # open netCDF file for writing
