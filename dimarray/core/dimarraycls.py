@@ -12,11 +12,11 @@ from collections import OrderedDict as odict
 from dimarray.tools import anynan, pandas_obj
 from dimarray.config import get_option
 from dimarray.decorators import format_doc
+from dimarray import plotting
 
 from .metadata import MetadataBase
 from .axes import Axis, Axes, GroupedAxis, _doc_reset_axis
 
-from dimarray import plotting
 from . import transform as _transform  # numpy along-axis transformations, interpolation
 from . import reshape as _reshape      # change array shape and dimensions
 from . import indexing as _indexing    # perform slicing and indexing operations
@@ -480,11 +480,8 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     def __getattr__(self, att):
         """ allows for accessing axis values by '.' directly
         """
-        # exclude special attributes from checking
-        exclude = ['values', 'axes']
-
         # check for dimensions
-        if not att.startswith('_') and att not in exclude and att in self.dims:
+        if not att.startswith('_') and att not in self.__metadata_exclude__ and att in self.dims:
             ax = self.axes[att]
             return ax.values # return numpy array
 
@@ -506,8 +503,7 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         >>> a.x0
         array(['a', 'b', 'c'], dtype=object)
         """
-        exclude = ['values', 'axes']
-        if not name.startswith('_') and name not in exclude and name in self.dims:
+        if not name.startswith('_') and name not in self.__metadata_exclude__ and name in self.dims:
             self.axes[name][:] = value # the axis class will handle types 
             # conversion and other subtelties that may come in the future 
         else:

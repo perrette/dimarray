@@ -464,7 +464,7 @@ def _take_broadcast(a, indices):
         # insert the right new axis at the appropriate position
         newaxes.insert(insert, broadcastaxis)
 
-    return a._constructor(newval, newaxes, **a._metadata)
+    return a._constructor(newval, newaxes, **a._metadata())
 
 def _take_box(a, indices):
     """ matlab-like, do not broadcast array-indices but simply sample values along each dimension independently

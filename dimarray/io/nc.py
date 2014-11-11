@@ -1,11 +1,12 @@
 """ NetCDF I/O to access and save geospatial data
 """
 import os
-import glob
+import glob, copy
 from collections import OrderedDict as odict
+from functools import partial
 import warnings
-import netCDF4 as nc
 import numpy as np
+import netCDF4 as nc
 import dimarray as da
 #from geo.data.index import to_slice, _slice3D
 
@@ -13,17 +14,693 @@ from dimarray.decorators import format_doc
 from dimarray.dataset import Dataset, concatenate_ds, stack_ds
 from dimarray.core import DimArray, Axis, Axes
 from dimarray.config import get_option
-from dimarray.core.metadata import _repr_metadata
+# from dimarray.core.metadata import _repr_metadata
 from dimarray.core.prettyprinting import repr_axis, repr_axes, repr_dimarray, repr_dataset, repr_attrs
 
-__all__ = ['read_nc','summary_nc', 'write_nc', 'read_dimensions']
+__all__ = ['read_nc','summary_nc', 'write_nc']
 
 
 #
 # Global variables 
 #
-FORMAT='NETCDF4'  # default format to write to netCDF
+FORMAT = get_option('io.nc.format') # for the doc
 
+#
+# Helper functions
+#
+def _convert_nctype_dtype(dtype):
+    """ strings are given "object" type in Axis object
+    ==> assume all objects are actually strings
+    NOTE: this will fail for other object-typed axes such as tuples
+    """
+    # if dtype is np.dtype('O'):
+    if dtype >= np.dtype('S1'): # all strings, this include objects dtype('O')
+        nctype = str 
+    else:
+        nctype = dtype 
+    return nctype
+
+def _convert_nctype_array(arr):
+    arr = np.asarray(arr)
+    if arr.dtype > np.dtype('S1'):
+        arr = np.asarray(arr, dtype=object)
+    return arr
+
+
+
+#
+# EXPERIMENTAL, ONLY PARTLY CONNECTED TO THE ABOVE
+#
+# Define an open_nc function return an on-disk Dataset object, more similar to 
+# netCDF4's Dataset.
+#
+class HasMetadataBase(object):
+    __metadata_exclude__ = []
+
+    @property
+    def attrs(self):
+        raise NotImplementedError('need to be overloaded !')
+    @attrs.setter
+    def attrs(self, value):
+        del self.attrs
+        self.attrs.update(value)
+    @attrs.deleter
+    def attrs(self):
+        for k in self.attrs.keys():
+            del self.attrs[k]
+
+    def _getattr(self, name):
+        if 'dims' in self.__class__.__dict__ and name in self.dims:
+            return self.axes[name].values # return axis values
+        elif name in self.attrs.keys():
+            return self.attrs[name]
+        else:
+            raise AttributeError("{} object has no attribute {}".format(self.__class__.__name__, name))
+
+    # methods to overload getattr, setattr, delattr
+    def _setattr(self, name, value):
+        if name.startswith('_') or name in self.__metadata_exclude__:
+            object.__setattr__(self, name, value)
+        elif hasattr(self, 'dims') and name in self.dims:
+            self.axes[name][:] = value # modify axis values
+        else:
+            self.attrs[name] = value # add as metadata
+
+    def _delattr(self, name):
+        if name in self.attrs.keys():
+            del self.attrs[name]
+        else:
+            return object.__delattr__(self, name)
+
+    def _repr(self, metadata=False):
+        return NotImplementedError()
+
+    def __repr__(self):
+        return self._repr()
+
+    def summary(self):
+        print self.summary_repr()
+
+    def summary_repr(self):
+        return self._repr(metadata=True)
+
+    def _metadata(self, meta=None):
+        " for back compatibility "
+        if meta is None:
+            return self.attrs
+        else:
+            self.attrs.update(meta)
+
+class HasAxesBase(HasMetadataBase):
+    """ class to handle things related to axes, such as overloading __getattr__
+    """
+    @property
+    def dims(self):
+        return tuple([ax.name for ax in self.axes])
+
+    @dims.setter
+    def dims(self, newdims):
+        if not isinstance(newdims, dict):
+            if len(newdims) != len(self.dims):
+                raise ValueError("Can only rename all dimensions at once, unless a dictionary is provided")
+            newdims = dict(zip(self.dims, newdims))
+        for old in newdims.keys():
+            self.axes[old].name = newdims[old]
+
+    @property
+    def axes(self):
+        raise NotImplementedError('need to be overloaded !')
+
+    @property
+    def labels(self):
+        return tuple([ax.values for ax in self.axes])
+
+
+class IndexableBase(HasAxesBase):
+
+    @property
+    def values(self):
+        return None
+
+    _indexing = None
+    _broadcast = False
+
+    def _get_indices(self, idx, indexing=None, tol=None, axis=None):
+        " check indices, return a tuple of integer indices "
+        indexing = indexing or self._indexing or get_option('indexing.by')
+
+        # special case: numpy like (idx, axis)
+        if axis not in (0, None):
+            warnings.warn(DeprecationWarning('(ix, axis) syntax will be \
+                                             deprecated in a future release, \
+                                             use the more general {axis:ix}'))
+            idx = {axis:idx}
+
+        # special case: Axes is provided as index
+        elif isinstance(idx, Axes):
+            idx = {ax.name:ax.values for ax in idx}
+
+        # should always be a tuple
+        if isinstance(idx, dict):
+            # replace int dimensions with str dimensions
+            for k in idx:
+                if type(k) is int:
+                    idx[k] = self.dims[k]
+            # build in
+            idx = tuple([idx[d] if d in idx else slice(None) for d in self.dims])
+
+        elif not isinstance(idx, tuple):
+            idx = (idx,)
+
+        # load each dimension as necessary
+        indices = ()
+        for i, dim in enumerate(self.dims):
+            if i >= len(idx):
+                ix = slice(None)
+            else:
+                ix = idx[i]
+
+            # in case of label-based indexing, need to read the whole dimension
+            # and look for the appropriate values
+            if indexing != 'position' and not (type(ix) is slice and ix == slice(None)):
+                # find the index corresponding to the required axis value
+                ix = self.axes[dim].loc(ix, tol=tol)
+            indices += (ix,)
+
+        return indices
+
+    def _getitem(self, indices=None, axis=None, indexing=None, tol=None, broadcast=None):
+        """ The indexing machinery in functional form, 
+        to be called by __getitem__ with default arguments
+        """
+        if indices is None:
+            indices = slice(None)
+        if broadcast is None: 
+            if self._broadcast is None:
+                broadcast = get_option('indexing.broadcast')
+            else: 
+                broadcast = self._broadcast
+
+        # special-case: full-shape boolean indexing (will fail with netCDF4)
+        if self._is_boolean_index_nd(indices):
+            values = self.values[indices] # boolean index, just get it, or raise appropriate error
+            if np.isscalar(values):
+                return values
+            idx = np.where(indices)
+            axes = self._getaxes_broadcast(idx)
+            dima = self._constructor(values, axes)
+            dima.attrs.update(self.attrs)
+            return dima
+
+        # indices are defined per axis
+        idx = self._get_indices(indices, indexing=indexing, tol=tol)
+
+        # special case: broadcast arrays a la numpy
+        if broadcast:
+            axes = self._getaxes_broadcast(idx)
+            values = self._getvalues_broadcast(idx)
+
+        else:
+            axes = self._getaxes_ortho(idx)
+            values = self._getvalues_ortho(idx)
+
+        # scalar variables come out as arrays (issue for netCDF4 only, here for simplicity)
+        if len(axes) == 0 and np.ndim(values) != 0:
+            # warnings.warn("netCDF4: scalar variables come out as arrays ! Fix that.")
+            assert np.size(values) == 1, "inconsistency betewen axes and data"
+            assert np.ndim(values) == 1
+            values = values[0]
+
+        if np.isscalar(values):
+            return values
+
+        dima = self._constructor(values, axes) # initialize DimArray
+        dima.attrs.update(self.attrs) # add attribute
+
+        return dima
+
+    def _setitem(self, indices, values, axis=None, indexing=None, tol=None, broadcast=None):
+        if broadcast is None: 
+            if self._broadcast is None:
+                broadcast = get_option('indexing.broadcast')
+            else: 
+                broadcast = self._broadcast
+
+        # special-case: full-shape boolean indexing (will fail with netCDF4)
+        if self._is_boolean_index_nd(indices):
+            self.values[indices] = values # boolean index, just set it, or raise appropriate error
+            return
+
+        idx = self._get_indices(indices, tol=tol, indexing=indexing, axis=axis)
+
+        if broadcast:
+            self._setvalues_broadcast(idx, np.asarray(values))
+        else:
+            self._setvalues_ortho(idx, np.asarray(values))
+
+    # also use with [:] syntax, for default arguments
+    __getitem__ = _getitem 
+    __setitem__ = _setitem
+
+    # orthogonal or broadcast indexing?
+    def _setvalues_broadcast(self, idx_tuple, values):
+        raise NotImplementedError()
+    def _getvalues_broadcast(self, idx_tuple):
+        raise NotImplementedError()
+    def _getaxes_broadcast(self, idx_tuple):
+        raise NotImplementedError()
+
+    def _setvalues_ortho(self, idx_tuple, values):
+        raise NotImplementedError()
+    def _getvalues_ortho(self, idx_tuple):
+        raise NotImplementedError()
+    def _getaxes_ortho(self, idx_tuple):
+        " idx: tuple of position indices  of length = ndim (orthogonal indexing)"
+        axes = []
+        for i, ix in enumerate(idx_tuple):
+            ax = self.axes[i][ix]
+            if isinstance(ax, Axis): # do not include scalar axes
+                axes.append(ax)
+        return axes
+
+    def _is_boolean_index_nd(self, idx):
+        return isinstance(idx, np.ndarray) and idx.dtype is np.dtype('bool') and idx.ndim > 1
+
+
+    @property
+    def ix(self):
+        " toggle between position-based and label-based indexing "
+        newindexing = 'label' if self._indexing=='position' else 'position'
+        new = copy.copy(self) # shallow copy, not to verwrite _indexing
+        new._indexing = newindexing
+        return new
+
+    # after xray: add sel, isel, loc, iloc methods
+    def sel(self, **indices):
+        return self.loc[indices]
+
+    def isel(self, **indices):
+        return self.iloc[indices]
+
+    @property
+    def loc(self):
+        return self if self._indexing == 'label' else self.ix
+
+    @property
+    def iloc(self):
+        # return self if self._indexing == 'position' else self.ix
+        return self if self._indexing == 'position' else self.ix
+
+class DatasetBase(HasMetadataBase):
+    def __iter__(self):
+        for k in self.keys():
+            yield k
+
+#
+# Specific to NetCDF I/O
+#
+class NetCDFOnDisk(object):
+    " DimArray wrapper for netCDF4 Variables and Datasets "
+    @property
+    def nc(self):
+        return self._ds
+    @property
+    def _obj(self):
+        return NotImplementedError("need to be subclassed")
+    @property
+    def attrs(self):
+        return AttrsOnDisk(self._obj)
+    def close(self):
+        return self._ds.close()
+    def __exit__(self, exception_type, exception_value, tracebook):
+        self.close()
+    def __enter__(self):
+        return self
+    @staticmethod
+    def _convert_dtype(self, dtype):
+        # needed for VLEN types
+        # ==> assume all objects are actually strings
+        #NOTE: this will fail for other object-typed axes such as tuples
+        if dtype >= np.dtype('S1'): # all strings, this include objects dtype('O')
+            nctype = str 
+        else:
+            nctype = dtype 
+        return nctype
+
+
+class DatasetOnDisk(NetCDFOnDisk, DatasetBase):
+    def __init__(self, f, *args, **kwargs):
+        if isinstance(f, nc.Dataset):
+            self._ds = f
+        else:
+            self._ds = nc.Dataset(f, *args, **kwargs)
+    @property
+    def _obj(self):
+        return self._ds
+
+    def read(self, names=None, **kwargs):
+        """ Equivalent to dimarray.read_nc
+        """
+        # automatically read all variables to load (except for the dimensions)
+        if names is None:
+            names = self.keys()
+        data = Dataset()
+        for nm in names:
+            data[nm] = self[nm].read(**kwargs)
+        data.attrs.update(self.attrs) # dataset's metadata
+        return data
+
+    def keys(self):
+        " all variables except for dimensions"
+        return [nm for nm in self._ds.variables.keys() if nm not in self.dims]
+    def values(self):
+        return [self[k] for k in self.keys()]
+    def __len__(self):
+        return len(self.keys())
+
+    @property
+    def dims(self):
+        return tuple(self._ds.dimensions.keys())
+    @property
+    def axes(self):
+        return AxesOnDisk(self._ds, self.dims)
+
+    def __getitem__(self, name):
+        if name in self.dims:
+            raise KeyError("Use 'axes' property to access dimension variables: {}".format(name))
+        if name not in self.keys():
+            raise KeyError("Variable not found in the dataset: {}.\nExisting variables: {}".format(name, self.keys()))
+        return DimArrayOnDisk(self._ds, name)
+
+    def __setitem__(self, name, value):
+        DimArrayOnDisk(self._ds, name)[:] = value
+
+    def __delitem__(self, name):
+        del self._ds.variables[name]
+
+    _repr = repr_dataset
+
+    # @property
+    # def createVariable(self):
+    #     " alias to netCDF4 method, for fine-grained access "
+    #     return self._ds.createVariable
+    # @property
+    # def createDimension(self):
+    #     " alias to netCDF4 method, for fine-grained access "
+    #     return self._ds.createDimension
+
+class NetCDFVariable(NetCDFOnDisk):
+    @property
+    def _obj(self):
+        return self._ds.variables[self._name]
+    @property
+    def values(self):
+        return self._obj # simply the variable to be indexed and returns values like netCDF4
+    @values.setter
+    def values(self, values):
+        self[:] = values
+    @property
+    def size(self):
+        return self._obj.size
+    def __array__(self):
+        return self.values[:] # returns a numpy array
+    
+class DimArrayOnDisk(NetCDFVariable, IndexableBase):
+    _constructor = DimArray
+    _broadcast = False
+    def __init__(self, ds, name, _indexing=None):
+        self._indexing = _indexing or get_option('indexing.by')
+        self._ds = ds
+        self._name = name
+    @property
+    def name(self):
+        return self._name
+    @name.setter
+    def name(self, newname):
+        self._ds.renameVariable(self, self._name, newname)
+        self._name = newname
+    @property
+    def shape(self):
+        return self._obj.shape
+    @property
+    def ndim(self):
+        return self._obj.ndim
+    @property
+    def dims(self):
+        return tuple(self._obj.dimensions)
+    @property
+    def axes(self):
+        return AxesOnDisk(self._ds, self.dims)
+
+    def _setitem(self, idx, values, **kwargs):
+        # just create the variable and dimensions
+        ds = self._ds
+        if self._name not in ds.variables.keys():
+            # create variable
+            if np.isscalar(values):
+                values = da.DimArray(values)
+            if not isinstance(values, DimArray):
+                #TODO: do the scalar case
+                raise TypeError("Can only create new variables with DimArray")
+            if values.ndim > 0:
+                for ax in values.axes:
+                    AxisOnDisk(ds, ax.name)[:] = ax.values
+            nctype = self._convert_dtype(values.dtype)
+            ds.createVariable(self._name, nctype, self.dims)
+
+        # do all the indexing and assignment via IndexableBase class
+        # ==> it will set the values via "values" attribute
+        super(DimArrayOnDisk)._setitem(self, idx, values, **kwargs)
+
+    read = IndexableBase._getitem #TODO: wrap documentation
+    write = IndexableBase._setitem  #TODO: wrap documentation
+
+    def _repr(self, **kwargs):
+        assert 'lazy' not in kwargs, "lazy parameter cannot be provided, it is always True"
+        return repr_dimarray(self, lazy=True, **kwargs)
+
+    def _getvalues_ortho(self, idx_tuple):
+        return self.values[idx_tuple] # orthogonal indexing is the default for netCDF4
+    def _setvalues_ortho(self, idx_tuple, values):
+        self.values[idx_tuple] = values
+
+class AxisOnDisk(NetCDFVariable, HasMetadataBase):
+    def __init__(self, ds, name):
+        self._ds = ds
+        if type(name) not in (str, unicode):
+            raise TypeError("only string names allowed")
+        self._name = name
+
+    @property
+    def name(self):
+        return self._name
+    @name.setter
+    def name(self, new):
+        self._ds.renameDimension(self._name, new)
+        if self._name in self._ds.variables.keys():
+            self._ds.renameVariable(self._name, new)
+        self._name = new
+
+    def __setitem__(self, ix, values):
+        ds = self._ds
+        name = self._name
+
+        size = np.size(values) if values is not None else None
+
+        # create dimension variable if needed
+        if name not in ds.dimensions.keys(): 
+            ds.createDimension(name, size)
+
+        # assign variable
+        if values is None:
+            return
+
+        arr = _convert_nctype_arr(values)
+
+        # create variable if needed
+        if name not in ds.variable.keys():
+            nctype = _convert_nctype_dtype(arr.dtype)
+            ds.createVariable(name, nctype, name) 
+
+        # assign value to variable
+        ds.variables[name][ix] = arr
+
+        # assign metadata
+        try:
+            self.attrs.update(values._metadata())
+        except:
+            pass
+
+    def __getitem__(self, ix):
+        name = self._name
+        ds = self._ds
+        if name in ds.variables.keys():
+            # assume that the variable and dimension have the same name
+            values = ds.variables[name][ix]
+        else:
+            # default, dummy dimension axis
+            msg = "'{}' dimension not found, define integer range".format(name)
+            warnings.warn(msg)
+            values = np.arange(len(ds.dimensions[name]))[ix]
+
+        # do not produce an Axis object
+        if np.isscalar(values):
+            return values
+
+        axis = Axis(values, name)
+        
+        # add metadata
+        if name in ds.variables.keys():
+            axis.attrs.update(self.attrs)
+
+        return axis
+
+    def __len__(self):
+        return len(self._ds.dimensions[self._name])
+    @property
+    def size(self):
+        return len(self)
+
+    def range(self):
+        size = len(self) # does not work with unlimited dimensions?
+        if self._name in self._ds.variables.keys():
+            first, last = self._ds.variables[self._name][0], self._ds.variables[self._name][size-1]
+        else:
+            first, last = 0, size-1
+        return first, last
+
+    _repr = repr_axis
+
+class AxesOnDisk(object):
+    def __init__(self, ds, dims):
+        self._ds = ds
+        self.dims = dims
+    def __getitem__(self, dim):
+        if type(dim) is int:
+            dim = self.dims[dim]
+        elif dim not in self.dims:
+            msg = """{} not found in dimensions (dims={}).
+A new dimension can be created via: `ds.axes[name] = values` 
+or `ds.axes[name] = None` for an unlimited dimension.
+Low-level netCDF4 function is also available as `ds.nc.createDimension` 
+and `ds.nc.createVariable`""".format(ix, self.dims)
+            raise KeyError(msg)
+        return AxisOnDisk(self._ds, dim)
+    def __setitem__(self, dim, axis):
+        if type(dim) is int:
+            dim = self.dims[dim]
+        # involves variable creation
+        AxisOnDisk(self._ds, dim)[:] = axis
+    def __iter__(self):
+        for k in self.dims:
+            yield k
+
+    _repr = repr_axes
+
+class AttrsOnDisk(object):
+    """ represent netCDF Dataset or Variable Attribute
+    """
+    def __init__(self, obj):
+        self.obj = obj
+    def __setitem__(self, name, value):
+        self.obj.setncattr(name, value)
+    def __getitem__(self, name):
+        return self.obj.getncattr(name)
+    def __delitem__(self, name):
+        return self.obj.delncattr(name)
+    def update(self, attrs):
+        for k in attrs.keys():
+            self[k] = attrs[k]
+    def keys(self):
+        return self.obj.ncattrs()
+    def values(self):
+        return [self.obj.getncattr(k) for k in self.obj.ncattrs()]
+    def todict(self):
+        return odict(zip(self.keys(), self.values()))
+    def __iter__(self):
+        for k in self.keys():
+            yield k
+    def __len__(self):
+        return len(self.keys())
+    def __repr__(self):
+        return "Attributes:\n"+repr_attrs(self)
+
+###################################################
+# Wrappers
+###################################################
+
+
+def open_nc(file_name, *args, **kwargs):
+    """ open a netCDF file a la netCDF4, for interactive access to its properties
+
+    Parameters
+    ----------
+    file_name : netCDF file name
+    *args, **kwargs : passed to netCDF4.Dataset
+
+    Returns
+    -------
+    dimarray.io.nc.DatasetOnDisk class (see help on this class for more info)
+
+    Examples
+    --------
+    >>> ncfile = da.get_ncfile('greenland_velocity.nc')
+    >>> ds = da.open_nc(ncfile)
+
+    Informative Display similar to a in-memory Dataset
+
+    >>> ds
+    Dataset of 6 variables (netCDF)
+    0 / y1 (113): -3400000.0 to -600000.0
+    1 / x1 (61): -800000.0 to 700000.0
+    surfvelmag: (u'y1', u'x1')
+    lat: (u'y1', u'x1')
+    lon: (u'y1', u'x1')
+    surfvely: (u'y1', u'x1')
+    surfvelx: (u'y1', u'x1')
+    mapping: ()
+
+    Load variables with [:] syntax, like netCDF4 package
+
+    >>> ds['surfvelmag'][:] # load one variable
+    dimarray: 6893 non-null elements (0 null)
+    0 / y1 (113): -3400000.0 to -600000.0
+    1 / x1 (61): -800000.0 to 700000.0
+    array(...)
+
+    Indexing is similar to DimArray, and includes the sel, isel methods
+
+    >>> ds['surfvelmag'].ix[:10, -1] # load first 10 y1 values, and last x1 value
+    dimarray: 10 non-null elements (0 null)
+    0 / y1 (10): -3400000.0 to -3175000.0
+    array([ 0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.], dtype=float32)
+
+    >>> ds['surfvelmag'].sel(x1=700000, y1=-3400000)
+    0.0
+
+    >>> ds['surfvelmag'].isel(x1=-1, y1=0)
+    0.0
+
+    Need to close the Dataset at the end
+
+    >>> ds.close() # close
+
+    Also usable as context manager
+
+    >>> with da.open_nc(ncfile) as ds:
+    ...     dataset = ds.read() # load full data set, same as da.read_nc(ncfile)
+    >>> dataset
+    Dataset of 6 variables
+    0 / y1 (113): -3400000.0 to -600000.0
+    1 / x1 (61): -800000.0 to 700000.0
+    surfvelmag: (u'y1', u'x1')
+    lat: (u'y1', u'x1')
+    lon: (u'y1', u'x1')
+    surfvely: (u'y1', u'x1')
+    surfvelx: (u'y1', u'x1')
+    mapping: nan
+    """
+    return DatasetOnDisk(file_name, *args, **kwargs)
 
 #
 # some common piece of documentation
@@ -99,17 +776,6 @@ def read_nc(f, nms=None, *args, **kwargs):
         It is always possible to use set_axis later.
 
         Only when reading multiple files and align==True
-
-    dimensions_mapping : dict, optional
-        mapping between netCDF dimensions and variables in the file
-        Keys are dimensions names, values are corresponding variable names.
-        if not provided, look for variables with same name as dimension.
-
-    copy_grid_mapping : bool, optional
-        if True, any "grid_mapping" attribute pointing to another variable 
-        present in the dataset will be replaced by that variable's metadata
-        as a dictionary. This can ease transformations.
-        Default is False for a variable, True for a Dataset.
 
     Returns
     -------
@@ -215,120 +881,6 @@ def read_nc(f, nms=None, *args, **kwargs):
 
     return obj
 
-#
-# read from file
-# 
-
-def read_dimensions(f, name=None, ix=slice(None), dimensions_mapping=None, verbose=False):
-    """ return an Axes object
-
-    Parameters
-    ----------
-    name : str, optional
-        variable name
-    ix : integer (position) index
-    dimensions_mapping : dict, optional
-        mapping between dimension and variable names
-
-    Returns
-    -------
-    Axes object
-    """
-    f, close = _check_file(f, mode='r', verbose=verbose)
-
-    # dimensions associated to the variable to load
-    if name is None:
-        dims = f.dimensions.keys()
-    else:
-        try:
-            dims = f.variables[name].dimensions
-        except KeyError:
-            print "Available variable names:",f.variables.keys()
-            raise
-
-    dims = [str(d) for d in dims] # conversion to string
-
-    # load axes
-    axes = Axes()
-    for dim in dims:
-        if dimensions_mapping is not None:
-            # user-provided mapping between dimensions and variable name
-            dim_name = dimensions_mapping[dim]
-        else:
-            dim_name = dim
-        axis = _read_dimension(f, dim_name, ix=ix)
-
-        if isinstance(axis, Axis): # we may have a scalar
-            axes.append(axis) 
-
-    if close: f.close()
-
-    return axes
-
-def _read_dimension(f, name, ix=None, values_only=False):
-    """ Read one netCDF4 dimension as dimarray.Axis
-
-    Parameters
-    ----------
-    f : netCDF4.Dataset handle
-    name : dimension name
-    ix : numpy index, optional
-    values_only : bool, optional (default False)
-        only return array value, instead of creating an Axis object
-        (avoid loading metadata, and some Axis checks)
-
-    Returns
-    -------
-    Axis instance
-    """
-    if ix is None:
-        ix = slice(None)
-    if name in f.variables.keys():
-        # assume that the variable and dimension have the same name
-        values = f.variables[name][ix]
-    else:
-        # default, dummy dimension axis
-        msg = "'{}' dimension not found, define integer range".format(name)
-        warnings.warn(msg)
-        values = np.arange(len(f.dimensions[name]))[ix]
-
-    # # replace unicode by str as a temporary bug fix (any string seems otherwise to be treated as unicode in netCDF4)
-    # if values.size > 0 and type(values[0]) is unicode:
-    #     for i, val in enumerate(values):
-    #         if type(val) is unicode:
-    #             values[i] = str(val)
-
-    # do not produce an Axis object
-    if values_only or np.isscalar(values):
-        return values
-
-    axis = Axis(values, name)
-    
-    # add metadata
-    if name in f.variables.keys():
-        meta = _read_attributes(f, name)
-        axis._metadata(meta)
-
-    return axis
-
-def _read_attributes(f, name=None, verbose=False):
-    """ Read netCDF attributes
-
-    name: variable name
-    """
-    f, close = _check_file(f, mode='r', verbose=verbose)
-    attr = {}
-    if name is None:
-        var = f
-    else:
-        var = f.variables[name]
-    for k in var.ncattrs():
-        if k.startswith('_'): 
-            continue # do not read "hidden" attributes
-        attr[k] = var.getncattr(k)
-
-    if close: f.close()
-    return attr
 
 def _extract_kw(kwargs, argnames, delete=True):
     """ extract check 
@@ -341,7 +893,7 @@ def _extract_kw(kwargs, argnames, delete=True):
     return kw
 
 @format_doc(indexing=_doc_indexing)
-def _read_variable(f, name, indices=None, axis=0, indexing='label', verbose=False, **kwargs):
+def _read_variable(f, name, indices=None, axis=0, indexing='label', tol=None, verbose=False):
     """ Read one variable from netCDF4 file 
 
     Parameters
@@ -359,13 +911,8 @@ def _read_variable(f, name, indices=None, axis=0, indexing='label', verbose=Fals
     See preferred function `dimarray.read_nc` for more complete documentation 
     """
     f, close = _check_file(f, mode='r', verbose=verbose)
-
-    v = VariableOnDisk(f, name, indexing).read(indices, axis, **kwargs)
-
-    # close netCDF if file was given as file name
-    if close:
-        f.close()
-
+    obj = DimArrayOnDisk(f, name).read(indices, axis=axis, indexing=indexing, tol=tol)
+    if close: f.close() # close netCDF if file was given as file name
     return obj
 
 #read_nc.__doc__ += _read_variable.__doc__
@@ -471,7 +1018,7 @@ def _read_multinc(fnames, nms=None, axis=None, keys=None, align=False, concatena
     return ds
 
 @format_doc(netCDF4=_doc_write_nc, indexing=_doc_indexing_write, write_modes=_doc_write_modes)
-def _write_dataset(f, obj, mode='w-', indices=None, axis=0, format=FORMAT, verbose=False, **kwargs):
+def _write_dataset(f, obj, mode='w-', indices=None, axis=0, format=None, verbose=False, **kwargs):
     """ Write Dataset to netCDF file
 
     Parameters
@@ -511,7 +1058,7 @@ def _write_dataset(f, obj, mode='w-', indices=None, axis=0, format=FORMAT, verbo
 
 
 @format_doc(netCDF4=_doc_write_nc, indexing=_doc_indexing_write, write_modes=_doc_write_modes)
-def _write_variable(f, obj=None, name=None, mode='a+', format=FORMAT, indices=None, axis=0, verbose=False, share_grid_mapping=False, **kwargs):
+def _write_variable(f, obj=None, name=None, mode='a+', format=None, indices=None, axis=0, verbose=False, indexing=None, **kwargs):
     """ Write DimArray instance to file
 
     Parameters
@@ -524,11 +1071,6 @@ def _write_variable(f, obj=None, name=None, mode='a+', format=FORMAT, indices=No
         Default mode is 'a+'
     {netCDF4}
     {indexing}
-    share_grid_mapping : bool, optional
-        if True, write any grid mapping attribute as a 
-        separate variable in the dataset, accordingly to CF-conventions
-        in order to share that information across several variables.
-        Default is False.
 
     See Also
     --------
@@ -539,128 +1081,14 @@ def _write_variable(f, obj=None, name=None, mode='a+', format=FORMAT, indices=No
     assert name, "invalid variable name !"
 
     # control wether file name or netCDF handle
-    f, close = _check_file(f, mode=mode, verbose=verbose, format=format)
+    f, close = _check_file(f, mode=mode, verbose=verbose, format=format, **kwargs)
 
-    # create variable if necessary
-    if name not in f.variables:
-        assert isinstance(obj, DimArray), "expected a DimArray instance, got {}".format(type(obj))
-        v = _createVariable(f, name, obj.axes, dtype=obj.dtype, **kwargs)
-
-    else:
-        v = f.variables[name]
-
-        # remove dimension check to write slices
-        #if isinstance(obj, DimArray) and obj.dims != tuple(v.dimensions):
-        #    raise ValueError("Dimension name do not correspond {}: {} attempted to write: {}".format(name, tuple(v.dimensions), obj.dims))
-
-    # determine indices
-    if indices is None:
-        ix = slice(None)
-
-    else:
-        axes = read_dimensions(f, name)
-        try:
-            ix = axes.loc(indices, axis=axis)
-        except IndexError, msg:
-            raise
-            raise IndexError(msg)
-
-    # Write Variable
-    try:
-        a = np.asarray(obj)
-        if a.dtype > np.dtype('S1'):
-            a = np.asarray(a, dtype=object)
-        v[ix] = a
-    except:
-        print np.asarray(obj)
-        print ix
-        print np.asarray(obj).dtype
-        print v.dtype
-        raise
-
-    # add metadata if any
-    if not isinstance(obj, DimArray):
-        if close:
-            f.close()
-        return
-
-    meta = obj._metadata()
-    for k in meta.keys():
-        if k == "name": continue # 
-        if meta[k] is None: 
-            # do not write empty attribute
-            # but delete any existing attribute 
-            # of the same name
-            if k in f.variables[name].ncattrs:
-                f.variables[name].delncattr(k) 
-            continue
-
-        # write grid_mapping in a separate variable
-        if k == 'grid_mapping' and share_grid_mapping \
-                and isinstance(meta[k], dict) \
-                and 'grid_mapping_name' in meta[k]:
-
-            # first search whether the mapping is already present
-            found = False
-            for nm in f.variables.keys():
-                ncvar = f.variables[nm]
-                if ncvar.size == 1 and hasattr(ncvar, 'grid_mapping_name'):
-                    test_grid_mapping = {kk: getattr(ncvar, kk) for kk in ncvar.ncattrs()}
-                    if test_grid_mapping == meta['grid_mapping']:
-                        found = True
-                        break
-            if found: 
-                meta[k] = nm # point toward the new name
-                    
-            else:
-                name0 = "mapping"
-                name = name0
-                i = 0
-                while name in f.variables.keys():
-                    i += 1
-                    name = name0+str(i)
-                    assert i < 100, 'infinite look'
-
-                try:
-                    mapping = f.createVariable(name, np.dtype('S1'), ())
-                    for kk, val in meta['grid_mapping'].iteritems():
-                        mapping.setncattr(kk, val)
-                    meta[k] = name # point toward the new name
-                except TypeError as error:
-                    msg = error.message
-                    msg += "\n=>could not create grid mapping variable"
-                    #warnings.warn(msg)
-                    raise Warning(msg)
-
-        try:
-            f.variables[name].setncattr(k, meta[k])
-
-        except TypeError, msg:
-            raise Warning(msg)
+    DimArrayOnDisk(f, name).write(obj, indices=indices, axis=axis, indexing=indexing)
 
     if close:
         f.close()
 
-@format_doc(netCDF4=_doc_write_nc, write_modes=_doc_write_modes)
-def _createVariable(f, name, axes, dims=None, dtype=float, verbose=False, mode='a+', format=FORMAT, **kwargs):
-    """ Create empty netCDF4 variable from axes
-
-    Parameters
-    ----------
-    f: string or netCDF4.Dataset file handle
-    name : variable name
-    axes : Axes's instance or list of numpy arrays (axis values)
-    dims: sequence, optional
-        dimension names (to be used in combination with axes to create Axes instance)
-    dtype : optional, variable type
-    mode : `str`, optional
-        {write_modes}
-        default is 'a+'
-
-    {netCDF4}
-
-    Examples
-    --------
+example_doc_to_recycle = """
     >>> tmpdir = getfixture('tmpdir').strpath # some temporary directory (py.test)
     >>> outfile = os.path.join(tmpdir, 'test.nc')
     >>> da.write_nc(outfile,'myvar', axes=[[1,2,3,4],['a','b','c']], dims=['dim1', 'dim2'], mode='w')
@@ -676,22 +1104,6 @@ def _createVariable(f, name, axes, dims=None, dtype=float, verbose=False, mode='
            [ 333.,   33.,   nan],
            [ 444.,   44.,   nan]])
     """
-    f, close = _check_file(f, mode=mode, verbose=verbose, format=format)
-
-    # make sure axes is an Axes instance
-    if not isinstance(axes, Axes):
-        axes = Axes._init(axes, dims=dims)
-
-    _check_dimensions(f, axes)
-
-    # Create Variable
-    nctype = _convert_to_nctype(dtype)
-    v = f.createVariable(name, nctype, [ax.name for ax in axes], **kwargs)
-
-    if close: 
-        f.close()
-
-    return v
 
 ##
 ## write to file
@@ -715,11 +1127,6 @@ def write_nc(f, obj=None, *args, **kwargs):
         {write_modes}
         default is 'a+'
     {indexing}
-    share_grid_mapping : bool, optional
-        if True, replace any dict-type grid mapping attribute 
-        by a string alias, and write the original dict as a separate variable 
-        in the dataset. This is accordingly to CF-conventions, in order to 
-        share that information across several variables. Default is False.
     {netCDF4}
 
     See Also
@@ -740,57 +1147,6 @@ def write_nc(f, obj=None, *args, **kwargs):
         raise TypeError("only DimArray or Dataset types allowed, \
                 or provide variable name (first argument) and axes parameters to create empty variable.\
                 \nGot first argument {}:{}".format(type(obj), obj))
-
-
-def _convert_to_nctype(dtype):
-    """ strings are given "object" type in Axis object
-    ==> assume all objects are actually strings
-    NOTE: this will fail for other object-typed axes such as tuples
-    """
-    # if dtype is np.dtype('O'):
-    if dtype >= np.dtype('S1'): # all strings, this include objects dtype('O')
-        nctype = str 
-    else:
-        nctype = dtype 
-    return nctype
-
-def _check_dimensions(f, axes, **verb):
-    """ create dimensions if not already existing
-
-    Parameters
-    ----------
-    f : `str` or netCDF handle
-        netCDF file to write to
-    axes: list of Axis objects
-    **verb: passed to _check_file (e.g. verbose=False)
-    """
-    f, close = _check_file(f, mode='a+', **verb)
-    for ax in axes:
-        dim = ax.name
-        if not dim in f.dimensions:
-            f.createDimension(dim, ax.size)
-            nctype = _convert_to_nctype(ax.dtype)
-            v = f.createVariable(dim, nctype, dim)
-            v[:] = ax.values
-
-        # add metadata if any
-        meta = ax._metadata()
-        for k in meta.keys():
-            if k == "name": continue # 
-            if meta[k] is None: 
-                # do not write empty attribute
-                # but delete any existing attribute 
-                # of the same name
-                if k in f.variables[name].ncattrs:
-                    f.variables[name].delncattr(k) 
-                continue
-            try:
-                f.variables[dim].setncattr(k, meta[k])
-
-            except TypeError, msg:
-                raise Warning(msg)
-
-    if close: f.close()
 
 #
 # display summary information
@@ -819,21 +1175,9 @@ def summary_nc(fname, name=None, metadata=False):
             obj = obj[name]
         print(obj.__repr__(metadata=metadata))
 
-#
-# util
-#
-
-def _scan(f, **verb):
-    """ get variable names in a netCDF file
-    """
-    f, close = _check_file(f, 'r', **verb)
-    nms = f.variables.keys()
-    dims = f.dimensions.keys()
-    if close: f.close()
-    return [n for n in nms if n not in dims], dims
 
 @format_doc(write_modes=_doc_write_modes)
-def _check_file(f, mode='r', verbose=False, format='NETCDF4'):
+def _check_file(f, mode='r', verbose=False, format=None):
     """ open a netCDF4 file
 
     Parameters
@@ -856,8 +1200,8 @@ def _check_file(f, mode='r', verbose=False, format='NETCDF4'):
     close: `bool`, `True` if input f indicated file name
     """
     close = False
-
     clobber = False
+    format = format or get_option('io.nc.format')
 
     if mode == 'w-':
         mode = 'w'
@@ -906,546 +1250,3 @@ Dataset.write_nc.__func__.__doc__ = _write_dataset.__doc__
 
 DimArray.read_nc.__func__.__doc__ = _read_variable.__doc__
 Dataset.read_nc.__func__.__doc__ = _read_dataset.__doc__
-
-
-#
-# EXPERIMENTAL, ONLY PARTLY CONNECTED TO THE ABOVE
-#
-# Define an open_nc function return an on-disk Dataset object, more similar to 
-# netCDF4's Dataset.
-#
-class HasMetadataBase(object):
-    _init_attrs = []
-    def _metadata(self, meta=None):
-        " for back compatibility "
-        if meta is None:
-            return self.attrs
-        else:
-            self.attrs.update(meta)
-
-    # general python class attribute access methods, which are overloaded
-    # to return / write axis values
-    def __getattr__(self, name):
-        """ access axis values via '.' attribute syntax, or metadata
-        """
-        if name in self.attrs.keys():
-            val = self.attrs[name]
-        else:
-            val = self.__getattribute__(name) # this 
-        return val
-
-    def __setattr__(self, name, value):
-        if name in self._init_attrs:
-            object.__setattr__(self, name, value) # e.g. 
-        else:
-            self.attrs[name] = value
-
-    def __delattr__(self, name):
-        if name in self.attrs.keys():
-            del self.attrs[name]
-        elif name in self._init_attrs:
-            raise ValueError("cannot delete attribute: "+str(name))
-        else:
-            object.__delattr__(self, name) # to have a typical error message
-
-    @property
-    def attrs(self):
-        return AttrsOnDisk(self._obj)
-
-    def _repr(self, metadata=False):
-        return self.__class__.__name +": ToBeSubclassed"
-
-    def __repr__(self):
-        self._repr()
-
-    def summary(self):
-        print self.summary_repr()
-
-    def summary_repr(self):
-        return self._repr(metadata=True)
-
-
-class HasAxesBase(HasMetadataBase):
-    """ class to handle things related to axes, such as overloading __getattr__
-    """
-    _init_attrs = [] # attributes that are set in the __init__
-
-    def __getattr__(self, name):
-        """ access axis values via '.' attribute syntax, or metadata
-        """
-        if name not in self._init_attrs and name in self.dims:
-            val = self._get_label(name)
-        else:
-            val = HasMetadataBase.__getattr__(self, name)
-        return val
-
-    def __setattr__(self, name, value):
-        if name not in self._init_attrs and name in self.dims:
-            self.ds.variables[name][:] = value # the axis class will handle types 
-        else:
-            HasMetadataBase.__setattr__(self, name, value)
-
-    def __delattr__(self, name):
-        if name in self.attrs.keys():
-            HasMetadataBase.__delattr__(self, name)
-        elif name in self._attributes:
-            raise ValueError("cannot delete attribute: "+str(name))
-        else:
-            object.__delattr__(self, name) # to have a typical error message
-
-    # @property
-    # def dims(self):
-    #     raise NotImplementedError('need to be overloaded !')
-    #
-    # @property
-    # def axes(self):
-    #     raise NotImplementedError('need to be overloaded !')
-    #
-    @property
-    def labels(self):
-        return tuple([ax.values for ax in self.axes])
-
-    # def _get_label(self, dim, ix=None):
-    #     " return dimension values "
-    #     return _read_dimension(self.ds, dim, ix=ix, values_only=True)
-
-
-class DatasetBase(HasAxesBase):
-    def _repr(self, metadata=False):
-        # variable names
-        f = self.ds
-        nms = self.keys()
-
-        # header
-        header = "Dataset of %s variables (netCDF)" % (len(nms))
-        if len(nms) == 1: header = header.replace('variables','variable')
-
-        lines = []
-        lines.append(header)
-        
-        # display dimensions name, size, first and last value
-        lines.append(AxesOnDisk(self.ds, self.dims)._repr(metadata=metadata))
-
-        # display variables name, shape and dimensions
-        for nm in nms:
-            dims = f.variables[nm].dimensions
-            line = "{name}: {dims}".format(dims=dims, name=nm)
-            lines.append(line)
-
-        # Metadata
-        if metadata:
-            meta = self.attrs
-            if len(meta) > 0:
-                lines.append("metadata:")
-                lines.append(_repr_metadata(meta))
-
-        return "\n".join(lines)
-
-
-class IndexableBase(HasAxesBase):
-    def _get_indices(self, idx, indexing=None, tol=None, axis=None):
-        " check indices, return a tuple of integer indices "
-        indexing = self._indexing if indexing is None else indexing
-
-        # special case: numpy like (idx, axis)
-        if axis not in (0, None):
-            warnings.warn(DeprecationWarning('(ix, axis) syntax will be \
-                                             deprecated in a future release, \
-                                             use the more general {axis:ix}'))
-            idx = {axis:idx}
-
-        # should always be a tuple
-        if isinstance(idx, dict):
-            # replace int dimensions with str dimensions
-            for k in idx:
-                if type(k) is int:
-                    idx[k] = self.dims[k]
-            # build in
-            idx = tuple([idx[d] if d in idx else slice(None) for d in self.dims])
-
-        elif not isinstance(idx, tuple):
-            idx = (idx,)
-
-        # load each dimension as necessary
-        indices = ()
-        for i, dim in enumerate(self.dims):
-            if i >= len(idx):
-                ix = slice(None)
-            else:
-                ix = idx[i]
-
-            # in case of label-based indexing, need to read the whole dimension
-            # and look for the appropriate values
-            if indexing != 'position' and not (type(ix) is slice and ix == slice(None)):
-                # find the index corresponding to the required axis value
-                ix = self.axes[dim].loc(ix, tol=None)
-            indices += (ix,)
-
-        return indices
-
-    def __getitem__(self, idx_raw):
-        # return self._read_variable(self.ds, self.name, indices=idx, indexing=self._indexing)
-        # position index
-        idx = self._get_indices(idx_raw)
-        axes = []
-        for i, ix in enumerate(idx):
-            ax = self.axes[i][ix]
-        # if ix is a scalar, the axis is reduced to a scalar as well: do not include it
-        if isinstance(ax, Axis):
-            axes.append(ax)
-
-        values = self._obj[idx]
-
-        # scalar variables come out as arrays. 
-        if len(axes) == 0 and np.ndim(values) != 0:
-            # warnings.warn("netCDF4: scalar variables come out as arrays ! Fix that.")
-            assert np.size(values) == 1, "inconsistency betwwen axes and data"
-            assert np.ndim(values) == 1
-            values = values[0]
-
-        if np.isscalar(values):
-            return values
-
-        dima = self._constructor(values, axes=axes) # initialize DimArray
-        dima.attrs.update(self.attrs) # add attribute
-
-        # attach metadata
-        return dima
-        # return self.read(indexing=self._indexing)
-
-
-#
-# Specific to NetCDF I/O
-#
-class NetCDFOnDisk(object):
-    @property
-    def axes(self):
-        return AxesOnDisk(self.ds, self.dims)
-
-    def close(self):
-        return self.ds.close()
-
-    def __exit__(self, exception_type, exception_value, tracebook):
-        self.close()
-
-    def __enter__(self):
-        return self
-
-class DatasetOnDisk(DatasetBase, NetCDFOnDisk):
-    _init_attrs = ['ds', '_indexing'] # attributes that are set in the __init__
-
-    def __init__(self, f, *args, **kwargs):
-        self._indexing = kwargs.pop('_indexing', get_option('indexing.by'))
-        if isinstance(f, nc.Dataset):
-            self.ds = f
-        else:
-            self.ds = nc.Dataset(f, *args, **kwargs)
-
-    def read(self, names=None, **kwargs):
-        """ Equivalent to dimarray.read_nc
-        """
-        # automatically read all variables to load (except for the dimensions)
-        if names is None:
-            names = self.keys()
-        data = Dataset()
-        for nm in names:
-            data[nm] = self[nm].read(**kwargs)
-        data._metadata(self.attrs) # dataset's metadata
-        return data
-
-    def keys(self):
-        """ all variables except for dimensions
-        """
-        return [nm for nm in self.ds.variables.keys() if nm not in self.dims]
-
-    def values(self):
-        return [self[k] for k in self.keys()]
-
-    def __iter__(self):
-        for k in self.keys():
-            yield k
-
-    @property
-    def dims(self):
-        return tuple(self.ds.dimensions.keys())
-
-    @property
-    def _obj(self):
-        return self.ds
-
-    def __getitem__(self, name):
-        return VariableOnDisk(self.ds, name, _indexing=self._indexing)
-
-    def __setitem__(self, name, value):
-        VariableOnDisk(self.ds, self.name)[:] = value
-
-    def __delitem__(self, name):
-        del self.ds.variables[name]
-
-
-
-class VariableOnDisk(IndexableBase, NetCDFOnDisk):
-    _constructor = DimArray
-    _init_attrs = ['ds', 'name', '_indexing'] # attributes that are set in the __init__
-    def __init__(self, ds, name, _indexing=None):
-        if _indexing is None:
-            _indexing = get_option('indexing.by')
-        self._indexing = _indexing
-        self.ds = ds
-        self.name = name
-    @property
-    def _obj(self):
-        return self.ds.variables[self.name]
-    @property
-    def shape(self):
-        return self._obj.shape
-    @property
-    def ndim(self):
-        return self._obj.ndim
-    @property
-    def size(self):
-        return self._obj.size
-    @property
-    def dims(self):
-        return tuple(self._obj.dimensions)
-
-    @property
-    def values(self):
-        return self._obj # simply the variable to be indexed and returns values like netCDF4
-
-    def read(self, indices=None, indexing=None, tol=None):
-        """ Equivalent to dimarray.read_nc
-        """
-        idx = self._get_indices(indices, tol=tol, indexing=indexing)
-        return self.iloc[idx]
-    
-    def __setitem__(self, idx, value):
-        return _write_variable(self.ds, self.name, indices=idx, indexing=self._indexing)
-
-    # after xray: add sel, isel, loc, iloc methods
-    def sel(self, **indices):
-        return self.loc[indices]
-
-    def isel(self, **indices):
-        return self.iloc[indices]
-
-    @property
-    def loc(self):
-        return self if self._indexing == 'label' else self.ix
-
-    @property
-    def iloc(self):
-        # return self if self._indexing == 'position' else self.ix
-        test = self if self._indexing == 'position' else self.ix
-        print test._indexing
-        return test
-
-    @property
-    def ix(self):
-        " toggle between position-based and label-based indexing "
-        newindexing = 'label' if self._indexing=='position' else 'position'
-        return self.__class__(self.ds, self.name, _indexing=newindexing)
-
-    def __repr__(self):
-        return repr_dimarray(self)
-
-class AxisOnDisk(HasMetadataBase):
-    def __init__(self, ds, name):
-        self.ds = ds
-        self.name = name
-        if type(name) not in (str, unicode):
-            raise TypeError("only string names allowed")
-
-    @property
-    def _obj(self):
-        return self.ds.variables[self.name]
-
-    def __setitem__(self, ix, values):
-        ds = self.ds
-        name = self.name
-
-        size = np.size(values) if values is not None else None
-
-        # create dimension variable if needed
-        if name not in ds.dimensions.keys(): 
-            ds.createDimension(name, size)
-
-        # assign variable
-        if values is None:
-            return
-
-        # create variable if needed
-        if name not in ds.variable.keys():
-            arr = np.asarray(values)
-            if arr.dtype > np.dtype('S1'):
-                arr = np.asarray(arr, dtype=object)
-            nctype = _convert_to_nctype(arr.dtype)
-            ds.createVariable(name, nctype, name) 
-
-        # assign value to variable
-        ds.variables[name][ix] = np.asarray(values)
-
-        # assign metadata
-        try:
-            self.attrs.update(values._metadata())
-        except:
-            pass
-
-    def __getitem__(self, ix):
-        name = self.name
-        ds = self.ds
-        if name in ds.variables.keys():
-            # assume that the variable and dimension have the same name
-            values = ds.variables[name][ix]
-        else:
-            # default, dummy dimension axis
-            msg = "'{}' dimension not found, define integer range".format(name)
-            warnings.warn(msg)
-            values = np.arange(len(ds.dimensions[name]))[ix]
-
-        # do not produce an Axis object
-        if np.isscalar(values):
-            return values
-
-        axis = Axis(values, name)
-        
-        # add metadata
-        if name in ds.variables.keys():
-            axis._metadata(self.attrs)
-
-        return axis
-
-    def __len__(self):
-        return len(self.ds.dimensions[self.name])
-    @property
-    def size(self):
-        return len(self)
-
-    def range(self):
-        size = len(self) # does not work with unlimited dimensions
-        if self.name in self.ds.variables.keys():
-            first, last = self.ds.variables[self.name][0], self.ds.variables[self.name][size-1]
-        else:
-            first, last = 0, size-1
-        return first, last
-
-    __repr__ = repr_axis
-
-class AxesOnDisk(object):
-    def __init__(self, ds, dims):
-        self.ds = ds
-        self.dims = dims
-    def _name(self, ix):
-        if type(ix) is not int and ix not in self.dims:
-            raise IndexError("{} not found in axes (dims={})".format(ix, self.dims))
-        return self.dims[ix] if type(ix) is int else ix
-
-    def __getitem__(self, ix):
-        return AxisOnDisk(self.ds, self._name(ix))
-    def __setitem__(self, dim, axis):
-        AxisOnDisk(self.ds, dim)[:] = axis
-    def __iter__(self):
-        for k in self.dims:
-            yield k
-
-    __repr__ = repr_axes
-
-class AttrsOnDisk(object):
-    """ represent netCDF Dataset or Variable Attribute
-    """
-    def __init__(self, obj):
-        self.obj = obj
-    def __setitem__(self, name, value):
-        self.obj.setncattr(name, value)
-    def __getitem__(self, name):
-        return self.obj.getncattr(name)
-    def __delitem__(self, name):
-        return self.obj.delncattr(name)
-    def update(self, attrs):
-        for k in attrs.keys():
-            self[k] = attrs[k]
-    def keys(self):
-        return self.obj.ncattrs()
-    def values(self):
-        return [self.obj.getncattr(k) for k in self.obj.ncattrs()]
-    def todict(self):
-        return odict(zip(self.keys(), self.values()))
-    def __iter__(self):
-        for k in self.keys():
-            yield k
-    def __repr__(self):
-        return "Attributes:\n"+repr_attrs(self)
-
-
-def open_nc(file_name, *args, **kwargs):
-    """ open a netCDF file a la netCDF4, for interactive access to its properties
-
-    Parameters
-    ----------
-    file_name : netCDF file name
-    *args, **kwargs : passed to netCDF4.Dataset
-
-    Returns
-    -------
-    dimarray.io.nc.DatasetOnDisk class (see help on this class for more info)
-
-    Examples
-    --------
-    >>> ncfile = da.get_ncfile('greenland_velocity.nc')
-    >>> ds = da.open_nc(ncfile)
-
-    Informative Display similar to a in-memory Dataset
-
-    >>> ds
-    Dataset of 6 variables (netCDF)
-    0 / y1 (113): -3400000.0 to -600000.0
-    1 / x1 (61): -800000.0 to 700000.0
-    surfvelmag: (u'y1', u'x1')
-    lat: (u'y1', u'x1')
-    lon: (u'y1', u'x1')
-    surfvely: (u'y1', u'x1')
-    surfvelx: (u'y1', u'x1')
-    mapping: ()
-
-    Load variables with [:] syntax, like netCDF4 package
-
-    >>> ds['surfvelmag'][:] # load one variable
-    dimarray: 6893 non-null elements (0 null)
-    0 / y1 (113): -3400000.0 to -600000.0
-    1 / x1 (61): -800000.0 to 700000.0
-    array(...)
-
-    Indexing is similar to DimArray, and includes the sel, isel methods
-
-    >>> ds['surfvelmag'].ix[:10, -1] # load first 10 y1 values, and last x1 value
-    dimarray: 10 non-null elements (0 null)
-    0 / y1 (10): -3400000.0 to -3175000.0
-    array([ 0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.], dtype=float32)
-
-    >>> ds['surfvelmag'].sel(x1=700000, y1=-3400000)
-    0.0
-
-    >>> ds['surfvelmag'].isel(x1=-1, y1=0)
-    0.0
-
-    Need to close the Dataset at the end
-
-    >>> ds.close() # close
-
-    Also usable as context manager
-
-    >>> with da.open_nc(ncfile) as ds:
-    ...     dataset = ds.read() # load full data set, same as da.read_nc(ncfile)
-    >>> dataset
-    Dataset of 6 variables
-    0 / y1 (113): -3400000.0 to -600000.0
-    1 / x1 (61): -800000.0 to 700000.0
-    surfvelmag: (u'y1', u'x1')
-    lat: (u'y1', u'x1')
-    lon: (u'y1', u'x1')
-    surfvely: (u'y1', u'x1')
-    surfvelx: (u'y1', u'x1')
-    mapping: nan
-    """
-    return DatasetOnDisk(file_name, *args, **kwargs)
-
