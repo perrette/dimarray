@@ -147,7 +147,7 @@ def transpose(self, *dims):
 
     result = self.values.transpose(newshape)
     newaxes = [self.axes[i] for i in newshape]
-    return self._constructor(result, newaxes, **self._metadata)
+    return self._constructor(result, newaxes, **self.attrs)
 
 def swapaxes(self, axis1, axis2):
     """ Swap two axes
@@ -307,7 +307,7 @@ def repeat(self, values, axis=None):
     newaxes[idx] = newaxis
 
     # Update values and axes
-    return self._constructor(newvalues, newaxes, **self._metadata)
+    return self._constructor(newvalues, newaxes, **self.attrs)
 
 
 def newaxis(self, name, values=None, pos=0):
@@ -383,7 +383,7 @@ def newaxis(self, name, values=None, pos=0):
     axes.insert(pos, axis)
 
     # create new object
-    newobj = self._constructor(newvalues, axes, **self._metadata)
+    newobj = self._constructor(newvalues, axes, **self.attrs)
 
     # If values is provided, repeat the array along values
     if values is not None:
@@ -438,7 +438,7 @@ def squeeze(self, axis=None):
         res = self.values.squeeze(idx)
         newaxes = [ax for ax in self.axes if ax.name != name or ax.size != 1] 
 
-    return self._constructor(res, newaxes, **self._metadata)
+    return self._constructor(res, newaxes, **self.attrs)
 
 def _ungroup_dims(dims):
     """ ['a','b,c','d'] ==> ['a','b','c','d']
@@ -736,7 +736,7 @@ def group(self, *dims, **kwargs):
     newvalues = self.values.reshape(newshape)
 
     # Define the new array
-    new = self._constructor(newvalues, newaxes, **self._metadata)
+    new = self._constructor(newvalues, newaxes, **self.attrs)
 
     return new
 
@@ -808,7 +808,7 @@ def ungroup(self, axis=None):
     newvalues = self.values.reshape(newshape)
     newaxes = self.axes[:axis] + group.axes + self.axes[axis+1:]
 
-    return self._constructor(newvalues, newaxes, **self._metadata)
+    return self._constructor(newvalues, newaxes, **self.attrs)
 
 #
 # groupby method

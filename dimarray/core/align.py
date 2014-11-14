@@ -611,11 +611,11 @@ def reindex_axis(self, values, axis=0, fill_value=np.nan, raise_error=False):
 
     # Get indices
     ax = self.axes[axis]
-    indices = ax.loc(values, clip=True)
-    newobj = self.take(indices, axis, indexing='position')
+    indices = ax.loc(values, mode="clip")
+    newobj = self.take_axis(indices, axis, indexing='position')
 
     # Replace mismatch with missing values
-    mask = ax.values[indices] != values
+    mask = ax.values.take(indices) != values
     if np.any(mask):
         if raise_error:
             raise IndexError("Some values where not found in the axis: {}".format(values[mask]))
@@ -683,6 +683,7 @@ def reindex_like(self, other, **kwargs):
         raise TypeError('expected DimArray or Axes, got {}: {}'.format(type(other), other))
 
     newdims = [ax2.name for ax2 in axes]
+    obj = self
     for ax in self.axes:
         if ax.name in newdims:
             newaxis = axes[ax.name].values

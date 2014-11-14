@@ -39,7 +39,7 @@ def _matches(a, value):
 def isnan(a, na=np.nan):
     """ analogous to numpy's isnan
     """
-    return a._constructor(_isnan(a, na=na), a.axes, **a._metadata)
+    return a._constructor(_isnan(a, na=na), a.axes, **a.attrs)
 
 def setna(self, value, na=np.nan, inplace=False):
     """ set a value as missing

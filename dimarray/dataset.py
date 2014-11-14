@@ -170,11 +170,6 @@ class Dataset(GetSetDelAttrMixin, AbstractDataset, odict):
 
         super(Dataset, self).__setitem__(key, val)
 
-        # now just checking 
-        test_internal = super(Dataset, self).__getitem__(key)
-        for ax in test_internal.axes:
-            assert self.axes[ax.name] is ax
-
     def copy(self):
         ds2 = super(Dataset, self).copy() # odict method, copy axes but not metadata
         ds2.attrs.update(self.attrs)

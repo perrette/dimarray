@@ -17,19 +17,20 @@ from dimarray import plotting
 # from .metadata import MetadataBase
 from .bases import AbstractDimArray, GetSetDelAttrMixin
 from .axes import Axis, Axes, GroupedAxis, _doc_reset_axis
+from .indexing import getaxes_broadcast, ix_, _maybe_cast_type, orthogonal_indexer
 
 from . import transform as _transform  # numpy along-axis transformations, interpolation
 from . import reshape as _reshape      # change array shape and dimensions
 from . import operation as _operation  # operation between DimArrays
 from . import missingvalues # operation between DimArrays
-from .indexing import getaxes_broadcast, ix_, _maybe_cast_type
+# from . import indexing as _indexing
 from . import align as _align
 # from .align import broadcast_arrays, align_axes, stack
 from .prettyprinting import repr_dimarray
 
 __all__ = ["DimArray", "array"]
 
-class DimArray(GetSetDelAttrMixin, AbstractDimArray):
+class DimArray(AbstractDimArray, GetSetDelAttrMixin):
     """ numpy's ndarray with labelled dimensions and axes
 
     Attributes
@@ -341,6 +342,22 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     def axes(self, newaxes):
         self._axes = newaxes
 
+    @property
+    def dims(self):
+        return tuple([ax.name for ax in self.axes])
+
+    @dims.setter
+    def dims(self, newdims):
+        if not np.iterable(newdims): 
+            raise TypeError("new dims must be iterable")
+        if not isinstance(newdims, dict):
+            if len(newdims) != len(self.dims):
+                raise ValueError("Can only rename all dimensions at once, unless a dictionary is provided")
+            newdims = dict(zip(self.dims, newdims))
+        for old in newdims.keys():
+            print "rename dim:",self.axes[old].name,newdims[old]
+            self.axes[old].name = newdims[old]
+
     @classmethod
     def from_nested(cls, nested_data, labels=None, dims=None, align=True):
         """ recursive definition of DimArray with nested lists or dict
@@ -582,9 +599,76 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     #
     # New general-purpose indexing method
     #
-    # def take(self, indices, axis=0, indexing="label", tol=None, keepdims=False, broadcast_arrays=True, mode='raise'):
     take = AbstractDimArray._getitem
     put = AbstractDimArray._setitem
+
+    def take_axis(self, indices, axis=0, indexing=None, mode='raise', out=None):
+        """ Take values along an axis, similarly to numpy.take.
+        
+        It is a one-dimensional version of DimArray.take, which may be faster
+        due to less checking, and with a `mode` parameter.
+
+        Parameters
+        ----------
+        indices : array-like
+            Same as numpy.take except that labels can be provided. Must be iterable.
+        axis : int or str, optional (default to 0)
+        indexing : `label` or `position`, optional
+            Default to `get_option("indexing.by")`, default to "label"
+        mode : {"raise", "wrap", "clip"}, optional
+            Specifies how out-of-bounds indices will behave.
+            If `indexing=="position"`, same behaviour as numpy.take.
+            If `indexing=="label", only "raise" and "clip" are allowed. 
+            If `mode == 'clip'`, any label not present in the axis is clipped to 
+            the nearest end of the array. For a sorted array, an integer 
+            position will be returned that maintained the array sorted. Note this 
+            can result in unexpected return values for unsorted arrays.
+            If mode == 'raise' (the default), a check is performed on the result to ensure that
+            all values were present, and raise an IndexError exception otherwise.
+        out : np.ndarray, optional
+            Store the result (same as numpy.take)
+
+        Returns
+        -------
+        dima : DimArray
+            Sampled dimarray with unchanged dimensions (but different size / shape).
+
+        Notes
+        -----
+        As a result of using numpy.searchsorted for array-like labels, which 
+        naturally works in "clip" mode in the sense described above, it is 
+        slightly faster to indicate mode == "clip" than mode == "raise" 
+        (since one check less is performed)
+
+        Examples
+        --------
+        >>> a = da.DimArray([[1,2,3],[4,5,6],[7,8,9]], axes=[('dim0',[10.,20.]), ('dim1',['a','b','c'])])
+        >>> a.take_axis([20,30,-10], axis='dim0', mode='clip')
+        >>> a.take_axis(['b','e'], axis='dim1', mode='clip')
+        >>> a.dim1 = ['c','a','b']
+        >>> a.take_axis(['b','e'], axis='dim1', mode='clip')
+        """
+        indexing = indexing or gettattr(self, "_indexing", None) or get_option("indexing.by")
+
+        pos, dim = self._get_axis_info(axis)
+        ax = self.axes[pos]
+
+        if not np.iterable(indices):
+            raise TypeError("indices must be iterable")
+
+        if indexing == "label":
+            indices = ax.loc(indices, mode=mode)
+
+        values = self.values.take(indices, axis=pos, mode=mode, out=out)
+
+        axes = self.axes.copy()
+        newax = ax.take(indices, mode=mode)
+        newaxes = [axx.copy() if axx.name!=ax.name else newax for axx in axes]
+
+        dima = self._constructor(values, newaxes)
+        dima.attrs.update(self.attrs)
+
+        return dima
 
     def _getvalues_broadcast(self, indices):
         return self.values[indices] # the default for a numpy array
@@ -595,20 +679,32 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         self.values[indices] = newvalues # the default for a numpy array
 
     def _getvalues_ortho(self, indices):
-        # idx = [ix if not np.isscalar(indices[i]) else ix[0] for i, ix in enumerate(ix_(indices, self.shape))]
-        res = self.values[ix_(indices, self.shape)]
-        # remove singleton dimensions
-        for i in range(len(indices)-1, -1, -1):
-            if np.isscalar(indices[i]):
-                res = np.squeeze(res, axis=i)
-        return res
+        ix = orthogonal_indexer(indices, self.shape)
+        return self.values[ix]
+        # res = self.values[ix_(indices, self.shape)]
+        # # remove singleton dimensions
+        # for i in range(len(indices)-1, -1, -1):
+        #     if np.isscalar(indices[i]):
+        #         res = np.squeeze(res, axis=i)
+        # return res
 
     def _setvalues_ortho(self, indices, newvalues, cast=False):
         if cast:
             self._values = _maybe_cast_type(self._values, newvalues)
+        ix = orthogonal_indexer(indices, self.shape)
+        self.values[ix] = newvalues
+        return 
+
         ix = ix_(indices, self.shape) # broadcast indices
         ix_shape = [idx.size for idx in ix]
-        self.values[ix] = np.reshape(newvalues, ix_shape) 
+        try:
+            self.values[ix] = np.reshape(newvalues, ix_shape) 
+        except:
+            print self.values[ix]
+            print newvalues
+            print ix
+            print ix_shape
+            raise
 
     _getaxes_broadcast = getaxes_broadcast
 

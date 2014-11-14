@@ -1,11 +1,12 @@
 """ Old indexing functions ==> imported from indexing.py. 
 In the process of being rewritten.
 """
-import numpy as np
 import functools
 import copy 
+import numpy as np
 from dimarray.tools import is_DimArray
 from dimarray.config import get_option
+from dimarray.compat.pycompat import iteritems, range
 
 #__all__ = ["take", "put", "reindex_axis", "reindex_like"]
 __all__ = []
@@ -71,6 +72,8 @@ def locate_many(values, val, issorted=False):
 
     return matches
 
+
+
 # def isnumber(val):
 #     try:
 #         val+1
@@ -84,7 +87,7 @@ def _maybe_cast_type(values, newval):
     """ update values's dtype so that values[:] = newval will not fail.
     """
     # check numpy-equivalent dtype
-    dtype = np.asarray(values).dtype
+    dtype = np.asarray(newval).dtype
 
     # dtype comparison seems to be a good indicator of when type conversion works
     # e.g. dtype('O') > dtype(int) , dtype('O') > dtype(str) and dtype(float) > dtype(int) all return True
@@ -277,68 +280,108 @@ def getaxes_broadcast(obj, indices):
 
     return newaxes
 
-def take_axis(self, indices, axis=0, indexing=None, mode='raise', out=None):
-    """ Take values along an axis, similarly to numpy.take.
-    
-    It is a one-dimensional version of DimArray.take, which may be faster
-    due to less checking, and with a `mode` parameter.
+#####################################################################
+#  The threee functions below have been taken from xray.core.indexing
+#####################################################################
 
-    Parameters
-    ----------
-    indices : array-like
-        Same as numpy.take except that labels can be provided. Must be iterable.
-    axis : int or str, optional (default to 0)
-    indexing : `label` or `position`, optional
-        Default to `get_option("indexing.by")`, default to "label"
-    mode : {"raise", "wrap", "clip"}, optional
-        Specifies how out-of-bounds indices will behave.
-        If `indexing=="position"`, same behaviour as numpy.take.
-        If `indexing=="label", only "raise" and "clip" are allowed. 
-        If `mode == 'clip'`, any label not present in the axis is clipped to 
-        the nearest end of the array. For a sorted array, an integer 
-        position will be returned that maintained the array sorted. Note this 
-        can result in unexpected return values for unsorted arrays.
-        If mode == 'raise' (the default), a check is performed on the result to ensure that
-        all values were present, and raise an IndexError exception otherwise.
-    out : np.ndarray, optional
-        Store the result (same as numpy.take)
+def expanded_indexer(key, ndim):
+    """Given a key for indexing an ndarray, return an equivalent key which is a
+    tuple with length equal to the number of dimensions.
 
-    Returns
-    -------
-    dima : DimArray
-        Sampled dimarray with unchanged dimensions (but different size / shape).
-
-    Notes
-    -----
-    As a result of using numpy.searchsorted for array-like labels, which 
-    naturally works in "clip" mode in the sense described above, it is 
-    slightly faster to indicate mode == "clip" than mode == "raise" 
-    (since one check less is performed)
-
-    Examples
-    --------
-    >>> a = da.DimArray([[1,2,3],[4,5,6],[7,8,9]], axes=[('dim0',[10.,20.]), ('dim1',['a','b','c'])])
-    >>> a.take_axis([20,30,-10], axis='dim0', mode='clip')
-    >>> a.take_axis(['b','e'], axis='dim1', mode='clip')
-    >>> a.dim1 = ['c','a','b']
-    >>> a.take_axis(['b','e'], axis='dim1', mode='clip')
+    The expansion is done by replacing all `Ellipsis` items with the right
+    number of full slices and then padding the key with full slices so that it
+    reaches the appropriate dimensionality.
     """
-    indexing = indexing or gettattr(self, "_indexing", None) or get_option("indexing.by")
-    ax = self.axes[axis]
+    if not isinstance(key, tuple):
+        # numpy treats non-tuple keys equivalent to tuples of length 1
+        key = (key,)
+    new_key = []
+    # handling Ellipsis right is a little tricky, see:
+    # http://docs.scipy.org/doc/numpy/reference/arrays.indexing.html#advanced-indexing
+    found_ellipsis = False
+    for k in key:
+        if k is Ellipsis:
+            if not found_ellipsis:
+                new_key.extend((ndim + 1 - len(key)) * [slice(None)])
+                found_ellipsis = True
+            else:
+                new_key.append(slice(None))
+        else:
+            new_key.append(k)
+    if len(new_key) > ndim:
+        raise IndexError('too many indices')
+    new_key.extend((ndim - len(new_key)) * [slice(None)])
+    return tuple(new_key)
 
-    if not np.iterable(indices):
-        raise TypeError("indices must be iterable")
 
-    if indexing == "position":
-        indices = ax.loc(indices, mode=mode)
+def canonicalize_indexer(key, ndim):
+    """Given an indexer for orthogonal array indexing, return an indexer that
+    is a tuple composed entirely of slices, integer ndarrays and native python
+    ints.
+    """
+    def canonicalize(indexer):
+        if not isinstance(indexer, slice):
+            indexer = np.asarray(indexer)
+            if indexer.ndim == 0:
+                indexer = int(np.asscalar(indexer))
+            if isinstance(indexer, np.ndarray):
+                if indexer.ndim != 1:
+                    raise ValueError('orthogonal array indexing only supports '
+                                     '1d arrays')
+                if indexer.dtype.kind == 'b':
+                    indexer, = np.nonzero(indexer)
+                elif indexer.dtype.kind != 'i':
+                    raise ValueError('invalid subkey %r for integer based '
+                                     'array indexing; all subkeys must be '
+                                     'slices, integers or sequences of '
+                                     'integers or Booleans' % indexer)
+        return indexer
 
-    values = self.values.take(indices, axis=axis, mode=mode, out=out)
+    return tuple(canonicalize(k) for k in expanded_indexer(key, ndim))
 
-    axes = self.axes.copy()
-    newax = ax.take(indices, mode=mode)
-    newaxes = [axx.copy() if axx.name!=ax.name else newax for axx in axes]
 
-    dima = self._constructor(values, newaxes)
-    dima.attrs.update(self.attrs)
+def orthogonal_indexer(key, shape):
+    """Given a key for orthogonal array indexing, returns an equivalent key
+    suitable for indexing a numpy.ndarray with fancy indexing.
+    """
+    def expand_key(k, length):
+        if isinstance(k, slice):
+            return np.arange(k.start or 0, k.stop or length, k.step or 1)
+        else:
+            return k
 
-    return dima
+    # replace Ellipsis objects with slices
+    key = list(canonicalize_indexer(key, len(shape)))
+    # replace 1d arrays and slices with broadcast compatible arrays
+    # note: we treat integers separately (instead of turning them into 1d
+    # arrays) because integers (and only integers) collapse axes when used with
+    # __getitem__
+    non_int_keys = [n for n, k in enumerate(key) if not isinstance(k, (int, np.integer))]
+
+    def full_slices_unselected(n_list):
+        def all_full_slices(key_index):
+            return all(isinstance(key[n], slice) and key[n] == slice(None)
+                       for n in key_index)
+        if not n_list:
+            return n_list
+        elif all_full_slices(range(n_list[0] + 1)):
+            return full_slices_unselected(n_list[1:])
+        elif all_full_slices(range(n_list[-1], len(key))):
+            return full_slices_unselected(n_list[:-1])
+        else:
+            return n_list
+
+    # However, testing suggests it is OK to keep contiguous sequences of full
+    # slices at the start or the end of the key. Keeping slices around (when
+    # possible) instead of converting slices to arrays significantly speeds up
+    # indexing.
+    # (Honestly, I don't understand when it's not OK to keep slices even in
+    # between integer indices if as array is somewhere in the key, but such are
+    # the admittedly mind-boggling ways of numpy's advanced indexing.)
+    array_keys = full_slices_unselected(non_int_keys)
+
+    array_indexers = np.ix_(*(expand_key(key[n], shape[n])
+                              for n in array_keys))
+    for i, n in enumerate(array_keys):
+        key[n] = array_indexers[i]
+    return tuple(key)

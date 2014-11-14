@@ -173,7 +173,7 @@ def apply_along_axis(self, func, axis=None, skipna=False, args=(), **kwargs):
     else:
         raise Exception("cannot find new axes for this transformation: "+repr(funcname))
 
-    newobj = obj._constructor(result, newaxes, **obj._metadata)
+    newobj = obj._constructor(result, newaxes, **obj.attrs)
 
     # add stamp
     #stamp = "{transform}({axis})".format(transform=funcname, axis=str(obj.axes[idx]))
@@ -564,7 +564,7 @@ def diff(self, axis=-1, scheme="backward", keepaxis=False, n=1):
 
     newaxes = obj.axes.copy() 
     newaxes[idx] = newaxis
-    newobj = obj._constructor(result, newaxes, **obj._metadata)
+    newobj = obj._constructor(result, newaxes, **obj.attrs)
 
     return newobj
 

@@ -70,3 +70,17 @@ def test_labels(a, ax0, ax1):
     a.labels = [ new0, new1 ]
     assert np.all(a.axes['d0'].values == new0)
     assert np.all(a.axes['d1'].values == new1)
+
+#     >>> a = DimArray(axes=[[1,2,3]], dims=['x0'])
+#     >>> a.x0 
+#     array([1, 2, 3])
+#     >>> a.x0 = a.x0*2
+#     >>> a.x0
+#     array([2, 4, 6])
+#     >>> a.x0 = a.x0*1.  # conversion to float
+#     >>> a.x0
+#     array([ 2.,  4.,  6.])
+#     >>> a.x0 = list('abc')  # or any other type
+#     >>> a.x0
+#     array(['a', 'b', 'c'], dtype=object)
+#     """

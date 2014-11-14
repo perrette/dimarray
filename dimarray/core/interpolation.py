@@ -112,7 +112,7 @@ def _interp_linear(obj, newindices, axis, repna):
 
     axes = obj.axes.copy()
     axes[pos] = Axis(newindices, ax.name) # new axis
-    return obj._constructor(newvalues, axes, **obj._metadata)
+    return obj._constructor(newvalues, axes, **obj.attrs)
 
 
 def _locate_nearest(axis, x):

@@ -55,6 +55,17 @@ def _convert_dtype(values):
 
     return values
 
+def is_monotonic(values):
+    """ test whether an array is monotonically increasing or decreasing
+    """
+    if values.size < 2:
+        monotonic = True
+    else:
+        increasing = values[1:] >= values[:-1] 
+        decreasing = values[1:] <= values[:-1]
+        monotonic = np.all(increasing) or np.all(decreasing)
+    return monotonic
+
 #
 # Axis class
 #
@@ -71,13 +82,8 @@ class Axis(GetSetDelAttrMixin, AbstractAxis):
             this modify `loc` behaviour only, but does not impose any constraint on actual axis values
 
     tol : [None], if not None, attempt a nearest neighbour search with specified tolerance
-
-    _metadata : property which returns a dictionary of metadata
     """
     __metadata_exclude__ = ['values','name','weights']
-
-    values = None
-    weights = None
 
     def __init__(self, values, name="", weights=None, dtype=None, tol=None, **kwargs):
         if not name:
@@ -97,16 +103,36 @@ class Axis(GetSetDelAttrMixin, AbstractAxis):
         if values.ndim != 1:
             raise ValueError("an Axis object can only be 1-D, check-out GroupedAxis")
 
-        self.values = values 
+        self._values = values 
         self.name = name 
-        self.weights = weights 
+        self.weights = weights # additional checks
         self._tol = tol
 
         self._attrs = odict()
         self._attrs.update(kwargs)
+        self._monotonic = None
 
         assert self.values is not None
-        assert self.name 
+
+    @property
+    def values(self):
+        return self._values
+
+    @values.setter
+    def values(self, newval):
+        self.values[:] = newval
+
+    @property
+    def name(self):
+        return self._name
+
+    @name.setter
+    def name(self, name):
+        if not isinstance(name, basestring):
+            raise TypeError("Axis name must be a string")
+        if not name:
+            raise ValueError("Axis name cannot be empty")
+        self._name = name
 
     @property
     def tol(self):
@@ -123,17 +149,21 @@ class Axis(GetSetDelAttrMixin, AbstractAxis):
 
         values = self.values[item]
 
-        # if collapsed to scalar, just return it
         if not isinstance(values, np.ndarray):
-            return values
+            return values # if collapsed to scalar, just return it
 
         if isinstance(self.weights, np.ndarray):
             weights = self.weights[item]
-
         else:
             weights = self.weights
 
-        return Axis(values, self.name, weights=weights, tol=self.tol, **self.attrs)
+        newaxis = Axis(values, self.name, weights=weights, tol=self.tol, **self.attrs)
+
+        # slices keep the ordering
+        if self._monotonic and type(item) is slice:
+            newaxis._monotonic = self._monotonic
+
+        return newaxis
 
     def take(self, indices, mode='raise'):
         """ Similar to numpy.take
@@ -177,7 +207,7 @@ class Axis(GetSetDelAttrMixin, AbstractAxis):
         # now can proceed to asignment
         self.values[item] = value
 
-        # here could do some additional check about _monotoic and other axis attributes
+        # here could do some additional check about _monotonic and other axis attributes
         # for now just set to None
         self._monotonic = None
 
@@ -293,36 +323,33 @@ class Axis(GetSetDelAttrMixin, AbstractAxis):
         elif other.values.size == 0:
             return self
 
-        ### concatenate two axes (minus missing elements)
-        ##if self.other.size < self.values.size:
-        ##    l1 = self.values
-        ##    l2 = [val for val in other.values if val not in self.values]
-        ##else:
-        ##    l1 = [val for val in self.values if val not in other.values]
-        ##    l2 = other.values
-        ## joined = np.concatenate((l1, l2))
-
         # use unique and concatenate to make things simpler
+        #TODO:use searchsorted
         joined = np.unique(np.concatenate((self.values, other.values)))
 
         # join two sorted axes?
         if self.is_monotonic() and other.is_monotonic():
-            is_increasing = lambda ax: ax.size < 2 or ax.values[1] >= ax.values[0]
-            is_decreasing = lambda ax: ax.size < 2 or ax.values[1] <= ax.values[0]
-
+            def is_increasing(ax):
+                return ax.size < 2 or ax.values[1] >= ax.values[0]
+            def is_decreasing(ax):
+                return ax.size < 2 or ax.values[1] <= ax.values[0]
             if is_increasing(self) and is_increasing(other):
                 joined.sort()
-
             elif is_decreasing(self) and is_decreasing(other):
                 joined2 = joined[::-1] # reverse should be increasing
                 joined2.sort()
                 joined = joined2[::-1] # back to normal
-
-            # one increases, the other decreases !
             else:
-                joined.sort()
+                joined.sort() # one increases, the other decreases !
 
         return Axis(joined, self.name)
+
+    def is_monotonic(self):
+        """ return True if Axis is monotonic
+        """
+        if self._monotonic is None:
+            self._monotonic = is_monotonic(self.values)
+        return self._monotonic
 
     @property
     def weights(self):

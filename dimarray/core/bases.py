@@ -16,27 +16,29 @@ class GetSetDelAttrMixin(object):
     __metadata_exclude__ = []
 
     def __getattr__(self, name):
-        if 'dims' in self.__class__.__dict__ and name in self.dims:
+        if name.startswith('_') or name in self.__metadata_exclude__:
+            pass
+        elif 'dims' in self.__class__.__dict__ and name in self.dims:
             return self.axes[name].values # return axis values
         elif name in self.attrs.keys():
             return self.attrs[name]
-        else:
-            raise AttributeError("{} object has no attribute {}".format(self.__class__.__name__, name))
+        raise AttributeError("{} object has no attribute {}".format(self.__class__.__name__, name))
 
-    # methods to overload getattr, setattr, delattr
     def __setattr__(self, name, value):
-        # assert name != 'axes'
-        if name.startswith('_') or name in self.__metadata_exclude__:
-            object.__setattr__(self, name, value)
-
+        if name.startswith('_') \
+                or name in self.__metadata_exclude__ \
+                or hasattr(self.__class__, name):
+            object.__setattr__(self, name, value) # do nothing special
         elif hasattr(self, 'axes') and name in self.dims:
             self.axes[name][:] = value # modify axis values
-
         else:
             self.attrs[name] = value # add as metadata
 
     def __delattr__(self, name):
-        if name in self.attrs.keys():
+        if not name.startswith('_') \
+                and name not in self.__metadata_exclude__ \
+                and not hasattr(self.__class__, name) \
+                and name in self.attrs.keys():
             del self.attrs[name]
         else:
             return object.__delattr__(self, name)
@@ -119,7 +121,7 @@ class AbstractAxis(AbstractHasMetadata):
 
         if type(val) is slice:
             start = locate_one(values, val.start, tol=tol, issorted=issorted) if val.start is not None else None
-            stop = locate_one(values, val.stop, tol=tol, issorted=issorted) if val.stop is not None else None
+            stop = locate_one(values, val.stop, tol=tol, issorted=issorted)+1 if val.stop is not None else None
             matches = slice(start, stop, val.step)
 
         elif np.isscalar(val):
@@ -139,8 +141,9 @@ class AbstractAxis(AbstractHasMetadata):
 
             if mode != 'clip':
                 test = values[matches] != val
+                mismatch = np.asarray(val)[test]
                 if np.any(test):
-                    raise IndexError("Some values where not found in the axis: {}.".format(val[test]))
+                    raise IndexError("Some values where not found in the axis: {}.".format(mismatch))
 
         return matches
 
@@ -169,6 +172,7 @@ class AbstractHasAxes(AbstractHasMetadata):
                 raise ValueError("Can only rename all dimensions at once, unless a dictionary is provided")
             newdims = dict(zip(self.dims, newdims))
         for old in newdims.keys():
+            print "rename dim:",self.axes[old].name,newdims[old]
             self.axes[old].name = newdims[old]
 
     @property
