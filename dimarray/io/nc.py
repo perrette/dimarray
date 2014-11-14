@@ -47,10 +47,6 @@ def _convert_nctype_array(arr):
         arr = np.asarray(arr, dtype=object)
     return arr
 
-
-
-#
-# EXPERIMENTAL, ONLY PARTLY CONNECTED TO THE ABOVE
 #
 # Define an open_nc function return an on-disk Dataset object, more similar to 
 # netCDF4's Dataset.
@@ -146,16 +142,6 @@ class DatasetOnDisk(GetSetDelAttrMixin, NetCDFOnDisk, AbstractDataset):
         for k in self.keys():
             yield k
 
-
-    # @property
-    # def createVariable(self):
-    #     " alias to netCDF4 method, for fine-grained access "
-    #     return self._ds.createVariable
-    # @property
-    # def createDimension(self):
-    #     " alias to netCDF4 method, for fine-grained access "
-    #     return self._ds.createDimension
-
 class NetCDFVariable(NetCDFOnDisk):
     @property
     def _obj(self):
@@ -210,6 +196,8 @@ class DimArrayOnDisk(GetSetDelAttrMixin, NetCDFVariable, AbstractDimArray):
         # ==> it will set the values via "values" attribute
         super(DimArrayOnDisk)._setitem(self, idx, values, **kwargs)
 
+    write.__doc__ = AbstractDimArray._setitem.__doc__
+
     read = AbstractDimArray._getitem #TODO: wrap documentation
 
     def _repr(self, **kwargs):
@@ -218,7 +206,9 @@ class DimArrayOnDisk(GetSetDelAttrMixin, NetCDFVariable, AbstractDimArray):
 
     def _getvalues_ortho(self, idx_tuple):
         return self.values[idx_tuple] # orthogonal indexing is the default for netCDF4
-    def _setvalues_ortho(self, idx_tuple, values):
+    def _setvalues_ortho(self, idx_tuple, values, cast=False):
+        if cast is True:
+            warnings.warn("`cast` parameter is ignored")
         self.values[idx_tuple] = values
 
 class AxisOnDisk(GetSetDelAttrMixin, NetCDFVariable, AbstractAxis):
@@ -826,7 +816,7 @@ def _write_variable(f, obj=None, name=None, mode='a+', format=None, indices=None
     # control wether file name or netCDF handle
     f, close = _check_file(f, mode=mode, verbose=verbose, format=format, **kwargs)
 
-    DimArrayOnDisk(f, name).write(obj, indices=indices, axis=axis, indexing=indexing)
+    DimArrayOnDisk(f, name).write(indices=indices, values=obj, axis=axis, indexing=indexing)
 
     if close:
         f.close()
@@ -878,10 +868,6 @@ def write_nc(f, obj=None, *args, **kwargs):
     """
     if isinstance(obj, Dataset):
         _write_dataset(f, obj, *args, **kwargs)
-
-    elif isinstance(obj, str):
-        name = obj
-        _createVariable(f, name, *args, **kwargs)
 
     elif isinstance(obj, DimArray) or isinstance(obj, np.ndarray) or isinstance(obj, list):
         _write_variable(f, obj, *args, **kwargs)

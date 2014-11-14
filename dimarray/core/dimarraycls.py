@@ -331,7 +331,7 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 
     @values.setter
     def values(self, newvalues):
-        _maybe_cast_type(self._values, newvalues)
+        self._values = _maybe_cast_type(self._values, newvalues)
         self._values[:] = newvalues
 
     @property
@@ -341,28 +341,6 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     @axes.setter
     def axes(self, newaxes):
         self._axes = newaxes
-
-    @classmethod
-    def from_kw(cls, *args, **kwargs):
-        """ See array_kw for the doc
-
-        .. deprecated:: This function might disappear in future versions
-        """
-        if len(args) == 0:
-            values = None
-        else:
-            values = args[0]
-
-        if len(args) > 1:
-            dims = args[1]
-        else:
-            dims = None
-
-        axes = {k:kwargs[k] for k in kwargs}
-
-        assert len(args) <= 2, "[values, [dims]]"
-
-        return cls(values, axes, dims)
 
     @classmethod
     def from_nested(cls, nested_data, labels=None, dims=None, align=True):
@@ -474,48 +452,13 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 
         This makes the sub-classing process easier since only this method needs to be 
         overloaded to make the sub-class a "closed" class.
+
         """
-        #if '_indexing' in metadata:
-        #    kwargs['_indexing'] = metadata.pop('_indexing')
-        #obj = cls(values, axes)
-        #for k in metadata: obj.setncattr(k, metadata[k])
+        #TODO: use the __new__ operator to bypass all checkings in __init__
+        # just check consistency between axes and values shape
+
         return cls(values, axes, **metadata)
 
-    #
-    # Attributes access via '.' syntax
-    #
-    # def __getattr__(self, att):
-    #     """ allows for accessing axis values by '.' directly
-    #     """
-    #     # check for dimensions
-    #     if not att.startswith('_') and att not in self.__metadata_exclude__ and att in self.dims:
-    #         ax = self.axes[att]
-    #         return ax.values # return numpy array
-    #
-    #     else:
-    #         raise AttributeError("{} object has no attribute {}".format(self.__class__.__name__, att))
-    #
-    # def __setattr__(self, name, value):
-    #     """ modify axis values in place with '.' accessor
-    #     >>> a = DimArray(axes=[[1,2,3]], dims=['x0'])
-    #     >>> a.x0 
-    #     array([1, 2, 3])
-    #     >>> a.x0 = a.x0*2
-    #     >>> a.x0
-    #     array([2, 4, 6])
-    #     >>> a.x0 = a.x0*1.  # conversion to float
-    #     >>> a.x0
-    #     array([ 2.,  4.,  6.])
-    #     >>> a.x0 = list('abc')  # or any other type
-    #     >>> a.x0
-    #     array(['a', 'b', 'c'], dtype=object)
-    #     """
-    #     if not name.startswith('_') and name not in self.__metadata_exclude__ and name in self.dims:
-    #         self.axes[name][:] = value # the axis class will handle types 
-    #         # conversion and other subtelties that may come in the future 
-    #     else:
-    #         object.__setattr__(self, name, value)
-    #
     def copy(self, shallow=False):
         """ copy of the object and update arguments
 
@@ -544,7 +487,6 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     #
     # misc
     #
-
     @property
     def dtype(self): 
         return self.values.dtype
@@ -595,12 +537,12 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 
         Parameters
         ----------
-            axis: `int` or `str` or None
+        axis : `int` or `str` or None
 
         Returns
         -------
-            idx        : `int`, axis position
-            name: `str` or None, axis name
+        idx : `int`, axis position
+        name : `str` or None, axis name
         """
         if axis is None:
             return None, None
@@ -622,13 +564,13 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 
         Parameters
         ----------
-            axes: sequence of str or int, representing axis (dimension) 
-                names or positions, possibly mixed up.
+        axes : sequence of str or int, representing axis (dimension) 
+            names or positions, possibly mixed up.
 
         Returns
         -------
-            pos          : list of `int` indicating dimension's rank in the array
-            names : list of dimension names
+        pos : list of `int` indicating dimension's rank in the array
+        names : list of dimension names
         """
         pos, names = zip(*[self._get_axis_info(x) for x in axes])
         return pos, names
@@ -648,13 +590,23 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     def _getvalues_broadcast(self, indices):
         return self.values[indices] # the default for a numpy array
 
-    def _setvalues_broadcast(self, indices, newvalues):
+    def _setvalues_broadcast(self, indices, newvalues, cast=False):
+        if cast:
+            self._values = _maybe_cast_type(self._values, newvalues)
         self.values[indices] = newvalues # the default for a numpy array
 
     def _getvalues_ortho(self, indices):
-        return self.values[ix_(indices, self.shape)]
+        # idx = [ix if not np.isscalar(indices[i]) else ix[0] for i, ix in enumerate(ix_(indices, self.shape))]
+        res = self.values[ix_(indices, self.shape)]
+        # remove singleton dimensions
+        for i in range(len(indices)-1, -1, -1):
+            if np.isscalar(indices[i]):
+                res = np.squeeze(res, axis=i)
+        return res
 
-    def _setvalues_ortho(self, indices, newvalues):
+    def _setvalues_ortho(self, indices, newvalues, cast=False):
+        if cast:
+            self._values = _maybe_cast_type(self._values, newvalues)
         self.values[ix_(indices, self.shape)] = newvalues
 
     _getaxes_broadcast = getaxes_broadcast
@@ -1315,62 +1267,6 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         warnings.warn(FutureWarning('from_arrays is deprecated, use concatenate() or stack() ot Dataset().to_array()) instead'))
         return array(*args, **kwargs)
 
-
-def array_kw(*args, **kwargs):
-    """ Define a Dimarray using keyword arguments for axes
-
-    .. deprecated:: This function might disappear in future versions
-
-    Parameters
-    ----------
-    *args : [values, [dims,]]
-    **kwargs        : axes as keyword arguments
-
-    Returns
-    -------
-    DimArray
-
-    Notes
-    -----
-    The key-word functionality comes at the expense of metadata, which needs to be 
-    added after creation of the DimArray object.
-
-    If axes are passed as kwargs, `dims=` also needs to be provided
-    or an error will be raised, unless values's shape is 
-    sufficient to determine ordering (when all axes have different 
-    sizes).  This is a consequence of the fact 
-    that keyword arguments are *not* ordered in python (any order
-    is lost since kwargs is a dict object)
-
-    Axes passed by keyword arguments cannot have name already taken by other 
-    parameters such as "values", "axes", "dims", "dtype" or "copy"
-
-    Examples 
-    --------
-
-    >>> import dimarray as da
-    >>> a = da.array_kw([[1,2,3],[4,5,6]], items=list("ab"), time=np.arange(1950,1953)) # here dims can be omitted because shape = (2, 3)
-    >>> b = da.array_kw([[1,2,3],[4,5,6]], ['items','time'], items=list("ab"), time=np.arange(1950,1953)) # here dims can be omitted because shape = (2, 3)
-
-    This is pretty similar to this other form:
-
-    >>> c = da.DimArray([[1,2,3],[4,5,6]], {'items':list("ab"), 'time':np.arange(1950,1953)}) # here dims can be omitted because shape = (2, 3)
-    >>> np.all(a == b) and np.all(a == c)
-    True
-
-    But note this would fail if both axes had the same size (would then need to specify the `dims` parameter).
-
-    See also DimArray's doc for more examples
-
-    See also:
-    ---------
-    DimArray.from_kw
-    """
-    return DimArray.from_kw(*args, **kwargs)
-
-#array_kw.__doc__ = DimArray.from_kw.__doc__
-
-
 def array(data, *args, **kwargs):
     """ initialize a DimArray by providing axes as key-word arguments
 
@@ -1472,15 +1368,6 @@ def array(data, *args, **kwargs):
     # equivalent to calling DimArray
     else:
         return DimArray(data, *args, **kwargs)
-
-# DEPRECATED
-def from_arrays(*args, **kwargs):
-    warnings.warn(FutureWarning('from_arrays is deprecated, use da.array() instead'))
-    return array(*args, **kwargs)
-
-def join(*args, **kwargs):
-    warnings.warn(FutureWarning('join is deprecated, use da.array() instead'))
-    return array(*args, **kwargs)
 
 # HANDY ALIAS
 from_pandas = DimArray.from_pandas

@@ -25,10 +25,13 @@ class GetSetDelAttrMixin(object):
 
     # methods to overload getattr, setattr, delattr
     def __setattr__(self, name, value):
+        # assert name != 'axes'
         if name.startswith('_') or name in self.__metadata_exclude__:
             object.__setattr__(self, name, value)
+
         elif hasattr(self, 'axes') and name in self.dims:
             self.axes[name][:] = value # modify axis values
+
         else:
             self.attrs[name] = value # add as metadata
 
@@ -38,9 +41,9 @@ class GetSetDelAttrMixin(object):
         else:
             return object.__delattr__(self, name)
 
-class GetSetDelAttrMixin(object):
-    pass
-
+# class GetSetDelAttrMixin(object):
+#     pass
+#
 class AbstractHasMetadata(object):
     @property
     def attrs(self):
@@ -188,11 +191,8 @@ class AbstractHasAxes(AbstractHasMetadata):
         indexing = indexing or getattr(self,'_indexing',None) or get_option('indexing.by')
 
         # special case: numpy like (idx, axis)
-        def make_tuple(idx):
+        def make_tuple(idx, axis):
             if axis not in (0, None):
-                # warnings.warn(DeprecationWarning('(ix, axis) syntax will be \
-                #                                  deprecated in a future release, \
-                #                                  use the more general {axis:ix}'))
                 idx = {axis:idx}
 
             # special case: Axes is provided as index
@@ -203,18 +203,22 @@ class AbstractHasAxes(AbstractHasMetadata):
             if isinstance(idx, dict):
                 # replace int dimensions with str dimensions
                 for k in idx:
-                    if type(k) is int:
-                        idx[k] = self.dims[k]
-                # build in
-                idx = tuple([idx[d] if d in idx else slice(None) for d in self.dims])
+                    if not isinstance(k, basestring):
+                        idx[self.dims[k]] = idx[k]
+                        del idx[k] 
+                    else:
+                        if k not in self.dims:
+                            raise ValueError("Dimension {} not found. Existing dimensions: {}".format(k, self.dims))
+                    
+                idx = tuple(idx[d] if d in idx else slice(None) for d in self.dims)
 
             elif not isinstance(idx, tuple):
                 idx = (idx,)
 
             return idx
 
-        idx = make_tuple(idx)
-        tols = make_tuple(tol)
+        idx = make_tuple(idx, axis)
+        tols = make_tuple(tol, axis)
 
         # expand "..." Ellipsis if any
         if np.any([ix is Ellipsis for ix in idx]):
@@ -228,7 +232,7 @@ class AbstractHasAxes(AbstractHasMetadata):
                 tol = None
             else:
                 ix = idx[i]
-                tol = tols[i]
+                tol = tols[i] if i < len(tols) else None
 
             # in case of label-based indexing, need to read the whole dimension
             # and look for the appropriate values
@@ -281,9 +285,6 @@ class AbstractDimArray(AbstractHasAxes):
                default is "label"
         tol : None or float or tuple or dict, optional
             tolerance when looking for numerical values, e.g. to use nearest neighbor search, default `None`
-        clip : bool, optional
-            if True, clip indices to nearest values of the sorted axes, in case 
-            of mistmatch. This only apply to array-like indices. Default to False.
         keepdims : bool, optional 
             keep singleton dimensions?
         broadcast : bool, optional
@@ -465,7 +466,7 @@ class AbstractDimArray(AbstractHasAxes):
             return dima
 
         # indices are defined per axis
-        idx = self._get_indices(indices, indexing=indexing, tol=tol)
+        idx = self._get_indices(indices, axis=axis, indexing=indexing, tol=tol)
 
         # special case: broadcast arrays a la numpy
         if broadcast:
@@ -506,21 +507,24 @@ class AbstractDimArray(AbstractHasAxes):
         # special-case: full-shape boolean indexing (will fail with netCDF4)
         if self._is_boolean_index_nd(indices):
             self.values[np.asarray(indices)] = values # boolean index, just set it, or raise appropriate error
-            return
 
-        idx = self._get_indices(indices, tol=tol, indexing=indexing, axis=axis)
-
-        if broadcast:
-            self._setvalues_broadcast(idx, np.asarray(values))
         else:
-            self._setvalues_ortho(idx, np.asarray(values))
+            idx = self._get_indices(indices, tol=tol, indexing=indexing, axis=axis)
+
+            if broadcast:
+                self._setvalues_broadcast(idx, np.asarray(values), cast=cast)
+            else:
+                self._setvalues_ortho(idx, np.asarray(values), cast=cast)
+
+        if not inplace:
+            return self
 
     # also use with [:] syntax, for default arguments
     __getitem__ = _getitem 
     __setitem__ = _setitem
 
     # orthogonal or broadcast indexing?
-    def _setvalues_broadcast(self, idx_tuple, values):
+    def _setvalues_broadcast(self, idx_tuple, values, cast=False):
         raise NotImplementedError()
 
     def _getvalues_broadcast(self, idx_tuple):
@@ -529,7 +533,7 @@ class AbstractDimArray(AbstractHasAxes):
     def _getaxes_broadcast(self, idx_tuple):
         raise NotImplementedError()
 
-    def _setvalues_ortho(self, idx_tuple, values):
+    def _setvalues_ortho(self, idx_tuple, values, cast=False):
         raise NotImplementedError()
 
     def _getvalues_ortho(self, idx_tuple):

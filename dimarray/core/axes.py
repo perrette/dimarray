@@ -8,6 +8,7 @@ import numpy as np
 from dimarray.tools import is_DimArray, is_array1d_equiv
 from dimarray.decorators import format_doc
 from .bases import AbstractAxis, AbstractAxes, GetSetDelAttrMixin
+from .indexing import _maybe_cast_type
 
 __all__ = ["Axis","Axes", "is_regular"]
 

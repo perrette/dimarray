@@ -604,9 +604,10 @@ def reindex_axis(self, values, axis=0, fill_value=np.nan, raise_error=False):
         newaxis = values
         values = newaxis.values
         axis = newaxis.name
-
-    if np.isscalar(values) or type(values) is slice:
+    elif np.isscalar(values) or type(values) is slice:
         raise TypeError("Please provide list, array-like or Axis object to perform re-indexing")
+    else:
+        values = np.asarray(values)
 
     # Get indices
     ax = self.axes[axis]
@@ -616,6 +617,8 @@ def reindex_axis(self, values, axis=0, fill_value=np.nan, raise_error=False):
     # Replace mismatch with missing values
     mask = ax.values[indices] != values
     if np.any(mask):
+        if raise_error:
+            raise IndexError("Some values where not found in the axis: {}".format(values[mask]))
         newobj.put(mask, fill_value, axis=axis, inplace=True, indexing="position", cast=True)
         # Make sure the axis values match the requested new axis
         newobj.axes[axis][mask] = values[mask]
@@ -628,6 +631,8 @@ def reindex_axis_with_pandas(obj, values, axis=0, fill_value=np.nan):
 
     import pandas
     pandasobj = obj.to_pandas()
+
+    axis_id, axis_nm = obj._get_axis_info(axis)
 
     try:
         newpandas = pandasobj.reindex_axis(values, axis=axis_id, fill_value=fill_value)

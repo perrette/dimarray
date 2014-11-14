@@ -64,11 +64,6 @@ class Dataset(AbstractDataset, odict):
     def axes(self):
         return self._axes
 
-    @axes.setter
-    def axes(self, axes):
-        self._axes = axes
-
-
     @property
     def dims(self):
         """ tuple of dimensions contained in the Dataset, consistently with DimArray's `dims`
@@ -151,7 +146,7 @@ class Dataset(AbstractDataset, odict):
         # shallow copy of the DimArray so that its axes attribute can be 
         # modified without affecting the original array
         val = copy.copy(val)  
-        val.axes = copy.deepcopy(val.axes)
+        val._axes = copy.deepcopy(val.axes)
 
         # Check dimensions
         # make sure axes match those of the dataset

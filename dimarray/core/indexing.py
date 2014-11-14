@@ -64,7 +64,7 @@ def locate_many(values, val, issorted=False):
     else:
         isort = np.argsort(values)
         indices = np.searchsorted(values, val, sorter=isort)
-        matches = isort[indices]
+        matches = isort.take(indices, mode='clip')
 
     return matches
 
@@ -480,7 +480,7 @@ def array_indices(indices_numpy, shape):
             if type(ix) is slice:
                 ix = np.arange(shape[i])[ix]
             else:
-                ix = np.array([ix])
+                ix = np.array([ix]) # for np.ix_ to work
 
         # else make sure we have an array, and if book, evaluate to arrays
         else:
@@ -497,9 +497,15 @@ def ix_(indices_numpy, shape):
 
     indices_numpy : indices to convert
     shape : shape of the array, to convert slices
+
+    Note : the resulting array will not be squeezed !
     """
     dummy_ix = array_indices(indices_numpy, shape)
-    return np.ix_(*dummy_ix)
+    indices = np.ix_(*dummy_ix)
+    # # now squeeze indices as they should be
+    # indices_fixed = tuple(ix if not np.isscalar(indices_numpy[i]) else int(ix) for i, ix in enumerate(indices))
+    # print indices_fixed
+    return indices
 
 #
 # Functions to 
