@@ -14,6 +14,7 @@ from dimarray.decorators import format_doc
 from dimarray.dataset import Dataset, concatenate_ds, stack_ds
 from dimarray.core import DimArray, Axis, Axes
 from dimarray.config import get_option
+from dimarray.core.bases import AbstractDimArray, AbstractDataset, AbstractAxis, GetSetDelAttrMixin, AbstractAxes
 # from dimarray.core.metadata import _repr_metadata
 from dimarray.core.prettyprinting import repr_axis, repr_axes, repr_dimarray, repr_dataset, repr_attrs
 
@@ -54,267 +55,6 @@ def _convert_nctype_array(arr):
 # Define an open_nc function return an on-disk Dataset object, more similar to 
 # netCDF4's Dataset.
 #
-class HasMetadataBase(object):
-    __metadata_exclude__ = []
-
-    @property
-    def attrs(self):
-        raise NotImplementedError('need to be overloaded !')
-    @attrs.setter
-    def attrs(self, value):
-        del self.attrs
-        self.attrs.update(value)
-    @attrs.deleter
-    def attrs(self):
-        for k in self.attrs.keys():
-            del self.attrs[k]
-
-    def _getattr(self, name):
-        if 'dims' in self.__class__.__dict__ and name in self.dims:
-            return self.axes[name].values # return axis values
-        elif name in self.attrs.keys():
-            return self.attrs[name]
-        else:
-            raise AttributeError("{} object has no attribute {}".format(self.__class__.__name__, name))
-
-    # methods to overload getattr, setattr, delattr
-    def _setattr(self, name, value):
-        if name.startswith('_') or name in self.__metadata_exclude__:
-            object.__setattr__(self, name, value)
-        elif hasattr(self, 'dims') and name in self.dims:
-            self.axes[name][:] = value # modify axis values
-        else:
-            self.attrs[name] = value # add as metadata
-
-    def _delattr(self, name):
-        if name in self.attrs.keys():
-            del self.attrs[name]
-        else:
-            return object.__delattr__(self, name)
-
-    def _repr(self, metadata=False):
-        return NotImplementedError()
-
-    def __repr__(self):
-        return self._repr()
-
-    def summary(self):
-        print self.summary_repr()
-
-    def summary_repr(self):
-        return self._repr(metadata=True)
-
-    def _metadata(self, meta=None):
-        " for back compatibility "
-        if meta is None:
-            return self.attrs
-        else:
-            self.attrs.update(meta)
-
-class HasAxesBase(HasMetadataBase):
-    """ class to handle things related to axes, such as overloading __getattr__
-    """
-    @property
-    def dims(self):
-        return tuple([ax.name for ax in self.axes])
-
-    @dims.setter
-    def dims(self, newdims):
-        if not isinstance(newdims, dict):
-            if len(newdims) != len(self.dims):
-                raise ValueError("Can only rename all dimensions at once, unless a dictionary is provided")
-            newdims = dict(zip(self.dims, newdims))
-        for old in newdims.keys():
-            self.axes[old].name = newdims[old]
-
-    @property
-    def axes(self):
-        raise NotImplementedError('need to be overloaded !')
-
-    @property
-    def labels(self):
-        return tuple([ax.values for ax in self.axes])
-
-
-class IndexableBase(HasAxesBase):
-
-    @property
-    def values(self):
-        return None
-
-    _indexing = None
-    _broadcast = False
-
-    def _get_indices(self, idx, indexing=None, tol=None, axis=None):
-        " check indices, return a tuple of integer indices "
-        indexing = indexing or self._indexing or get_option('indexing.by')
-
-        # special case: numpy like (idx, axis)
-        if axis not in (0, None):
-            warnings.warn(DeprecationWarning('(ix, axis) syntax will be \
-                                             deprecated in a future release, \
-                                             use the more general {axis:ix}'))
-            idx = {axis:idx}
-
-        # special case: Axes is provided as index
-        elif isinstance(idx, Axes):
-            idx = {ax.name:ax.values for ax in idx}
-
-        # should always be a tuple
-        if isinstance(idx, dict):
-            # replace int dimensions with str dimensions
-            for k in idx:
-                if type(k) is int:
-                    idx[k] = self.dims[k]
-            # build in
-            idx = tuple([idx[d] if d in idx else slice(None) for d in self.dims])
-
-        elif not isinstance(idx, tuple):
-            idx = (idx,)
-
-        # load each dimension as necessary
-        indices = ()
-        for i, dim in enumerate(self.dims):
-            if i >= len(idx):
-                ix = slice(None)
-            else:
-                ix = idx[i]
-
-            # in case of label-based indexing, need to read the whole dimension
-            # and look for the appropriate values
-            if indexing != 'position' and not (type(ix) is slice and ix == slice(None)):
-                # find the index corresponding to the required axis value
-                ix = self.axes[dim].loc(ix, tol=tol)
-            indices += (ix,)
-
-        return indices
-
-    def _getitem(self, indices=None, axis=None, indexing=None, tol=None, broadcast=None):
-        """ The indexing machinery in functional form, 
-        to be called by __getitem__ with default arguments
-        """
-        if indices is None:
-            indices = slice(None)
-        if broadcast is None: 
-            if self._broadcast is None:
-                broadcast = get_option('indexing.broadcast')
-            else: 
-                broadcast = self._broadcast
-
-        # special-case: full-shape boolean indexing (will fail with netCDF4)
-        if self._is_boolean_index_nd(indices):
-            values = self.values[indices] # boolean index, just get it, or raise appropriate error
-            if np.isscalar(values):
-                return values
-            idx = np.where(indices)
-            axes = self._getaxes_broadcast(idx)
-            dima = self._constructor(values, axes)
-            dima.attrs.update(self.attrs)
-            return dima
-
-        # indices are defined per axis
-        idx = self._get_indices(indices, indexing=indexing, tol=tol)
-
-        # special case: broadcast arrays a la numpy
-        if broadcast:
-            axes = self._getaxes_broadcast(idx)
-            values = self._getvalues_broadcast(idx)
-
-        else:
-            axes = self._getaxes_ortho(idx)
-            values = self._getvalues_ortho(idx)
-
-        # scalar variables come out as arrays (issue for netCDF4 only, here for simplicity)
-        if len(axes) == 0 and np.ndim(values) != 0:
-            # warnings.warn("netCDF4: scalar variables come out as arrays ! Fix that.")
-            assert np.size(values) == 1, "inconsistency betewen axes and data"
-            assert np.ndim(values) == 1
-            values = values[0]
-
-        if np.isscalar(values):
-            return values
-
-        dima = self._constructor(values, axes) # initialize DimArray
-        dima.attrs.update(self.attrs) # add attribute
-
-        return dima
-
-    def _setitem(self, indices, values, axis=None, indexing=None, tol=None, broadcast=None):
-        if broadcast is None: 
-            if self._broadcast is None:
-                broadcast = get_option('indexing.broadcast')
-            else: 
-                broadcast = self._broadcast
-
-        # special-case: full-shape boolean indexing (will fail with netCDF4)
-        if self._is_boolean_index_nd(indices):
-            self.values[indices] = values # boolean index, just set it, or raise appropriate error
-            return
-
-        idx = self._get_indices(indices, tol=tol, indexing=indexing, axis=axis)
-
-        if broadcast:
-            self._setvalues_broadcast(idx, np.asarray(values))
-        else:
-            self._setvalues_ortho(idx, np.asarray(values))
-
-    # also use with [:] syntax, for default arguments
-    __getitem__ = _getitem 
-    __setitem__ = _setitem
-
-    # orthogonal or broadcast indexing?
-    def _setvalues_broadcast(self, idx_tuple, values):
-        raise NotImplementedError()
-    def _getvalues_broadcast(self, idx_tuple):
-        raise NotImplementedError()
-    def _getaxes_broadcast(self, idx_tuple):
-        raise NotImplementedError()
-
-    def _setvalues_ortho(self, idx_tuple, values):
-        raise NotImplementedError()
-    def _getvalues_ortho(self, idx_tuple):
-        raise NotImplementedError()
-    def _getaxes_ortho(self, idx_tuple):
-        " idx: tuple of position indices  of length = ndim (orthogonal indexing)"
-        axes = []
-        for i, ix in enumerate(idx_tuple):
-            ax = self.axes[i][ix]
-            if isinstance(ax, Axis): # do not include scalar axes
-                axes.append(ax)
-        return axes
-
-    def _is_boolean_index_nd(self, idx):
-        return isinstance(idx, np.ndarray) and idx.dtype is np.dtype('bool') and idx.ndim > 1
-
-
-    @property
-    def ix(self):
-        " toggle between position-based and label-based indexing "
-        newindexing = 'label' if self._indexing=='position' else 'position'
-        new = copy.copy(self) # shallow copy, not to verwrite _indexing
-        new._indexing = newindexing
-        return new
-
-    # after xray: add sel, isel, loc, iloc methods
-    def sel(self, **indices):
-        return self.loc[indices]
-
-    def isel(self, **indices):
-        return self.iloc[indices]
-
-    @property
-    def loc(self):
-        return self if self._indexing == 'label' else self.ix
-
-    @property
-    def iloc(self):
-        # return self if self._indexing == 'position' else self.ix
-        return self if self._indexing == 'position' else self.ix
-
-class DatasetBase(HasMetadataBase):
-    def __iter__(self):
-        for k in self.keys():
-            yield k
 
 #
 # Specific to NetCDF I/O
@@ -348,7 +88,7 @@ class NetCDFOnDisk(object):
         return nctype
 
 
-class DatasetOnDisk(NetCDFOnDisk, DatasetBase):
+class DatasetOnDisk(GetSetDelAttrMixin, NetCDFOnDisk, AbstractDataset):
     def __init__(self, f, *args, **kwargs):
         if isinstance(f, nc.Dataset):
             self._ds = f
@@ -373,8 +113,10 @@ class DatasetOnDisk(NetCDFOnDisk, DatasetBase):
     def keys(self):
         " all variables except for dimensions"
         return [nm for nm in self._ds.variables.keys() if nm not in self.dims]
+
     def values(self):
         return [self[k] for k in self.keys()]
+
     def __len__(self):
         return len(self.keys())
 
@@ -400,6 +142,11 @@ class DatasetOnDisk(NetCDFOnDisk, DatasetBase):
 
     _repr = repr_dataset
 
+    def __iter__(self):
+        for k in self.keys():
+            yield k
+
+
     # @property
     # def createVariable(self):
     #     " alias to netCDF4 method, for fine-grained access "
@@ -412,20 +159,17 @@ class DatasetOnDisk(NetCDFOnDisk, DatasetBase):
 class NetCDFVariable(NetCDFOnDisk):
     @property
     def _obj(self):
-        return self._ds.variables[self._name]
+        return self.values
     @property
     def values(self):
-        return self._obj # simply the variable to be indexed and returns values like netCDF4
+        return self._ds.variables[self._name] # simply the variable to be indexed and returns values like netCDF4
     @values.setter
     def values(self, values):
         self[:] = values
-    @property
-    def size(self):
-        return self._obj.size
     def __array__(self):
         return self.values[:] # returns a numpy array
     
-class DimArrayOnDisk(NetCDFVariable, IndexableBase):
+class DimArrayOnDisk(GetSetDelAttrMixin, NetCDFVariable, AbstractDimArray):
     _constructor = DimArray
     _broadcast = False
     def __init__(self, ds, name, _indexing=None):
@@ -440,19 +184,13 @@ class DimArrayOnDisk(NetCDFVariable, IndexableBase):
         self._ds.renameVariable(self, self._name, newname)
         self._name = newname
     @property
-    def shape(self):
-        return self._obj.shape
-    @property
-    def ndim(self):
-        return self._obj.ndim
-    @property
     def dims(self):
         return tuple(self._obj.dimensions)
     @property
     def axes(self):
         return AxesOnDisk(self._ds, self.dims)
 
-    def _setitem(self, idx, values, **kwargs):
+    def write(self, idx, values, **kwargs):
         # just create the variable and dimensions
         ds = self._ds
         if self._name not in ds.variables.keys():
@@ -468,12 +206,11 @@ class DimArrayOnDisk(NetCDFVariable, IndexableBase):
             nctype = self._convert_dtype(values.dtype)
             ds.createVariable(self._name, nctype, self.dims)
 
-        # do all the indexing and assignment via IndexableBase class
+        # do all the indexing and assignment via IndexedArray class
         # ==> it will set the values via "values" attribute
         super(DimArrayOnDisk)._setitem(self, idx, values, **kwargs)
 
-    read = IndexableBase._getitem #TODO: wrap documentation
-    write = IndexableBase._setitem  #TODO: wrap documentation
+    read = AbstractDimArray._getitem #TODO: wrap documentation
 
     def _repr(self, **kwargs):
         assert 'lazy' not in kwargs, "lazy parameter cannot be provided, it is always True"
@@ -484,7 +221,7 @@ class DimArrayOnDisk(NetCDFVariable, IndexableBase):
     def _setvalues_ortho(self, idx_tuple, values):
         self.values[idx_tuple] = values
 
-class AxisOnDisk(NetCDFVariable, HasMetadataBase):
+class AxisOnDisk(GetSetDelAttrMixin, NetCDFVariable, AbstractAxis):
     def __init__(self, ds, name):
         self._ds = ds
         if type(name) not in (str, unicode):
@@ -561,9 +298,11 @@ class AxisOnDisk(NetCDFVariable, HasMetadataBase):
     def size(self):
         return len(self)
 
-    def range(self):
+    def _bounds(self):
         size = len(self) # does not work with unlimited dimensions?
-        if self._name in self._ds.variables.keys():
+        if self.size == 0:
+            first, last = None, None
+        elif self._name in self._ds.variables.keys():
             first, last = self._ds.variables[self._name][0], self._ds.variables[self._name][size-1]
         else:
             first, last = 0, size-1
@@ -571,10 +310,13 @@ class AxisOnDisk(NetCDFVariable, HasMetadataBase):
 
     _repr = repr_axis
 
-class AxesOnDisk(object):
+class AxesOnDisk(AbstractAxes):
     def __init__(self, ds, dims):
         self._ds = ds
-        self.dims = dims
+        self._dims = dims
+    @property
+    def dims(self):
+        return self._dims
     def __getitem__(self, dim):
         if type(dim) is int:
             dim = self.dims[dim]
@@ -591,9 +333,10 @@ and `ds.nc.createVariable`""".format(ix, self.dims)
             dim = self.dims[dim]
         # involves variable creation
         AxisOnDisk(self._ds, dim)[:] = axis
+
     def __iter__(self):
-        for k in self.dims:
-            yield k
+        for dim in self.dims:
+            yield AxisOnDisk(self._ds, dim)
 
     _repr = repr_axes
 
@@ -623,7 +366,7 @@ class AttrsOnDisk(object):
     def __len__(self):
         return len(self.keys())
     def __repr__(self):
-        return "Attributes:\n"+repr_attrs(self)
+        return repr_attrs(self)
 
 ###################################################
 # Wrappers

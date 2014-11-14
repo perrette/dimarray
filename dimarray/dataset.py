@@ -1,5 +1,6 @@
 """ collection of base obeje
 """
+from __future__ import absolute_import
 from collections import OrderedDict as odict
 import warnings, copy
 import numpy as np
@@ -7,25 +8,17 @@ import numpy as np
 import dimarray as da  # for the doctest, so that they are testable via py.test
 from dimarray.decorators import format_doc
 
-from core import DimArray, array, Axis, Axes
-from core import align_axes, stack, concatenate
-from core.align import _check_stack_args, _get_axes, stack, concatenate, _check_stack_axis, get_dims as _get_dims
-from core import pandas_obj
-from core.metadata import MetadataBase
-from core.axes import _doc_reset_axis
-from core.prettyprinting import repr_dataset
+from .core import DimArray, array, Axis, Axes
+from .core import align_axes, stack, concatenate
+from .core.align import _check_stack_args, _get_axes, stack, concatenate, _check_stack_axis, get_dims as _get_dims
+from .core import pandas_obj
+from .core.axes import _doc_reset_axis
+from .core.bases import AbstractDataset, GetSetDelAttrMixin
 
-class Dataset(odict, MetadataBase):
+# class Dataset(GetSetDelAttrMixin, AbstractDataset, odict):
+class Dataset(AbstractDataset, odict):
     """ Container for a set of aligned objects
     """
-    @property
-    def axes(self):
-        return self._axes
-
-    @axes.setter
-    def axes(self, axes):
-        self._axes = axes
-
     _constructor = DimArray
 
     def __init__(self, *args, **kwargs):
@@ -40,7 +33,8 @@ class Dataset(odict, MetadataBase):
         data = odict(*args, **kwargs)
 
         # Basic initialization
-        self.axes = Axes()
+        self._axes = Axes()
+        self._attrs = odict()
 
         # initialize an ordered dictionary
         super(Dataset, self).__init__()
@@ -67,10 +61,19 @@ class Dataset(odict, MetadataBase):
             self[key] = value
 
     @property
+    def axes(self):
+        return self._axes
+
+    @axes.setter
+    def axes(self, axes):
+        self._axes = axes
+
+
+    @property
     def dims(self):
         """ tuple of dimensions contained in the Dataset, consistently with DimArray's `dims`
         """
-        return tuple([ax.name for ax in self.axes])
+        return tuple([ax.name for ax in self._axes])
 
     @dims.setter
     def dims(self, newdims):
@@ -86,16 +89,11 @@ class Dataset(odict, MetadataBase):
             oldname = self.axes[i].name
             self.axes[i].name = newname
 
-            # axes in individual items will be updated automatically 
-            # since they are all references of the central axes
-
     @property
     def labels(self):
         """ tuple of axis values contained in the Dataset, consistently with DimArray's `labels`
         """
         return tuple([ax.values for ax in self.axes])
-
-    __repr__ = repr_dataset
 
     #
     # overload dictionary methods
@@ -184,7 +182,7 @@ class Dataset(odict, MetadataBase):
 
     def copy(self):
         ds2 = super(Dataset, self).copy() # odict method, copy axes but not metadata
-        ds2._metadata(self._metadata())
+        ds2.attrs.update(self.attrs)
         return ds2
 
     def __eq__(self, other):

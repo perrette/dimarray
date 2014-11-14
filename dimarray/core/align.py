@@ -6,6 +6,7 @@ import itertools
 from axes import Axes, Axis
 import warnings
 from dimarray.tools import is_DimArray
+from dimarray.config import get_option
 
 def broadcast_arrays(*arrays):
     """ Analogous to numpy.broadcast_arrays
@@ -407,7 +408,7 @@ def concatenate(arrays, axis=0, check_other_axes=True):
     # concatenate axis values
     #newaxisvalues = np.concatenate([a.axes[axis].values for a in arrays])
     #newaxis = Axis(newaxisvalues, name=arrays[0].dims[axis])
-    newaxis = concatenate_axes([a.axes[axis] for a in arrays])
+    newaxis = _concatenate_axes([a.axes[axis] for a in arrays])
 
     # check that other axes match
     if check_other_axes:
@@ -425,14 +426,14 @@ def concatenate(arrays, axis=0, check_other_axes=True):
 #    """ build a common Axes object from a list of arrays
 #    """
 #    for ax
-def concatenate_axes(axes):
+def _concatenate_axes(axes):
     """ concatenate Axis objects
 
     axes: list of Axis objects
 
     >>> a = Axis([1,2,3],'x0')
     >>> b = Axis([5,6,7],'x0')
-    >>> ax = concatenate_axes((a, b))
+    >>> ax = _concatenate_axes((a, b))
     >>> ax.name
     'x0'
     >>> ax.values
@@ -521,7 +522,7 @@ def aggregate(arrays, check_overlap=True):
     # build a common Axes object 
     axes = Axes()
     for d in dims:
-        newaxis = concatenate_axes([a.axes[d] for a in arrays if d in a.dims])
+        newaxis = _concatenate_axes([a.axes[d] for a in arrays if d in a.dims])
         newaxis.values = np.unique(newaxis.values) # unique values
         axes.append(newaxis)
 
@@ -555,6 +556,216 @@ def aggregate(arrays, check_overlap=True):
     # That's it !
 
     return newarray
+
+
+#
+# Reindex axis
+#
+def reindex_axis(self, values, axis=0, fill_value=np.nan, raise_error=False):
+    """ reindex an array along an axis
+
+    Parameters
+    ----------
+    values : array-like or Axis
+        new axis values
+    axis : int or str, optional
+        axis number or name
+    fill_value: bool, optional
+        Fill data to use for missing axis value, 
+        if `raise_error` is False.
+    raise_error : bool, optional
+        if True, raise error when an axis value is not present 
+        otherwise just replace with `fill_value`. Defaulf is False
+
+    Returns
+    -------
+    dimarray: DimArray instance
+
+    Examples
+    --------
+    Basic reindexing: fill missing values with NaN
+
+    >>> import dimarray as da
+    >>> a = da.DimArray([1,2,3],axes=[('x0', [1,2,3])])
+    >>> b = da.DimArray([3,4],axes=[('x0',[1,3])])
+    >>> b.reindex_axis([1,2,3])
+    dimarray: 2 non-null elements (1 null)
+    0 / x0 (3): 1 to 3
+    array([  3.,  nan,   4.])
+
+    Or replace with anything else, like -9999
+
+    >>> b.reindex_axis([1,2,3], fill_value=-9999)
+    dimarray: 3 non-null elements (0 null)
+    0 / x0 (3): 1 to 3
+    array([    3, -9999,     4])
+    """
+    if isinstance(values, Axis):
+        newaxis = values
+        values = newaxis.values
+        axis = newaxis.name
+
+    if np.isscalar(values) or type(values) is slice:
+        raise TypeError("Please provide list, array-like or Axis object to perform re-indexing")
+
+    # Get indices
+    ax = self.axes[axis]
+    indices = ax.loc(values, clip=True)
+    newobj = self.take(indices, axis, indexing='position')
+
+    # Replace mismatch with missing values
+    mask = ax.values[indices] != values
+    if np.any(mask):
+        newobj.put(mask, fill_value, axis=axis, inplace=True, indexing="position", cast=True)
+        # Make sure the axis values match the requested new axis
+        newobj.axes[axis][mask] = values[mask]
+
+    return newobj
+
+def reindex_axis_with_pandas(obj, values, axis=0, fill_value=np.nan):
+    """ Convert to and from pandas to use a faster (?) indexing method
+    """
+
+    import pandas
+    pandasobj = obj.to_pandas()
+
+    try:
+        newpandas = pandasobj.reindex_axis(values, axis=axis_id, fill_value=fill_value)
+    except TypeError:
+        # older versions of pandas do not have the fill_value parameter
+        newpandas = pandasobj.reindex_axis(values, axis=axis_id)
+
+    newobj = obj.from_pandas(newpandas) # use class method from_pandas
+    newobj.attrs.update(obj.attrs)    # add metadata back
+    newobj.axes[axis_id].name = axis_nm  # give back original name
+
+    return newobj
+
+
+def reindex_like(self, other, **kwargs):
+    """ reindex_like : re-index like another dimarray / axes instance
+
+    Applies reindex_axis on each axis to match another DimArray
+
+    Parameters
+    ----------
+    other : DimArray or Axes instance
+    **kwargs : 
+
+    Returns
+    -------
+    DimArray
+
+    Notes
+    -----
+    only reindex axes which are present in other
+
+    Examples
+    --------
+    >>> import dimarray as da
+    >>> b = da.DimArray([3,4],('x0',[1,3]))
+    >>> c = da.DimArray([[1,2,3], [1,2,3]],[('x1',["a","b"]),('x0',[1, 2, 3])])
+    >>> b.reindex_like(c, method='interp')
+    dimarray: 3 non-null elements (0 null)
+    0 / x0 (3): 1 to 3
+    array([ 3. ,  3.5,  4. ])
+    """
+    if hasattr(other, 'axes'):
+        axes = other.axes
+    elif isinstance(other, Axes):
+        axes = other
+    else:
+        raise TypeError('expected DimArray or Axes, got {}: {}'.format(type(other), other))
+
+    newdims = [ax2.name for ax2 in axes]
+    for ax in self.axes:
+        if ax.name in newdims:
+            newaxis = axes[ax.name].values
+            obj = obj.reindex_axis(newaxis, axis=ax.name, **kwargs)
+
+    return obj
+
+
+def sort_axis(a, axis=0, key=None):
+    """ sort an axis 
+
+    Parameters
+    ----------
+    a : DimArray (this argument is pre-assigned when using as bound method)
+    axis : int or str, optional
+        axis by position (int) or name (str) (default: 0)
+    key : callable or dict-like, optional
+        function that is called on each axis label and 
+        whose return value is used for sorting instead of axis label.
+        Any other object with __getitem__ attribute may also be used as key,
+        such as a dictionary.
+        If None (the default), axis label is used for sorting.
+
+    Returns
+    --------
+    sorted : new DimArray with sorted axis
+
+    Examples
+    --------
+    Basic
+
+    >>> from dimarray import DimArray
+    >>> a = DimArray([10,20,30], labels=[2, 0, 1])
+    >>> a
+    dimarray: 3 non-null elements (0 null)
+    0 / x0 (3): 2 to 1
+    array([10, 20, 30])
+
+    >>> a.sort_axis()
+    dimarray: 3 non-null elements (0 null)
+    0 / x0 (3): 0 to 2
+    array([20, 30, 10])
+
+    >>> a.sort_axis(key=lambda x: -x)
+    dimarray: 3 non-null elements (0 null)
+    0 / x0 (3): 2 to 0
+    array([10, 30, 20])
+
+    Multi-dimensional
+     
+    >>> a = DimArray([[10,20,30],[40,50,60]], labels=[[0, 1], ['a','c','b']])
+    >>> a.sort_axis(axis=1)
+    dimarray: 6 non-null elements (0 null)
+    0 / x0 (2): 0 to 1
+    1 / x1 (3): a to c
+    array([[10, 30, 20],
+           [40, 60, 50]])
+    """
+    index = a.axes[axis].values
+
+    # convert key to a function
+    if not hasattr(key, '__call__') and hasattr(key, '__getitem__'):
+        key = key.__getitem__
+
+    if key is None:
+        ii = index.argsort()
+    else:
+        ii = argsort(index, key)
+
+    return a.take(ii, axis=axis, indexing='position')
+
+
+def argsort(seq, key=None):
+    """ equivalent of numpy's argsort in basic python
+
+    Modified after http://stackoverflow.com/questions/3382352/equivalent-of-numpy-argsort-in-basic-python
+
+    >>> a = ['a', 'd', 'c']
+    >>> argsort(a)
+    [0, 2, 1]
+    >>> argsort(a, key=lambda x: {'a':2,'c':1,'d':0}[x])
+    [1, 2, 0]
+    """
+    if key is None:
+        _key = seq.__getitem__
+    else:
+        _key = lambda x: key(seq.__getitem__(x))
+    return sorted(range(len(seq)), key=_key)
 
 
 ##

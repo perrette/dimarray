@@ -21,8 +21,25 @@ def interp(obj, indices, axis=0, method="linear", repna=False):
     Returns
     -------
     DimArray
+
+    Examples
+    --------
+    "nearest" mode
+
+    >>> interp(b, [0,1,2,3], method='nearest') # out-of-bound to NaN
+    dimarray: 3 non-null elements (1 null)
+    0 / x0 (4): 0 to 3
+    array([ nan,   3.,   3.,   4.])
+
+    "interp" mode
+
+    >>> interp(b, [0,1,2,3], method='interp') # out-of-bound to NaN
+    dimarray: 3 non-null elements (1 null)
+    0 / x0 (4): 0 to 3
+    array([ nan,  3. ,  3.5,  4. ])
     """
-    kw = obj._get_keyword_indices(indices, axis)
+    # kw = obj._get_keyword_indices(indices, axis)
+    kw = _get_keyword_indices(obj, indices, axis)
     for k in kw:
         if method == "nearest":
             obj = _interp_nearest(obj, kw[k], k, repna=repna)
@@ -145,3 +162,34 @@ def _locate_bounds(axis, x):
     w1 = (x-x0)/float(x1-x0)
 
     return i0, i1, w1
+
+def _get_keyword_indices(obj, indices, axis=0):
+    """ get dictionary of indices
+    """
+    try:
+        axes = obj.axes
+    except:
+        raise TypeError(" must be a DimArray instance !")
+
+    # convert to dictionary
+    if type(indices) is tuple or isinstance(indices, dict) or isinstance(indices, Axis):
+        assert axis in (None, 0), "cannot have axis > 0 for tuple (multi-dimensional) indexing"
+
+    if isinstance(indices, Axis):
+        newaxis = indices
+        kw = {newaxis.name: newaxis.values}
+
+    elif type(indices) is tuple:
+        kw = {axes[i].name: ind for i, ind in enumerate(indices)}
+
+    elif type(indices) in (list, np.ndarray) or np.isscalar(indices):
+        kw = {axes[axis].name:indices}
+
+    elif isinstance(indices, dict):
+        kw = indices
+
+    else:
+        raise TypeError("indices not understood: {}, axis={}".format(indices, axis))
+
+    return kw
+

@@ -2,63 +2,52 @@
 """
 from collections import OrderedDict as odict
 import numpy as np
+import json
 import dimarray as da
 from dimarray.config import get_option
 
+def str_attrs(meta, indent=4):
+    return "\n".join([" "*indent+"'{}': {}".format(key, repr(meta[key])) for key  in meta.keys()])
+
 def repr_attrs(meta):
-    return "\n".join([" "*4+"{}: {}".format(key, meta[key]) for key  in meta.keys()])
+    # return "\n".join([" "*4+"{}: {}".format(key, repr(meta[key])) for key  in meta.keys()])
+    # return repr(odict(zip(meta.keys(), meta.values())))
+    # return repr({k:meta[k] for k in meta.keys()})
+    # return json.dumps({k:meta[k] for k in meta.keys()}, sort_keys=True,indent=4,separators=(',', ': '))
+    return json.dumps(odict(zip(meta.keys(), meta.values())))
 
 def repr_axis(self, metadata=False):
     dim = self.name
     size = self.size
-    first, last = self.range()
-    repr_ = "{dim} ({size}): {first} to {last}".format(**locals())
-    if metadata:
-        repr_ += "\n"+repr_attrs(self.attrs)
+    first, last = self._bounds()
+    repr_ = "{dim} ({size}): {first} to {last}".format(dim=dim, size=size, first=repr(first), last=repr(last))
+    if metadata and len(self.attrs)>0:
+        repr_ += "\n"+str_attrs(self.attrs)
     return repr_
 
 def repr_axes(self, metadata=False):
-    return "\n".join([ "{i} / {axis}".format(i=i, 
-                                             axis=repr_axis(self[dim]), 
-                                             metadata=metadata)
-                      for i, dim in enumerate(self.dims)])
+    return "\n".join([ "{i} / {axis}".format(i=i, axis=repr_axis(ax, metadata=metadata)  )
+                      for i, ax in enumerate(self)])
 
-
-def repr_dimarray_inline(self, metadata=True, name=None):
+def repr_dimarray_inline(self, metadata=False, name=None):
     " inline representation of a dimarray (without its name"
     if name is None and hasattr(self, 'name'):
         name = self.name
     dims = self.dims
-    descr = ",".join(dims) if len(dims) > 0 else str(self[0])
-    return ": ".join([name, descr]) 
+    descr = repr(dims) if len(dims) > 0 else repr(self[0])
+    repr_ = ": ".join([name, descr]) 
+    if metadata and len(self.attrs)>0:
+        repr_ += "\n"+str_attrs(self.attrs)
+    return repr_
 
-def repr_dimarray(self, metadata=False, lazy=False, backcompatibility=True):
-    var = self.nc.variables[self.name]
-    dims = var.dimensions
-    name = self.name
-    f = self.nc
-    
-    # header
-    if backcompatibility and \
-            (isinstance(self, da.Dataset) or isinstance(self, da.DimArray)):
-        header = self.__class__.__name__.lower()
-    else:
-        header = self.__class__.__name__
-
-    # add various levels of description
-    if hasattr(self, 'name'):
-        descr1 = self.name
-    else:
-        descr1 = ""
+def repr_dimarray(self, metadata=True, lazy=False):
+    header = self.__class__.__name__
+    # lazy = not isinstance(self, da.DimArray))
     if lazy:
-        descr2 = "on disk"
-    else:
-        descr2 = stats_dimarray(self, backcompatibility=backcompatibility)
+        header = header + ": "+repr(self.name)+" (%i"%self.size+")"
 
-    if descr1 != "":
-        header += ": "+descr1
-    if descr2 != "":
-        header += " ("+descr2+")"
+    else:
+        header = self.__class__.__name__.lower() + ": " + stats_dimarray(self)
 
     lines = [header]
 
@@ -68,16 +57,20 @@ def repr_dimarray(self, metadata=False, lazy=False, backcompatibility=True):
 
     # metadata
     if metadata and len(self.attrs) > 0:
-        lines.append( repr_attrs(self.attrs) )
+        lines.append(repr_attrs(self.attrs) )
+        # lines.append(str_attrs(self.attrs, indent=8) )
 
     # the data itself
     if lazy:
-        line = "array(...)" if self.ndim > 0 else str(self[0])
+        # line = "array(...)" if self.ndim > 0 else str(self[0])
+        # line = self.name+("(...)" if self.ndim > 0 else repr((self[0],)))
+        line = ""
     elif self.size > get_option('display.max'):
         line = "array(...)"
     else:
         line = repr(self.values)
-    lines.append(line)
+    if line:
+        lines.append(line)
 
     return "\n".join(lines)
 
@@ -99,17 +92,24 @@ def stats_dimarray(self, backcompatibility=True):
         desc = odict()
         if nonnull < self.size:
             desc['nans']=self.size-nonnull
-        desc['min']=self.min(skipna=True) 
-        desc['max']=self.max(skipna=True) 
-        stats = ", ".join([k+':'+desc[k]])
+        try:
+            # numeric types
+            desc['min']=self.min(skipna=True) 
+            desc['max']=self.max(skipna=True) 
+        except:
+            pass
+        stats = ", ".join([k+':'+desc[k] for k in desc])
     return stats
 
-def repr_dataset(self, metadata=True):
+def repr_dataset(self, metadata=False):
     # variable names
     nms = [nm for nm in self.keys() if nm not in self.dims]
 
     # header
-    header = "Dataset of %s variables (netCDF)" % (len(nms))
+    if not isinstance(self, da.Dataset):
+        header = self.__class__.__name__+" of %s variables (%s)" % (len(nms), self.nc.file_format)
+    else:
+        header = "Dataset of %s variables" % len(nms)
     if len(nms) == 1: header = header.replace('variables','variable')
 
     lines = []
@@ -124,8 +124,10 @@ def repr_dataset(self, metadata=True):
         line = repr_dimarray_inline(self[nm], metadata=metadata, name=nm)
         lines.append(line)
 
-    # Meta"data
-    if metadata and len(self.attrs) > 0:
-        lines.append("//global attributes:\n"+repr_attrs(self.attrs))
+    # Global Meta"data
+    # if metadata and len(self.attrs) > 0:
+    if len(self.attrs) > 0:
+        # lines.append("//global attributes:\n"+str_attrs(self.attrs))
+        lines.append(repr_attrs(self.attrs))
 
     return "\n".join(lines)

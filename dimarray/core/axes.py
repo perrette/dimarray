@@ -1,12 +1,13 @@
+from __future__ import absolute_import
 import warnings
 from collections import OrderedDict as odict
 import string
 import copy
 import numpy as np
 
-from metadata import MetadataBase
 from dimarray.tools import is_DimArray, is_array1d_equiv
 from dimarray.decorators import format_doc
+from .bases import AbstractAxis, AbstractAxes, GetSetDelAttrMixin
 
 __all__ = ["Axis","Axes", "is_regular"]
 
@@ -32,33 +33,6 @@ inplace : bool, optional
                     also reset other axis attributes (e.g. name, modulo, weights, or any metadata)""".strip(),
         )
 
-def is_regular(values):
-    """ test if numeric, monotonically increasing and constant step
-    """
-    if values.dtype is np.dtype('O'): 
-        regular = False
-
-    else:
-        diff = np.diff(values)
-        step = diff[0]
-        regular = np.all(diff==step) and step > 0
-
-    return regular
-
-def is_monotonic(values):
-    """ test is monotonically increasing or decreasing
-    """
-    if values.size < 2:
-        monotonic = True
-
-    else:
-        #increasing = np.diff(values) > 0 
-        increasing = values[1:] >= values[:-1] 
-        monotonic = np.all(increasing) or np.all(values[1:] <= values[:-1])
-
-    return monotonic
-
-
 def _convert_dtype(values):
     """ convert Axis type to have "object" instead of string
     """
@@ -80,11 +54,10 @@ def _convert_dtype(values):
 
     return values
 
-
 #
 # Axis class
 #
-class Axis(MetadataBase):
+class Axis(GetSetDelAttrMixin, AbstractAxis):
     """ Axis
 
     Attributes
@@ -100,13 +73,12 @@ class Axis(MetadataBase):
 
     _metadata : property which returns a dictionary of metadata
     """
-    __metadata_exclude__ = ['values','name','tol','modulo','weights']
+    __metadata_exclude__ = ['values','name','weights']
+
     values = None
-    tol = None
-    modulo = None
     weights = None
 
-    def __init__(self, values, name="", weights=None, modulo=None, dtype=None, _monotonic=None, tol=None, **kwargs):
+    def __init__(self, values, name="", weights=None, dtype=None, tol=None, **kwargs):
         if not name:
             assert hasattr(values, "name"), "unnamed dimension !"
             name = values.name # e.g pandas axis
@@ -127,14 +99,20 @@ class Axis(MetadataBase):
         self.values = values 
         self.name = name 
         self.weights = weights 
-        self.modulo = modulo or self.modulo # default class attribute
-        self.tol = tol or self.tol # tolerance, when searching an axis
-        self._monotonic = _monotonic
+        self._tol = tol
 
-        self._metadata = kwargs
+        self._attrs = odict()
+        self._attrs.update(kwargs)
 
         assert self.values is not None
         assert self.name 
+
+    @property
+    def tol(self):
+        return self._tol
+    @tol.setter
+    def tol(self, val):
+        self._tol = val
 
     def __getitem__(self, item):
         """ access values elements & return an axis object
@@ -154,7 +132,7 @@ class Axis(MetadataBase):
         else:
             weights = self.weights
 
-        return Axis(values, self.name, weights=weights, tol=self.tol, **self._metadata)
+        return Axis(values, self.name, weights=weights, tol=self.tol, **self.attrs)
 
     def __setitem__(self, item, value):
         """ do some type checking/conversion before setting new axis values
@@ -171,18 +149,7 @@ class Axis(MetadataBase):
         >>> a.values
         array(['a', 2.0, 3.0], dtype=object)
         """
-        # check numpy-equivalent dtype
-        dtype = _convert_dtype(value).dtype
-
-        # dtype comparison seems to be a good indicator of when type conversion works
-        # e.g. dtype('O') > dtype(int) , dtype('O') > dtype(str) and dtype(float) > dtype(int) all return True
-        # first convert Axis datatype to new values's type, if needed
-        if self.values.dtype < dtype:
-            self.values = np.asarray(self.values, dtype=dtype)
-
-        # otherwise (no ordering relationship), just define an object type
-        elif not (self.values.dtype  >= dtype):
-            self.values = np.asarray(self.values, dtype=object)  
+        self.values = _maybe_cast_type(self.values, value)
 
         # now can proceed to asignment
         self.values[item] = value
@@ -334,22 +301,6 @@ class Axis(MetadataBase):
 
         return Axis(joined, self.name)
 
-    def is_monotonic(self):
-        """ return True if monotonic
-        """
-        if self._monotonic is None:
-            self._monotonic = is_monotonic(self.values)
-
-        return self._monotonic
-
-    def is_regular(self):
-        """ return True if regular axis (numeric and steadily increasing)
-        """
-        if self._regular is None:
-            self._regular = self.is_numeric() and self.is_monotonic() and is_regular(self.values)
-
-        return self._regular
-
     @property
     def weights(self):
         return self._weights
@@ -374,48 +325,9 @@ class Axis(MetadataBase):
     def weights(self):
         self._weights = None
 
-    @property
-    def loc(self):
-        """ Access the slicer to locate axis elements
-
-        >>> ax = Axis([1,2,3],'x0')
-        >>> ax.is_numeric()
-        True
-        >>> ax = Axis([1.,2.,3.],'x0')
-        >>> ax.is_numeric()
-        True
-        >>> ax = Axis(['a','b','c'],'x0')
-        >>> ax.is_numeric()
-        False
-        """
-        assert self.values.ndim == 1, "!!! 2-dimensional axis !!!"
-        if self.is_numeric():
-            return NumLocator(self.values, modulo=self.modulo, tol=self.tol)
-        else:
-            return ObjLocator(self.values)
-
-    def is_numeric(self):
-        """ numeric type?
-        """
-        syms = [int,long,float,'int32', 'float32','int64','float64']
-        numtypes = [np.dtype(sym) for sym in syms]
-        return self.values.dtype in numtypes
-        # Or could use something more general like:
-        # try:
-        #     self.values[0] + 1
-        #     return True
-        # except:
-        #     return False
-
     def __eq__(self, other):
         #return hasattr(other, "name") and hasattr(other, "values") and np.all(other.values == self.values) and self.name == other.name
         return isinstance(other, Axis) and np.all(other.values == self.values) and self.name == other.name
-
-    def _repr(self, metadata=True):
-        lines = ["{} ({}): {} to {}".format(self.name, self.size, *self._bounds())]
-        if metadata and len(self._metadata()) > 0:
-            lines.append(self._metadata_summary())
-        return "\n".join(lines)
 
     def _bounds(self):
         if self.values.size == 0:
@@ -512,6 +424,7 @@ class GroupedAxis(Axis):
         self._values = None  # values not computed unless needed
         self._weights = None  
         self._size = None  
+        self._attrs = odict()
 
     @property
     def values(self):
@@ -614,7 +527,7 @@ def _flatten(*list_of_arrays):
 # List of axes
 #
 
-class Axes(list):
+class Axes(list, AbstractAxes):
     """ Axes class: inheritates from a list but dict-like access methods for convenience
     """
     def __init__(self, *args, **kwargs):
@@ -743,18 +656,6 @@ class Axes(list):
             raise TypeError("can only set axis type, got: {}".format(item))
 
         return list.__setitem__(self, k, item)
-
-    def __repr__(self):
-        return self._repr(metadata=False)
-
-    def _repr(self, metadata=True):
-        return "\n".join(["{} / {}".format(i,ax._repr(metadata=metadata)) for i,ax in enumerate(self)])
-
-    def summary_repr(self):
-        return self._repr(metadata=True)
-
-    def summary(self):
-        print self.summary_repr()
 
     def sort(self, dims):
         """ sort IN PLACE according to the order in "dims"
@@ -925,367 +826,6 @@ def _init_axes(axes=None, dims=None, labels=None, shape=None, check_order=True):
     return axes
 
 
-
-#
-# Locate values on an axis
-#
-
-## indexing errors
-#class OutBoundError(IndexError):
-#    pass
-
-def locate(values, *args, **kwargs):
-    return Axis(values).loc(*args, **kwargs)
-
-class LocatorAxis(object):
-    """ This class is the core of indexing in dimarray. 
-
-        loc = LocatorAxis(values, **opt)  
-
-    where `values` represent the axis values
-
-
-    A locator instance is generated from within the Axis object, via 
-    its properties loc (valued-based indexing) and iloc (integer-based)
-
-        axis.loc  ==> LocatorAxis(values)  
-
-    A locator is hashable is a similar way to a numpy array, but also 
-    callable to update parameters on-the-fly.
-
-    It returns an integer index or `list` of `int` or `slice` of `int` which 
-    is understood by numpy's arrays. In particular we have:
-
-        loc[ix] == np.index_exp[loc[ix]][0]
-
-    The "set" method can also be useful for chained calls. We have the general 
-    equivalence:
-
-        loc(idx, **kwargs) :: loc.set(**kwargs)[idx]
-
-    """
-    _check_params = False # false  for multi indexing
-    def __init__(self, values, raise_error=True, position_index = False, keepdims = False, **opt):
-        """
-        values        : string list or numpy array
-
-        raise_error = True # raise an error if value not found?
-        """
-        # compatibility wiht other methods:
-        if 'indexing' in opt:
-            indexing = opt.pop('indexing')
-            assert indexing in ('values', 'position')
-            position_index = indexing == 'position'
-
-        self.values = values
-        self.raise_error = raise_error
-        self.position_index = position_index
-        self.keepdims = keepdims 
-        self._list = None   # store axis value as a list
-
-        # check parameter values (default to False)
-#        if self._check_params:
-        for k in opt: 
-            if not hasattr(self, k):
-                if k in ('tol', 'modulo'): # need to clean that up in LocatorAxes
-                    pass
-                else:
-                    raise ValueError("unknown parameter {} for {}".format(k, self.__class__))
-
-        assert not hasattr(self, 'indexing')
-
-        #self.__dict__.update(opt) # update default options
-
-    def tolist(self):
-        """ return axis values as a list
-        """
-        if self._list is None:
-            self._list = self.values.tolist()
-        return self._list
-
-    #
-    # wrapper mode: __getitem__ and __call__
-    #
-    def __getitem__(self, ix):
-        """ 
-        """
-        #
-        # check special cases
-        #
-        assert ix is not None, "index is None!"
-
-        if self.position_index:
-            return ix
-
-        # boolean indexing ?
-        if is_DimArray(ix):
-            ix = ix.values
-
-        if type(ix) in (np.ndarray,) and ix.dtype is np.dtype(bool):
-            return ix
-
-        # make sure (1,) is understood as 1 just as numpy would
-        elif type(ix) is tuple:
-            if len(ix) == 1:
-                ix = ix[0]
-        #    else:
-        #        raise TypeError("index not understood: did you mean a `slice`?")
-
-        #
-        # look up corresponding numpy indices
-        #
-        # e.g. 45:56
-        if type(ix) is slice:
-            res = self.slice(ix)
-
-        elif self._islist(ix):
-            res = map(self.locate, ix)
-            #res = [self.locate(i) for i in ix]
-
-        else:
-            res = self.locate(ix)
-
-        return res
-
-    def _islist(self, ix):
-        """ check if value is a list index (in the sense it will collapse an axis)
-        """
-        return type(ix) in (list, np.ndarray)
-
-    def __call__(self, ix, **kwargs):
-        """ general wrapper method
-        
-        Parameters
-        ----------
-        ix : int, list, slice, tuple (on integer index or axis values)
-        **kwargs: see help on LocatorAxis
-
-        Returns
-        -------
-            `int`, list of `int` or slice of `int`
-        
-        """
-        #if method is None: method = self.method
-        if len(kwargs) > 0:
-            self = self.set(**kwargs)
-
-        if self.keepdims and not self._islist(ix) and not type(ix) is slice:
-            ix = [ix]
-
-        return self[ix]
-
-    def set(self, **kwargs):
-        """ convenience function for chained call: update methods and return itself 
-        """
-        #self.method = method
-        dict_ = self.__dict__.copy()
-        dict_.update(kwargs)
-        return self.__class__(**dict_)
-
-    #
-    # locate single values
-    #
-    def locate(self, val):
-        """ locate with try/except checks
-        """
-        if not self._check_type(val):
-            raise TypeError("{}: locate: wrong type {} --> {}".format(self.__class__, type(val), val))
-
-        try:
-            res = self._locate(val)
-
-        except IndexError, msg:
-            if self.raise_error:
-                raise
-            else:
-                res = None
-
-        return res
-
-    def _check_type(self, val): 
-        return True
-
-    def _locate(self, val):
-        """ locate without try/except check
-        """
-        raise NotImplementedError("to be subclassed")
-
-    #
-    # Access a slice
-    #
-    def slice(self, slice_, include_last=True):
-        """ Return a slice_ object
-
-        Parameters
-        ----------
-        slice_ : slice or tuple 
-        include_last : include last element 
-
-        Notes
-        -----
-        Note bound checking is automatically done via "locate" mode
-        This is in contrast with slicing in numpy arrays.
-        """
-        # Check type
-        if type(slice_) is not slice:
-            raise TypeError("should be slice !")
-
-        start, stop, step = slice_.start, slice_.stop, slice_.step
-
-        if start is not None:
-            start = self.locate(start)
-            if start is None: raise ValueError("{} not found in: \n {}:\n ==> invalid slice".format(start, self.values))
-
-        if stop is not None:
-            stop = self.locate(stop)
-            if stop is None: raise ValueError("{} not found in: \n {}:\n ==> invalid slice".format(stop, self.values))
-            
-            #at this stage stop is an integer index on the axis, 
-            # so make sure it is included in the slice if required
-            if include_last:
-                stop += 1
-
-        # leave the step unchanged: it always means subsampling
-        return slice(start, stop, step)
-
-class ObjLocator(LocatorAxis):
-    """ locator axis for strings
-    """
-    def _locate(self, val):
-        """ find a string
-        """
-        try:
-            return self.tolist().index(val)
-        except ValueError, msg:
-            raise IndexError(msg)
-
-
-class NumLocator(LocatorAxis):
-    """ Locator for axis of integers or floats to be treated as numbers (with tolerance parameters)
-
-    Examples
-    --------
-    >>> values = np.arange(1950.,2000.)
-    >>> values  # doctest: +ELLIPSIS
-    array([ 1950., ... 1999.])
-    >>> loc = NumLocator(values)   
-    >>> loc(1951) 
-    1
-    >>> loc([1960, 1980, 1999])                # a list if also fine 
-    [10, 30, 49]
-    >>> loc(slice(1960,1970))                # or a tuple/slice (latest index included)
-    slice(10, 21, None)
-    >>> loc[1960:1970] == _                # identical, as any of the commands above
-    True
-    >>> loc([1960, -99, 1999], raise_error=False)  # handles missing values
-    [10, None, 49]
-
-    Test equivalence with np.index_exp
-    >>> ix = 1951
-    >>> loc[ix] == np.index_exp[loc[ix]][0]
-    True
-    >>> ix = [1960, 1980, 1999]
-    >>> loc[ix] == np.index_exp[loc[ix]][0]
-    True
-    >>> ix = slice(1960,1970)
-    >>> loc[ix] == np.index_exp[loc[ix]][0]
-    True
-    >>> ix = 1951
-    >>> loc[ix] == np.index_exp[loc[ix]][0]
-    True
-
-    # Modulo
-    >>> loc = NumLocator(np.array([0, 180, 360]), modulo=360)
-    >>> loc[180] == loc[-180]
-    True
-    """
-    def __init__(self, *args, **kwargs):
-
-        # extract parameters specific to NumLocator
-        opt = {'tol':None, 'modulo':None}
-        for k in kwargs.copy():
-            if k in opt:
-                opt[k] = kwargs.pop(k)
-
-        super(NumLocator, self).__init__(*args, **kwargs)
-
-        self.__dict__.update(opt)
-        #print self.indexing
-
-    def _check_type(self, val):
-        return isnumber(val)
-
-    def _locate(self, val):
-        """ 
-        """
-        values = self.values
-
-        # modulo calculation, val = val +/- modulo*n, where n is an integer
-        # e.g. longitudes has modulo = 360
-        if self.modulo is not None:
-
-            if not isnumber(self.modulo):
-                raise TypeError("modulo parameter need to be a number, got {} --> {}".format(type(self.modulo), self.modulo))
-                        
-            #mi, ma = values.min(), values.max() # min, max
-            mi, ma = self.min(), self.max() # min, max
-
-            if self.modulo and (val < mi or val > ma):
-                val = _adjust_modulo(val, self.modulo, mi)
-
-        if self.tol is not None:
-
-            # locate value in axis
-            loc = np.argmin(np.abs(val-values))
-
-            if np.abs(values[loc]-val) > self.tol:
-                raise IndexError("%f not found within tol %f (closest match %i:%f)" % (val, self.tol, loc, values[loc]))
-
-        else:
-            try:
-                loc = self.tolist().index(val)
-            except ValueError, msg:
-                raise IndexError("{}. Try setting axis `tol` parameter for nearest neighbor search.".format(msg))
-
-        return loc
-
-    def min(self):
-        return self.values.min()
-    def max(self):
-        return self.values.max()
-
-def isnumber(val):
-    try:
-        val+1
-        if val == 1: pass # only scalar allowed
-        return True
-
-    except:
-        return type(val) != bool
-
-class RegularAxisLoc(NumLocator):
-    """ Locator for numerical axis with monotonically increasing, regularly spaced values
-    """
-    def min(self):
-        return self.values[0]
-
-    def max(self):
-        return self.values[-1]
-
-    @property
-    def step(self):
-        return self.values[1] - self.values[0]
-
-    
-def _adjust_modulo(val, modulo, min=0):
-    oldval = val
-    mval = np.mod(val, modulo)
-    mmin = np.mod(min, modulo)
-    if mval < mmin:
-        mval += modulo
-    val = min + (mval - mmin)
-    assert np.mod(val-oldval, modulo) == 0, "pb modulo"
-    return val
 
 #    mode: different modes to handle out-of-mode situations
 #        "raise": raise error

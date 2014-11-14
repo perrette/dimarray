@@ -14,20 +14,23 @@ from dimarray.config import get_option
 from dimarray.decorators import format_doc
 from dimarray import plotting
 
-from .metadata import MetadataBase
+# from .metadata import MetadataBase
+from .bases import AbstractDimArray, GetSetDelAttrMixin
 from .axes import Axis, Axes, GroupedAxis, _doc_reset_axis
 
 from . import transform as _transform  # numpy along-axis transformations, interpolation
 from . import reshape as _reshape      # change array shape and dimensions
-from . import indexing as _indexing    # perform slicing and indexing operations
+from . import indexing2 as _indexing2    # perform slicing and indexing operations
 from . import operation as _operation  # operation between DimArrays
 from . import missingvalues # operation between DimArrays
-from .align import broadcast_arrays, align_axes, stack
+from .indexing import getaxes_broadcast, ix_, _maybe_cast_type
+from . import align as _align
+# from .align import broadcast_arrays, align_axes, stack
 from .prettyprinting import repr_dimarray
 
 __all__ = ["DimArray", "array"]
 
-class DimArray(MetadataBase):
+class DimArray(GetSetDelAttrMixin, AbstractDimArray):
     """ numpy's ndarray with labelled dimensions and axes
 
     Attributes
@@ -140,9 +143,6 @@ class DimArray(MetadataBase):
     """
     _order = None  # set a general ordering relationship for dimensions
 
-    # so that it does not appear in metadata
-    __metadata_exclude__ = ['values','axes']
-
     #
     # NOW MAIN BODY OF THE CLASS
     #
@@ -247,10 +247,7 @@ class DimArray(MetadataBase):
         if hasattr(values, "axes") and axes is None:
             axes = values.axes
 
-        if hasattr(values, "_metadata") and callable(values._metadata):
-            metadata = values._metadata() 
-        else:
-            metadata = {}
+        self._attrs = odict(getattr(values, "attrs", {}))
 
         # default options
         if _indexing is None: _indexing = get_option('indexing.by')
@@ -301,20 +298,13 @@ class DimArray(MetadataBase):
         #
         # store all fields
         #
-        self.values = values
-        self.axes = axes
+        self._attrs.update(kwargs)
+        self._values = values
+        self._axes = axes
 
         ## options
         self._indexing = _indexing
         self._indexing_broadcast = _indexing_broadcast
-
-        #
-        # metadata (see Metadata type in metadata.py)
-        #
-        #for k in kwargs:
-        #    setncattr(self, k, kwargs[k]) # perform type-checking and store in self._metadata
-        metadata.update(kwargs)
-        self._metadata(metadata)
 
         # Check consistency between axes and values
         inferred = tuple([ax.size for ax in self.axes])
@@ -332,8 +322,25 @@ mismatch between values and axes""".format(inferred, self.values.shape)
             missing = filter(lambda x: x not in self._order, self.dims)  # not
             order = missing + present # prepend dimensions not found in ordering relationship
             obj = self.transpose(order)
-            self.values = obj.values
+            self._values = obj.values
             self.axes = obj.axes
+
+    @property
+    def values(self):
+        return self._values
+
+    @values.setter
+    def values(self, newvalues):
+        _maybe_cast_type(self._values, newvalues)
+        self._values[:] = newvalues
+
+    @property
+    def axes(self):
+        return self._axes
+
+    @axes.setter
+    def axes(self, newaxes):
+        self._axes = newaxes
 
     @classmethod
     def from_kw(cls, *args, **kwargs):
@@ -475,40 +482,40 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         return cls(values, axes, **metadata)
 
     #
-    # Attributes access
+    # Attributes access via '.' syntax
     #
-    def __getattr__(self, att):
-        """ allows for accessing axis values by '.' directly
-        """
-        # check for dimensions
-        if not att.startswith('_') and att not in self.__metadata_exclude__ and att in self.dims:
-            ax = self.axes[att]
-            return ax.values # return numpy array
-
-        else:
-            raise AttributeError("{} object has no attribute {}".format(self.__class__.__name__, att))
-
-    def __setattr__(self, name, value):
-        """ modify axis values in place with '.' accessor
-        >>> a = DimArray(axes=[[1,2,3]], dims=['x0'])
-        >>> a.x0 
-        array([1, 2, 3])
-        >>> a.x0 = a.x0*2
-        >>> a.x0
-        array([2, 4, 6])
-        >>> a.x0 = a.x0*1.  # conversion to float
-        >>> a.x0
-        array([ 2.,  4.,  6.])
-        >>> a.x0 = list('abc')  # or any other type
-        >>> a.x0
-        array(['a', 'b', 'c'], dtype=object)
-        """
-        if not name.startswith('_') and name not in self.__metadata_exclude__ and name in self.dims:
-            self.axes[name][:] = value # the axis class will handle types 
-            # conversion and other subtelties that may come in the future 
-        else:
-            object.__setattr__(self, name, value)
-
+    # def __getattr__(self, att):
+    #     """ allows for accessing axis values by '.' directly
+    #     """
+    #     # check for dimensions
+    #     if not att.startswith('_') and att not in self.__metadata_exclude__ and att in self.dims:
+    #         ax = self.axes[att]
+    #         return ax.values # return numpy array
+    #
+    #     else:
+    #         raise AttributeError("{} object has no attribute {}".format(self.__class__.__name__, att))
+    #
+    # def __setattr__(self, name, value):
+    #     """ modify axis values in place with '.' accessor
+    #     >>> a = DimArray(axes=[[1,2,3]], dims=['x0'])
+    #     >>> a.x0 
+    #     array([1, 2, 3])
+    #     >>> a.x0 = a.x0*2
+    #     >>> a.x0
+    #     array([2, 4, 6])
+    #     >>> a.x0 = a.x0*1.  # conversion to float
+    #     >>> a.x0
+    #     array([ 2.,  4.,  6.])
+    #     >>> a.x0 = list('abc')  # or any other type
+    #     >>> a.x0
+    #     array(['a', 'b', 'c'], dtype=object)
+    #     """
+    #     if not name.startswith('_') and name not in self.__metadata_exclude__ and name in self.dims:
+    #         self.axes[name][:] = value # the axis class will handle types 
+    #         # conversion and other subtelties that may come in the future 
+    #     else:
+    #         object.__setattr__(self, name, value)
+    #
     def copy(self, shallow=False):
         """ copy of the object and update arguments
 
@@ -533,59 +540,6 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 
         return new
         #return DimArray(self.values.copy(), self.axes.copy(), slicing=self.slicing, **{k:getattr(self,k) for k in self.ncattrs()})
-
-    #
-    # Basic numpy array's properties
-    #
-    # basic numpy shape attributes as properties
-    @property
-    def shape(self): 
-        return self.values.shape
-
-    @property
-    def size(self): 
-        return self.values.size
-
-    @property
-    def ndim(self): 
-        return self.values.ndim
-
-    #
-    # Some additional properties
-    #
-    @property
-    def dims(self):
-        """ axis names 
-        """
-        return tuple([ax.name for ax in self.axes])
-
-    @dims.setter
-    def dims(self, newdims):
-        """ rename all axis names at once
-        """
-        if not np.iterable(newdims): 
-            raise TypeError("new dims must be iterable")
-        if not len(newdims) == self.ndim:
-            raise ValueError("dimension mistmatch")
-        for i, d in enumerate(newdims):
-            self.axes[i].name = d
-
-    @property
-    def labels(self):
-        """ axis values 
-        """
-        return tuple([ax.values for ax in self.axes])
-
-    @labels.setter
-    def labels(self, newlabels):
-        """ change all labels at once
-        """
-        if not np.iterable(newlabels): 
-            raise TypeError("new labels must be iterable")
-        if not len(newlabels) == self.ndim:
-            raise ValueError("dimension mistmatch")
-        for i, lab in enumerate(newlabels):
-            self.axes[i][:] = lab
 
     #
     # misc
@@ -687,40 +641,28 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     #
     # New general-purpose indexing method
     #
-    take = _indexing.take
-    put = _indexing.put  
-    fill = _indexing.fill  
+    # def take(self, indices, axis=0, indexing="label", tol=None, keepdims=False, broadcast_arrays=True, mode='raise'):
+    take = AbstractDimArray._getitem
+    put = AbstractDimArray._setitem
 
-    # get the kw index equivalent {dimname:indices}
-    _get_keyword_indices = _indexing._get_keyword_indices 
+    def _getvalues_broadcast(self, indices):
+        return self.values[indices] # the default for a numpy array
 
-    #
-    # Standard indexing takes axis values
-    #
-    def __getitem__(self, indices): 
-        """ get a slice (use take method)
-        """
-        #indexing = self.axes.loc[indices]
-        #return self.take(indexing, position_index=True)
-        return self.take(indices, indexing=self._indexing, broadcast_arrays=self._indexing_broadcast)
+    def _setvalues_broadcast(self, indices, newvalues):
+        self.values[indices] = newvalues # the default for a numpy array
 
-    def __setitem__(self, ix, val):
-        """
-        """
-        self.put(val, ix, indexing=self._indexing, broadcast_arrays=self._indexing_broadcast, inplace=True)
+    def _getvalues_ortho(self, indices):
+        return self.values[ix_(indices, self.shape)]
 
-    # 
-    # Can also use integer-indexing via ix
-    #
-    @property
-    def ix(self):
-        """ property for integer (position) indexing (toogle between integer-based and values-based indexing)
+    def _setvalues_ortho(self, indices, newvalues):
+        self.values[ix_(indices, self.shape)] = newvalues
+
+    _getaxes_broadcast = getaxes_broadcast
+
+    def fill(self, val):
+        """ anologous to numpy's fill (in-place operation)
         """
-        if self._indexing in ("label", "values"):  # values for back-compatibility
-            _indexing = "position"
-        else:
-            _indexing = "label"
-        return self._constructor(self.values, self.axes, _indexing=_indexing, _indexing_broadcast=self._indexing_broadcast, **self._metadata)
+        self.values.fill(val) 
 
     # 
     # indexing where default behaviour is not to broadcast array indices, similar to matlab
@@ -729,7 +671,8 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     def box(self):
         """ property to allow indexing without array broadcasting (matlab-like)
         """
-        return self._constructor(self.values, self.axes, _indexing=self._indexing , _indexing_broadcast= not self._indexing_broadcast, **self._metadata)
+        warnings.warn("box (or orthogonal) indexing has become the default indexing method of a DimArray. This method is thus deprecated.", FutureWarning)
+        return self
 
     #
     # TRANSFORMS
@@ -817,9 +760,9 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     #
     # REINDEXING 
     #
-    reindex_axis = _indexing.reindex_axis
-    reindex_like = _indexing.reindex_like
-    sort_axis = _indexing.sort_axis
+    reindex_axis = _align.reindex_axis
+    reindex_like = _align.reindex_like
+    sort_axis = _align.sort_axis
 
     # Drop missing values
     dropna = missingvalues.dropna
