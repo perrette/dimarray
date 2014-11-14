@@ -135,6 +135,28 @@ class Axis(GetSetDelAttrMixin, AbstractAxis):
 
         return Axis(values, self.name, weights=weights, tol=self.tol, **self.attrs)
 
+    def take(self, indices, mode='raise'):
+        """ Similar to numpy.take
+
+        Parameters
+        ----------
+        indices : array_like
+            The indices of the values to extract.
+        mode : {'raise', 'wrap', 'clip'}, optional
+            Specifies how out-of-bounds indices will behave.
+            See help on numpy.take for more info.
+
+        Returns
+        -------
+        subaxis : Axis instance
+        """
+        values = self.values.take(indices, mode=mode)
+        if isinstance(self.weights, np.ndarray):
+            weights = self.weights.take(indices, mode=mode)
+        else:
+            weights = self.weights
+        return Axis(values, self.name, weights=weights, tol=self.tol, **self.attrs)
+
     def __setitem__(self, item, value):
         """ do some type checking/conversion before setting new axis values
 

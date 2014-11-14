@@ -29,23 +29,24 @@ FORMAT = get_option('io.nc.format') # for the doc
 #
 # Helper functions
 #
-def _convert_nctype_dtype(dtype):
+def _maybe_convert_dtype(values, f=None):
     """ strings are given "object" type in Axis object
     ==> assume all objects are actually strings
     NOTE: this will fail for other object-typed axes such as tuples
     """
     # if dtype is np.dtype('O'):
-    if dtype >= np.dtype('S1'): # all strings, this include objects dtype('O')
-        nctype = str 
-    else:
-        nctype = dtype 
-    return nctype
+    values = np.asarray(values)
+    dtype = values.dtype
+    if dtype > np.dtype('S1'): # all strings, this include objects dtype('O')
+        values = np.asarray(values, dtype=object)
+        dtype = str
+    return values, dtype
 
-def _convert_nctype_array(arr):
-    arr = np.asarray(arr)
-    if arr.dtype > np.dtype('S1'):
-        arr = np.asarray(arr, dtype=object)
-    return arr
+# def _maybe_convert_dtype_array(arr):
+#     arr = np.asarray(arr)
+#     if arr.dtype > np.dtype('S1'):
+#         arr = np.asarray(arr, dtype=object)
+#     return arr
 
 #
 # Define an open_nc function return an on-disk Dataset object, more similar to 
@@ -72,16 +73,16 @@ class NetCDFOnDisk(object):
         self.close()
     def __enter__(self):
         return self
-    @staticmethod
-    def _convert_dtype(dtype):
-        # needed for VLEN types
-        # ==> assume all objects are actually strings
-        #NOTE: this will fail for other object-typed axes such as tuples
-        if dtype >= np.dtype('S1'): # all strings, this include objects dtype('O')
-            nctype = str 
-        else:
-            nctype = dtype 
-        return nctype
+    # @staticmethod
+    # def _convert_dtype(dtype):
+    #     # needed for VLEN types
+    #     # ==> assume all objects are actually strings
+    #     #NOTE: this will fail for other object-typed axes such as tuples
+    #     if dtype >= np.dtype('S1'): # all strings, this include objects dtype('O')
+    #         nctype = str 
+    #     else:
+    #         nctype = dtype 
+    #     return nctype
 
 
 class DatasetOnDisk(GetSetDelAttrMixin, NetCDFOnDisk, AbstractDataset):
@@ -137,8 +138,6 @@ class DatasetOnDisk(GetSetDelAttrMixin, NetCDFOnDisk, AbstractDataset):
         return DimArrayOnDisk(self._ds, name)
 
     def __setitem__(self, name, value):
-        if name not in self.keys():
-            print "new variable"
         DimArrayOnDisk(self._ds, name)[:] = value
 
     def __delitem__(self, name):
@@ -187,6 +186,8 @@ class DimArrayOnDisk(GetSetDelAttrMixin, NetCDFVariable, AbstractDimArray):
     def write(self, indices, values, **kwargs):
         # just create the variable and dimensions
         ds = self._ds
+        arr, nctype = _maybe_convert_dtype(values, ds)
+
         if self._name not in ds.variables.keys():
             # create variable
             if np.isscalar(values):
@@ -197,7 +198,6 @@ class DimArrayOnDisk(GetSetDelAttrMixin, NetCDFVariable, AbstractDimArray):
             if values.ndim > 0:
                 for ax in values.axes:
                     AxisOnDisk(ds, ax.name)[:] = ax.values
-            nctype = self._convert_dtype(values.dtype)
             ds.createVariable(self._name, nctype, values.dims)
 
         # add attributes
@@ -205,13 +205,17 @@ class DimArrayOnDisk(GetSetDelAttrMixin, NetCDFVariable, AbstractDimArray):
             self.attrs.update(values.attrs)
 
         # do all the indexing and assignment via IndexedArray class
-        # ==> it will set the values via "values" attribute
+        # ==> it will set the values via _setvalues_ortho below
         # super(DimArrayOnDisk)._setitem(self, indices, values, **kwargs)
-        AbstractDimArray._setitem(self, indices, values, **kwargs)
+        AbstractDimArray._setitem(self, indices, arr, **kwargs)
 
     write.__doc__ = AbstractDimArray._setitem.__doc__
 
-    read = AbstractDimArray._getitem #TODO: wrap documentation
+    def read(self, indices=slice(None), *args, **kwargs):
+        return AbstractDimArray._getitem(self, indices, *args, **kwargs)
+                           
+    read.__doc__ = AbstractDimArray._getitem.__doc__
+    # read = AbstractDimArray._getitem #TODO: wrap documentation
 
     __setitem__ = write
     __getitem__ = read
@@ -220,12 +224,34 @@ class DimArrayOnDisk(GetSetDelAttrMixin, NetCDFVariable, AbstractDimArray):
         assert 'lazy' not in kwargs, "lazy parameter cannot be provided, it is always True"
         return repr_dimarray(self, lazy=True, **kwargs)
 
-    def _getvalues_ortho(self, idx_tuple):
-        return self.values[idx_tuple] # orthogonal indexing is the default for netCDF4
     def _setvalues_ortho(self, idx_tuple, values, cast=False):
         if cast is True:
             warnings.warn("`cast` parameter is ignored")
+        # values = _maybe_convert_dtype_array(values)
+        values, nctype = _maybe_convert_dtype(values, self._ds)
         self.values[idx_tuple] = values
+
+    def _getvalues_ortho(self, idx_tuple):
+        res = self.values[idx_tuple]
+        # scalar become arrays with netCDF4# scalar become arrays with netCDF4
+        # need convert to ndim=0 numpy array for consistency with axes
+        if self.ndim == 0:
+            try:
+                res[0] + 1 # pb arises only for numerical types
+                res = np.array(res[0]) 
+            except:
+                res = np.array(res) # str and unicode
+        return res
+
+    def _getaxes_ortho(self, idx_tuple):
+        " idx: tuple of position indices  of length = ndim (orthogonal indexing)"
+        axes = []
+        for i, ix in enumerate(idx_tuple):
+            ax = self.axes[i][ix]
+            if not np.isscalar(ax): # do not include scalar axes
+                axes.append(ax)
+        return axes
+
 
 class AxisOnDisk(GetSetDelAttrMixin, NetCDFVariable, AbstractAxis):
     def __init__(self, ds, name):
@@ -258,15 +284,16 @@ class AxisOnDisk(GetSetDelAttrMixin, NetCDFVariable, AbstractAxis):
         if values is None:
             return
 
-        arr = _convert_nctype_array(values)
+        # arr = _maybe_convert_dtype_array(values)
+        values, nctype = _maybe_convert_dtype(values, ds)
 
         # create variable if needed
         if name not in ds.variables.keys():
-            nctype = _convert_nctype_dtype(arr.dtype)
+            # nctype = _maybe_convert_dtype(arr.dtype, ds)
             ds.createVariable(name, nctype, name) 
 
         # assign value to variable
-        ds.variables[name][ix] = arr
+        ds.variables[name][ix] = values
 
         # assign metadata
         try:

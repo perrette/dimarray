@@ -276,3 +276,69 @@ def getaxes_broadcast(obj, indices):
         newaxes.insert(insert, broadcastaxis)
 
     return newaxes
+
+def take_axis(self, indices, axis=0, indexing=None, mode='raise', out=None):
+    """ Take values along an axis, similarly to numpy.take.
+    
+    It is a one-dimensional version of DimArray.take, which may be faster
+    due to less checking, and with a `mode` parameter.
+
+    Parameters
+    ----------
+    indices : array-like
+        Same as numpy.take except that labels can be provided. Must be iterable.
+    axis : int or str, optional (default to 0)
+    indexing : `label` or `position`, optional
+        Default to `get_option("indexing.by")`, default to "label"
+    mode : {"raise", "wrap", "clip"}, optional
+        Specifies how out-of-bounds indices will behave.
+        If `indexing=="position"`, same behaviour as numpy.take.
+        If `indexing=="label", only "raise" and "clip" are allowed. 
+        If `mode == 'clip'`, any label not present in the axis is clipped to 
+        the nearest end of the array. For a sorted array, an integer 
+        position will be returned that maintained the array sorted. Note this 
+        can result in unexpected return values for unsorted arrays.
+        If mode == 'raise' (the default), a check is performed on the result to ensure that
+        all values were present, and raise an IndexError exception otherwise.
+    out : np.ndarray, optional
+        Store the result (same as numpy.take)
+
+    Returns
+    -------
+    dima : DimArray
+        Sampled dimarray with unchanged dimensions (but different size / shape).
+
+    Notes
+    -----
+    As a result of using numpy.searchsorted for array-like labels, which 
+    naturally works in "clip" mode in the sense described above, it is 
+    slightly faster to indicate mode == "clip" than mode == "raise" 
+    (since one check less is performed)
+
+    Examples
+    --------
+    >>> a = da.DimArray([[1,2,3],[4,5,6],[7,8,9]], axes=[('dim0',[10.,20.]), ('dim1',['a','b','c'])])
+    >>> a.take_axis([20,30,-10], axis='dim0', mode='clip')
+    >>> a.take_axis(['b','e'], axis='dim1', mode='clip')
+    >>> a.dim1 = ['c','a','b']
+    >>> a.take_axis(['b','e'], axis='dim1', mode='clip')
+    """
+    indexing = indexing or gettattr(self, "_indexing", None) or get_option("indexing.by")
+    ax = self.axes[axis]
+
+    if not np.iterable(indices):
+        raise TypeError("indices must be iterable")
+
+    if indexing == "position":
+        indices = ax.loc(indices, mode=mode)
+
+    values = self.values.take(indices, axis=axis, mode=mode, out=out)
+
+    axes = self.axes.copy()
+    newax = ax.take(indices, mode=mode)
+    newaxes = [axx.copy() if axx.name!=ax.name else newax for axx in axes]
+
+    dima = self._constructor(values, newaxes)
+    dima.attrs.update(self.attrs)
+
+    return dima

@@ -81,7 +81,7 @@ class AbstractAxis(AbstractHasMetadata):
 
     _tol = None
 
-    def loc(self, val, tol=None, issorted=False, clip=False):
+    def loc(self, val, tol=None, issorted=False, mode='raise'):
         """ Locate one or several values, using numpy functions
 
         Parameters
@@ -94,10 +94,14 @@ class AbstractAxis(AbstractHasMetadata):
             applicable for numerical axes only. 
         issorted: bool, optional
             If True, assume the axis is sorted with increasing values (faster search)
-        clip: bool, optional
-            if clip is True (the default), clip the values to the nearest end 
-            of the sorted array in case of mismatch, otherwise raise an error.
-            Only applicable if `val` is array-like, ignored otherwise.
+        mode: {'raise', 'clip'}, optional
+            Only applicable if `val` is array-like ignored otherwise and mode == 'raise'.
+            If `mode == 'clip'`, any label not present in the axis is clipped to 
+            the nearest end of the array. For a sorted array, an integer 
+            position will be returned that maintained the array sorted. Note this 
+            can result in unexpected return values for unsorted arrays.
+            If mode == 'raise' (the default), a check is performed on the result to ensure that
+            all values were present, and raise an IndexError exception otherwise.
 
         Returns
         -------
@@ -121,6 +125,9 @@ class AbstractAxis(AbstractHasMetadata):
         elif np.isscalar(val):
             matches = locate_one(values, val, tol=tol, issorted=issorted)
 
+        elif val is None:
+            matches = values.tolist().index(val)
+
         elif hasattr(val, 'dtype') and val.dtype.kind == 'b':
             matches = val  # boolean indexing, do nothing
 
@@ -130,10 +137,10 @@ class AbstractAxis(AbstractHasMetadata):
         else:
             matches = locate_many(values, val, issorted=issorted)
 
-            if not clip:
+            if mode != 'clip':
                 test = values[matches] != val
                 if np.any(test):
-                    raise IndexError("Some values where not found in the axis: {}.".format(values[test]))
+                    raise IndexError("Some values where not found in the axis: {}.".format(val[test]))
 
         return matches
 
@@ -189,53 +196,57 @@ class AbstractHasAxes(AbstractHasMetadata):
         for i, lab in enumerate(newlabels):
             self.axes[i][:] = lab
 
-    def _get_indices(self, idx, axis=None, indexing=None, tol=None, keepdims=False):
-        " check indices, return a tuple of integer indices "
+    def _get_indices(self, indices, axis=None, indexing=None, tol=None, keepdims=False):
+        """ Return an n-D indexer  
+        
+        Parameters
+        ----------
+        **kwargs: same as DimArray.take or DimArrayOnDisk.read
+
+        Returns
+        -------
+        indexer : tuple of numpy-compatible indices, of length equal to the number of 
+            dimensions.
+        """
         indexing = indexing or getattr(self,'_indexing',None) or get_option('indexing.by')
+        if indices is None: 
+            indices = slice(None)
 
         # special case: numpy like (idx, axis)
-        def make_tuple(idx, axis):
-            if axis not in (0, None):
-                idx = {axis:idx}
+        if axis not in (0, None):
+            indices = {axis:indices}
 
-            # special case: Axes is provided as index
-            elif isinstance(idx, AbstractAxes):
-                idx = {ax.name:ax.values for ax in idx}
+        # special case: Axes is provided as index
+        elif isinstance(indices, AbstractAxes):
+            indices = {ax.name:ax.values for ax in indices}
 
-            # should always be a tuple
-            if isinstance(idx, dict):
-                # replace int dimensions with str dimensions
-                for k in idx:
-                    if not isinstance(k, basestring):
-                        idx[self.dims[k]] = idx[k]
-                        del idx[k] 
-                    else:
-                        if k not in self.dims:
-                            raise ValueError("Dimension {} not found. Existing dimensions: {}".format(k, self.dims))
-                    
-                idx = tuple(idx[d] if d in idx else slice(None) for d in self.dims)
+        # should always be a tuple
+        if isinstance(indices, dict):
+            # replace int dimensions with str dimensions
+            for k in indices:
+                if not isinstance(k, basestring):
+                    indices[self.dims[k]] = indices[k]
+                    del indices[k] 
+                else:
+                    if k not in self.dims:
+                        raise ValueError("Dimension {} not found. Existing dimensions: {}".format(k, self.dims))
+                
+            indices = tuple(indices[d] if d in indices else slice(None) for d in self.dims)
 
-            elif not isinstance(idx, tuple):
-                idx = (idx,)
-
-            return idx
-
-        idx = make_tuple(idx, axis)
-        tols = make_tuple(tol, axis)
+        elif not isinstance(indices, tuple):
+            indices = (indices,)
 
         # expand "..." Ellipsis if any
-        if np.any([ix is Ellipsis for ix in idx]):
-            idx = _fill_ellipsis(idx, self.ndim)
+        if np.any([ix is Ellipsis for ix in indices]):
+            indices = _fill_ellipsis(indices, self.ndim)
 
         # load each dimension as necessary
-        indices = ()
+        indexer = ()
         for i, dim in enumerate(self.dims):
-            if i >= len(idx):
+            if i >= len(indices):
                 ix = slice(None)
-                tol = None
             else:
-                ix = idx[i]
-                tol = tols[i] if i < len(tols) else None
+                ix = indices[i]
 
             # in case of label-based indexing, need to read the whole dimension
             # and look for the appropriate values
@@ -248,9 +259,9 @@ class AbstractHasAxes(AbstractHasMetadata):
             if keepdims and np.isscalar(ix):
                 ix = [ix]
 
-            indices += (ix,)
+            indexer += (ix,)
 
-        return indices
+        return indexer
 
 class AbstractDimArray(AbstractHasAxes):
 
@@ -281,15 +292,19 @@ class AbstractDimArray(AbstractHasAxes):
         indices : int or list or slice (single-dimensional indices)
                    or a tuple of those (multi-dimensional)
                    or `dict` of {{ axis name : axis values }}
-        axis : int or str, optional
-        indexing : "label" or "position", optional
+        axis : None or int or str, optional
+            if specified and indices is a slice, scalar or an array, assumes 
+            indexing is along this axis.
+        indexing : {'label', 'position', None}, optional
+            Indexing mode. 
                - "position": use numpy-like position index (default)
                - "label": indexing on axis labels
-               default is "label"
+            If None, call get_option('indexing.by'), which defaults to 'label'
         tol : None or float or tuple or dict, optional
-            tolerance when looking for numerical values, e.g. to use nearest neighbor search, default `None`
+            tolerance when looking for numerical values, e.g. to use nearest 
+            neighbor search, default `None`.
         keepdims : bool, optional 
-            keep singleton dimensions?
+            keep singleton dimensions (default False)
         broadcast : bool, optional
             if True, use numpy-like `fancy` indexing and broacast any 
             indexing array to a common shape, useful for example to sample
@@ -301,7 +316,7 @@ class AbstractDimArray(AbstractHasAxes):
 
         See Also
         --------
-        put
+        DimArray.put, DimArrayOnDisk.read, DimArray.take_axis
 
         Examples
         --------
@@ -469,7 +484,7 @@ class AbstractDimArray(AbstractHasAxes):
             return dima
 
         # indices are defined per axis
-        idx = self._get_indices(indices, axis=axis, indexing=indexing, tol=tol)
+        idx = self._get_indices(indices, axis=axis, indexing=indexing, tol=tol, keepdims=keepdims)
 
         # special case: broadcast arrays a la numpy
         if broadcast:
@@ -479,13 +494,6 @@ class AbstractDimArray(AbstractHasAxes):
         else:
             axes = self._getaxes_ortho(idx)
             values = self._getvalues_ortho(idx)
-
-        # scalar variables come out as arrays (issue for netCDF4 only, here for simplicity)
-        if len(axes) == 0 and np.ndim(values) != 0:
-            # warnings.warn("netCDF4: scalar variables come out as arrays ! Fix that.")
-            assert np.size(values) == 1, "inconsistency betewen axes and data"
-            assert np.ndim(values) == 1
-            values = values[0]
 
         if np.isscalar(values):
             return values
@@ -497,6 +505,9 @@ class AbstractDimArray(AbstractHasAxes):
 
     def _setitem(self, indices, values, axis=None, indexing=None, tol=None, broadcast=None, cast=False, inplace=True):
         """
+        See Also
+        --------
+        DimArray.read, DimArrayOnDisk.write
         """
         if broadcast is None: 
             if self._broadcast is None:
@@ -541,15 +552,6 @@ class AbstractDimArray(AbstractHasAxes):
 
     def _getvalues_ortho(self, idx_tuple):
         raise NotImplementedError()
-
-    def _getaxes_ortho(self, idx_tuple):
-        " idx: tuple of position indices  of length = ndim (orthogonal indexing)"
-        axes = []
-        for i, ix in enumerate(idx_tuple):
-            ax = self.axes[i][ix]
-            if not np.isscalar(ax): # do not include scalar axes
-                axes.append(ax)
-        return axes
 
     def _is_boolean_index_nd(self, idx):
         " check whether a[a > 2] kind of operation is intended, with a.ndim > 1 "

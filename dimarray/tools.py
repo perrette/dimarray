@@ -14,6 +14,8 @@ except ImportError:
         ----------
          a: numpy array
         """
+        if a.size == 0:
+            return False
         return np.isnan(a.min(axis=axis))
 
 def pandas_obj(values, *axes):

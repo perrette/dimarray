@@ -20,7 +20,6 @@ from .axes import Axis, Axes, GroupedAxis, _doc_reset_axis
 
 from . import transform as _transform  # numpy along-axis transformations, interpolation
 from . import reshape as _reshape      # change array shape and dimensions
-from . import indexing2 as _indexing2    # perform slicing and indexing operations
 from . import operation as _operation  # operation between DimArrays
 from . import missingvalues # operation between DimArrays
 from .indexing import getaxes_broadcast, ix_, _maybe_cast_type
@@ -612,6 +611,16 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         self.values[ix] = np.reshape(newvalues, ix_shape) 
 
     _getaxes_broadcast = getaxes_broadcast
+
+    def _getaxes_ortho(self, idx_tuple):
+        " idx: tuple of position indices  of length = ndim (orthogonal indexing)"
+        axes = []
+        for i, ix in enumerate(idx_tuple):
+            ax = self.axes[i][ix]
+            if not np.isscalar(ax): # do not include scalar axes
+                axes.append(ax)
+        return axes
+
 
     def fill(self, val):
         """ anologous to numpy's fill (in-place operation)

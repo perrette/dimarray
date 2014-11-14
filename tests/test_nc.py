@@ -56,9 +56,10 @@ class ReadTest(object):
         ds = self.ds 
         assert ds.keys() == [u'tsl', u'temp']
         assert ds.dims == ('time', 'scenario')
-        assert ds.scenario.tolist() == ['historical', 'rcp26', 'rcp45', 'rcp60', 'rcp85']
+        assert ds.scenario[:].tolist() == ['historical', 'rcp26', 'rcp45', 'rcp60', 'rcp85']
         assert_equal( ds.time , np.arange(1850, 2301) )
         assert ds.time.dtype is np.dtype('int32') 
+        print ds.attrs
         assert ds.model == 'CSIRO-Mk3-6-0' # metadata
         assert ds['tsl'].ndim == 2
         assert ds['tsl'].shape == (451, 5)
@@ -85,13 +86,13 @@ class TestReadOpenNC(ReadTest):
         ds = self.ds
         assert isinstance(ds['tsl'][:], da.DimArray)
         assert isinstance(ds['tsl'].values[:], np.ndarray)
-        expected = ds.ds.variables['tsl'][:] # netCDF4
+        expected = ds.nc.variables['tsl'][:] # netCDF4
         assert_equal( ds['tsl'][:].values , expected )
         assert_equal( ds['tsl'].values[:] , expected ) # alternative (more efficient) form
 
     def test_indexing(self):
 
-        size0 = len(self.ds.ds.dimensions.values()[0])
+        size0 = len(self.ds.nc.dimensions.values()[0])
         boolidx = np.random.rand(size0) > 0.5
         indices = [5, -1, [0, 1, 2], boolidx, (0,1), slice(None), slice(2,10,2)]
 
@@ -99,23 +100,25 @@ class TestReadOpenNC(ReadTest):
 
         # position indexing
         for idx in indices:
-            print "Test index: ", idx
-            expected = ds.ds.variables['tsl'][idx] # netCDF4
-            actual = ds['tsl'].ix[idx].values
-            assert_equal( expected, actual)
+            # print "Test index: ", idx
+            expected = ds.nc.variables['tsl'][idx] # netCDF4
+            actual = ds['tsl'].ix[idx]
+            actual = getattr(actual, "values", actual)
+            assert_equal(actual, expected)
 
         # label indexing
-        labels = [(idx, self.ds.ds.variables['time'][idx]) for idx in indices if type(idx) not in (tuple, slice, np.ndarray)]
-        labels.append(((0,1), (self.ds.ds.variables['time'][0], self.ds.ds.variables['scenario'][1])))
+        labels = [(idx, self.ds.nc.variables['time'][idx]) for idx in indices if type(idx) not in (tuple, slice, np.ndarray)]
+        labels.append(((0,1), (self.ds.nc.variables['time'][0], self.ds.nc.variables['scenario'][1])))
         labels.append((slice(None), slice(None)))
-        labels.append((slice(2,10,2), slice(self.ds.ds.variables['time'][2],self.ds.ds.variables['time'][10-1],2)))
+        labels.append((slice(2,10,2), slice(self.ds.nc.variables['time'][2],self.ds.nc.variables['time'][10-1],2)))
         labels.append((boolidx, boolidx))
 
         for idx, lidx in labels:
             print "Test labelled index:",idx,':',lidx
-            expected = ds.ds.variables['tsl'][idx] # netCDF4
-            actual = ds['tsl'][lidx].values
-            assert_equal( expected, actual)
+            expected = ds.nc.variables['tsl'][idx] # netCDF4
+            actual = ds['tsl'][lidx]
+            actual = getattr(actual, "values", actual)
+            assert_equal(actual, expected)
 
 class TestIO(object):
 
@@ -128,6 +131,7 @@ class TestIO(object):
         cls.ncfile = os.path.join(cls.tmpdir, "test.nc")
         print "Write test netCDF file to",cls.ncfile
         cls.ds_var.write_nc(cls.ncfile, mode='w')
+        os.system("ncdump -v str_0d "+cls.ncfile)
 
     @classmethod
     def teardown_class(cls):
@@ -143,7 +147,9 @@ class TestIO(object):
 
     def test_read_nc_whole(self):
         " check that the netCDF file matches what has been written "
+        os.system("ncdump -v str_0d "+self.ncfile)
         actual = da.read_nc(self.ncfile)
+        os.system("ncdump -v str_0d "+self.ncfile)
         assert_equal_datasets(actual, self.ds_var)
 
     def test_basic_write_and_read(self, tmpdir):
@@ -228,12 +234,3 @@ def test_io(dim_array, tmpdir):
 
 def test_open_nc(tmpdir):
     pass
-
-def main(**kw):
-    try:
-        test_ncio()
-    except RuntimeError, msg:
-        warn("NetCDF test failed: {}".format(msg))
-
-if __name__ == "__main__":
-    main()

@@ -1,8 +1,9 @@
 """ A few functions useful for testing
 """
-import dimarray as da
 import numpy as np
 from numpy.testing import assert_equal, assert_almost_equal
+import dimarray as da
+from dimarray.tools import anynan
 
 SEED = None
 #
@@ -63,7 +64,8 @@ def create_dimarray(shape=(2,3), dtype=float, axis_dtypes=float, dims=None, seed
 
     return da.DimArray(values, axes, dims=dims, **meta)
 
-def create_dataset(seed=SEED):
+# def create_dataset(seed=SEED, dtypes = ("float", "int","int32", "int64")):
+def create_dataset(seed=SEED, dtypes = ("float", "int","int32", "int64", "str", "unicode")):
     # a = create_dimarray((2,3,2,1,1), float, (float, int, str, unicode, object), seed=seed)
     ds = da.Dataset()
     ds['many_axes'] = create_dimarray((2,3,2), float, (float, int, str), seed=seed) # test axis types
@@ -72,7 +74,7 @@ def create_dataset(seed=SEED):
     # test 0, 1 and 2-D variables of several types
     for shp in [(), (3,), (2,3)]:
         dims = ["x{}_{}d".format(i, len(shp)) for i in range(len(shp))]
-        for dtype in ("float", "int","int32", "int64", "str", "unicode"):
+        for dtype in dtypes:
             vname = "{}_{}d".format(dtype, len(shp))
             ds[vname] =  da.DimArray(create_array(shp, dtype, seed=seed), dims=dims)
 
@@ -83,7 +85,7 @@ def assert_equal_axis(actual, expected, metadata=True):
     assert isinstance(actual, da.Axis)
     assert actual == expected
     if metadata:
-        assert_equal_metadata(actual._metadata(), expected._metadata())
+        assert_equal_metadata(actual.attrs, expected.attrs)
         assert np.all(actual.weights == expected.weights)
 
 def assert_equal_dimarrays(actual, expected, metadata=True, approx=False):
@@ -93,7 +95,7 @@ def assert_equal_dimarrays(actual, expected, metadata=True, approx=False):
     assert actual.dims == expected.dims
 
     # check the values
-    if approx: 
+    if approx or actual.dtype.kind == 'f' and anynan(actual.values): 
         assert_equal_values = assert_almost_equal
     else: 
         assert_equal_values = assert_equal
@@ -105,7 +107,7 @@ def assert_equal_dimarrays(actual, expected, metadata=True, approx=False):
 
     # check the metadata
     if metadata:
-        assert_equal_metadata(actual._metadata(), expected._metadata())
+        assert_equal_metadata(actual.attrs, expected.attrs)
 
 def assert_equal_metadata(actual, expected):
     assert actual.keys() == expected.keys()
@@ -115,7 +117,13 @@ def assert_equal_metadata(actual, expected):
 def assert_equal_datasets(actual, expected, metadata=True, approx=False):
     assert expected.keys() == actual.keys()
     for k in expected.keys():
-        assert_equal_dimarrays(actual[k], expected[k], approx=approx, metadata=metadata)
+        try:
+            assert_equal_dimarrays(actual[k], expected[k], approx=approx, metadata=metadata)
+        except:
+            print actual[k]
+            print expected[k]
+            print k
+            raise
     # check the metadata
     if metadata:
-        assert_equal_metadata(actual._metadata(), expected._metadata())
+        assert_equal_metadata(actual.attrs, expected.attrs)
