@@ -17,7 +17,7 @@ from dimarray import plotting
 # from .metadata import MetadataBase
 from .bases import AbstractDimArray, GetSetDelAttrMixin
 from .axes import Axis, Axes, GroupedAxis, _doc_reset_axis
-from .indexing import getaxes_broadcast, ix_, _maybe_cast_type, orthogonal_indexer
+from .indexing import _maybe_cast_type, getaxes_broadcast, orthogonal_indexer
 
 from . import transform as _transform  # numpy along-axis transformations, interpolation
 from . import reshape as _reshape      # change array shape and dimensions
@@ -681,12 +681,6 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     def _getvalues_ortho(self, indices):
         ix = orthogonal_indexer(indices, self.shape)
         return self.values[ix]
-        # res = self.values[ix_(indices, self.shape)]
-        # # remove singleton dimensions
-        # for i in range(len(indices)-1, -1, -1):
-        #     if np.isscalar(indices[i]):
-        #         res = np.squeeze(res, axis=i)
-        # return res
 
     def _setvalues_ortho(self, indices, newvalues, cast=False):
         if cast:
@@ -694,17 +688,6 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         ix = orthogonal_indexer(indices, self.shape)
         self.values[ix] = newvalues
         return 
-
-        ix = ix_(indices, self.shape) # broadcast indices
-        ix_shape = [idx.size for idx in ix]
-        try:
-            self.values[ix] = np.reshape(newvalues, ix_shape) 
-        except:
-            print self.values[ix]
-            print newvalues
-            print ix
-            print ix_shape
-            raise
 
     _getaxes_broadcast = getaxes_broadcast
 
@@ -1597,3 +1580,4 @@ def _contains_dictlike(dict_):
     """
     return _is_dictlike(dict_) or isinstance(dict_, list) \
             and np.any([_contains_dictlike(item) for item in dict_])
+

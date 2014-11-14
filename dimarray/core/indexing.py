@@ -72,94 +72,6 @@ def locate_many(values, val, issorted=False):
 
     return matches
 
-
-
-# def isnumber(val):
-#     try:
-#         val+1
-#         if val == 1: pass # only scalar allowed
-#         return True
-#
-#     except:
-#         return type(val) != bool
-
-def _maybe_cast_type(values, newval):
-    """ update values's dtype so that values[:] = newval will not fail.
-    """
-    # check numpy-equivalent dtype
-    dtype = np.asarray(newval).dtype
-
-    # dtype comparison seems to be a good indicator of when type conversion works
-    # e.g. dtype('O') > dtype(int) , dtype('O') > dtype(str) and dtype(float) > dtype(int) all return True
-    # first convert Axis datatype to new values's type, if needed
-    if values.dtype < dtype:
-        values = np.asarray(values, dtype=dtype)
-
-    # otherwise (no ordering relationship), just define an object type
-    elif not (values.dtype  >= dtype):
-        values = np.asarray(values, dtype=object)  
-
-    return values
-
-
-def _fill_ellipsis(indices, ndim):
-    """ replace Ellipsis
-    """
-    if indices is Ellipsis:
-        return slice(None)
-
-    elif type(indices) is not tuple:
-        return indices
-
-    # Implement some basic patterns
-    is_ellipsis = np.array([ix is Ellipsis for ix in indices])
-    ne = is_ellipsis.sum()
-
-    if ne == 0:
-        return indices
-
-    elif ne > 1:
-        raise NotImplementedError('Only support one Ellipsis')
-
-    # From here, one Ellipsis is present
-    i = np.where(is_ellipsis)[0]
-    indices = indices[:i] + (slice(None),)*(ndim - len(indices) + 1) + indices[(i+1):]
-    return indices
-
-def ix_(indices, shape):
-    """ Convert indices for orthogonal indexing
-
-    Parameters
-    ----------
-    indices : (i0, i1, ...)
-        can contains integer arrays, slice, integers
-    shape : shape of the array, to convert slices
-
-    Returns
-    -------
-    indices_ortho : (j0, j1, ...) 
-        Indices so that for any compatible numpy array `a`, we have:
-        `a[indices_ortho] == a[i0][:,i1][:,:,...]`
-
-    Notes
-    -----
-    Singleton dimensions are maintained, need to squeeze the array accordingly
-    """
-    dummy_ix = []
-    for i,ix in enumerate(indices):
-        if not np.iterable(ix):
-            if type(ix) is slice:
-                ix = np.arange(shape[i])[ix]
-            else:
-                ix = np.array([ix]) # for np.ix_ to work
-        # else make sure we have an array, and if bool, evaluate to arrays
-        else:
-            ix = np.asarray(ix)
-            if ix.dtype.kind == 'b':
-                ix = np.where(ix)[0]
-        dummy_ix.append(ix)
-    return np.ix_(*dummy_ix)
-
 #
 # Functions to 
 #
@@ -279,6 +191,25 @@ def getaxes_broadcast(obj, indices):
         newaxes.insert(insert, broadcastaxis)
 
     return newaxes
+
+
+def _maybe_cast_type(values, newval):
+    """ update values's dtype so that values[:] = newval will not fail.
+    """
+    # check numpy-equivalent dtype
+    dtype = np.asarray(newval).dtype
+
+    # dtype comparison seems to be a good indicator of when type conversion works
+    # e.g. dtype('O') > dtype(int) , dtype('O') > dtype(str) and dtype(float) > dtype(int) all return True
+    # first convert Axis datatype to new values's type, if needed
+    if values.dtype < dtype:
+        values = np.asarray(values, dtype=dtype)
+
+    # otherwise (no ordering relationship), just define an object type
+    elif not (values.dtype  >= dtype):
+        values = np.asarray(values, dtype=object)  
+
+    return values
 
 #####################################################################
 #  The threee functions below have been taken from xray.core.indexing
