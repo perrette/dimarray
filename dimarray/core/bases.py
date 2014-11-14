@@ -121,6 +121,9 @@ class AbstractAxis(AbstractHasMetadata):
         elif np.isscalar(val):
             matches = locate_one(values, val, tol=tol, issorted=issorted)
 
+        elif hasattr(val, 'dtype') and val.dtype.kind == 'b':
+            matches = val  # boolean indexing, do nothing
+
         elif tol is not None: # no scalar, but tolerance parameter provided
             matches = [locate_one(values, v, tol=tol, issorted=issorted) for v in val]
 

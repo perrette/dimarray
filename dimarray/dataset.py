@@ -15,8 +15,8 @@ from .core import pandas_obj
 from .core.axes import _doc_reset_axis
 from .core.bases import AbstractDataset, GetSetDelAttrMixin
 
-# class Dataset(GetSetDelAttrMixin, AbstractDataset, odict):
-class Dataset(AbstractDataset, odict):
+class Dataset(GetSetDelAttrMixin, AbstractDataset, odict):
+# class Dataset(AbstractDataset, odict):
     """ Container for a set of aligned objects
     """
     _constructor = DimArray
@@ -196,11 +196,12 @@ class Dataset(AbstractDataset, odict):
         If you see this documentation, it means netCDF4 is not installed on your system 
         and you will not be able to use this functionality.
         """
-        import io.nc as ncio
-        ncio._write_dataset(f, self, *args, **kwargs)
+        da.io.nc._write_dataset(f, self, *args, **kwargs)
 
-    write = write_nc
-
+    # def write(self, *args, **kwargs):
+    #     warnings.warn("Deprecated. Use write_nc.", FutureWarning)
+    #     self.write_nc(*args, **kwargs)
+    #
     @classmethod
     def read_nc(cls, f, *args, **kwargs):
         """ Read dataset from netCDF file.
@@ -208,8 +209,7 @@ class Dataset(AbstractDataset, odict):
         If you see this documentation, it means netCDF4 is not installed on your system 
         and you will not be able to use this functionality.
         """
-        import io.nc as ncio
-        return ncio._read_dataset(f, *args, **kwargs)
+        return da.io.nc._read_dataset(f, *args, **kwargs)
 
     #read = read_nc
 
@@ -366,17 +366,6 @@ class Dataset(AbstractDataset, odict):
     def var(self, axis=0, **kwargs): return self._apply_dimarray_axis('var', axis=axis, **kwargs)
     def median(self, axis=0, **kwargs): return self._apply_dimarray_axis('median', axis=axis, **kwargs)
     def sum(self, axis=0, **kwargs): return self._apply_dimarray_axis('sum', axis=axis, **kwargs)
-
-    def __getattr__(self, att):
-        """ allow access of dimensions
-        """
-        # check for dimensions
-        if att in self.dims:
-            ax = self.axes[att]
-            return ax.values # return numpy array
-
-        else:
-            raise AttributeError("{} object has no attribute {}".format(self.__class__.__name__, att))
 
     def to_dict(self):
         """ export to dict

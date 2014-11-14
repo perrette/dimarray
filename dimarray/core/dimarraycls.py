@@ -607,7 +607,9 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     def _setvalues_ortho(self, indices, newvalues, cast=False):
         if cast:
             self._values = _maybe_cast_type(self._values, newvalues)
-        self.values[ix_(indices, self.shape)] = newvalues
+        ix = ix_(indices, self.shape) # broadcast indices
+        ix_shape = [idx.size for idx in ix]
+        self.values[ix] = np.reshape(newvalues, ix_shape) 
 
     _getaxes_broadcast = getaxes_broadcast
 

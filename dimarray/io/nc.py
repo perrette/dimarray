@@ -73,7 +73,7 @@ class NetCDFOnDisk(object):
     def __enter__(self):
         return self
     @staticmethod
-    def _convert_dtype(self, dtype):
+    def _convert_dtype(dtype):
         # needed for VLEN types
         # ==> assume all objects are actually strings
         #NOTE: this will fail for other object-typed axes such as tuples
@@ -106,6 +106,12 @@ class DatasetOnDisk(GetSetDelAttrMixin, NetCDFOnDisk, AbstractDataset):
         data.attrs.update(self.attrs) # dataset's metadata
         return data
 
+    def write(self, obj, *args, **kwargs):
+        if not isinstance(obj, da.Dataset):
+            raise TypeError("Can only write Dataset, use `ds[name] = dima` to write a DimArray")
+        for k in obj.keys():
+            self[k].write(obj.axes, obj.values)
+
     def keys(self):
         " all variables except for dimensions"
         return [nm for nm in self._ds.variables.keys() if nm not in self.dims]
@@ -131,6 +137,8 @@ class DatasetOnDisk(GetSetDelAttrMixin, NetCDFOnDisk, AbstractDataset):
         return DimArrayOnDisk(self._ds, name)
 
     def __setitem__(self, name, value):
+        if name not in self.keys():
+            print "new variable"
         DimArrayOnDisk(self._ds, name)[:] = value
 
     def __delitem__(self, name):
@@ -176,7 +184,7 @@ class DimArrayOnDisk(GetSetDelAttrMixin, NetCDFVariable, AbstractDimArray):
     def axes(self):
         return AxesOnDisk(self._ds, self.dims)
 
-    def write(self, idx, values, **kwargs):
+    def write(self, indices, values, **kwargs):
         # just create the variable and dimensions
         ds = self._ds
         if self._name not in ds.variables.keys():
@@ -190,15 +198,23 @@ class DimArrayOnDisk(GetSetDelAttrMixin, NetCDFVariable, AbstractDimArray):
                 for ax in values.axes:
                     AxisOnDisk(ds, ax.name)[:] = ax.values
             nctype = self._convert_dtype(values.dtype)
-            ds.createVariable(self._name, nctype, self.dims)
+            ds.createVariable(self._name, nctype, values.dims)
+
+        # add attributes
+        if hasattr(values,'attrs'):
+            self.attrs.update(values.attrs)
 
         # do all the indexing and assignment via IndexedArray class
         # ==> it will set the values via "values" attribute
-        super(DimArrayOnDisk)._setitem(self, idx, values, **kwargs)
+        # super(DimArrayOnDisk)._setitem(self, indices, values, **kwargs)
+        AbstractDimArray._setitem(self, indices, values, **kwargs)
 
     write.__doc__ = AbstractDimArray._setitem.__doc__
 
     read = AbstractDimArray._getitem #TODO: wrap documentation
+
+    __setitem__ = write
+    __getitem__ = read
 
     def _repr(self, **kwargs):
         assert 'lazy' not in kwargs, "lazy parameter cannot be provided, it is always True"
@@ -242,10 +258,10 @@ class AxisOnDisk(GetSetDelAttrMixin, NetCDFVariable, AbstractAxis):
         if values is None:
             return
 
-        arr = _convert_nctype_arr(values)
+        arr = _convert_nctype_array(values)
 
         # create variable if needed
-        if name not in ds.variable.keys():
+        if name not in ds.variables.keys():
             nctype = _convert_nctype_dtype(arr.dtype)
             ds.createVariable(name, nctype, name) 
 
@@ -254,7 +270,7 @@ class AxisOnDisk(GetSetDelAttrMixin, NetCDFVariable, AbstractAxis):
 
         # assign metadata
         try:
-            self.attrs.update(values._metadata())
+            self.attrs.update(values.attrs)
         except:
             pass
 
@@ -776,7 +792,7 @@ def _write_dataset(f, obj, mode='w-', indices=None, axis=0, format=None, verbose
         _write_variable(f, obj[nm], nm, **kwargs)
 
     # set metadata for the whole dataset
-    meta = obj._metadata()
+    meta = obj.attrs
     for k in meta.keys():
         if meta[k] is None: 
             # do not write empty attribute
