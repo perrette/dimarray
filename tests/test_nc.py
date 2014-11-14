@@ -94,7 +94,7 @@ class TestReadOpenNC(ReadTest):
 
         size0 = len(self.ds.nc.dimensions.values()[0])
         boolidx = np.random.rand(size0) > 0.5
-        indices = [5, -1, [0, 1, 2], boolidx, (0,1), slice(None), slice(2,10,2)]
+        indices = [5, -1, [0, 1, 2], boolidx, (0,1), slice(None), (), slice(2,10,2)]
 
         ds = self.ds
 
@@ -109,7 +109,7 @@ class TestReadOpenNC(ReadTest):
         # label indexing
         labels = [(idx, self.ds.nc.variables['time'][idx]) for idx in indices if type(idx) not in (tuple, slice, np.ndarray)]
         labels.append(((0,1), (self.ds.nc.variables['time'][0], self.ds.nc.variables['scenario'][1])))
-        labels.append((slice(None), slice(None)))
+        labels.append(((),()))
         labels.append((slice(2,10,2), slice(self.ds.nc.variables['time'][2],self.ds.nc.variables['time'][10-1],2)))
         labels.append((boolidx, boolidx))
 
@@ -175,13 +175,13 @@ class TestIO(object):
         with da.open_nc(self.ncfile) as ds_disk:
             for k in ds_disk.keys():
                 print 'read', k, self.ncfile
-                assert_equal_dimarrays(ds_disk[k][:], self.ds_var[k])
+                assert_equal_dimarrays(ds_disk[k][()], self.ds_var[k])
                 assert_equal_dimarrays(ds_disk[k].read(), self.ds_var[k])
 
     def test_read_position_index(self):
         # try opening bits of the first variable
         boolidx = np.random.rand(self.ds_var.axes[0].size) > 0.5
-        indices = [1, -1, [0, 1], boolidx, (0,1), slice(None), slice(1,None,2)]
+        indices = [1, -1, [0, 1], boolidx, (0,1), (), slice(None), slice(1,None,2)]
 
         # position indexing
         with da.open_nc(self.ncfile) as ds_disk:

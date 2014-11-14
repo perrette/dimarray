@@ -138,7 +138,7 @@ class DatasetOnDisk(GetSetDelAttrMixin, NetCDFOnDisk, AbstractDataset):
         return DimArrayOnDisk(self._ds, name)
 
     def __setitem__(self, name, value):
-        DimArrayOnDisk(self._ds, name)[:] = value
+        DimArrayOnDisk(self._ds, name)[()] = value
 
     def __delitem__(self, name):
         del self._ds.variables[name]
@@ -158,9 +158,9 @@ class NetCDFVariable(NetCDFOnDisk):
         return self._ds.variables[self._name] # simply the variable to be indexed and returns values like netCDF4
     @values.setter
     def values(self, values):
-        self[:] = values
+        self[()] = values
     def __array__(self):
-        return self.values[:] # returns a numpy array
+        return self.values[()] # returns a numpy array
     
 class DimArrayOnDisk(GetSetDelAttrMixin, NetCDFVariable, AbstractDimArray):
     _constructor = DimArray
@@ -197,12 +197,17 @@ class DimArrayOnDisk(GetSetDelAttrMixin, NetCDFVariable, AbstractDimArray):
                 raise TypeError("Can only create new variables with DimArray")
             if values.ndim > 0:
                 for ax in values.axes:
-                    AxisOnDisk(ds, ax.name)[:] = ax.values
+                    AxisOnDisk(ds, ax.name)[()] = ax.values
             ds.createVariable(self._name, nctype, values.dims)
 
         # add attributes
         if hasattr(values,'attrs'):
             self.attrs.update(values.attrs)
+
+        # special case: index == slice(None) and self.ndim == 0
+        # This would fail with numpy, but not with netCDF4
+        if type(indices) is slice and indices == slice(None) and self.ndim == 0:
+            indices = ()
 
         # do all the indexing and assignment via IndexedArray class
         # ==> it will set the values via _setvalues_ortho below
@@ -211,7 +216,9 @@ class DimArrayOnDisk(GetSetDelAttrMixin, NetCDFVariable, AbstractDimArray):
 
     write.__doc__ = AbstractDimArray._setitem.__doc__
 
-    def read(self, indices=slice(None), *args, **kwargs):
+    def read(self, indices=(), *args, **kwargs):
+        if type(indices) is slice and indices == slice(None) and self.ndim == 0:
+            indices = ()
         return AbstractDimArray._getitem(self, indices, *args, **kwargs)
                            
     read.__doc__ = AbstractDimArray._getitem.__doc__
@@ -365,7 +372,7 @@ and `ds.nc.createVariable`""".format(ix, self.dims)
         if type(dim) is int:
             dim = self.dims[dim]
         # involves variable creation
-        AxisOnDisk(self._ds, dim)[:] = axis
+        AxisOnDisk(self._ds, dim)[()] = axis
 
     def __iter__(self):
         for dim in self.dims:
@@ -669,7 +676,7 @@ def _extract_kw(kwargs, argnames, delete=True):
     return kw
 
 @format_doc(indexing=_doc_indexing)
-def _read_variable(f, name, indices=None, axis=0, indexing='label', tol=None, verbose=False):
+def _read_variable(f, name, indices=(), axis=0, indexing='label', tol=None, verbose=False):
     """ Read one variable from netCDF4 file 
 
     Parameters
@@ -794,7 +801,7 @@ def _read_multinc(fnames, nms=None, axis=None, keys=None, align=False, concatena
     return ds
 
 @format_doc(netCDF4=_doc_write_nc, indexing=_doc_indexing_write, write_modes=_doc_write_modes)
-def _write_dataset(f, obj, mode='w-', indices=None, axis=0, format=None, verbose=False, **kwargs):
+def _write_dataset(f, obj, mode='w-', indices=(), axis=0, format=None, verbose=False, **kwargs):
     """ Write Dataset to netCDF file
 
     Parameters
@@ -834,7 +841,7 @@ def _write_dataset(f, obj, mode='w-', indices=None, axis=0, format=None, verbose
 
 
 @format_doc(netCDF4=_doc_write_nc, indexing=_doc_indexing_write, write_modes=_doc_write_modes)
-def _write_variable(f, obj=None, name=None, mode='a+', format=None, indices=None, axis=0, verbose=False, indexing=None, **kwargs):
+def _write_variable(f, obj=None, name=None, mode='a+', format=None, indices=(), axis=0, verbose=False, indexing=None, **kwargs):
     """ Write DimArray instance to file
 
     Parameters

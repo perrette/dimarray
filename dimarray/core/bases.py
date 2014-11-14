@@ -4,7 +4,7 @@ from __future__ import absolute_import
 from collections import OrderedDict as odict
 import numpy as np
 import copy
-from .indexing import locate_one, locate_many
+from .indexing import locate_one, locate_many, expanded_indexer
 from .prettyprinting import repr_axis, repr_dataset
 
 class GetSetDelAttrMixin(object):
@@ -30,7 +30,7 @@ class GetSetDelAttrMixin(object):
                 or hasattr(self.__class__, name):
             object.__setattr__(self, name, value) # do nothing special
         elif hasattr(self, 'axes') and name in self.dims:
-            self.axes[name][:] = value # modify axis values
+            self.axes[name][()] = value # modify axis values
         else:
             self.attrs[name] = value # add as metadata
 
@@ -47,13 +47,16 @@ class GetSetDelAttrMixin(object):
 #     pass
 #
 class AbstractHasMetadata(object):
+       
     @property
     def attrs(self):
         return self._attrs # only for the in-memory array
+
     @attrs.setter
     def attrs(self, value):
         del self.attrs
         self.attrs.update(value)
+         
     @attrs.deleter
     def attrs(self):
         for k in self.attrs.keys():
@@ -116,7 +119,7 @@ class AbstractAxis(AbstractHasMetadata):
         For array-like indexer, the axis is sorted and np.searchsorted is applied.
         If tol is provided, a `np.argmin(np.abs(a-val))` is used.
         """
-        values = self.values[:]
+        values = self.values[()]
         tol=tol or self._tol
 
         if type(val) is slice:
@@ -198,7 +201,7 @@ class AbstractHasAxes(AbstractHasMetadata):
         if not len(newlabels) == self.ndim:
             raise ValueError("dimension mistmatch")
         for i, lab in enumerate(newlabels):
-            self.axes[i][:] = lab
+            self.axes[i][()] = lab
 
     def _get_indices(self, indices, axis=None, indexing=None, tol=None, keepdims=False):
         """ Return an n-D indexer  
@@ -213,9 +216,14 @@ class AbstractHasAxes(AbstractHasMetadata):
             dimensions.
         """
         indexing = indexing or getattr(self,'_indexing',None) or get_option('indexing.by')
-        if indices is None: 
-            indices = slice(None)
+        dims = self.dims
 
+        if indices is None:
+            indices = ()
+
+        #
+        # Convert indices to tuple, from a variety of input formats
+        #
         # special case: numpy like (idx, axis)
         if axis not in (0, None):
             indices = {axis:indices}
@@ -229,28 +237,20 @@ class AbstractHasAxes(AbstractHasMetadata):
             # replace int dimensions with str dimensions
             for k in indices:
                 if not isinstance(k, basestring):
-                    indices[self.dims[k]] = indices[k]
+                    indices[dims[k]] = indices[k]
                     del indices[k] 
                 else:
-                    if k not in self.dims:
-                        raise ValueError("Dimension {} not found. Existing dimensions: {}".format(k, self.dims))
-                
-            indices = tuple(indices[d] if d in indices else slice(None) for d in self.dims)
+                    if k not in dims:
+                        raise ValueError("Dimension {} not found. Existing dimensions: {}".format(k, dims))
+            indices = tuple(indices[d] if d in indices else slice(None) for d in dims)
 
-        elif not isinstance(indices, tuple):
-            indices = (indices,)
-
-        # expand "..." Ellipsis if any
-        if np.any([ix is Ellipsis for ix in indices]):
-            indices = _fill_ellipsis(indices, self.ndim)
+        # expand to N-D tuple, and expands ellipsis
+        indices = expanded_indexer(indices, self.ndim)
 
         # load each dimension as necessary
         indexer = ()
-        for i, dim in enumerate(self.dims):
-            if i >= len(indices):
-                ix = slice(None)
-            else:
-                ix = indices[i]
+        for i, ix in enumerate(indices):
+            dim = dims[i]
 
             # in case of label-based indexing, need to read the whole dimension
             # and look for the appropriate values
@@ -537,7 +537,6 @@ class AbstractDimArray(AbstractHasAxes):
         if not inplace:
             return self
 
-    # also use with [:] syntax, for default arguments
     __getitem__ = _getitem 
     __setitem__ = _setitem
 

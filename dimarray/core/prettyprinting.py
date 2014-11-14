@@ -34,7 +34,7 @@ def repr_dimarray_inline(self, metadata=False, name=None):
     if name is None and hasattr(self, 'name'):
         name = self.name
     dims = self.dims
-    descr = repr(dims) if len(dims) > 0 else repr(self[0])
+    descr = repr(dims) if len(dims) > 0 else repr(self[()])
     repr_ = ": ".join([name, descr]) 
     if metadata and len(self.attrs)>0:
         repr_ += "\n"+str_attrs(self.attrs)
