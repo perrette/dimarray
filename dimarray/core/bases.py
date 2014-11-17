@@ -181,10 +181,9 @@ class AbstractAxes(object):
         if not name.startswith('_'):
             raise AttributeError("Cannot set attribute to an Axes object")
         object.__setattr__(self, name, value)
-    def __repr__(self):
-        return repr_axes(self)
-    def __str__(self):
-        return str_axes(self)
+
+    __repr__ = repr_axes
+    __str__ = str_axes
 
 class AbstractHasAxes(AbstractHasMetadata):
     """ class to handle things related to axes, such as overloading __getattr__
@@ -279,9 +278,16 @@ class AbstractHasAxes(AbstractHasMetadata):
         for i, ix in enumerate(indices):
             dim = dims[i]
 
+            if not np.isscalar(ix) and not isinstance(ix, slice):
+                ix = np.asarray(ix)
+
+            # boolean indices are fine
+            if isinstance(ix, np.ndarray) and ix.dtype.kind == 'b':
+                pass
+
             # in case of label-based indexing, need to read the whole dimension
             # and look for the appropriate values
-            if indexing != 'position' and not (type(ix) is slice and ix == slice(None)):
+            elif indexing != 'position' and not (type(ix) is slice and ix == slice(None)):
                 # find the index corresponding to the required axis value
                 lix = ix
                 ix = self.axes[dim].loc(lix, tol=tol)

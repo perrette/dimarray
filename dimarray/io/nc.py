@@ -43,12 +43,6 @@ def _maybe_convert_dtype(values):
         dtype = str
     return values, dtype
 
-# def _maybe_convert_dtype_array(arr):
-#     arr = np.asarray(arr)
-#     if arr.dtype > np.dtype('S1'):
-#         arr = np.asarray(arr, dtype=object)
-#     return arr
-
 #
 # Define an open_nc function return an on-disk Dataset object, more similar to 
 # netCDF4's Dataset.
@@ -74,16 +68,6 @@ class NetCDFOnDisk(object):
         self.close()
     def __enter__(self):
         return self
-    # @staticmethod
-    # def _convert_dtype(dtype):
-    #     # needed for VLEN types
-    #     # ==> assume all objects are actually strings
-    #     #NOTE: this will fail for other object-typed axes such as tuples
-    #     if dtype >= np.dtype('S1'): # all strings, this include objects dtype('O')
-    #         nctype = str 
-    #     else:
-    #         nctype = dtype 
-    #     return nctype
 
 
 class DatasetOnDisk(GetSetDelAttrMixin, NetCDFOnDisk, AbstractDataset):

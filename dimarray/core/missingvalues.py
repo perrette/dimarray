@@ -157,5 +157,7 @@ def dropna(self, axis=0, minvalid=None, na=np.nan):
     else:
         maxna = nans.axes[0].size - minvalid
 
-    indices = count_nans_axis <= maxna
-    return self.take_axis(np.where(indices)[0], axis=idx)
+    return self.compress_axis(count_nans_axis <= maxna, axis=idx)
+    # indices = countnans_axis <= maxna
+    # return self.take_axis(np.where(indices)[0], axis=idx, indexing='position')
+    # return self.take(count_nans_axis <= maxna, axis=idx)

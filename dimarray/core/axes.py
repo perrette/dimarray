@@ -133,6 +133,8 @@ class Axis(GetSetDelAttrMixin, AbstractAxis):
         """
         if type(item) is slice and item == slice(None):
             return self
+        if not isinstance(item, slice) and not np.isscalar(item):
+            item = np.asarray(item) # needed for boolean axes, otherwise problem
         values = self.values[item]
         if not isinstance(values, np.ndarray):
             return values # if collapsed to scalar, just return it
@@ -643,7 +645,7 @@ class Axes(AbstractAxes, list):
         list.insert(self, pos, ax)
 
     def pop(self, axis):
-        pos = self.get_idx(axis)
+        pos = self._get_idx(axis)
         return list.pop(self, pos)
 
     def sort(self, dims):
@@ -661,7 +663,7 @@ class Axes(AbstractAxes, list):
     def copy(self):
         return copy.deepcopy(self) # not only the list but the elements of the list are copied
 
-    def get_idx(self, axis):
+    def _get_idx(self, axis):
         " always return axis integer location "
         if isinstance(axis, basestring):
             dims = [ax.name for ax in self]
@@ -670,16 +672,6 @@ class Axes(AbstractAxes, list):
             except IndexError:
                 IndexError("Axis name not found: {}. Existing dimensions : {}".format(axis, dims))
         return axis
-        #
-        # # if axis is already an integer, just return it
-        # if type(axis) in (int, np.int_, np.dtype(int)):
-        #     return axis
-        #
-        # assert type(axis) in [str, unicode, tuple, np.string_], "unexpected axis index: {}, {}".format(type(axis), axis)
-        #
-        # dims = [ax.name for ax in self]
-        #
-        # return dims.index(axis)
 
 def _init_axes(axes=None, dims=None, labels=None, shape=None, check_order=True):
     """ initialize axis instance with many different ways
@@ -763,11 +755,3 @@ def _init_axes(axes=None, dims=None, labels=None, shape=None, check_order=True):
         raise TypeError("axes, if provided, must be a list of: `Axis` or `tuple` or arrays. Got: {} (instance:{})".format(axes.__class__, axes))
 
     return axes
-
-
-def make_multiindex(ix, n):
-    # Just add slice(None) if some indices are missing
-    ix = np.index_exp[ix] # make it a tuple
-    for i in range(n-len(ix)):
-        ix += slice(None),
-    return ix

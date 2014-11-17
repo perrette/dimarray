@@ -829,6 +829,17 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         dima.attrs.update(self.attrs)
         return dima
 
+    def compress_axis(self, boolarray, axis=0, out=None):
+        """ axis-wise boolean indexing, analogous to numpy.ndarray.compress
+        """
+        pos, dim = self._get_axis_info(axis)
+        val = self.values.compress(boolarray, axis=pos, out=out)
+        newax = self.axes[pos][boolarray]
+        axes = [ax if ax.name != dim else newax for ax in self.axes]
+        dima = self._constructor(val, axes)
+        dima.attrs.update(self.attrs)
+        return dima
+
     def take_axis(self, indices, axis=0, indexing=None, mode='raise', out=None):
         """ Take values along an axis, similarly to numpy.take.
         
