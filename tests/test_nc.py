@@ -7,7 +7,7 @@ import numpy as np
 from numpy.testing import assert_equal, assert_almost_equal
 
 import dimarray  as da
-from dimarray import DimArray, summary_nc, read_nc, open_nc, write_nc, get_ncfile
+from dimarray import DimArray, summary_nc, read_nc, open_nc, get_ncfile
 from dimarray.testing import (assert_equal_dimarrays, assert_equal_datasets, assert_equal_axis,
                               create_dataset, create_dimarray)
 

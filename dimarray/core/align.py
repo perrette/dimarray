@@ -299,7 +299,7 @@ def stack(arrays, axis=None, keys=None, align=False):
     >>> b = DimArray([11,22,33])
     >>> stack([a, b], axis='stackdim', keys=['a','b'])
     dimarray: 6 non-null elements (0 null)
-    0 / stackdim (2): a to b
+    0 / stackdim (2): 'a' to 'b'
     1 / x0 (3): 0 to 2
     array([[ 1,  2,  3],
            [11, 22, 33]])
@@ -372,7 +372,7 @@ def concatenate(arrays, axis=0, check_other_axes=True):
     >>> b = DimArray([4,5,6], axes=[['d','e','f']])
     >>> concatenate((a, b))
     dimarray: 6 non-null elements (0 null)
-    0 / x0 (6): a to f
+    0 / x0 (6): 'a' to 'f'
     array([1, 2, 3, 4, 5, 6])
 
     2-D
@@ -480,7 +480,7 @@ def aggregate(arrays, check_overlap=True):
     >>> aggregate((a,b,c,d))
     dimarray: 10 non-null elements (6 null)
     0 / line (4): 0 to 4
-    1 / col (4): a to d
+    1 / col (4): 'a' to 'd'
     array([[  1.,   2.,   3.,  nan],
            [ nan,  nan,  nan,   4.],
            [ nan,  22.,  nan,   5.],
@@ -501,7 +501,7 @@ def aggregate(arrays, check_overlap=True):
     >>> aggregate((a,b), check_overlap=False)  
     dimarray: 4 non-null elements (2 null)
     0 / line (2): 0 to 1
-    1 / col (3): a to c
+    1 / col (3): 'a' to 'c'
     array([[  1.,   4.,   3.],
            [ nan,   5.,  nan]])
 
@@ -512,7 +512,7 @@ def aggregate(arrays, check_overlap=True):
     >>> aggregate((a,b)) # does not overwrite `2` at location (1, 'b')
     dimarray: 4 non-null elements (2 null)
     0 / line (2): 1 to 2
-    1 / col (3): a to c
+    1 / col (3): 'a' to 'c'
     array([[  1.,   2.,   3.],
            [ nan,   5.,  nan]])
     """
@@ -523,7 +523,7 @@ def aggregate(arrays, check_overlap=True):
     axes = Axes()
     for d in dims:
         newaxis = _concatenate_axes([a.axes[d] for a in arrays if d in a.dims])
-        newaxis.values = np.unique(newaxis.values) # unique values
+        newaxis._values = np.unique(newaxis.values) # unique values
         axes.append(newaxis)
 
     # Fill in an array
@@ -535,7 +535,7 @@ def aggregate(arrays, check_overlap=True):
         if check_overlap:
 
             # look for nans in replaced and replacing arrays
-            subarray = newarray.take(indices, broadcast_arrays=False).values
+            subarray = newarray.take(indices, broadcast=False).values
             subarray_is_nan = np.isnan(subarray)
             newvalues_is_nan = np.isnan(a.values)
 
@@ -551,7 +551,7 @@ def aggregate(arrays, check_overlap=True):
             newvalues = a.values
 
         # The actual operation is done by put
-        newarray.put(newvalues, indices=indices, inplace=True, convert=True, broadcast_arrays=False)
+        newarray.put(indices=indices, values=newvalues, inplace=True, cast=True, broadcast=False)
 
     # That's it !
 
@@ -670,10 +670,10 @@ def reindex_like(self, other, **kwargs):
     >>> import dimarray as da
     >>> b = da.DimArray([3,4],('x0',[1,3]))
     >>> c = da.DimArray([[1,2,3], [1,2,3]],[('x1',["a","b"]),('x0',[1, 2, 3])])
-    >>> b.reindex_like(c, method='interp')
-    dimarray: 3 non-null elements (0 null)
+    >>> b.reindex_like(c)
+    dimarray: 2 non-null elements (1 null)
     0 / x0 (3): 1 to 3
-    array([ 3. ,  3.5,  4. ])
+    array([  3.,  nan,   4.])
     """
     if hasattr(other, 'axes'):
         axes = other.axes
@@ -738,7 +738,7 @@ def sort_axis(a, axis=0, key=None):
     >>> a.sort_axis(axis=1)
     dimarray: 6 non-null elements (0 null)
     0 / x0 (2): 0 to 1
-    1 / x1 (3): a to c
+    1 / x1 (3): 'a' to 'c'
     array([[10, 30, 20],
            [40, 60, 50]])
     """

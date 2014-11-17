@@ -90,7 +90,7 @@ def interp1d_numpy(obj, values=None, axis=0, left=np.nan, right=np.nan):
         xp = obj.axes[newaxis.name].values
         fp = obj.values
         result = np.interp(newaxis.values, xp, fp, left=left, right=right)
-        return obj._constructor(result, [newaxis], **obj._metadata)
+        return obj._constructor(result, [newaxis], **obj.attrs)
 
     result = apply_recursive(obj, (newaxis.name,), interp1d)
     return result.transpose(obj.dims) # transpose back to original dimensions
@@ -228,6 +228,6 @@ def interp2d(dim_array, newaxes, dims=(-2, -1), order=1, clip=False):
     dim_array_int = dim_array_int.transpose(dims_orig)
 
     # add metadata
-    dim_array_int._metadata(dim_array._metadata())
+    dim_array_int.attrs.update(dim_array.attrs)
 
     return dim_array_int

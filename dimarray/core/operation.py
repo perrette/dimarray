@@ -1,11 +1,13 @@
 """
 Operation and axis aligmnent
 """
+from __future__ import absolute_import
 import numpy as np
 import warnings
 
-from align import align_dims, align_axes
 from dimarray.tools import is_DimArray
+from .align import align_dims, align_axes
+from .axes import Axes
 
 def operation(func, o1, o2, reindex=True, broadcast=True, constructor=None):
     """ binary operation involving a DimArray objects
@@ -58,12 +60,13 @@ def operation(func, o1, o2, reindex=True, broadcast=True, constructor=None):
         o1, o2 = align_dims(o1, o2)
 
     # make the new axes
-    newaxes = o1.axes.copy()
-
-    # ...make sure no singleton value is included
-    for i, ax in enumerate(newaxes):
+    newaxes = Axes()
+    for i, ax in enumerate(o1.axes):
         if ax.values[0] is None:
-            newaxes[i] = o2.axes[ax.name]
+            # ...make sure no singleton value is included
+            newaxes.append(o2.axes[ax.name].copy())
+        else:
+            newaxes.append(ax.copy())
 
     res = func(o1.values, o2.values)
 

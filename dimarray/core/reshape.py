@@ -33,8 +33,8 @@ def broadcast(self, other):
     >>> lon = np.linspace(10, 30, 2)
     >>> lat = np.linspace(10, 50, 3)
     >>> time = np.arange(1950,1955)
-    >>> ts = da.DimArray.from_kw(np.arange(5), time=time)
-    >>> cube = da.DimArray.from_kw(np.zeros((3,2,5)), lon=lon, lat=lat, time=time)  # lat x lon x time
+    >>> ts = da.DimArray(np.arange(5), axes=[time], dims=['time'])
+    >>> cube = da.DimArray(np.zeros((3,2,5)), axes=[('lat',lat), ('lon',lon), ('time',time)])  # lat x lon x time
     >>> cube.axes  
     0 / lat (3): 10.0 to 50.0
     1 / lon (2): 10.0 to 30.0
@@ -361,7 +361,7 @@ def newaxis(self, name, values=None, pos=0):
     >>> a.newaxis('new', values=['a','b'],pos=1)
     dimarray: 4 non-null elements (0 null)
     0 / x0 (2): 0 to 1
-    1 / new (2): a to b
+    1 / new (2): 'a' to 'b'
     array([[1, 1],
            [2, 2]])
     """
@@ -891,7 +891,7 @@ def groupby(self, *dims):
     >>> a = a.newaxis('y',4) # add an axis of length 4
     >>> a.groupby('items').mean()
     dimarray: 3 non-null elements (0 null)
-    0 / items (3): a to c
+    0 / items (3): 'a' to 'c'
     array([ 2.5,  3.5,  4.5])
     """
     obj = group(self, dims, reverse=True, insert=0).T

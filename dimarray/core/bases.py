@@ -4,8 +4,11 @@ from __future__ import absolute_import
 from collections import OrderedDict as odict
 import numpy as np
 import copy
+from dimarray.config import get_option
+from dimarray.compat.pycompat import iteritems, zip
+from dimarray.tools import is_numeric
 from .indexing import locate_one, locate_many, expanded_indexer
-from .prettyprinting import repr_axis, repr_dataset
+from .prettyprinting import repr_axis, repr_dataset, repr_axes, str_axes, str_dataset, str_dimarray
 
 class GetSetDelAttrMixin(object):
     """ Class to overload the __getattr__, __setattr__, __delattr__
@@ -13,21 +16,24 @@ class GetSetDelAttrMixin(object):
     are stored in an `attrs` dictionary attribute, and check for presence of axes
     in an `axes` attribute and `dims`.
     """
-    __metadata_exclude__ = []
+    __metadata_exclude__ = [] # do not add to attrs
+    __metadata_include__ = [] 
 
     def __getattr__(self, name):
-        if name.startswith('_') or name in self.__metadata_exclude__:
+        if name not in self.__metadata_include__ \
+                and (name.startswith('_') or name in self.__metadata_exclude__):
             pass
-        elif 'dims' in self.__class__.__dict__ and name in self.dims:
+        elif hasattr(self, 'dims') and name in self.dims:
             return self.axes[name].values # return axis values
         elif name in self.attrs.keys():
             return self.attrs[name]
         raise AttributeError("{} object has no attribute {}".format(self.__class__.__name__, name))
 
     def __setattr__(self, name, value):
-        if name.startswith('_') \
-                or name in self.__metadata_exclude__ \
-                or hasattr(self.__class__, name):
+        if name not in self.__metadata_include__ and \
+                (name.startswith('_') \
+                 or name in self.__metadata_exclude__ \
+                 or hasattr(self.__class__, name)):
             object.__setattr__(self, name, value) # do nothing special
         elif hasattr(self, 'axes') and name in self.dims:
             self.axes[name][()] = value # modify axis values
@@ -67,6 +73,8 @@ class AbstractHasMetadata(object):
 
     def __repr__(self):
         return self._repr()
+
+    __str__ = str_dimarray
 
     def summary(self):
         print self.summary_repr()
@@ -146,18 +154,37 @@ class AbstractAxis(AbstractHasMetadata):
                 test = values[matches] != val
                 mismatch = np.asarray(val)[test]
                 if np.any(test):
-                    raise IndexError("Some values where not found in the axis: {}.".format(mismatch))
+                    raise IndexError("Some values where not found in the axis ({}): {}.".format(self.name, mismatch))
 
         return matches
 
-    def _repr(self, metadata=False):
-        return repr_axis(self, metadata=metadata)
+    # def _repr(self, metadata=False):
+    #     return repr_axis(self, metadata=metadata)
+    _repr = repr_axis
+
+    def __str__(self):
+        """ simple string representation
+        """
+        #return "{}={}:{}".format(self.name, self.values[0], self.values[-1])
+        return "{}({})={}:{}".format(self.name, self.size, *self._bounds())
+
+    @property
+    def dtype(self):
+        return self.values.dtype
+
+    def is_numeric(self):
+        return is_numeric(self.values)
 
 class AbstractAxes(object):
+    _Axis = AbstractAxis
     def __setattr__(self, name, value):
         if not name.startswith('_'):
             raise AttributeError("Cannot set attribute to an Axes object")
         object.__setattr__(self, name, value)
+    def __repr__(self):
+        return repr_axes(self)
+    def __str__(self):
+        return str_axes(self)
 
 class AbstractHasAxes(AbstractHasMetadata):
     """ class to handle things related to axes, such as overloading __getattr__
@@ -203,7 +230,7 @@ class AbstractHasAxes(AbstractHasMetadata):
         for i, lab in enumerate(newlabels):
             self.axes[i][()] = lab
 
-    def _get_indices(self, indices, axis=None, indexing=None, tol=None, keepdims=False):
+    def _get_indices(self, indices, axis=0, indexing=None, tol=None, keepdims=False):
         """ Return an n-D indexer  
         
         Parameters
@@ -267,12 +294,20 @@ class AbstractHasAxes(AbstractHasMetadata):
 
         return indexer
 
+    def _getaxes_ortho(self, idx_tuple):
+        " idx: tuple of position indices  of length = ndim (orthogonal indexing)"
+        axes = []
+        for i, ix in enumerate(idx_tuple):
+            ax = self.axes[i][ix]
+            if not np.isscalar(ax): # do not include scalar axes
+                axes.append(ax)
+        return axes
+
 class AbstractDimArray(AbstractHasAxes):
 
     @property
     def values(self):
         raise NotImplementedError()
-
     @property
     def shape(self):
         return self.values.shape
@@ -283,193 +318,18 @@ class AbstractDimArray(AbstractHasAxes):
     def size(self):
         return self.values.size
 
+    def is_numeric(self):
+        return is_numeric(self.values)
+
     _indexing = None
     _broadcast = False
 
     # The indexing machinery in functional form, 
     # to be called by __getitem__ with default arguments
-    def _getitem(self, indices=None, axis=None, indexing=None, tol=None, broadcast=None, keepdims=False):
-        """ Retrieve values from a DimArray
-
-        Parameters
-        ----------
-        indices : int or list or slice (single-dimensional indices)
-                   or a tuple of those (multi-dimensional)
-                   or `dict` of {{ axis name : axis values }}
-        axis : None or int or str, optional
-            if specified and indices is a slice, scalar or an array, assumes 
-            indexing is along this axis.
-        indexing : {'label', 'position', None}, optional
-            Indexing mode. 
-               - "position": use numpy-like position index (default)
-               - "label": indexing on axis labels
-            If None, call get_option('indexing.by'), which defaults to 'label'
-        tol : None or float or tuple or dict, optional
-            tolerance when looking for numerical values, e.g. to use nearest 
-            neighbor search, default `None`.
-        keepdims : bool, optional 
-            keep singleton dimensions (default False)
-        broadcast : bool, optional
-            if True, use numpy-like `fancy` indexing and broacast any 
-            indexing array to a common shape, useful for example to sample
-            points along a path. Default to False.
-
-        Returns
-        -------
-        indexed_array : DimArray instance or scalar
-
-        See Also
-        --------
-        DimArray.put, DimArrayOnDisk.read, DimArray.take_axis
-
-        Examples
-        --------
-
-        >>> from dimarray import DimArray
-        >>> v = DimArray([[1,2,3],[4,5,6]], axes=[["a","b"], [10.,20.,30.]], dims=['d0','d1'], dtype=float) 
-        >>> v
-        dimarray: 6 non-null elements (0 null)
-        0 / d0 (2): a to b
-        1 / d1 (3): 10.0 to 30.0
-        array([[ 1.,  2.,  3.],
-               [ 4.,  5.,  6.]])
-
-        Indexing via axis values (default)
-
-        >>> a = v[:,10]   # python slicing method
-        >>> a
-        dimarray: 2 non-null elements (0 null)
-        0 / d0 (2): a to b
-        array([ 1.,  4.])
-        >>> b = v.take(10, axis=1)  # take, by axis position
-        >>> c = v.take(10, axis='d1')  # take, by axis name
-        >>> d = v.take({{'d1':10}})  # take, by dict {{axis name : axis values}}
-        >>> (a==b).all() and (a==c).all() and (a==d).all()
-        True
-
-        Indexing via integer index (indexing="position" or `ix` property)
-
-        >>> np.all(v.ix[:,0] == v[:,10])
-        True
-        >>> np.all(v.take(0, axis="d1", indexing="position") == v.take(10, axis="d1"))
-        True
-
-        Multi-dimensional indexing
-
-        >>> v["a", 10]  # also work with string axis
-        1.0
-        >>> v.take(('a',10))  # multi-dimensional, tuple
-        1.0
-        >>> v.take({{'d0':'a', 'd1':10}})  # dict-like arguments
-        1.0
-
-        Take a list of indices
-
-        >>> a = v[:,[10,20]] # also work with a list of index
-        >>> a
-        dimarray: 4 non-null elements (0 null)
-        0 / d0 (2): a to b
-        1 / d1 (2): 10.0 to 20.0
-        array([[ 1.,  2.],
-               [ 4.,  5.]])
-        >>> b = v.take([10,20], axis='d1')
-        >>> np.all(a == b)
-        True
-
-        Take a slice:
-
-        >>> c = v[:,10:20] # axis values: slice includes last element
-        >>> c
-        dimarray: 4 non-null elements (0 null)
-        0 / d0 (2): a to b
-        1 / d1 (2): 10.0 to 20.0
-        array([[ 1.,  2.],
-               [ 4.,  5.]])
-        >>> d = v.take(slice(10,20), axis='d1') # `take` accepts `slice` objects
-        >>> np.all(c == d)
-        True
-        >>> v.ix[:,0:1] # integer position: does *not* include last element
-        dimarray: 2 non-null elements (0 null)
-        0 / d0 (2): a to b
-        1 / d1 (1): 10.0 to 10.0
-        array([[ 1.],
-               [ 4.]])
-
-        Keep dimensions 
-
-        >>> a = v[["a"]]
-        >>> b = v.take("a",keepdims=True)
-        >>> np.all(a == b)
-        True
-
-        tolerance parameter to achieve "nearest neighbour" search
-
-        >>> v.take(12, axis="d1", tol=5)
-        dimarray: 2 non-null elements (0 null)
-        0 / d0 (2): a to b
-        array([ 1.,  4.])
-
-        # Matlab like multi-indexing
-
-        >>> v = DimArray(np.arange(2*3*4).reshape(2,3,4))
-        >>> v.box[[0,1],:,[0,0,0]].shape
-        (2, 3, 3)
-        >>> v.box[[0,1],:,[0,0]].shape # here broadcast_arrays = False
-        (2, 3, 2)
-        >>> v[[0,1],:,[0,0]].shape # that is traditional numpy, with broadcasting on same shape
-        (2, 3)
-        >>> v.values[[0,1],:,[0,0]].shape # a proof of it
-        (2, 3)
-
-        >>> a = DimArray(np.arange(2*3).reshape(2,3))
-
-        >>> a[a > 3] # FULL ARRAY: return a numpy array in n-d case (at least for now)
-        dimarray: 2 non-null elements (0 null)
-        0 / x0,x1 (2): (1, 1) to (1, 2)
-        array([4, 5])
-
-        >>> a[a.x0 > 0] # SINGLE AXIS: only first axis
-        dimarray: 3 non-null elements (0 null)
-        0 / x0 (1): 1 to 1
-        1 / x1 (3): 0 to 2
-        array([[3, 4, 5]])
-
-        >>> a[:, a.x1 > 0] # only second axis 
-        dimarray: 4 non-null elements (0 null)
-        0 / x0 (2): 0 to 1
-        1 / x1 (2): 1 to 2
-        array([[1, 2],
-               [4, 5]])
-
-        >>> a[a.x0 > 0, a.x1 > 0]
-        dimarray: 2 non-null elements (0 null)
-        0 / x0 (1): 1 to 1
-        1 / x1 (2): 1 to 2
-        array([[4, 5]])
-
-        Sample points along a path, a la numpy
-
-        >>> a.take(zip((0,1),(0,2),(1,2)), broadcast=True)
-
-        Ommit `indices` parameter when putting a DimArray
-
-        >>> a = DimArray([0,1,2,3,4], ['a','b','c','d','e'])
-        >>> b = DimArray([5,6], ['c','d'])
-        >>> a.put(b, inplace=False)
-        dimarray: 5 non-null elements (0 null)
-        0 / x0 (5): a to e
-        array([0, 1, 5, 6, 4])
-
-        Ellipsis (only one supported)
-
-        >>> a = DimArray(np.arange(2*3*4*5).reshape(2,3,4,5))
-        >>> a[0,...,0].shape
-        (3, 4)
-        >>> a[...,0,0].shape
-        (2, 3)
-        """
+    def _getitem(self, indices=None, axis=0, indexing=None, tol=None, broadcast=None, keepdims=False):
         if indices is None:
-            indices = slice(None)
+            indices = ()
+
         if broadcast is None: 
             if self._broadcast is None:
                 broadcast = get_option('indexing.broadcast')
@@ -478,16 +338,11 @@ class AbstractDimArray(AbstractHasAxes):
 
         # special-case: full-shape boolean indexing (will fail with netCDF4)
         if self._is_boolean_index_nd(indices):
-            values = self.values[np.asarray(indices)] # boolean index, just get it, or raise appropriate error
-            if np.isscalar(values):
-                return values
-            idx = np.where(indices)
-            axes = self._getaxes_broadcast(idx)
-            dima = self._constructor(values, axes)
-            dima.attrs.update(self.attrs)
-            return dima
+            if hasattr(self, 'compress'):
+                return self.compress(indices)
+            else:
+                raise TypeError("{} does not support boolean indexing".format(self.__class__.__name__))
 
-        # indices are defined per axis
         idx = self._get_indices(indices, axis=axis, indexing=indexing, tol=tol, keepdims=keepdims)
 
         # special case: broadcast arrays a la numpy
@@ -507,7 +362,7 @@ class AbstractDimArray(AbstractHasAxes):
 
         return dima
 
-    def _setitem(self, indices, values, axis=None, indexing=None, tol=None, broadcast=None, cast=False, inplace=True):
+    def _setitem(self, indices, values, axis=0, indexing=None, tol=None, broadcast=None, cast=False, inplace=True):
         """
         See Also
         --------
@@ -524,21 +379,25 @@ class AbstractDimArray(AbstractHasAxes):
 
         # special-case: full-shape boolean indexing (will fail with netCDF4)
         if self._is_boolean_index_nd(indices):
-            self.values[np.asarray(indices)] = values # boolean index, just set it, or raise appropriate error
+            self._setvalues_bool(indices, values, cast=cast)
 
         else:
             idx = self._get_indices(indices, tol=tol, indexing=indexing, axis=axis)
 
             if broadcast:
-                self._setvalues_broadcast(idx, np.asarray(values), cast=cast)
+                self._setvalues_broadcast(idx, values, cast=cast)
             else:
-                self._setvalues_ortho(idx, np.asarray(values), cast=cast)
+                self._setvalues_ortho(idx, values, cast=cast)
 
         if not inplace:
             return self
 
     __getitem__ = _getitem 
     __setitem__ = _setitem
+
+    # def _getitem_1d(self, indices, axis=0, **kwargs):
+    #     # by default, call _getitem (could be overloaded for optimization)
+    #     return self._getitem({axis:indices}, **kwargs)
 
     # orthogonal or broadcast indexing?
     def _setvalues_broadcast(self, idx_tuple, values, cast=False):
@@ -552,6 +411,9 @@ class AbstractDimArray(AbstractHasAxes):
 
     def _setvalues_ortho(self, idx_tuple, values, cast=False):
         raise NotImplementedError()
+
+    def _setvalues_bool(self, mask, values, cast=False):
+        raise NotImplementedError("boolean indexing is not implemented")
 
     def _getvalues_ortho(self, idx_tuple):
         raise NotImplementedError()
@@ -589,4 +451,38 @@ class AbstractDimArray(AbstractHasAxes):
         return self if self._indexing == 'position' else self.ix
 
 class AbstractDataset(AbstractHasAxes):
+
+    def _getitems(self, indices=None, axis=0, indexing=None, tol=None, broadcast=None, keepdims=False):
+
+        # first find the index for the shared axes
+        tuple_indices = self._get_indices(indices, axis=axis, tol=tol, keepdims=keepdims, indexing=indexing)
+
+        # then index all arrays, one after the other
+        newdata = self.__class__()
+
+        # then apply take in 'position' mode
+        newdata = self.__class__()
+
+        axes_dict = {ax.name:ax[ix] for ix, ax in zip(tuple_indices, self.axes) if not np.isscalar(ix)}
+        indices_dict = {ax.name:ix for ix, ax in zip(tuple_indices, self.axes)}
+
+        # loop over variables
+        for k in self.keys():
+            v = self[k]
+            # loop over axes to index on
+            for axis in kw_indices.keys():
+                if np.ndim(v) == 0 or axis not in v.dims: 
+                    if raise_error: 
+                        raise ValueError("{} does not have dimension {} ==> set raise_error=False to keep this variable unchanged".format(k, axis))
+                    else:
+                        continue
+                # slice along one axis
+                v = v.take({axis:kw_indices[axis]}, indexing='position')
+            newdata[k] = v
+
+        return newdata
     _repr = repr_dataset
+    __str__ = str_dataset
+
+# Add docstrings
+

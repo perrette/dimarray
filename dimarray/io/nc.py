@@ -10,6 +10,7 @@ import netCDF4 as nc
 import dimarray as da
 #from geo.data.index import to_slice, _slice3D
 
+from dimarray.compat.pycompat import basestring, zip
 from dimarray.decorators import format_doc
 from dimarray.dataset import Dataset, concatenate_ds, stack_ds
 from dimarray.core import DimArray, Axis, Axes
@@ -29,7 +30,7 @@ FORMAT = get_option('io.nc.format') # for the doc
 #
 # Helper functions
 #
-def _maybe_convert_dtype(values, f=None):
+def _maybe_convert_dtype(values):
     """ strings are given "object" type in Axis object
     ==> assume all objects are actually strings
     NOTE: this will fail for other object-typed axes such as tuples
@@ -86,32 +87,208 @@ class NetCDFOnDisk(object):
 
 
 class DatasetOnDisk(GetSetDelAttrMixin, NetCDFOnDisk, AbstractDataset):
-    def __init__(self, f, *args, **kwargs):
+    """ Dataset on Disk
+
+    .. versionadded :: 0.2
+
+    See open_nc for examples of use.
+    """
+    @format_doc(format=FORMAT)
+    def __init__(self, f, mode="r", clobber=True, diskless=False, persist=False, format=FORMAT, **kwargs):
+        """ 
+        Parameters
+        ----------
+        f : file name or netCDF4.Dataset instance
+        mode : str, optional
+            access mode. This include "r" (read) (the default), "w" (write)
+            and "a" (append)
+            See netCDF4.Dataset for full information. 
+        clobber : `bool`, optional
+            if True (default), opening a file with mode='w'
+            will clobber an existing file with the same name.  if False, an
+            exception will be raised if a file with the same name already exists.
+        diskless : see netCDF4.Dataset help
+        persist : see netCDF4.Dataset help
+        format : `str`
+            netCDF file format. Default is '{format}' (only accounted for during file creation)
+
+        **kwargs : key-word arguments, used as default argument when creating a variable
+    
+        Notes
+        -----
+        See the netCDF4-python module documentation for more information about the use
+        of keyword arguments to DatasetOnDisk
+        """
         if isinstance(f, nc.Dataset):
             self._ds = f
         else:
-            self._ds = nc.Dataset(f, *args, **kwargs)
+            self._ds = nc.Dataset(f, mode=mode, clobber=clobber, diskless=diskless, persist=persist, format=format)
+        # assert self._kwargs is not None
+        self._kwargs = kwargs
     @property
     def _obj(self):
         return self._ds
 
-    def read(self, names=None, **kwargs):
-        """ Equivalent to dimarray.read_nc
+    def read(self, names=None, indices=None, axis=0, indexing=None, tol=None, keepdims=False):
+        """ Read values from disk
+
+        Parameters
+        ----------
+        names : list of variables to read, optional
+        indices : int or list or slice (single-dimensional indices)
+                   or a tuple of those (multi-dimensional)
+                   or `dict` of { axis name : axis indices }
+            Indices refer to Dataset axes. Any item that does not possess
+            one of the dimensions will not be indexed along that dimension.
+            For example, scalar items will be left unchanged whatever indices
+            are provided.
+        axis : None or int or str, optional
+            if specified and indices is a slice, scalar or an array, assumes 
+            indexing is along this axis.
+        indexing : {'label', 'position'}, optional
+            Indexing mode. 
+            - "label": indexing on axis labels (default)
+            - "position": use numpy-like position index
+            Default value can be changed in dimarray.rcParams['indexing.by']
+        tol : float, optional
+            tolerance when looking for numerical values, e.g. to use nearest 
+            neighbor search, default `None`.
+        keepdims : bool, optional 
+            keep singleton dimensions (default False)
+
+        Returns
+        -------
+        Dataset
+
+        See Also
+        --------
+        open_nc : examples of use
+        DimArrayOnDisk.read, DatasetOnDisk.write, DimArray.take
         """
         # automatically read all variables to load (except for the dimensions)
         if names is None:
             names = self.keys()
+        elif isinstance(names, basestring):
+            return self[names].read(indices=indices, axis=axis, indexing=indexing, tol=tol, keepdims=keepdims)
+        # else:
+        #     raise TypeError("Expected list or str for 'names=', got {}".format(names))
+
+        tuple_indices = self._get_indices(indices, axis=axis, tol=tol, keepdims=keepdims, indexing=indexing)
+        dict_indices = {dim:tuple_indices[i] for i, dim in enumerate(self.dims)}
+
         data = Dataset()
+        # start with the axes, to make sure the ordering is maintained
+        data.axes = self._getaxes_ortho(tuple_indices) 
         for nm in names:
-            data[nm] = self[nm].read(**kwargs)
+            data[nm] = self[nm].read(indices={dim:dict_indices[dim] for dim in self[nm].dims}, indexing='position')
         data.attrs.update(self.attrs) # dataset's metadata
         return data
 
-    def write(self, obj, *args, **kwargs):
-        if not isinstance(obj, da.Dataset):
-            raise TypeError("Can only write Dataset, use `ds[name] = dima` to write a DimArray")
-        for k in obj.keys():
-            self[k].write(obj.axes, obj.values)
+    def __getitem__(self, name):
+        if name in self.dims:
+            raise KeyError("Use 'axes' property to access dimension variables: {}".format(name))
+        if name not in self.keys():
+            raise KeyError("Variable not found in the dataset: {}.\nExisting variables: {}".format(name, self.keys()))
+        return DimArrayOnDisk(self._ds, name)
+
+
+    # def write(self, name, dataset, zlib=False, **kwargs):
+    def write(self, name, dima, **kwargs):
+        """ Write a variable to a netCDF4 dataset.
+
+        Parameters
+        ----------
+        name : variable name 
+        dima : DimArray instance
+        zlib : `bool`
+            Enable zlib compression if True. Default is False (no compression).
+        complevel : `int`
+            integer between 1 and 9 describing the level of compression desired. Ignored if zlib=False.
+        **kwargs : key-word arguments
+            Any additional keyword arguments accepted by `netCDF4.Dataset.createVariable`
+
+        Notes
+        -----
+        See the netCDF4-python module documentation for more information about the use
+        of keyword arguments to write_nc.
+
+        See also
+        --------
+        DimArrayOnDisk.write
+
+        Examples
+        --------
+        >>> import numpy as np
+        >>> import dimarray as da
+
+        Create a DimArray (in memory), with metadata
+
+        >>> dima = da.DimArray([[1,2,3],[4,5,6]], axes=[('time',[2000,2045.5]),('scenario',['a','b','c'])])
+        >>> dima.units = 'myunits' # metadata 
+        >>> dima.axes['time'].units = 'metadata-dim-in-memory'
+
+        Write it to disk, and add some additional metadata
+
+        >>> ds = da.open_nc('/tmp/test.nc', mode='w')
+        >>> ds['myvar'] = dima
+        >>> ds['myvar'].bla = 'bla'
+        >>> ds['myvar'].axes['time'].yo = 'metadata-dim-on-disk'
+        >>> ds.axes['scenario'].ya = 'metadata-var-on-disk'
+        >>> ds.yi = 'metadata-dataset-on-disk'
+        >>> ds.close()
+
+        Check the result with ncdump utility from a terminal (need to be installed for the test below to work)
+        
+        :> ncdump -h /tmp/test.nc
+        netcdf test {
+        dimensions:
+            time = 2 ;
+            scenario = 3 ;
+        variables:
+            double time(time) ;
+                time:units = "metadata-dim-in-memory" ;
+                time:yo = "metadata-dim-on-disk" ;
+            string scenario(scenario) ;
+                scenario:ya = "metadata-var-on-disk" ;
+            int64 myvar(time, scenario) ;
+                myvar:units = "myunits" ;
+                myvar:bla = "bla" ;
+
+        // global attributes:
+                :yi = "metadata-dataset-on-disk" ;
+        }
+        """
+        # if not isinstance(obj, da.DimArray):
+        #     raise TypeError("Can only write Dataset, use `ds[name] = dima` to write a DimArray")
+        _, nctype = _maybe_convert_dtype(dima)
+
+        name = name or getattr(self, "name", None)
+        if not name:
+            raise ValueError("Need to provide variable name")
+
+        if name not in self._ds.variables.keys():
+            if np.isscalar(dima):
+                dima = da.DimArray(dima)
+            if not isinstance(dima, DimArray):
+                raise TypeError("Expected DimArray, got {}".format(type(dima)))
+            if dima.ndim > 0:
+                # create Dimension and associated variable
+                for ax in dima.axes:
+                    if ax.name not in self.dims:
+                        self.axes.append(ax, **kwargs)
+
+            kw = self._kwargs.copy() 
+            kw.update(kwargs)
+            self._ds.createVariable(name, nctype, dima.dims, **kw)
+
+        DimArrayOnDisk(self._ds, name)[()] = dima
+
+    __setitem__ = write
+
+    def __delitem__(self, name):
+        " will raise an Exception if on-disk "
+        del self._ds.variables[name]
+
 
     def keys(self):
         " all variables except for dimensions"
@@ -128,20 +305,14 @@ class DatasetOnDisk(GetSetDelAttrMixin, NetCDFOnDisk, AbstractDataset):
         return tuple(self._ds.dimensions.keys())
     @property
     def axes(self):
-        return AxesOnDisk(self._ds, self.dims)
-
-    def __getitem__(self, name):
-        if name in self.dims:
-            raise KeyError("Use 'axes' property to access dimension variables: {}".format(name))
-        if name not in self.keys():
-            raise KeyError("Variable not found in the dataset: {}.\nExisting variables: {}".format(name, self.keys()))
-        return DimArrayOnDisk(self._ds, name)
-
-    def __setitem__(self, name, value):
-        DimArrayOnDisk(self._ds, name)[()] = value
-
-    def __delitem__(self, name):
-        del self._ds.variables[name]
+        return AxesOnDisk(self._ds, self.dims, **self._kwargs)
+    @axes.setter
+    def axes(self, newaxes):
+        for ax in newaxes:
+            if ax.name in self.dims:
+                self.axes[ax.name] = ax
+            else:
+                self.axes.append(ax)
 
     _repr = repr_dataset
 
@@ -183,26 +354,42 @@ class DimArrayOnDisk(GetSetDelAttrMixin, NetCDFVariable, AbstractDimArray):
     def axes(self):
         return AxesOnDisk(self._ds, self.dims)
 
-    def write(self, indices, values, **kwargs):
+    def write(self, indices, values, axis=0, indexing=None, tol=None):
+        """ Write numpy array or DimArray to netCDF file (The 
+        variable must have been created previously)
+
+        Parameters
+        ----------
+        indices : int or list or slice (single-dimensional indices)
+                   or a tuple of those (multi-dimensional)
+                   or `dict` of { axis name : axis values }
+        values : np.ndarray or DimArray
+        axis : None or int or str, optional
+            if specified and indices is a slice, scalar or an array, assumes 
+            indexing is along this axis.
+        indexing : {'label', 'position'}, optional
+            Indexing mode. 
+            - "label": indexing on axis labels (default)
+            - "position": use numpy-like position index
+            Default value can be changed in dimarray.rcParams['indexing.by']
+        tol : float, optional
+            tolerance when looking for numerical values, e.g. to use nearest 
+            neighbor search, default `None`.
+
+        See Also
+        --------
+        DimArray.put, DatasetOnDisk.write, DimArrayOnDisk.read
+        """
         # just create the variable and dimensions
         ds = self._ds
-        arr, nctype = _maybe_convert_dtype(values, ds)
+        dima = values # internal convention: values is a numpy array
+        values, nctype = _maybe_convert_dtype(dima)
 
-        if self._name not in ds.variables.keys():
-            # create variable
-            if np.isscalar(values):
-                values = da.DimArray(values)
-            if not isinstance(values, DimArray):
-                #TODO: do the scalar case
-                raise TypeError("Can only create new variables with DimArray")
-            if values.ndim > 0:
-                for ax in values.axes:
-                    AxisOnDisk(ds, ax.name)[()] = ax.values
-            ds.createVariable(self._name, nctype, values.dims)
+        assert self._name in ds.variables.keys(), "variable does not exist, should have been created earlier!"
 
         # add attributes
-        if hasattr(values,'attrs'):
-            self.attrs.update(values.attrs)
+        if hasattr(dima,'attrs'):
+            self.attrs.update(dima.attrs)
 
         # special case: index == slice(None) and self.ndim == 0
         # This would fail with numpy, but not with netCDF4
@@ -212,18 +399,43 @@ class DimArrayOnDisk(GetSetDelAttrMixin, NetCDFVariable, AbstractDimArray):
         # do all the indexing and assignment via IndexedArray class
         # ==> it will set the values via _setvalues_ortho below
         # super(DimArrayOnDisk)._setitem(self, indices, values, **kwargs)
-        AbstractDimArray._setitem(self, indices, arr, **kwargs)
+        AbstractDimArray._setitem(self, indices, values, axis=axis, indexing=indexing, tol=tol)
 
-    write.__doc__ = AbstractDimArray._setitem.__doc__
+    def read(self, indices=None, axis=0, indexing=None, tol=None, keepdims=False):
+        """ Read values from disk
 
-    def read(self, indices=(), *args, **kwargs):
+        Parameters
+        ----------
+        indices : int or list or slice (single-dimensional indices)
+                   or a tuple of those (multi-dimensional)
+                   or `dict` of { axis name : axis values }
+        axis : None or int or str, optional
+            if specified and indices is a slice, scalar or an array, assumes 
+            indexing is along this axis.
+        indexing : {'label', 'position'}, optional
+            Indexing mode. 
+            - "label": indexing on axis labels (default)
+            - "position": use numpy-like position index
+            Default value can be changed in dimarray.rcParams['indexing.by']
+        tol : float, optional
+            tolerance when looking for numerical values, e.g. to use nearest 
+            neighbor search, default `None`.
+        keepdims : bool, optional 
+            keep singleton dimensions (default False)
+
+        Returns
+        -------
+        DimArray instance or scalar
+
+        See Also
+        --------
+        DimArray.take, DatasetOnDisk.read, DimArrayOnDisk.write
+        """
         if type(indices) is slice and indices == slice(None) and self.ndim == 0:
             indices = ()
-        return AbstractDimArray._getitem(self, indices, *args, **kwargs)
+        return AbstractDimArray._getitem(self, indices=indices, axis=axis, 
+                                         indexing=indexing, tol=tol, keepdims=keepdims)
                            
-    read.__doc__ = AbstractDimArray._getitem.__doc__
-    # read = AbstractDimArray._getitem #TODO: wrap documentation
-
     __setitem__ = write
     __getitem__ = read
 
@@ -235,7 +447,7 @@ class DimArrayOnDisk(GetSetDelAttrMixin, NetCDFVariable, AbstractDimArray):
         if cast is True:
             warnings.warn("`cast` parameter is ignored")
         # values = _maybe_convert_dtype_array(values)
-        values, nctype = _maybe_convert_dtype(values, self._ds)
+        values, nctype = _maybe_convert_dtype(values)
         self.values[idx_tuple] = values
 
     def _getvalues_ortho(self, idx_tuple):
@@ -259,11 +471,10 @@ class DimArrayOnDisk(GetSetDelAttrMixin, NetCDFVariable, AbstractDimArray):
                 axes.append(ax)
         return axes
 
-
 class AxisOnDisk(GetSetDelAttrMixin, NetCDFVariable, AbstractAxis):
     def __init__(self, ds, name):
         self._ds = ds
-        if type(name) not in (str, unicode):
+        if not isinstance(name, basestring):
             raise TypeError("only string names allowed")
         self._name = name
 
@@ -277,63 +488,51 @@ class AxisOnDisk(GetSetDelAttrMixin, NetCDFVariable, AbstractAxis):
             self._ds.renameVariable(self._name, new)
         self._name = new
 
-    def __setitem__(self, ix, values):
+    def __setitem__(self, indices, ax):
         ds = self._ds
         name = self._name
 
-        size = np.size(values) if values is not None else None
+        assert getattr(ax, 'name', name) == name, "inconsistent axis name"
 
-        # create dimension variable if needed
-        if name not in ds.dimensions.keys(): 
-            ds.createDimension(name, size)
+        values, nctype = _maybe_convert_dtype(ax)
 
-        # assign variable
-        if values is None:
-            return
+        # assign value to variable (variable creation handled in AxesOnDisk)
+        ds.variables[name][indices] = values
 
-        # arr = _maybe_convert_dtype_array(values)
-        values, nctype = _maybe_convert_dtype(values, ds)
-
-        # create variable if needed
-        if name not in ds.variables.keys():
-            # nctype = _maybe_convert_dtype(arr.dtype, ds)
-            ds.createVariable(name, nctype, name) 
-
-        # assign value to variable
-        ds.variables[name][ix] = values
-
-        # assign metadata
+        # add attributes
+        attrs = getattr(ax, 'attrs', {})
         try:
-            self.attrs.update(values.attrs)
-        except:
-            pass
+            self.attrs.update(attrs)
+        except Exception as error:
+            warnings.warn(error)
 
-    def __getitem__(self, ix):
+    def __getitem__(self, indices):
         name = self._name
         ds = self._ds
         if name in ds.variables.keys():
             # assume that the variable and dimension have the same name
-            values = ds.variables[name][ix]
+            values = ds.variables[name][indices]
         else:
             # default, dummy dimension axis
             msg = "'{}' dimension not found, define integer range".format(name)
             warnings.warn(msg)
-            values = np.arange(len(ds.dimensions[name]))[ix]
+            values = np.arange(len(ds.dimensions[name]))[indices]
 
         # do not produce an Axis object
         if np.isscalar(values):
             return values
 
-        axis = Axis(values, name)
+        ax = Axis(values, name)
         
         # add metadata
         if name in ds.variables.keys():
-            axis.attrs.update(self.attrs)
+            ax.attrs.update(self.attrs)
 
-        return axis
+        return ax
 
     def __len__(self):
         return len(self._ds.dimensions[self._name])
+
     @property
     def size(self):
         return len(self)
@@ -348,31 +547,73 @@ class AxisOnDisk(GetSetDelAttrMixin, NetCDFVariable, AbstractAxis):
             first, last = 0, size-1
         return first, last
 
-    _repr = repr_axis
-
 class AxesOnDisk(AbstractAxes):
-    def __init__(self, ds, dims):
+    def __init__(self, ds, dims, **kwargs):
         self._ds = ds
         self._dims = dims
+        self._kwargs = kwargs # for variable creation
+
     @property
     def dims(self):
         return self._dims
+
+    def __len__(self):
+        return len(self._dims)
+
     def __getitem__(self, dim):
-        if type(dim) is int:
+        if not isinstance(dim, basestring):
             dim = self.dims[dim]
         elif dim not in self.dims:
-            msg = """{} not found in dimensions (dims={}).
-A new dimension can be created via: `ds.axes[name] = values` 
-or `ds.axes[name] = None` for an unlimited dimension.
+            msg = "{} not found in dimensions (dims={}).".format(dim, self.dims)
+            print """An error ocurred? A new dimension can be created via `axes.append(axis)` syntax, 
+where axis can be a string (unlimited dimension), an Axis instance, 
+or a tuple (name, values).  See help on `axes.append` for more information. 
 Low-level netCDF4 function is also available as `ds.nc.createDimension` 
-and `ds.nc.createVariable`""".format(ix, self.dims)
+and `ds.nc.createVariable`"""
             raise KeyError(msg)
         return AxisOnDisk(self._ds, dim)
-    def __setitem__(self, dim, axis):
-        if type(dim) is int:
+
+    def __setitem__(self, dim, ax):
+        " modify existing axis and possibly create new associated variable " 
+        if not isinstance(dim, basestring):
             dim = self.dims[dim]
-        # involves variable creation
-        AxisOnDisk(self._ds, dim)[()] = axis
+
+        if dim not in self._ds.dimensions.keys():
+            raise ValueError("{} dimension does not exist. Use axes.append() to create a new axis".format(dim))
+
+        values, nctype = _maybe_convert_dtype(ax)
+
+        if dim not in self._ds.variables.keys(): 
+            v = self._ds.createVariable(dim, nctype, dim, **self._kwargs) 
+
+        self[dim][:] = ax
+        # v[:] = values
+
+    def append(self, ax, **kwargs):
+        """ create new dimension
+        
+        Parameters
+        ----------
+        ax : Axis or (name, values) tuple or str
+            if str, create an Unlimited dimension
+        **kwargs : passed to createVariable
+        """
+        if isinstance(ax, basestring):
+            self._ds.createDimension(ax, None)
+            self._dims += (ax,) 
+
+        else:
+            try:
+                ax = Axis.as_axis(ax)
+            except:
+                raise TypeError("can only append Axis instances or (name, values),\
+                                or provide str to create unlimited dimension")
+            # elif isinstance(ax, Axis):
+            self._ds.createDimension(ax.name, ax.size)
+            self._dims += (ax.name,) 
+
+            self._kwargs.update(kwargs) # createVariable parameters
+            self[ax.name] = ax # assign values and attributes
 
     def __iter__(self):
         for dim in self.dims:
@@ -433,7 +674,7 @@ def open_nc(file_name, *args, **kwargs):
     Informative Display similar to a in-memory Dataset
 
     >>> ds
-    Dataset of 6 variables (netCDF)
+    DatasetOnDisk of 6 variables (NETCDF4)
     0 / y1 (113): -3400000.0 to -600000.0
     1 / x1 (61): -800000.0 to 700000.0
     surfvelmag: (u'y1', u'x1')
@@ -441,7 +682,7 @@ def open_nc(file_name, *args, **kwargs):
     lon: (u'y1', u'x1')
     surfvely: (u'y1', u'x1')
     surfvelx: (u'y1', u'x1')
-    mapping: ()
+    mapping: nan
 
     Load variables with [:] syntax, like netCDF4 package
 
@@ -485,65 +726,50 @@ def open_nc(file_name, *args, **kwargs):
     """
     return DatasetOnDisk(file_name, *args, **kwargs)
 
-#
-# some common piece of documentation
-#
-_doc_indexing = """
-    indices : `dict`
-        provide indices or slice to extract {nm1:val1}
-    indexing : 'label' or 'position'
-        By default, indexing is by axis values ('label') but 
-        in some cases it is more convenient to provide it directly 
-        by by position on the axis ('position'), in particular when 
-        the first (0) or last (-1) values are requested.
-    tol : None or float
-        floating point tolerance when indexing float-arrays (default to None for exact match) 
-""".strip()
-
-_doc_indexing_write = """
-    {take} 
-""".format(take=_doc_indexing).strip()
-
-_doc_write_nc = """ 
-    format : `str`
-        netCDF file format. Default is '{format}' (only accounted for during file creation)
-    zlib : `bool`
-        Enable zlib compression if True. Default is False (no compression).
-    complevel : `int`
-        integer between 1 and 9 describing the level of compression desired. Ignored if zlib=False.
-    **kwargs : key-word arguments
-        Any additional keyword arguments accepted by `netCDF4.Dataset.CreateVariable`
+def read_nc(f, names=None, *args, **kwargs):
+    """  Wrapper around DatasetOnDisk.read  
     
-    Notes
-    -----
-    See the netCDF4-python module documentation for more information about the use
-    of keyword arguments to write_nc.
-""".strip().format(format=FORMAT)+'\n'
-
-_doc_write_modes = """Several write modes are available:
-
-        - 'w' : write, overwrite if file if present (clobber=True)
-        - 'w-': create new file, but raise Exception if file is present (clobber=False)
-        - 'a' : append, raise Exception if file is not present
-        - 'a+': append if file is present, otherwise create
-        """
-
-
-@format_doc(indexing=_doc_indexing)
-def read_nc(f, nms=None, *args, **kwargs):
-    """  Read one or several variables from one or several netCDF file
+    Read one or several variables from one or several netCDF file
 
     Parameters
     ----------
     f : str or netCDF handle
         netCDF file to read from or regular expression
-    nms : None or list or str, optional
+
+    names : None or list or str, optional
         variable name(s) to read
         default is None
-    {indexing}
+
+    indices : int or list or slice (single-dimensional indices)
+               or a tuple of those (multi-dimensional)
+               or `dict` of { axis name : axis indices }
+        Indices refer to Dataset axes. Any item that does not possess
+        one of the dimensions will not be indexed along that dimension.
+        For example, scalar items will be left unchanged whatever indices
+        are provided.
+
+    axis : 
+        When reading multiple files and align==True :
+            axis along which to join the dimarrays or datasets (if align is True)
+        When reading one file (deprecated: use {name:values} notation instead):
+            if specified and indices is a slice, scalar or an array, assumes 
+            indexing is along this axis.
+
+    indexing : {'label', 'position'}, optional
+        Indexing mode. 
+        - "label": indexing on axis labels (default)
+        - "position": use numpy-like position index
+        Default value can be changed in dimarray.rcParams['indexing.by']
+
+    tol : float, optional
+        tolerance when looking for numerical values, e.g. to use nearest 
+        neighbor search, default `None`.
+
+    keepdims : bool, optional 
+        keep singleton dimensions (default False)
 
     align : bool, optional
-        if nms is a list of files or a regular expression, pass align=True
+        if names is a list of files or a regular expression, pass align=True
         if the arrays from the various files have to be aligned prior to 
         concatenation. Similar to dimarray.stack and dimarray.stack_ds
 
@@ -563,11 +789,11 @@ def read_nc(f, nms=None, *args, **kwargs):
     Returns
     -------
     obj : DimArray or Dataset
-        depending on whether a (single) variable name is passed as argument (nms) or not
+        depending on whether a (single) variable name is passed as argument (names) or not
 
     See Also
     --------
-    summary_nc, take, stack, concatenate, stack_ds, concatenate_ds,
+    DatasetOnDisk.read, stack, concatenate, stack_ds, concatenate_ds,
     DimArray.write_nc, Dataset.write_nc
 
     Examples
@@ -583,13 +809,13 @@ def read_nc(f, nms=None, *args, **kwargs):
     >>> data
     Dataset of 2 variables
     0 / time (451): 1850 to 2300
-    1 / scenario (5): historical to rcp85
+    1 / scenario (5): u'historical' to u'rcp85'
     tsl: (u'time', u'scenario')
     temp: (u'time', u'scenario')
     >>> data = read_nc(ncfile,'temp') # only one variable
-    >>> data = read_nc(ncfile,'temp', indices={{"time":slice(2000,2100), "scenario":"rcp45"}})  # load only a chunck of the data
-    >>> data = read_nc(ncfile,'temp', indices={{"time":1950.3}}, tol=0.5)  #  approximate matching, adjust tolerance
-    >>> data = read_nc(ncfile,'temp', indices={{"time":-1}}, indexing='position')  #  integer position indexing
+    >>> data = read_nc(ncfile,'temp', indices={"time":slice(2000,2100), "scenario":"rcp45"})  # load only a chunck of the data
+    >>> data = read_nc(ncfile,'temp', indices={"time":1950.3}, tol=0.5)  #  approximate matching, adjust tolerance
+    >>> data = read_nc(ncfile,'temp', indices={"time":-1}, indexing='position')  #  integer position indexing
 
     Multiple files
     Read variable 'temp' across multiple files (representing various climate models)
@@ -607,9 +833,9 @@ def read_nc(f, nms=None, *args, **kwargs):
     >>> temp.set_axis(getmodel, axis='model', inplace=True) # would return a copy if inplace is not specified
     >>> temp
     dimarray: 9114 non-null elements (6671 null)
-    0 / model (7): CSIRO-Mk3-6-0 to MPI-ESM-MR
+    0 / model (7): 'CSIRO-Mk3-6-0' to 'MPI-ESM-MR'
     1 / time (451): 1850 to 2300
-    2 / scenario (5): historical to rcp85
+    2 / scenario (5): u'historical' to u'rcp85'
     array(...)
     
     This works on datasets as well:
@@ -617,11 +843,11 @@ def read_nc(f, nms=None, *args, **kwargs):
     >>> ds = da.read_nc(direc+'/cmip5.*.nc', align=True, axis='model')
     >>> ds.set_axis(getmodel, axis='model')
     Dataset of 2 variables
-    0 / model (7): CSIRO-Mk3-6-0 to MPI-ESM-MR
+    0 / model (7): 'CSIRO-Mk3-6-0' to 'MPI-ESM-MR'
     1 / time (451): 1850 to 2300
-    2 / scenario (5): historical to rcp85
-    tsl: ('model', 'time', 'scenario')
-    temp: ('model', 'time', 'scenario')
+    2 / scenario (5): u'historical' to u'rcp85'
+    tsl: ('model', u'time', u'scenario')
+    temp: ('model', u'time', u'scenario')
     """
     # check for regular expression
     if type(f) is str:
@@ -642,93 +868,30 @@ def read_nc(f, nms=None, *args, **kwargs):
 
     # Read a single file
     if not mf:
-
-        # single variable ==> DimArray
-        if nms is not None and (isinstance(nms, str) or type(nms) is unicode):
-            obj = _read_variable(f, nms, *args, **kwargs)
-
-        # multiple variable ==> Dataset
-        else:
-            obj = _read_dataset(f, nms, *args, **kwargs)
+        f, close = _maybe_open_file(f, mode='r')
+        obj = DatasetOnDisk(f).read(names, *args, **kwargs)
+        if close: f.close()
 
     # Read multiple files
     else:
         # single variable ==> DimArray (via Dataset)
-        if nms is not None and isinstance(nms, str):
-            obj = _read_multinc(f, [nms], *args, **kwargs)
-            obj = obj[nms]
+        if names is not None and isinstance(names, str):
+            obj = _read_multinc(f, [names], *args, **kwargs)
+            obj = obj[names]
 
         # single variable ==> DimArray
         else:
-            obj = _read_multinc(f, nms, *args, **kwargs)
+            obj = _read_multinc(f, names, *args, **kwargs)
 
     return obj
 
-
-def _extract_kw(kwargs, argnames, delete=True):
-    """ extract check 
-    """
-    kw = {}
-    for k in kwargs.copy():
-        if k in argnames:
-            kw[k] = kwargs[k]
-            if delete: del kwargs[k]
-    return kw
-
-@format_doc(indexing=_doc_indexing)
-def _read_variable(f, name, indices=(), axis=0, indexing='label', tol=None, verbose=False):
-    """ Read one variable from netCDF4 file 
-
-    Parameters
-    ----------
-    f  : file name or file handle
-    name : netCDF variable name to extract
-    {indexing}
-
-    Returns
-    -------
-    Returns a Dimarray instance
-
-    See Also
-    --------
-    See preferred function `dimarray.read_nc` for more complete documentation 
-    """
-    f, close = _check_file(f, mode='r', verbose=verbose)
-    obj = DimArrayOnDisk(f, name).read(indices, axis=axis, indexing=indexing, tol=tol)
-    if close: f.close() # close netCDF if file was given as file name
-    return obj
-
-#read_nc.__doc__ += _read_variable.__doc__
-
-def _read_dataset(f, nms=None, **kwargs):
-    """ Read several (or all) variable from a netCDF file
-
-    Parameters
-    ----------
-    f : file name or (netcdf) file handle
-    nms : list of variables to read (default None for all variables)
-    **kwargs
-
-    Returns
-    -------
-    Dataset instance
-
-    See preferred function `dimarray.read_nc` for more complete documentation 
-    """
-    kw = _extract_kw(kwargs, ('verbose',))
-    f, close = _check_file(f, 'r', **kw)
-    data = DatasetOnDisk(f).read(nms, **kwargs)
-    if close: f.close()
-
-    return data
-
-def _read_multinc(fnames, nms=None, axis=None, keys=None, align=False, concatenate_only=False, **kwargs):
+def _read_multinc(fnames, names=None, axis=None, keys=None, align=False, concatenate_only=False, **kwargs):
     """ read multiple netCDF files 
 
     Parameters
     ----------
     fnames : list of file names or file handles to be read
-    nms : variable names to be read
+    names : variable names to be read
     axis : str, optional
         dimension along which the files are concatenated 
         (created as new dimension if not already existing)
@@ -739,7 +902,7 @@ def _read_multinc(fnames, nms=None, axis=None, keys=None, align=False, concatena
     concatenate_only : `bool`, optional
         if True, only concatenate along existing axis (and raise error if axis not existing) 
 
-    **kwargs : keyword arguments passed to io.nc._read_variable  (cannot 
+    **kwargs : keyword arguments passed to DatasetOnDisk.read  (cannot 
     contain 'axis', though, but indices can be passed as a dictionary
     if needed, e.g. {'time':2010})
 
@@ -761,7 +924,8 @@ def _read_multinc(fnames, nms=None, axis=None, keys=None, align=False, concatena
 
     datasets = []
     for fn in fnames:
-        ds = _read_dataset(fn, nms, **kwargs)
+        with DatasetOnDisk(fn) as f:
+            ds = f.read(names, **kwargs)
 
         # check that the same variables are present in the file
         if variables is None:
@@ -800,163 +964,22 @@ def _read_multinc(fnames, nms=None, axis=None, keys=None, align=False, concatena
 
     return ds
 
-@format_doc(netCDF4=_doc_write_nc, indexing=_doc_indexing_write, write_modes=_doc_write_modes)
-def _write_dataset(f, obj, mode='w-', indices=(), axis=0, format=None, verbose=False, **kwargs):
-    """ Write Dataset to netCDF file
-
-    Parameters
-    ----------
-    f : str or netCDF handle
-        netCDF file to write to
-    mode : str, optional
-        File creation mode. Default is 'w-'. Set to 'w' to overwrite any existing file.
-        {write_modes}
-    {netCDF4}
-    {indexing}
-
-    See Also
-    --------
-    read_nc
-    DimArray.write_nc
-    """
-    f, close = _check_file(f, mode=mode, verbose=verbose, format=format)
-    nms = obj.keys()
-        
-    for nm in obj:
-        _write_variable(f, obj[nm], nm, **kwargs)
-
-    # set metadata for the whole dataset
-    meta = obj.attrs
-    for k in meta.keys():
-        if meta[k] is None: 
-            # do not write empty attribute
-            # but delete any existing attribute 
-            # of the same name
-            if k in f.ncattrs:
-                f.delncattr(k) 
-            continue
-        f.setncattr(k, meta[k])
-
-    if close: f.close()
-
-
-@format_doc(netCDF4=_doc_write_nc, indexing=_doc_indexing_write, write_modes=_doc_write_modes)
-def _write_variable(f, obj=None, name=None, mode='a+', format=None, indices=(), axis=0, verbose=False, indexing=None, **kwargs):
-    """ Write DimArray instance to file
-
-    Parameters
-    ----------
-    f : file name or netCDF file handle
-    name : str, optional
-        variable name, optional if `name` attribute already defined.
-    mode : str, optional
-        {write_modes}
-        Default mode is 'a+'
-    {netCDF4}
-    {indexing}
-
-    See Also
-    --------
-    read_nc
-    Dataset.write_nc
-    """
-    if not name and hasattr(obj, "name"): name = obj.name
-    assert name, "invalid variable name !"
-
-    # control wether file name or netCDF handle
-    f, close = _check_file(f, mode=mode, verbose=verbose, format=format, **kwargs)
-
-    DimArrayOnDisk(f, name).write(indices=indices, values=obj, axis=axis, indexing=indexing)
-
-    if close:
-        f.close()
-
-example_doc_to_recycle = """
-    >>> tmpdir = getfixture('tmpdir').strpath # some temporary directory (py.test)
-    >>> outfile = os.path.join(tmpdir, 'test.nc')
-    >>> da.write_nc(outfile,'myvar', axes=[[1,2,3,4],['a','b','c']], dims=['dim1', 'dim2'], mode='w')
-    >>> a = DimArray([11, 22, 33, 44], axes=[[1, 2, 3, 4]], dims=('dim1',)) # some array slice 
-    >>> da.write_nc(outfile, a, 'myvar', indices='b', axis='dim2') 
-    >>> da.write_nc(outfile, [111,222,333,444], 'myvar', indices='a', axis='dim2') 
-    >>> da.read_nc(outfile,'myvar')
-    dimarray: 8 non-null elements (4 null)
-    0 / dim1 (4): 1 to 4
-    1 / dim2 (3): a to c
-    array([[ 111.,   11.,   nan],
-           [ 222.,   22.,   nan],
-           [ 333.,   33.,   nan],
-           [ 444.,   44.,   nan]])
-    """
-
-##
-## write to file
-##
-@format_doc(netCDF4=_doc_write_nc, indexing=_doc_indexing_write, write_modes=_doc_write_modes)
-def write_nc(f, obj=None, *args, **kwargs):
-    """  Write DimArray or Dataset to file or Create Empty netCDF file
-
-    This function is a wrapper whose accepted parameters vary depending
-    on the object to write.
-
-    Parameters
-    ----------
-    f : file name or netCDF file handle
-    obj : DimArray or Dataset or Axes instance
-        An Axes instance will create an empty variable.
-    name : str, optional, ONLY IF obj is a DimArray  
-        variable name, optional if `name` attribute is already defined.
-    dtype : variable type, optional, ONLY IF obj is an Axes object
-    mode : `str`, optional
-        {write_modes}
-        default is 'a+'
-    {indexing}
-    {netCDF4}
-
-    See Also
-    --------
-    read_nc, DimArray.write_nc, Dataset.write_nc
-    """
-    if isinstance(obj, Dataset):
-        _write_dataset(f, obj, *args, **kwargs)
-
-    elif isinstance(obj, DimArray) or isinstance(obj, np.ndarray) or isinstance(obj, list):
-        _write_variable(f, obj, *args, **kwargs)
-
-    else:
-        raise TypeError("only DimArray or Dataset types allowed, \
-                or provide variable name (first argument) and axes parameters to create empty variable.\
-                \nGot first argument {}:{}".format(type(obj), obj))
-
 #
 # display summary information
 #
 
 def summary_nc(fname, name=None, metadata=False):
     """ Print summary information about the content of a netCDF file
-
-    Parameters
-    ----------
-    fname : netCDF file name
-    name : variable name, optional
-    metadata : bool, optional (default to False)
-        if True, also display metadata
-
-    Returns
-    -------
-    None (print message to screen)
-
-    See Also
-    --------
-    dimarray.DatasetOnDisk
+    Deprecated, see dimarray.open_nc
     """
+    warnings.warn("Deprecated. Use dimarray.open_nc", FutureWarning)
     with DatasetOnDisk(fname) as obj:
         if name is not None:
             obj = obj[name]
         print(obj.__repr__(metadata=metadata))
 
 
-@format_doc(write_modes=_doc_write_modes)
-def _check_file(f, mode='r', verbose=False, format=None):
+def _maybe_open_file(f, mode='r', clobber=None, verbose=False, format=None):
     """ open a netCDF4 file
 
     Parameters
@@ -965,10 +988,12 @@ def _check_file(f, mode='r', verbose=False, format=None):
     mode: changed from original 'r','w','r' & clobber option:
 
     mode : `str`
-        read or write modes
-
-        - 'r': read mode
-        {write_modes}
+        read or write access
+        - 'r': read 
+        - 'w' : write, overwrite if file if present (clobber=True)
+        - 'w-': create new file, but raise Exception if file is present (clobber=False)
+        - 'a' : append, raise Exception if file is not present
+        - 'a+': append if file is present, otherwise create
 
     format: passed to netCDF4.Dataset, only relevatn when mode = 'w', 'w-', 'a+'
         'NETCDF4', 'NETCDF4_CLASSIC', 'NETCDF3_CLASSIC', 'NETCDF3_64BIT'
@@ -978,20 +1003,20 @@ def _check_file(f, mode='r', verbose=False, format=None):
     f : netCDF file handle
     close: `bool`, `True` if input f indicated file name
     """
-    close = False
-    clobber = False
     format = format or get_option('io.nc.format')
 
     if mode == 'w-':
         mode = 'w'
-
-    elif mode == 'w':
-        clobber = True
+        if clobber is None: clobber = False
 
     # mode 'a+' appends if file exists, otherwise create new variable
     elif mode == 'a+' and not isinstance(f, nc.Dataset):
         if os.path.exists(f): mode = 'a'
         else: mode = 'w'
+        if clobber is None: clobber=False
+
+    else:
+        if clobber is None: clobber=True
 
     if not isinstance(f, nc.Dataset):
         fname = f
@@ -1002,10 +1027,8 @@ def _check_file(f, mode='r', verbose=False, format=None):
 
         try:
             f = nc.Dataset(fname, mode, clobber=clobber, format=format)
-
         except UserWarning, msg:
             print msg
-
         except Exception, msg: # raise a weird RuntimeError
             #print "read from",fname
             raise IOError("{} => failed to opend {} in mode {}".format(msg, fname, mode)) # easier to handle
@@ -1020,12 +1043,3 @@ def _check_file(f, mode='r', verbose=False, format=None):
         close = True
 
     return f, close
-
-#
-# Append documentation to dimarray's methods
-#
-DimArray.write_nc.__func__.__doc__ = _write_variable.__doc__
-Dataset.write_nc.__func__.__doc__ = _write_dataset.__doc__
-
-DimArray.read_nc.__func__.__doc__ = _read_variable.__doc__
-Dataset.read_nc.__func__.__doc__ = _read_dataset.__doc__

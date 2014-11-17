@@ -12,7 +12,6 @@ from .core import DimArray, array, Axis, Axes
 from .core import align_axes, stack, concatenate
 from .core.align import _check_stack_args, _get_axes, stack, concatenate, _check_stack_axis, get_dims as _get_dims
 from .core import pandas_obj
-from .core.axes import _doc_reset_axis
 from .core.bases import AbstractDataset, GetSetDelAttrMixin
 
 class Dataset(GetSetDelAttrMixin, AbstractDataset, odict):
@@ -63,6 +62,14 @@ class Dataset(GetSetDelAttrMixin, AbstractDataset, odict):
     @property
     def axes(self):
         return self._axes
+
+    @axes.setter
+    def axes(self, newaxes):
+        for ax in newaxes:
+            if ax.name in self.dims:
+                self.axes[ax.name] = ax
+            else:
+                self.axes.append(ax)
 
     @property
     def dims(self):
@@ -183,30 +190,38 @@ class Dataset(GetSetDelAttrMixin, AbstractDataset, odict):
                 and np.all([np.all(self[k] == other[k]) for k in self.keys()])
 
     #
+    # Backends
     #
-    #
-    def write_nc(self, f, *args, **kwargs):
-        """ Save dataset in netCDF file.
+    def write_nc(self, f, mode='w', clobber=True, *args, **kwargs):
+        """ Write Dataset to netCDF file.
 
-        If you see this documentation, it means netCDF4 is not installed on your system 
-        and you will not be able to use this functionality.
+        Wrapper around DatasetOnDisk
+
+        Parameters
+        ----------
+        f : file name or netCDF4.Dataset instance
+        mode : access mode, accordingly to netCDF4 
+        *args, **kwargs : passed to DatasetOnDisk.write
         """
-        da.io.nc._write_dataset(f, self, *args, **kwargs)
+        from dimarray.io.nc import DatasetOnDisk, nc, _maybe_open_file
+        f, close = _maybe_open_file(f, mode=mode, clobber=clobber)
+        store = DatasetOnDisk(f, mode=mode, clobber=clobber, *args, **kwargs)
+        for name in self.keys():
+            store.write(name, self[name], *args, **kwargs)
+        store.attrs.update(self.attrs) # attributes
+        if close: f.close()
 
-    # def write(self, *args, **kwargs):
-    #     warnings.warn("Deprecated. Use write_nc.", FutureWarning)
-    #     self.write_nc(*args, **kwargs)
-    #
+    def write(self, *args, **kwargs):
+        warnings.warn("Deprecated. Use write_nc.", FutureWarning)
+        self.write_nc(*args, **kwargs)
+
     @classmethod
     def read_nc(cls, f, *args, **kwargs):
         """ Read dataset from netCDF file.
-
-        If you see this documentation, it means netCDF4 is not installed on your system 
-        and you will not be able to use this functionality.
         """
-        return da.io.nc._read_dataset(f, *args, **kwargs)
-
-    #read = read_nc
+        warnings.warn("Deprecated. Use dimarray.read_nc or dimarray.open_nc", FutureWarning)
+        return da.io.nc.read_nc(f, *args, **kwargs)
+    read = read_nc
 
     def to_array(self, axis=None, keys=None):
         """ Convert to DimArray
@@ -246,18 +261,40 @@ class Dataset(GetSetDelAttrMixin, AbstractDataset, odict):
 
         return self._constructor(data, axes)
 
-    # 
-    # REMOVE THESE FUNCTIONS AS NON-ESSENTIAL ???
-    #
-    def take(self, indices, axis=0, raise_error=False, **kwargs):
-        """ analogous to DimArray's take, but for each DimArray of the Dataset
+    def take(self, names=None, indices=None, axis=0, indexing=None, tol=None, keepdims=False):
+        """ Analogous to DimArray's take, but for each DimArray of the Dataset
 
         Parameters
         ----------
-        indices : scalar, or array-like, or slice
-        axis : axis name (str)
-        raise_error : raise an error if a variable does not have the desired dimension
-        **kwargs : arguments passed to the axis locator, similar to `take`, such as `indexing` or `keepdims`
+        names : list of variables to read, optional
+        indices : int or list or slice (single-dimensional indices)
+                   or a tuple of those (multi-dimensional)
+                   or `dict` of { axis name : axis indices }
+            Indices refer to Dataset axes. Any item that does not possess
+            one of the dimensions will not be indexed along that dimension.
+            For example, scalar items will be left unchanged whatever indices
+            are provided.
+        axis : None or int or str, optional
+            if specified and indices is a slice, scalar or an array, assumes 
+            indexing is along this axis.
+        indexing : {'label', 'position'}, optional
+            Indexing mode. 
+            - "label": indexing on axis labels (default)
+            - "position": use numpy-like position index
+            Default value can be changed in dimarray.rcParams['indexing.by']
+        tol : float, optional
+            tolerance when looking for numerical values, e.g. to use nearest 
+            neighbor search, default `None`.
+        keepdims : bool, optional 
+            keep singleton dimensions (default False)
+
+        Returns
+        -------
+        Dataset
+
+        See Also
+        --------
+        DimArrayOnDisk.read, DimArray.take
 
         Examples
         --------
@@ -269,54 +306,50 @@ class Dataset(GetSetDelAttrMixin, AbstractDataset, odict):
         0 / time (4): 1950 to 1953
         a: ('time',)
         b: ('time',)
-        >>> ds.take(1951, axis='time')
+        >>> ds.take(indices=1951, axis='time')
         Dataset of 2 variables
         <BLANKLINE>
         a: 2.0
         b: 11.0
-        >>> ds.take(0, axis='time', indexing='position')
+        >>> ds.take(indices=0, axis='time', indexing='position')
         Dataset of 2 variables
         <BLANKLINE>
         a: 1.0
         b: nan
         >>> ds['c'] = DimArray([[1,2],[11,22],[111,222],[3,4]], axes=[('time', [1950,1951,1952,1953]),('item',['a','b'])])
-        >>> ds.take({'time':1950})
+        >>> ds.take(indices={'time':1950})
         Dataset of 3 variables
-        0 / item (2): a to b
+        0 / item (2): 'a' to 'b'
         a: 1.0
         b: nan
         c: ('item',)
-        >>> ds.take({'time':1950})['c']
+        >>> ds.take(indices={'time':1950})['c']
         dimarray: 2 non-null elements (0 null)
-        0 / item (2): a to b
+        0 / item (2): 'a' to 'b'
         array([1, 2])
-        >>> ds.take({'item':'b'})
+        >>> ds.take(indices={'item':'b'})
         Dataset of 3 variables
         0 / time (4): 1950 to 1953
         a: ('time',)
         b: ('time',)
         c: ('time',)
         """
-        # first find the index for the shared axes
-        kw_indices = {self.axes[i].name:ind for i,ind in enumerate(self.axes.loc(indices, axis=axis, **kwargs))}
+        # automatically read all variables to load (except for the dimensions)
+        if names is None:
+            names = self.keys()
+        elif isinstance(names, basestring):
+            raise TypeError("Please provide a sequence of variables to read.")
 
-        # then apply take in 'position' mode
-        newdata = self.__class__()
-        # loop over variables
-        for k in self.keys():
-            v = self[k]
-            # loop over axes to index on
-            for axis in kw_indices.keys():
-                if np.ndim(v) == 0 or axis not in v.dims: 
-                    if raise_error: 
-                        raise ValueError("{} does not have dimension {} ==> set raise_error=False to keep this variable unchanged".format(k, axis))
-                    else:
-                        continue
-                # slice along one axis
-                v = v.take({axis:kw_indices[axis]}, indexing='position')
-            newdata[k] = v
+        tuple_indices = self._get_indices(indices, axis=axis, tol=tol, keepdims=keepdims, indexing=indexing)
+        dict_indices = {dim:tuple_indices[i] for i, dim in enumerate(self.dims)}
 
-        return newdata
+        data = Dataset()
+        # start with the axes, to make sure the ordering is maintained
+        data.axes = self._getaxes_ortho(tuple_indices) 
+        for nm in names:
+            data[nm] = self[nm].take(indices={dim:dict_indices[dim] for dim in self[nm].dims}, indexing='position')
+        data.attrs.update(self.attrs) # dataset's metadata
+        return data
 
     def _apply_dimarray_axis(self, funcname, *args, **kwargs):
         """ Apply a function on every Dataset variable. 
@@ -346,7 +379,7 @@ class Dataset(GetSetDelAttrMixin, AbstractDataset, odict):
         >>> ds = Dataset(a=a, b=b)
         >>> ds.mean(axis='time')
         Dataset of 2 variables
-        0 / items (2): a to b
+        0 / items (2): 'a' to 'b'
         a: 2.0
         b: ('items',)
         >>> ds.mean(axis='items')
@@ -372,20 +405,39 @@ class Dataset(GetSetDelAttrMixin, AbstractDataset, odict):
         """
         return odict([(nm, self[nm]) for nm in self.keys()])
 
-    @format_doc(**_doc_reset_axis)
-    def set_axis(self, values=None, axis=0, inplace=False, **kwargs):
-        """ (re)set axis values and attributes in all dimarrays present in the dataset
-
+    def set_axis(self, values=None, axis=0, name=None, inplace=False, **kwargs):
+        """ Set axis values, name and attributes of the Dataset
+        
         Parameters
         ----------
-        {values}
-        {axis}
-        {inplace}
-        {kwargs}
+        values : numpy array-like or mapper (callable or dict), optional
+            - array-like : new axis values, must have exactly the same 
+            length as original axis
+            - dict : establish a map between original and new axis values
+            - callable : transform each axis value into a new one
+            - if None, axis values are left unchanged
+            Default to None.
+        axis : int or str, optional
+            axis to be (re)set
+        name : str, optional
+            rename axis
+        inplace : bool, optional
+            modify dataset axis in-place (True) or return copy (False)? 
+            (default False)
+        **kwargs : key-word arguments
+            Also reset other axis attributes, which can be single metadata
+            or other axis attributes, via using `setattr`
+            This includes special attributes `weights` and `attrs` (the latter
+            reset all attributes)
 
         Returns
         -------
         Dataset instance, or None if inplace is True
+
+        Notes
+        -----
+        This affects all DimArray present in the Dataset, since they share the same
+        axes.
 
         Examples
         --------
@@ -394,68 +446,21 @@ class Dataset(GetSetDelAttrMixin, AbstractDataset, odict):
         >>> ds['b'] = da.zeros(shape=(3,4)) # dimensions 'x0', 'x1'
         >>> ds.set_axis(['a','b','c'], axis='x0')
         Dataset of 2 variables
-        0 / x0 (3): a to c
+        0 / x0 (3): 'a' to 'c'
         1 / x1 (4): 0 to 3
         a: ('x0',)
         b: ('x0', 'x1')
         """
-        if inplace is False:
-            self = self.copy()
-        ## update every dimarray in the dict
-        #axis_name = self.axes[axis].name
-        #for nm in self.keys():
-        #    if not axis_name in self[nm].dims:
-        #        continue
-        #    super(Dataset, self).__setitem__(nm, self[nm].set_axis(values, axis, inplace=False, **kwargs) )
+        if not inplace: self = self.copy()
+        self.axes[axis].set(values=values, inplace=True, name=name, **kwargs)
+        if not inplace: return self
 
-        # update the main axis instance
-        self.axes = self.axes.set_axis(values, axis, inplace=False, **kwargs)
-
-        if inplace is False:
-            return self
-
-    @format_doc(**_doc_reset_axis)
-    def reset_axis(self, axis=0, inplace=False, **kwargs):
-        """ (re)set axis values and attributes in all dimarrays present in the dataset
-
-        Parameters
-        ----------
-        {axis}
-        {inplace}
-        {kwargs}
-
-        Returns
-        -------
-        Dataset instance, or None if inplace is True
-
-        Examples
-        --------
-        >>> ds = Dataset()
-        >>> ds['a'] = da.zeros(axes=[['a','b','c']])  # some dimarray with dimension 'x0'
-        >>> ds['b'] = da.zeros(axes=[['a','b','c'], [11,22,33,44]]) # dimensions 'x0', 'x1'
-        >>> ds.reset_axis(axis='x0')
-        Dataset of 2 variables
-        0 / x0 (3): 0 to 2
-        1 / x1 (4): 11 to 44
-        a: ('x0',)
-        b: ('x0', 'x1')
-        """
-        if inplace is False:
-            self = self.copy()
-
-        ## update every dimarray in the dict
-        #axis_name = self.axes[axis].name
-        #for nm in self.keys():
-        #    if not axis_name in self[nm].dims:
-        #        continue
-        #    super(Dataset, self).__setitem__(nm, self[nm].reset_axis(axis, inplace=False, **kwargs) )
-
-        # update the main axis instance
-        self.axes = self.axes.reset_axis(axis, inplace=False, **kwargs)
-
-        if inplace is False:
-            return self
-
+    def reset(self, values=None, axis=0, name=None, **kwargs):
+        "deprecated, see Dataset.set" 
+        warnings.warn("Deprecated. Use Dataset.set", FutureWarning)
+        if values is None: values = np.arange(self.size)
+        if values is False: values = None
+        return self.set(values, axis=axis, name=name, **kwargs)
 
 def stack_ds(datasets, axis, keys=None, align=False):
     """ stack dataset along a new dimension
@@ -483,7 +488,7 @@ def stack_ds(datasets, axis, keys=None, align=False):
     >>> ds2 = Dataset({'a':a*2,'b':b*2}) # dataset of 2 variables from a second experiment
     >>> stack_ds([ds, ds2], axis='stackdim', keys=['exp1','exp2'])
     Dataset of 2 variables
-    0 / stackdim (2): exp1 to exp2
+    0 / stackdim (2): 'exp1' to 'exp2'
     1 / dima (3): 0 to 2
     2 / dimb (2): 0 to 1
     a: ('stackdim', 'dima')
@@ -548,7 +553,7 @@ def concatenate_ds(datasets, axis=0):
     >>> ds2 = Dataset({'a':a2,'b':b2}) # dataset of 2 variables from a second experiment
     >>> concatenate_ds([ds, ds2])
     Dataset of 2 variables
-    0 / x0 (6): a to f
+    0 / x0 (6): 'a' to 'f'
     1 / x1 (2): 1 to 2
     a: ('x0',)
     b: ('x0', 'x1')

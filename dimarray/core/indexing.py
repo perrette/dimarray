@@ -120,9 +120,9 @@ def getaxes_broadcast(obj, indices):
     --------
     >>> import dimarray as da
     >>> a = da.zeros(shape=(3,4,5,6))
-    >>> a[:,[0, 1],:,2].shape
+    >>> a.take((slice(None),[0, 1],slice(None),2), broadcast=True).shape
     (2, 3, 5)
-    >>> a[:,[0, 1],2,:].shape
+    >>> a.take((slice(None),[0, 1],2,slice(None)), broadcast=True).shape
     (3, 2, 6)
     """
     from dimarray import Axis, Axes

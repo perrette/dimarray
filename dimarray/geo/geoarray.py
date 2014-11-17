@@ -8,6 +8,7 @@ References
     http://cfconventions.org/1.4
     http://cfconventions.org/1.6 (in track-change mode w.r.t CF-1.4)
 """
+from __future__ import absolute_import
 from collections import OrderedDict as odict
 import sys
 import numpy as np
@@ -106,6 +107,8 @@ class GeoArray(DimArray):
         #        assert k not in kwargs, "{} was provided multiple times".format(k)
         #    kwargs.update(metadata) # TODO: make metadata a parameter in DimArray as well
 
+        self._grid_mapping = None
+
         super(GeoArray, self).__init__(values, axes, **kwargs) # order dimensions
 
         # add metadata
@@ -155,6 +158,26 @@ class GeoArray(DimArray):
     def __print__(self): return super(GeoArray, self).__print__().replace("dimarray","geoarray")
     def __str__(self): return super(GeoArray, self).__str__().replace("dimarray","geoarray")
 
+    @property
+    def grid_mapping(self):
+        if 'grid_mapping' in self.attrs:
+            return self.attrs['grid_mapping'] 
+        else:
+            return self._grid_mapping
+
+    @grid_mapping.setter
+    def grid_mapping(self, val):
+        if isinstance(val, basestring): # e.g. variable name in a dataset
+            self.attrs['grid_mapping'] = val
+        else:
+            try: 
+                from .crs import get_crs
+                self._grid_mapping = get_crs(val)
+                self.attrs.pop('grid_mapping', None) # remove from attrs
+            except:
+                self.attrs['grid_mapping'] = val
+                warnings.warn("Problem when setting the grid mapping")
+
 
 # define Latitude and Longitude axes
 class Coordinate(Axis):
@@ -181,7 +204,7 @@ class Coordinate(Axis):
     @classmethod
     def from_axis(cls, ax):
         " define a Coordinate from an Axis object "
-        return cls(ax.values, ax.name, **ax._metadata)
+        return cls(ax.values, ax.name, **ax.attrs)
 
     def _repr(self, metadata=None):
         return super(Coordinate, self)._repr(metadata)+" ({})".format(self.__class__.__name__)

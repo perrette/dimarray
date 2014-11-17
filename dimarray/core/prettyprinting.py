@@ -20,7 +20,10 @@ def repr_axis(self, metadata=False):
     dim = self.name
     size = self.size
     first, last = self._bounds()
-    repr_ = "{dim} ({size}): {first} to {last}".format(dim=dim, size=size, first=repr(first), last=repr(last))
+    if self.dtype.kind == 'f':
+        repr_ = "{dim} ({size}): {first} to {last}".format(dim=dim, size=size, first=first, last=last)
+    else:
+        repr_ = "{dim} ({size}): {first} to {last}".format(dim=dim, size=size, first=repr(first), last=repr(last))
     if metadata and len(self.attrs)>0:
         repr_ += "\n"+str_attrs(self.attrs)
     return repr_
@@ -29,18 +32,27 @@ def repr_axes(self, metadata=False):
     return "\n".join([ "{i} / {axis}".format(i=i, axis=repr_axis(ax, metadata=metadata)  )
                       for i, ax in enumerate(self)])
 
+str_axes = repr_axes
+
 def repr_dimarray_inline(self, metadata=False, name=None):
     " inline representation of a dimarray (without its name"
     if name is None and hasattr(self, 'name'):
         name = self.name
     dims = self.dims
-    descr = repr(dims) if len(dims) > 0 else repr(self[()])
+    if len(dims) == 0:
+        val = self.values[()]
+        if val.ndim == 1 and val.size == 1:
+            val = val[0]
+        descr = repr(val)
+    else:
+        descr = repr(dims)
+
     repr_ = ": ".join([name, descr]) 
     if metadata and len(self.attrs)>0:
         repr_ += "\n"+str_attrs(self.attrs)
     return repr_
 
-def repr_dimarray(self, metadata=True, lazy=False):
+def repr_dimarray(self, metadata=False, lazy=False):
     header = self.__class__.__name__
     # lazy = not isinstance(self, da.DimArray))
     if lazy:
@@ -73,6 +85,8 @@ def repr_dimarray(self, metadata=True, lazy=False):
         lines.append(line)
 
     return "\n".join(lines)
+
+str_dimarray = repr_dimarray
 
 def stats_dimarray(self, backcompatibility=True):
     """ descriptive statistics
@@ -125,9 +139,11 @@ def repr_dataset(self, metadata=False):
         lines.append(line)
 
     # Global Meta"data
-    # if metadata and len(self.attrs) > 0:
-    if len(self.attrs) > 0:
+    if metadata and len(self.attrs) > 0:
+    # if len(self.attrs) > 0:
         # lines.append("//global attributes:\n"+str_attrs(self.attrs))
         lines.append(repr_attrs(self.attrs))
 
     return "\n".join(lines)
+
+str_dataset = repr_dataset

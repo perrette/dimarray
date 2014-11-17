@@ -161,7 +161,7 @@ def test():
     array(...)
     """
     import dimarray as da
-    axes = da.Axes.from_tuples(('time',[1, 2, 3]))
+    axes = da.Axes([('time',[1, 2, 3])])
     ds = da.Dataset()
     a = da.DimArray([[0, 1],[2, 3]], dims=('time','items'))
     ds['yo'] = a.reindex_like(axes)

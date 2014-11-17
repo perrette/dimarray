@@ -23,7 +23,7 @@ except:
     __version__ = "X.X.X"
 
 try:
-    from .io.nc import (read_nc, write_nc, open_nc, summary_nc,
+    from .io.nc import (read_nc, open_nc, summary_nc,
                         DatasetOnDisk)
     _ncio = True
 

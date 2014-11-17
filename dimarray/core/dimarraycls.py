@@ -16,8 +16,9 @@ from dimarray import plotting
 
 # from .metadata import MetadataBase
 from .bases import AbstractDimArray, GetSetDelAttrMixin
-from .axes import Axis, Axes, GroupedAxis, _doc_reset_axis
+from .axes import Axis, Axes, GroupedAxis
 from .indexing import _maybe_cast_type, getaxes_broadcast, orthogonal_indexer
+from .align import broadcast_arrays, align_axes, stack
 
 from . import transform as _transform  # numpy along-axis transformations, interpolation
 from . import reshape as _reshape      # change array shape and dimensions
@@ -71,7 +72,7 @@ class DimArray(AbstractDimArray, GetSetDelAttrMixin):
     >>> a = DimArray([[1.,2,3], [4,5,6]], axes=[['grl', 'ant'], [1950, 1960, 1970]], dims=['variable', 'time']) 
     >>> a
     dimarray: 6 non-null elements (0 null)
-    0 / variable (2): grl to ant
+    0 / variable (2): 'grl' to 'ant'
     1 / time (3): 1950 to 1970
     array([[ 1.,  2.,  3.],
            [ 4.,  5.,  6.]])
@@ -85,7 +86,7 @@ class DimArray(AbstractDimArray, GetSetDelAttrMixin):
     while its axes are stored in `axes`:
 
     >>> a.axes
-    0 / variable (2): grl to ant
+    0 / variable (2): 'grl' to 'ant'
     1 / time (3): 1950 to 1970
 
     Each axis can be accessed by its rank or its name:
@@ -117,7 +118,7 @@ class DimArray(AbstractDimArray, GetSetDelAttrMixin):
 
     >>> a.mean(axis='time')
     dimarray: 2 non-null elements (0 null)
-    0 / variable (2): grl to ant
+    0 / variable (2): 'grl' to 'ant'
     array([ 2.,  5.])
 
     During an operation, arrays are automatically re-indexed to span the 
@@ -215,7 +216,7 @@ class DimArray(AbstractDimArray, GetSetDelAttrMixin):
 
         >>> DimArray([[1,2,3],[4,5,6]], axes=[list("ab"), np.arange(1950,1953)]) # axis values only
         dimarray: 6 non-null elements (0 null)
-        0 / x0 (2): a to b
+        0 / x0 (2): 'a' to 'b'
         1 / x1 (3): 1950 to 1952
         array([[1, 2, 3],
                [4, 5, 6]])
@@ -229,7 +230,7 @@ class DimArray(AbstractDimArray, GetSetDelAttrMixin):
         True
         >>> a
         dimarray: 6 non-null elements (0 null)
-        0 / items (2): a to b
+        0 / items (2): 'a' to 'b'
         1 / time (3): 1950 to 1952
         array([[1, 2, 3],
                [4, 5, 6]])
@@ -340,6 +341,10 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 
     @axes.setter
     def axes(self, newaxes):
+        if not isinstance(newaxes, Axes):
+            newaxes = Axes._init(newaxes, shape=self.shape)
+        else:
+            assert [ax.size for ax in newaxes] == list(self.shape), "shape mismatch"
         self._axes = newaxes
 
     @property
@@ -392,7 +397,7 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 
         >>> DimArray(nested_data, dims=['dim1','dim2'], labels=[['a','b']]) # enough to include the first level label in this case
         dimarray: 6 non-null elements (0 null)
-        0 / dim1 (2): a to b
+        0 / dim1 (2): 'a' to 'b'
         1 / dim2 (3): 1 to 3
         array([[ 11,  22,  33],
                [111, 222, 333]])
@@ -492,13 +497,7 @@ mismatch between values and axes""".format(inferred, self.values.shape)
             new = copy.copy(self) # shallow copy
         else:
             new = copy.deepcopy(self) # shallow copy
-
-        #if not shallow:
-        #    new.values = self.values.copy()
-        #    new.axes = self.axes.copy()
-
         return new
-        #return DimArray(self.values.copy(), self.axes.copy(), slicing=self.slicing, **{k:getattr(self,k) for k in self.ncattrs()})
 
     #
     # misc
@@ -519,7 +518,7 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         >>> a = DimArray([3,4], axes=[('xx',['a','b'])])
         >>> a.values + a
         dimarray: 2 non-null elements (0 null)
-        0 / xx (2): a to b
+        0 / xx (2): 'a' to 'b'
         array([6, 8])
         """
         return self._constructor(result, self.axes) # copy=True by default, ok?
@@ -599,30 +598,262 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     #
     # New general-purpose indexing method
     #
-    take = AbstractDimArray._getitem
-    put = AbstractDimArray._setitem
+    @property
+    def take(self):
+        """ Retrieve values from a DimArray
+
+        Parameters
+        ----------
+        indices : int or list or slice (single-dimensional indices)
+                   or a tuple of those (multi-dimensional)
+                   or `dict` of { axis name : axis values }
+        axis : None or int or str, optional
+            if specified and indices is a slice, scalar or an array, assumes 
+            indexing is along this axis.
+        indexing : {'label', 'position'}, optional
+            Indexing mode. 
+            - "label": indexing on axis labels (default)
+            - "position": use numpy-like position index
+            Default value can be changed in dimarray.rcParams['indexing.by']
+        tol : None or float or tuple or dict, optional
+            tolerance when looking for numerical values, e.g. to use nearest 
+            neighbor search, default `None`.
+        keepdims : bool, optional 
+            keep singleton dimensions (default False)
+        broadcast : bool, optional
+            if True, use numpy-like `fancy` indexing and broadcast any 
+            indexing array to a common shape, useful for example to sample
+            points along a path. Default to False.
+
+        Returns
+        -------
+        indexed_array : DimArray instance or scalar
+
+        See Also
+        --------
+        DimArray.put, DimArrayOnDisk.read, DimArray.take_axis
+
+        Examples
+        --------
+
+        >>> from dimarray import DimArray
+        >>> v = DimArray([[1,2,3],[4,5,6]], axes=[["a","b"], [10.,20.,30.]], dims=['d0','d1'], dtype=float) 
+        >>> v
+        dimarray: 6 non-null elements (0 null)
+        0 / d0 (2): 'a' to 'b'
+        1 / d1 (3): 10.0 to 30.0
+        array([[ 1.,  2.,  3.],
+               [ 4.,  5.,  6.]])
+
+        Indexing via axis values (default)
+
+        >>> a = v[:,10]   # python slicing method
+        >>> a
+        dimarray: 2 non-null elements (0 null)
+        0 / d0 (2): 'a' to 'b'
+        array([ 1.,  4.])
+        >>> b = v.take(10, axis=1)  # take, by axis position
+        >>> c = v.take(10, axis='d1')  # take, by axis name
+        >>> d = v.take({'d1':10})  # take, by dict {axis name : axis values}
+        >>> (a==b).all() and (a==c).all() and (a==d).all()
+        True
+
+        Indexing via integer index (indexing="position" or `ix` property)
+
+        >>> np.all(v.ix[:,0] == v[:,10])
+        True
+        >>> np.all(v.take(0, axis="d1", indexing="position") == v.take(10, axis="d1"))
+        True
+
+        Multi-dimensional indexing
+
+        >>> v["a", 10]  # also work with string axis
+        1.0
+        >>> v.take(('a',10))  # multi-dimensional, tuple
+        1.0
+        >>> v.take({'d0':'a', 'd1':10})  # dict-like arguments
+        1.0
+
+        Take a list of indices
+
+        >>> a = v[:,[10,20]] # also work with a list of index
+        >>> a
+        dimarray: 4 non-null elements (0 null)
+        0 / d0 (2): 'a' to 'b'
+        1 / d1 (2): 10.0 to 20.0
+        array([[ 1.,  2.],
+               [ 4.,  5.]])
+        >>> b = v.take([10,20], axis='d1')
+        >>> np.all(a == b)
+        True
+
+        Take a slice:
+
+        >>> c = v[:,10:20] # axis values: slice includes last element
+        >>> c
+        dimarray: 4 non-null elements (0 null)
+        0 / d0 (2): 'a' to 'b'
+        1 / d1 (2): 10.0 to 20.0
+        array([[ 1.,  2.],
+               [ 4.,  5.]])
+        >>> d = v.take(slice(10,20), axis='d1') # `take` accepts `slice` objects
+        >>> np.all(c == d)
+        True
+        >>> v.ix[:,0:1] # integer position: does *not* include last element
+        dimarray: 2 non-null elements (0 null)
+        0 / d0 (2): 'a' to 'b'
+        1 / d1 (1): 10.0 to 10.0
+        array([[ 1.],
+               [ 4.]])
+
+        Keep dimensions 
+
+        >>> a = v[["a"]]
+        >>> b = v.take("a",keepdims=True)
+        >>> np.all(a == b)
+        True
+
+        tolerance parameter to achieve "nearest neighbour" search
+
+        >>> v.take(12, axis="d1", tol=5)
+        dimarray: 2 non-null elements (0 null)
+        0 / d0 (2): 'a' to 'b'
+        array([ 1.,  4.])
+
+        # Matlab like multi-indexing
+
+        >>> v = DimArray(np.arange(2*3*4).reshape(2,3,4))
+        >>> v[[0,1],:,[0,0,0]].shape
+        (2, 3, 3)
+        >>> v[[0,1],:,[0,0]].shape # here broadcast = False
+        (2, 3, 2)
+        >>> v.take(([0,1],slice(None),[0,0]), broadcast=True).shape # that is traditional numpy, with broadcasting on same shape
+        (2, 3)
+        >>> v.values[[0,1],:,[0,0]].shape # a proof of it
+        (2, 3)
+
+        >>> a = DimArray(np.arange(2*3).reshape(2,3))
+
+        >>> a[a > 3] # FULL ARRAY: return a numpy array in n-d case (at least for now)
+        dimarray: 2 non-null elements (0 null)
+        0 / x0,x1 (2): (1, 1) to (1, 2)
+        array([4, 5])
+
+        >>> a[a.x0 > 0] # SINGLE AXIS: only first axis
+        dimarray: 3 non-null elements (0 null)
+        0 / x0 (1): 1 to 1
+        1 / x1 (3): 0 to 2
+        array([[3, 4, 5]])
+
+        >>> a[:, a.x1 > 0] # only second axis 
+        dimarray: 4 non-null elements (0 null)
+        0 / x0 (2): 0 to 1
+        1 / x1 (2): 1 to 2
+        array([[1, 2],
+               [4, 5]])
+
+        >>> a[a.x0 > 0, a.x1 > 0]
+        dimarray: 2 non-null elements (0 null)
+        0 / x0 (1): 1 to 1
+        1 / x1 (2): 1 to 2
+        array([[4, 5]])
+
+        Sample points along a path, a la numpy, with broadcast=True
+
+        >>> a.take(([0,0,1],[1,2,2]), broadcast=True)
+        dimarray: 3 non-null elements (0 null)
+        0 / x0,x1 (3): (0, 1) to (1, 2)
+        array([1, 2, 5])
+
+        Ellipsis (only one supported)
+
+        >>> a = DimArray(np.arange(2*3*4*5).reshape(2,3,4,5))
+        >>> a[0,...,0].shape
+        (3, 4)
+        >>> a[...,0,0].shape
+        (2, 3)
+        """
+        return self._getitem
+
+    @property
+    def put(self):
+        """Modify values of a DimArray
+
+        Parameters
+        ----------
+        indices : int or list or slice (single-dimensional indices)
+                   or a tuple of those (multi-dimensional)
+                   or `dict` of { axis name : axis values }
+        axis : None or int or str, optional
+            if specified and indices is a slice, scalar or an array, assumes 
+            indexing is along this axis.
+        indexing : {'label', 'position'}, optional
+            Indexing mode. 
+            - "label": indexing on axis labels (default)
+            - "position": use numpy-like position index
+            Default value can be changed in dimarray.rcParams['indexing.by']
+        tol : None or float or tuple or dict, optional
+            tolerance when looking for numerical values, e.g. to use nearest 
+            neighbor search, default `None`.
+        broadcast : bool, optional
+            if True, use numpy-like `fancy` indexing and broadcast any 
+            indexing array to a common shape, useful for example to sample
+            points along a path. Default to False.
+
+        Returns
+        -------
+        None (inplace=True) or DimArray instance or scalar (inplace=False)
+
+        See Also
+        --------
+        DimArray.take, DimArrayOnDisk.write
+        """
+        return self._setitem
+
+    def compress(self, boolarray):
+        """ Boolean indexing
+        """
+        try:
+            boolarray = np.asarray(boolarray)
+            assert boolarray.dtype.kind == 'b'
+        except:
+            raise TypeError("Invalid dtype for boolean indexing: "+boolarray.dtype.kind)
+        if boolarray.ndim != self.ndim:
+            raise ValueError("Indexing array dimensions must match indexed array")
+        values = self.values[boolarray] # boolean index, just get it, or raise appropriate error
+        if np.isscalar(values):
+            return values
+        idx = np.where(boolarray)
+        axes = self._getaxes_broadcast(idx)
+        dima = self._constructor(values, axes)
+        dima.attrs.update(self.attrs)
+        return dima
 
     def take_axis(self, indices, axis=0, indexing=None, mode='raise', out=None):
         """ Take values along an axis, similarly to numpy.take.
         
-        It is a one-dimensional version of DimArray.take, which may be faster
-        due to less checking, and with a `mode` parameter.
+        It is a one-dimensional version of DimArray.take for array-like indexing
+        which does not accept slice or scalar indices. It may be faster
+        due to less checking, and includes numpy's `mode` parameter.
 
         Parameters
         ----------
         indices : array-like
             Same as numpy.take except that labels can be provided. Must be iterable.
         axis : int or str, optional (default to 0)
-        indexing : `label` or `position`, optional
-            Default to `get_option("indexing.by")`, default to "label"
+        indexing : {'label', 'position'}, optional
+            Indexing mode. 
+            - "label": indexing on axis labels (default)
+            - "position": use numpy-like position index
+            Default value can be changed in dimarray.rcParams['indexing.by']
         mode : {"raise", "wrap", "clip"}, optional
             Specifies how out-of-bounds indices will behave.
             If `indexing=="position"`, same behaviour as numpy.take.
             If `indexing=="label", only "raise" and "clip" are allowed. 
             If `mode == 'clip'`, any label not present in the axis is clipped to 
-            the nearest end of the array. For a sorted array, an integer 
-            position will be returned that maintained the array sorted. Note this 
-            can result in unexpected return values for unsorted arrays.
+            the nearest end of the array, or inserted at an appropriate place in the array. 
+            For a sorted array, an integer position will be returned that maintained the array 
+            sorted. 
             If mode == 'raise' (the default), a check is performed on the result to ensure that
             all values were present, and raise an IndexError exception otherwise.
         out : np.ndarray, optional
@@ -642,13 +873,29 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 
         Examples
         --------
-        >>> a = da.DimArray([[1,2,3],[4,5,6],[7,8,9]], axes=[('dim0',[10.,20.]), ('dim1',['a','b','c'])])
+        >>> a = DimArray([[1,2,3],[4,5,6]], axes=[('dim0',[10.,20.]), ('dim1',['a','b','c'])])
         >>> a.take_axis([20,30,-10], axis='dim0', mode='clip')
+        dimarray: 9 non-null elements (0 null)
+        0 / dim0 (3): 20.0 to 10.0
+        1 / dim1 (3): 'a' to 'c'
+        array([[4, 5, 6],
+               [4, 5, 6],
+               [1, 2, 3]])
         >>> a.take_axis(['b','e'], axis='dim1', mode='clip')
-        >>> a.dim1 = ['c','a','b']
+        dimarray: 4 non-null elements (0 null)
+        0 / dim0 (2): 10.0 to 20.0
+        1 / dim1 (2): 'b' to 'c'
+        array([[2, 3],
+               [5, 6]])
+        >>> a.dim1 = ['c','a','f'] # change axis dim1
         >>> a.take_axis(['b','e'], axis='dim1', mode='clip')
+        dimarray: 4 non-null elements (0 null)
+        0 / dim0 (2): 10.0 to 20.0
+        1 / dim1 (2): 'c' to 'f'
+        array([[1, 3],
+               [4, 6]])
         """
-        indexing = indexing or gettattr(self, "_indexing", None) or get_option("indexing.by")
+        indexing = indexing or getattr(self, "_indexing", None) or get_option("indexing.by")
 
         pos, dim = self._get_axis_info(axis)
         ax = self.axes[pos]
@@ -678,6 +925,12 @@ mismatch between values and axes""".format(inferred, self.values.shape)
             self._values = _maybe_cast_type(self._values, newvalues)
         self.values[indices] = newvalues # the default for a numpy array
 
+    def _setvalues_bool(self, mask, newvalues, cast=False):
+        mask = np.asarray(mask)
+        if cast:
+            self._values = _maybe_cast_type(self._values, newvalues)
+        self.values[mask] = newvalues # the default for a numpy array
+
     def _getvalues_ortho(self, indices):
         ix = orthogonal_indexer(indices, self.shape)
         return self.values[ix]
@@ -690,16 +943,6 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         return 
 
     _getaxes_broadcast = getaxes_broadcast
-
-    def _getaxes_ortho(self, idx_tuple):
-        " idx: tuple of position indices  of length = ndim (orthogonal indexing)"
-        axes = []
-        for i, ix in enumerate(idx_tuple):
-            ax = self.axes[i][ix]
-            if not np.isscalar(ax): # do not include scalar axes
-                axes.append(ax)
-        return axes
-
 
     def fill(self, val):
         """ anologous to numpy's fill (in-place operation)
@@ -1047,7 +1290,7 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         >>> s.index.name = 'dim0'
         >>> DimArray.from_pandas(s)
         dimarray: 3 non-null elements (0 null)
-        0 / dim0 (3): a to c
+        0 / dim0 (3): 'a' to 'c'
         array([3, 5, 6])
 
         Also work with Multi-Index
@@ -1203,33 +1446,30 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     #
     #  I/O
     # 
-    def write_nc(self, f, name=None, *args, **kwargs):
+    def write_nc(self, f, name=None, mode='w', clobber=None, *args, **kwargs):
         """ Write to netCDF
 
-        If you read this documenation, it means that netCDF4 is not installed on your 
-        system and the write_nc / read_nc function will raise an Exception.
+        Parameters
+        ----------
+        f : file name or netCDF4.Dataset
+        name : variable name, optional
+            must be provided if no attribute "name" is defined
+        mode : {'w', 'w-', 'a'}
+        **kwargs : key-word arguments to be passed to createVariable, if applicable
+            They include zlib, complevel.
+
+        See Also
+        --------
+        DatasetOnDisk
         """
         import dimarray.io.nc as ncio
-
-        # add variable name if provided...
-        if name is None and hasattr(self, "name"):
-            name = self.name
-
-        ncio._write_variable(f, self, name, *args, **kwargs)
-
-    @classmethod
-    def read_nc(cls, f, *args, **kwargs):
-        """ Read from netCDF
-
-        If you read this documenation, it means that netCDF4 is not installed on your 
-        system and the write_nc / read_nc function will raise an Exception.
-        """
-        import dimarray.io.nc as ncio
-        return ncio._read_variable(f, *args, **kwargs)
+        f, close = ncio._maybe_open_file(f, mode=mode, clobber=clobber)
+        store = ncio.DatasetOnDisk(f, mode=mode, clobber=clobber)
+        store.write(name, self, *args, **kwargs)
+        if close: store.close()
 
     # Aliases
     write = write_nc
-    read = read_nc
 
     #
     # Plotting
@@ -1244,17 +1484,30 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     contour = plotting.contour
     pcolor = plotting.pcolor
 
-    # (re)set axis values and attributes
-    @format_doc(**_doc_reset_axis)
-    def set_axis(self, values=None, axis=0, inplace=False, **kwargs):
-        """ Set or update axis values and attributes
-
+    def set_axis(self, values=None, axis=0, name=None, inplace=False, **kwargs):
+        """ Set axis values, name and attributes
+        
         Parameters
         ----------
-        {values}
-        {axis}
-        {inplace}
-        {kwargs}
+        values : numpy array-like or mapper (callable or dict), optional
+            - array-like : new axis values, must have exactly the same 
+            length as original axis
+            - dict : establish a map between original and new axis values
+            - callable : transform each axis value into a new one
+            - if None, axis values are left unchanged
+            Default to None.
+        axis : int or str, optional
+            axis to be (re)set
+        name : str, optional
+            rename axis
+        inplace : bool, optional
+            modify dataset axis in-place (True) or return copy (False)? 
+            (default False)
+        **kwargs : key-word arguments
+            Also reset other axis attributes, which can be single metadata
+            or other axis attributes, via using `setattr`
+            This includes special attributes `weights` and `attrs` (the latter
+            reset all attributes)
 
         Returns
         -------
@@ -1272,14 +1525,14 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 
         >>> a.set_axis(list('abcd'))
         dimarray: 4 non-null elements (0 null)
-        0 / time (4): a to d
+        0 / time (4): 'a' to 'd'
         array([1, 2, 3, 4])
 
         Update just a few of the values
 
-        >>> a.set_axis({{1900:0000}})
+        >>> a.set_axis({1900:-9999})
         dimarray: 4 non-null elements (0 null)
-        0 / time (4): 0 to 1903
+        0 / time (4): -9999 to 1903
         array([1, 2, 3, 4])
 
         Or transform axis values
@@ -1304,57 +1557,23 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         0 / year (4): 1900 to 1903
         array([1, 2, 3, 4])
         """
-        axes = self.axes.set_axis(values, axis, inplace=inplace, **kwargs)
+        if not inplace: self = self.copy()
+        self.axes[axis].set(values=values, inplace=True, name=name, **kwargs)
+        if not inplace: return self
 
-        # make a copy?
-        if not inplace:
-            a = self.copy()
-            a.axes = axes
-            return a
+    def reset_axis(values=None, axis=0, **kwargs):
+        warnings.warn(FutureWarning('reset_axis is deprecated, use set_axis'))
+        if values is None: values = np.arange(self.axes[axis], size)
+        if values is False: values = None
+        return self.set(values, name, axis=axis, **kwargs)
 
-    @format_doc(**_doc_reset_axis)
-    def reset_axis(self, axis=0, inplace=False, **kwargs):
-        """ Reset to default axis values and attributes
-
-        Parameters
-        ----------
-        {axis}
-        {inplace}
-        {kwargs}
-
-        Returns
-        -------
-        DimArray instance, or None if inplace is True
-
-        Examples
-        --------
-        >>> a = DimArray([1, 2, 3, 4], axes = [[ 1900, 1901, 1902, 1903 ]], dims=['time'])
-        >>> a
-        dimarray: 4 non-null elements (0 null)
-        0 / time (4): 1900 to 1903
-        array([1, 2, 3, 4])
-
-        Reset to default init values
-
-        >>> a.reset_axis()
-        dimarray: 4 non-null elements (0 null)
-        0 / time (4): 0 to 3
-        array([1, 2, 3, 4])
-        """
-        axes = self.axes.reset_axis(axis, inplace=inplace, **kwargs)
-
-        # make a copy?
-        if not inplace:
-            a = self.copy()
-            a.axes = axes
-            return a
 
     # for back-compatibility
     @classmethod
     def from_arrays(cls, *args, **kwargs):
         """ use dimarray.array instead """
         kwargs['cls'] = cls
-        warnings.warn(FutureWarning('from_arrays is deprecated, use concatenate() or stack() ot Dataset().to_array()) instead'))
+        warnings.warn(FutureWarning('from_arrays is deprecated, use DimArray() or concatenate() or stack() or Dataset().to_array() instead'))
         return array(*args, **kwargs)
 
 def array(data, *args, **kwargs):
@@ -1401,7 +1620,7 @@ def array(data, *args, **kwargs):
     >>> a = da.array(d, keys=['a','b'], axis='items') # keys= just needed to enforce ordering
     >>> a
     dimarray: 6 non-null elements (2 null)
-    0 / items (2): a to b
+    0 / items (2): 'a' to 'b'
     1 / x0 (4): 0.0 to 3.0
     array([[ 10.,  20.,  30.,  nan],
            [ nan,   1.,   2.,   3.]])
@@ -1417,7 +1636,7 @@ def array(data, *args, **kwargs):
     True
     >>> c
     dimarray: 7 non-null elements (1 null)
-    0 / items (2): a to b
+    0 / items (2): 'a' to 'b'
     1 / x0 (2): 0 to 1
     2 / x1 (2): 0 to 1
     array([[[  0.,   1.],
@@ -1474,7 +1693,7 @@ def empty(axes=None, dims=None, shape=None, dtype=float):
     >>> a
     dimarray: 6 non-null elements (0 null)
     0 / time (2): 2000 to 2001
-    1 / items (3): a to c
+    1 / items (3): 'a' to 'c'
     array([[ 3.,  3.,  3.],
            [ 3.,  3.,  3.]])
     >>> b = empty(dims=('time','items'), shape=(2, 3))
@@ -1505,7 +1724,7 @@ def empty_like(a, dtype=None):
     >>> b
     dimarray: 6 non-null elements (0 null)
     0 / time (2): 2000 to 2001
-    1 / items (3): a to c
+    1 / items (3): 'a' to 'c'
     array([[ 3.,  3.,  3.],
            [ 3.,  3.,  3.]])
     """

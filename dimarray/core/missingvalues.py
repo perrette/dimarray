@@ -36,11 +36,6 @@ def _matches(a, value):
         test = a == value
     return test
 
-def isnan(a, na=np.nan):
-    """ analogous to numpy's isnan
-    """
-    return a._constructor(_isnan(a, na=na), a.axes, **a.attrs)
-
 def setna(self, value, na=np.nan, inplace=False):
     """ set a value as missing
 
@@ -72,7 +67,7 @@ def setna(self, value, na=np.nan, inplace=False):
     1 / x1 (3): 0 to 2
     array([[  1.,  nan,  nan]])
     """
-    return self.put(na, _matches(self.values, value), convert=True, inplace=inplace)
+    return self.put(_matches(self.values, value), na, cast=True, inplace=inplace)
 
 def fillna(self, value, inplace=False, na=np.nan):
     """ Fill NaN with a replacement value
@@ -86,7 +81,7 @@ def fillna(self, value, inplace=False, na=np.nan):
     0 / x0 (3): 0 to 2
     array([  1.,   2., -99.])
     """
-    return self.put(value, _isnan(self.values, na=na), convert=True, inplace=inplace)
+    return self.put(_isnan(self.values, na=na), value, cast=True, inplace=inplace)
 
 def dropna(self, axis=0, minvalid=None, na=np.nan):
     """ drop nans along an axis
@@ -142,11 +137,6 @@ def dropna(self, axis=0, minvalid=None, na=np.nan):
            [  5.,  nan]])
     """
     assert axis is not None, "axis cannot be None for dropna"
-#    # if None, all axes
-#    if axis is None:
-#        for dim in a.dims:
-#            a = dropna(a, axis=dim, minvalid=minvalid)
-#        return a
 
     idx, name = self._get_axis_info(axis)
 
@@ -154,7 +144,7 @@ def dropna(self, axis=0, minvalid=None, na=np.nan):
         return  self[~_isnan(self.values, na=na)]
 
     else:
-        nans = isnan(self, na=na) 
+        nans = _isnan(self, na=na) 
         nans = nans.group([dim for dim in self.dims if dim != name], insert=0) # in first position
         count_nans_axis = nans.sum(axis=0) # number of points valid along that axis
         count_vals_axis = (~nans).sum(axis=0) # number of points valid along that axis
@@ -168,5 +158,4 @@ def dropna(self, axis=0, minvalid=None, na=np.nan):
         maxna = nans.axes[0].size - minvalid
 
     indices = count_nans_axis <= maxna
-
-    return self.take(indices, axis=idx)
+    return self.take_axis(np.where(indices)[0], axis=idx)

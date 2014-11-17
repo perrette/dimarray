@@ -101,7 +101,7 @@ def apply_along_axis(self, func, axis=None, skipna=False, args=(), **kwargs):
     >>> c = da.stack([a,b],keys=['a','b'],axis='items')
     >>> c
     dimarray: 7 non-null elements (1 null)
-    0 / items (2): a to b
+    0 / items (2): 'a' to 'b'
     1 / x0 (2): 0 to 1
     2 / x1 (2): 0 to 1
     array([[[  0.,   1.],
@@ -562,8 +562,7 @@ def diff(self, axis=-1, scheme="backward", keepaxis=False, n=1):
     else:
         raise ValueError("scheme must be one of 'forward', 'backward', 'central', got {}".format(scheme))
 
-    newaxes = obj.axes.copy() 
-    newaxes[idx] = newaxis
+    newaxes = [ax.copy() if ax.name != name else newaxis for ax in obj.axes]
     newobj = obj._constructor(result, newaxes, **obj.attrs)
 
     return newobj
@@ -710,16 +709,17 @@ def _get_weights(self, axis=None, mirror_nans=True, weights=None):
            [ 1.        ,  1.        ],
            [ 0.17364818,  0.17364818]])
 
-    It possible to mix up axis and dict-input weights
-
+    # It possible to mix up axis and dict-input weights
+    #
     >>> v.axes['lat'].weights = w
-    >>> v._get_weights(weights={{'lon':lambda x:((x+180)/100)**2}}) 
-    dimarray: 6 non-null elements (0 null)
-    0 / lat (3): -80 to 80
-    1 / lon (2): -180 to 180
-    array([[ 0.       ,  1.5628336],
-           [ 0.       ,  9.       ],
-           [ 0.       ,  1.5628336]])
+
+    # >>> v._get_weights(weights={{'lon':lambda x:((x+180)/100)**2}}) 
+    # dimarray: 6 non-null elements (0 null)
+    # 0 / lat (3): -80 to 80
+    # 1 / lon (2): -180 to 180
+    # array([[ 0.       ,  1.5628336],
+    #        [ 0.       ,  9.       ],
+    #        [ 0.       ,  1.5628336]])
 
     But if the transformation is required on one axis only, 
     weights on other axes are not accounted for since they

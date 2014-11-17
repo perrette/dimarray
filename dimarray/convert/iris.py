@@ -81,7 +81,7 @@ def as_cube(dim_array, copy=True):
             cube.add_aux_coord(coord, i)
 
     # add cube metadata
-    _add_iris_metadata(cube, dim_array._metadata)
+    _add_iris_metadata(cube, dim_array.attrs)
 
     return cube
 
@@ -100,7 +100,7 @@ def as_coord(ax):
         #coord.rename(name)
 
     # add coordinate metadata
-    _add_iris_metadata(coord, ax._metadata)
+    _add_iris_metadata(coord, ax.attrs)
 
     return coord
 

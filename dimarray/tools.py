@@ -76,3 +76,6 @@ def is_array1d_equiv(a):
             res = False
     return res
 
+def is_numeric(a):
+    " for a ndarray "
+    return a.dtype.kind in ("i, f")
