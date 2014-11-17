@@ -69,24 +69,23 @@ def apply_recursive(obj, dims, fun, *args, **kwargs):
 # INTERPOLATION
 #
 
-def interp1d_numpy(obj, values=None, axis=0, left=np.nan, right=np.nan):
+def interp1d_numpy(obj, values, axis=0, left=np.nan, right=np.nan):
     """ interpolate along one axis: wrapper around numpy's interp
 
     Parameters
     ----------
     obj : DimArray
-    newaxis_values : 1d array, or Axis object
-    newaxis_name, optional : `str` (axis name), required if newaxis is an array
+    values : 1d array, or Axis object
+    axis, optional : `str` (axis name), required if newaxis is an array
 
     Returns
     -------
     interpolated data (n-d)
     """
-    newaxis = Axis(values, axis)
+    pos, name = obj._get_axis_info(axis)
+    newaxis = Axis(values, name)
 
     def interp1d(obj):
-        """ 2-D interpolation function appled recursively on the object
-        """
         xp = obj.axes[newaxis.name].values
         fp = obj.values
         result = np.interp(newaxis.values, xp, fp, left=left, right=right)
@@ -95,7 +94,7 @@ def interp1d_numpy(obj, values=None, axis=0, left=np.nan, right=np.nan):
     result = apply_recursive(obj, (newaxis.name,), interp1d)
     return result.transpose(obj.dims) # transpose back to original dimensions
 
-def interp1d(obj, values=None, axis=0, order=1, **kwargs):
+def interp1d(obj, values, axis=0, order=1, **kwargs):
     """ interpolate along one axis
     """
     if order == 1:
@@ -103,6 +102,10 @@ def interp1d(obj, values=None, axis=0, order=1, **kwargs):
 
     else:
         raise NotImplementedError('order: '+repr(order))
+        # dimal = obj.reindex_axis(values, axis, method='left')
+        # dimar = obj.reindex_axis(values, axis, method='right')
+        # return (dimal+dimar)*0.5
+        # raise NotImplementedError('order: '+repr(order))
         #return obj.reindex_axis(values, axis, method=method **kwargs)
 
 def interp2d(dim_array, newaxes, dims=(-2, -1), order=1, clip=False):

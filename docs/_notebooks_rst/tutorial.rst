@@ -26,7 +26,7 @@ via `axes` and `dims` parameters.
 >>> a = DimArray([[1.,2,3], [4,5,6]], axes=[['a', 'b'], [1950, 1960, 1970]], dims=['variable', 'time'])
 >>> a
 dimarray: 6 non-null elements (0 null)
-0 / variable (2): a to b
+0 / variable (2): 'a' to 'b'
 1 / time (3): 1950 to 1970
 array([[ 1.,  2.,  3.],
        [ 4.,  5.,  6.]])
@@ -45,7 +45,7 @@ array([[ 1.,  2.,  3.],
 while its axes are stored in `axes`
 
 >>> a.axes
-0 / variable (2): a to b
+0 / variable (2): 'a' to 'b'
 1 / time (3): 1950 to 1970
 
 As a convenience, axis labels can be accessed directly by name, as an alias for `a.axes['time'].values`:
@@ -97,7 +97,7 @@ Standard numpy transformations are defined, and now accept axis name:
 
 >>> a.mean(axis='time')
 dimarray: 2 non-null elements (0 null)
-0 / variable (2): a to b
+0 / variable (2): 'a' to 'b'
 array([ 2.,  5.])
 
 and can ignore **missing values (nans)** if asked to:
@@ -106,7 +106,7 @@ and can ignore **missing values (nans)** if asked to:
 >>> a['a',1950] = np.nan
 >>> a.mean(axis='time', skipna=True)
 dimarray: 2 non-null elements (0 null)
-0 / variable (2): a to b
+0 / variable (2): 'a' to 'b'
 array([ 2.5,  5. ])
 
 .. seealso:: :ref:`page_transformations`
@@ -146,7 +146,7 @@ Arrays are said to be **broadcast**:
 >>> combined_data 
 dimarray: 6 non-null elements (0 null)
 0 / year (3): 1950 to 1970
-1 / season (2): winter to summer
+1 / season (2): 'winter' to 'summer'
 array([[  0,   0],
        [ 10, 100],
        [ 20, 200]])
@@ -164,7 +164,7 @@ As a commodity, the **`Dataset`** class is an ordered dictionary of DimArray ins
 >>> dataset = Dataset({'combined_data':combined_data, 'yearly_data':yearly_data,'seasonal_data':seasonal_data})
 >>> dataset
 Dataset of 3 variables
-0 / season (2): winter to summer
+0 / season (2): 'winter' to 'summer'
 1 / year (3): 1950 to 1970
 seasonal_data: ('season',)
 combined_data: ('year', 'season')
@@ -189,7 +189,7 @@ the netCDF4 package. If netCDF4 is installed (much recommanded), a dataset can e
 >>> da.read_nc('/tmp/test.nc', 'combined_data')
 dimarray: 6 non-null elements (0 null)
 0 / year (3): 1950 to 1970
-1 / season (2): winter to summer
+1 / season (2): u'winter' to u'summer'
 array([[  0,   0],
        [ 10, 100],
        [ 20, 200]])
@@ -210,14 +210,14 @@ It is possible to define and access metadata via the standard `.` syntax to acce
 >>> a.units = 'meters'
 
 
-The `_metadata` method scans the DimArray's `__dict__` and returns a dictionary of metadata:
+Any non-private attribute is automatically added to `a.attrs` ordered dictionary:
 
->>> a._metadata()  # doctest: +SKIP
-{'name': 'myarray', 'units': 'meters'}
+>>> a.attrs
+OrderedDict([('name', 'myarray'), ('units', 'meters')])
 
 Metadata can also be defined for :class:`dimarray.Dataset` and :class:`dimarray.Axis` instances, and will be written to / read from netCDF files. 
 
-.. note:: Metadata that start with an underscore `_` or use any protected class attribute as name (e.g. `values`, `axes`, `dims` and so on) can be set and accessed using :meth:`set_metadata`, :meth:`get_metadata` and  :meth:`del_metadata` methods.
+.. note:: Metadata that start with an underscore `_` or use any protected class attribute as name (e.g. `values`, `axes`, `dims` and so on) must be set directly in `attrs`.
 
 .. seealso:: :ref:`page_metadata` for more information.
 
@@ -241,7 +241,7 @@ or they can be stacked along each other, thereby creating a new dimension (:func
 >>> b = DimArray([21, 22, 23], axes=[[1950, 1951, 1952]], dims=['time'])
 >>> da.stack((a, b), axis='items', keys=['a','b'])
 dimarray: 6 non-null elements (0 null)
-0 / items (2): a to b
+0 / items (2): 'a' to 'b'
 1 / time (3): 1950 to 1952
 array([[11, 12, 13],
        [21, 22, 23]])
@@ -253,7 +253,7 @@ In the above note that new axis values were provided via the parameter `keys=`. 
 >>> c = da.stack((a, b), axis='items', keys=['a','b'], align=True)
 >>> c
 dimarray: 5 non-null elements (1 null)
-0 / items (2): a to b
+0 / items (2): 'a' to 'b'
 1 / time (3): 1950 to 1952
 array([[ 11.,  12.,  13.],
        [ 21.,  nan,  23.]])
@@ -270,7 +270,7 @@ Say you have data with NaNs:
 >>> a = DimArray([[11, np.nan, np.nan],[21,np.nan,23]], axes=[['a','b'],[1950, 1951, 1952]], dims=['items','time'])
 >>> a
 dimarray: 3 non-null elements (3 null)
-0 / items (2): a to b
+0 / items (2): 'a' to 'b'
 1 / time (3): 1950 to 1952
 array([[ 11.,  nan,  nan],
        [ 21.,  nan,  23.]])
@@ -279,7 +279,7 @@ You can drop every column that contains a NaN
 
 >>> a.dropna(axis=1) # drop along columns
 dimarray: 2 non-null elements (0 null)
-0 / items (2): a to b
+0 / items (2): 'a' to 'b'
 1 / time (1): 1950 to 1950
 array([[ 11.],
        [ 21.]])
@@ -288,7 +288,7 @@ or actually control decide to retain only these columns with a minimum number of
 
 >>> a.dropna(axis=1, minvalid=1) # drop every column with less than one valid data
 dimarray: 3 non-null elements (1 null)
-0 / items (2): a to b
+0 / items (2): 'a' to 'b'
 1 / time (2): 1950 to 1952
 array([[ 11.,  nan],
        [ 21.,  23.]])
@@ -342,7 +342,7 @@ And :py:meth:`dimarray.DimArray.from_pandas` works to convert pandas objects to 
 >>> s = pd.DataFrame([[1,2],[3,4]], index=['a','b'], columns=[1950, 1960])
 >>> da.from_pandas(s)
 dimarray: 4 non-null elements (0 null)
-0 / x0 (2): a to b
+0 / x0 (2): 'a' to 'b'
 1 / x1 (2): 1950 to 1960
 array([[1, 2],
        [3, 4]])
@@ -360,8 +360,8 @@ dimarray comes with basic plotting facility. For 1-D and 2-D data, it simplies i
 >>> a.plot() # doctest: +SKIP
 Using matplotlib backend: Qt4Agg
 Populating the interactive namespace from numpy and matplotlib
-[<matplotlib.lines.Line2D at 0x7f4402dbdf10>,
- <matplotlib.lines.Line2D at 0x7f4402dce1d0>]
+[<matplotlib.lines.Line2D at 0x7fb04ac30ed0>,
+ <matplotlib.lines.Line2D at 0x7fb04ac7e090>]
 
 .. image:: tutorial_files/figure_80-2.png
 
@@ -380,7 +380,7 @@ In addition, it can also display 2-D data via its methods `contour`, `contourf` 
 >>> c = a.contourf()
 >>> colorbar(c)  # explicit colorbar creation  # doctest: +SKIP
 >>> a.contour(colors='k') # doctest: +SKIP
-<matplotlib.contour.QuadContourSet instance at 0x7f4402c73c20>
+<matplotlib.contour.QuadContourSet instance at 0x7fb04aa83560>
 
 .. image:: tutorial_files/figure_82-1.png
 
@@ -388,7 +388,7 @@ In addition, it can also display 2-D data via its methods `contour`, `contourf` 
 
 >>> # plot the data
 >>> a.pcolor(colorbar=True)  # colorbar as keyword argument # doctest: +SKIP
-<matplotlib.collections.QuadMesh at 0x7f4402aee810>
+<matplotlib.collections.QuadMesh at 0x7fb04a95d7d0>
 
 .. image:: tutorial_files/figure_83-1.png
 

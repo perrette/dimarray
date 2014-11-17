@@ -7,6 +7,7 @@ from axes import Axes, Axis
 import warnings
 from dimarray.tools import is_DimArray
 from dimarray.config import get_option
+from .indexing import locate_many
 
 def broadcast_arrays(*arrays):
     """ Analogous to numpy.broadcast_arrays
@@ -561,7 +562,7 @@ def aggregate(arrays, check_overlap=True):
 #
 # Reindex axis
 #
-def reindex_axis(self, values, axis=0, fill_value=np.nan, raise_error=False):
+def reindex_axis(self, values, axis=0, fill_value=np.nan, raise_error=False, method=None):
     """ reindex an array along an axis
 
     Parameters
@@ -576,6 +577,9 @@ def reindex_axis(self, values, axis=0, fill_value=np.nan, raise_error=False):
     raise_error : bool, optional
         if True, raise error when an axis value is not present 
         otherwise just replace with `fill_value`. Defaulf is False
+    method : {None, 'left', 'right'}
+        method to fill the gaps (default None)
+        If 'left' or 'right', just pass along to numpy.searchsorted.
 
     Returns
     -------
@@ -611,15 +615,17 @@ def reindex_axis(self, values, axis=0, fill_value=np.nan, raise_error=False):
 
     # Get indices
     ax = self.axes[axis]
-    indices = ax.loc(values, mode="clip")
+    # indices = ax.loc(values, mode='clip', side=method)
+    indices = locate_many(ax.values, values, side=method or 'left')
     newobj = self.take_axis(indices, axis, indexing='position')
 
-    # Replace mismatch with missing values
+    # Replace mismatch with missing values?
     mask = ax.values.take(indices) != values
     if np.any(mask):
         if raise_error:
             raise IndexError("Some values where not found in the axis: {}".format(values[mask]))
-        newobj.put(mask, fill_value, axis=axis, inplace=True, indexing="position", cast=True)
+        if method is None:
+            newobj.put(mask, fill_value, axis=axis, inplace=True, indexing="position", cast=True)
         # Make sure the axis values match the requested new axis
         newobj.axes[axis][mask] = values[mask]
 

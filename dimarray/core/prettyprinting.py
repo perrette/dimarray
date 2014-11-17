@@ -7,20 +7,20 @@ import dimarray as da
 from dimarray.config import get_option
 
 def str_attrs(meta, indent=4):
-    return "\n".join([" "*indent+"'{}': {}".format(key, repr(meta[key])) for key  in meta.keys()])
+    return "\n".join([" "*indent+"{}: {}".format(key, repr(meta[key])) for key  in meta.keys()])
 
 def repr_attrs(meta):
-    # return "\n".join([" "*4+"{}: {}".format(key, repr(meta[key])) for key  in meta.keys()])
+    return "\n".join([" "*4+"{}: {}".format(key, repr(meta[key])) for key  in meta.keys()])
     # return repr(odict(zip(meta.keys(), meta.values())))
     # return repr({k:meta[k] for k in meta.keys()})
     # return json.dumps({k:meta[k] for k in meta.keys()}, sort_keys=True,indent=4,separators=(',', ': '))
-    return json.dumps(odict(zip(meta.keys(), meta.values())))
+    # return json.dumps(odict(zip(meta.keys(), meta.values())))
 
 def repr_axis(self, metadata=False):
     dim = self.name
     size = self.size
     first, last = self._bounds()
-    if self.dtype.kind == 'f':
+    if getattr(self.dtype, 'kind', None) == 'f':
         repr_ = "{dim} ({size}): {first} to {last}".format(dim=dim, size=size, first=first, last=last)
     else:
         repr_ = "{dim} ({size}): {first} to {last}".format(dim=dim, size=size, first=repr(first), last=repr(last))
@@ -69,6 +69,7 @@ def repr_dimarray(self, metadata=False, lazy=False):
 
     # metadata
     if metadata and len(self.attrs) > 0:
+        lines.append("attributes:")
         lines.append(repr_attrs(self.attrs) )
         # lines.append(str_attrs(self.attrs, indent=8) )
 
@@ -130,9 +131,17 @@ def repr_dataset(self, metadata=False):
     lines.append(header)
     
     # display dimensions name, size, first and last value
-    lines.append(repr_axes(self.axes, metadata=metadata))
+    if len(self.axes) > 0:
+        if metadata:
+            lines.append("")
+            lines.append("//dimensions:")
+        lines.append(repr_axes(self.axes, metadata=metadata))
 
     # display variables name, shape and dimensions
+    if len(self.keys()) > 0:
+        if metadata:
+            lines.append("")
+            lines.append("//variables:")
     for nm in nms:
         dims = self.dims
         line = repr_dimarray_inline(self[nm], metadata=metadata, name=nm)
@@ -142,6 +151,8 @@ def repr_dataset(self, metadata=False):
     if metadata and len(self.attrs) > 0:
     # if len(self.attrs) > 0:
         # lines.append("//global attributes:\n"+str_attrs(self.attrs))
+        lines.append("")
+        lines.append("//global attributes:")
         lines.append(repr_attrs(self.attrs))
 
     return "\n".join(lines)

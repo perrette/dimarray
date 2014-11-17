@@ -840,7 +840,7 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         dima.attrs.update(self.attrs)
         return dima
 
-    def take_axis(self, indices, axis=0, indexing=None, mode='raise', out=None):
+    def take_axis(self, indices, axis=0, indexing=None, mode='raise', out=None, side='left'):
         """ Take values along an axis, similarly to numpy.take.
         
         It is a one-dimensional version of DimArray.take for array-like indexing
@@ -869,6 +869,7 @@ mismatch between values and axes""".format(inferred, self.values.shape)
             all values were present, and raise an IndexError exception otherwise.
         out : np.ndarray, optional
             Store the result (same as numpy.take)
+        side : passed along to searchsorted, useful in 'clip' mode, if indexing='label'
 
         Returns
         -------

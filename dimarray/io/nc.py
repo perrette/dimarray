@@ -287,6 +287,10 @@ class DatasetOnDisk(GetSetDelAttrMixin, NetCDFOnDisk, AbstractDataset):
     @property
     def dims(self):
         return tuple(self._ds.dimensions.keys())
+    @dims.setter
+    def dims(self, newdims):
+        self._set_dims(newdims)
+
     @property
     def axes(self):
         return AxesOnDisk(self._ds, self.dims, **self._kwargs)
@@ -380,10 +384,29 @@ class DimArrayOnDisk(GetSetDelAttrMixin, NetCDFVariable, AbstractDimArray):
         if type(indices) is slice and indices == slice(None) and self.ndim == 0:
             indices = ()
 
+        indices = self._get_indices(indices,axis=axis, indexing=indexing, tol=tol)
+
+        # Perform additional checks on axes if the Data to assign is a DimArray
+        if isinstance(dima, DimArray):
+            for i, ax in enumerate(self.axes):
+                idx = indices[i]
+                val = dima.axes[ax.name]
+                # write unlimited dimensions
+                if self._ds.dimensions[ax.name].isunlimited():
+                    self.axes[ax.name][idx] = val
+
+                else:
+                    ondisk = self.axes[ax.name][idx if not np.isscalar(idx) else [idx]].values
+                    inmemory = val.values
+                    if not np.all(ondisk == inmemory):
+                        assert np.all(ondisk == inmemory)
+                        raise ValueError("axes values differ in the netCDF file, try using a numpy array instead, or re-index\
+                                      the dimarray prior to assigning to netCDF")
+
         # do all the indexing and assignment via IndexedArray class
         # ==> it will set the values via _setvalues_ortho below
         # super(DimArrayOnDisk)._setitem(self, indices, values, **kwargs)
-        AbstractDimArray._setitem(self, indices, values, axis=axis, indexing=indexing, tol=tol)
+        AbstractDimArray._setitem(self, indices, values, indexing='position')
 
     def read(self, indices=None, axis=0, indexing=None, tol=None, keepdims=False):
         """ Read values from disk
@@ -463,6 +486,20 @@ class AxisOnDisk(GetSetDelAttrMixin, NetCDFVariable, AbstractAxis):
         self._name = name
 
     @property
+    def values(self):
+        name = self._name
+        ds = self._ds
+        if name in ds.variables.keys():
+            # assume that the variable and dimension have the same name
+            values = ds.variables[name]
+        else:
+            # default, dummy dimension axis
+            msg = "'{}' dimension not found, define integer range".format(name)
+            warnings.warn(msg)
+            values = np.arange(len(ds.dimensions[name]))
+        return values
+
+    @property
     def name(self):
         return self._name
     @name.setter
@@ -480,7 +517,14 @@ class AxisOnDisk(GetSetDelAttrMixin, NetCDFVariable, AbstractAxis):
 
         values, nctype = _maybe_convert_dtype(ax)
 
-        # assign value to variable (variable creation handled in AxesOnDisk)
+        # assign value to variable (finer-grained control in AxesOnDisk.append)
+        if name not in self._ds.variables.keys(): 
+            ds.createVariable(name, nctype, name)
+
+        if np.isscalar(indices): 
+            assert values.size == 1
+            values = values[0]
+
         ds.variables[name][indices] = values
 
         # add attributes
@@ -491,25 +535,19 @@ class AxisOnDisk(GetSetDelAttrMixin, NetCDFVariable, AbstractAxis):
             warnings.warn(error)
 
     def __getitem__(self, indices):
-        name = self._name
-        ds = self._ds
-        if name in ds.variables.keys():
-            # assume that the variable and dimension have the same name
-            values = ds.variables[name][indices]
-        else:
-            # default, dummy dimension axis
-            msg = "'{}' dimension not found, define integer range".format(name)
-            warnings.warn(msg)
-            values = np.arange(len(ds.dimensions[name]))[indices]
+        values = self.values[indices]
 
         # do not produce an Axis object
         if np.isscalar(values):
             return values
 
-        ax = Axis(values, name)
-        
+        if isinstance(values, np.ma.MaskedArray):
+            values = values.filled(0)
+
+        ax = Axis(values, self._name)
+
         # add metadata
-        if name in ds.variables.keys():
+        if self._name in self._ds.variables.keys():
             ax.attrs.update(self.attrs)
 
         return ax
@@ -573,17 +611,22 @@ and `ds.nc.createVariable`"""
         self[dim][:] = ax
         # v[:] = values
 
-    def append(self, ax, **kwargs):
+    def append(self, ax, size=None, **kwargs):
         """ create new dimension
         
         Parameters
         ----------
-        ax : Axis or (name, values) tuple or str
-            if str, create an Unlimited dimension
-        **kwargs : passed to createVariable
+        ax : str or Axis or (name, values) tuple
+            if str, simply create a dimension without writing the axis values
+        size : int or None, optional
+            if None, an unlimited dimension is created
+            if ax is provided as an array-like or Axis, size is taken 
+            from the axis values by default (so size does not need to 
+            be provided)
+        **kwargs : passed to createVariable (compression parameters)
         """
         if isinstance(ax, basestring):
-            self._ds.createDimension(ax, None)
+            self._ds.createDimension(ax, size)
             self._dims += (ax,) 
 
         else:
@@ -593,7 +636,8 @@ and `ds.nc.createVariable`"""
                 raise TypeError("can only append Axis instances or (name, values),\
                                 or provide str to create unlimited dimension")
             # elif isinstance(ax, Axis):
-            self._ds.createDimension(ax.name, ax.size)
+            size = size or ax.size
+            self._ds.createDimension(ax.name, size)
             self._dims += (ax.name,) 
 
             self._kwargs.update(kwargs) # createVariable parameters
@@ -620,7 +664,7 @@ class AttrsOnDisk(object):
         for k in attrs.keys():
             self[k] = attrs[k]
     def keys(self):
-        return self.obj.ncattrs()
+        return getattr(self.obj,'ncattrs', lambda :[])()
     def values(self):
         return [self.obj.getncattr(k) for k in self.obj.ncattrs()]
     def todict(self):

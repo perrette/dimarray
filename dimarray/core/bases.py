@@ -109,10 +109,8 @@ class AbstractAxis(AbstractHasMetadata):
             If True, assume the axis is sorted with increasing values (faster search)
         mode: {'raise', 'clip'}, optional
             Only applicable if `val` is array-like ignored otherwise and mode == 'raise'.
-            If `mode == 'clip'`, any label not present in the axis is clipped to 
-            the nearest end of the array. For a sorted array, an integer 
-            position will be returned that maintained the array sorted. Note this 
-            can result in unexpected return values for unsorted arrays.
+            If `mode=='clip'`, any label not present in the axis is clipped to 
+            the nearest values (see np.searchsorted).
             If mode == 'raise' (the default), a check is performed on the result to ensure that
             all values were present, and raise an IndexError exception otherwise.
 
@@ -194,11 +192,14 @@ class AbstractHasAxes(AbstractHasMetadata):
 
     @dims.setter
     def dims(self, newdims):
+        self._set_dims(newdims)
+
+    def _set_dims(self, newdims):
         if not np.iterable(newdims): 
             raise TypeError("new dims must be iterable")
         if not isinstance(newdims, dict):
             if len(newdims) != len(self.dims):
-                raise ValueError("Can only rename all dimensions at once, unless a dictionary is provided")
+                raise ValueError("dimensions number mismatch")
             newdims = dict(zip(self.dims, newdims))
         for old in newdims.keys():
             print "rename dim:",self.axes[old].name,newdims[old]

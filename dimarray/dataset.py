@@ -126,7 +126,6 @@ class Dataset(GetSetDelAttrMixin, AbstractDataset, odict):
         >>> ds = Dataset()
         >>> ds
         Dataset of 0 variables
-        <BLANKLINE>
         >>> a = DimArray([0, 1, 2], dims=('time',))
         >>> ds['yo'] = a 
         >>> ds['yo']
@@ -308,12 +307,10 @@ class Dataset(GetSetDelAttrMixin, AbstractDataset, odict):
         b: ('time',)
         >>> ds.take(indices=1951, axis='time')
         Dataset of 2 variables
-        <BLANKLINE>
         a: 2.0
         b: 11.0
         >>> ds.take(indices=0, axis='time', indexing='position')
         Dataset of 2 variables
-        <BLANKLINE>
         a: 1.0
         b: nan
         >>> ds['c'] = DimArray([[1,2],[11,22],[111,222],[3,4]], axes=[('time', [1950,1951,1952,1953]),('item',['a','b'])])

@@ -34,7 +34,7 @@ _doc_broadcast_arrays = """
       """.strip()
 
 
-def locate_one(values, val, issorted=False, tol=None):
+def locate_one(values, val, issorted=False, tol=None, side='left'):
     " Locate one value in an axis"
     if tol is not None:
         try:
@@ -46,7 +46,7 @@ def locate_one(values, val, issorted=False, tol=None):
             raise IndexError("Did not find element `{}` in the axis with `tol={}`".format(repr(val), repr(tol)))
 
     elif issorted:
-        match = np.searchsorted(values, val)
+        match = np.searchsorted(values, val, side=side)
 
     else:
         matches = np.where(values == val)[0]
@@ -57,14 +57,14 @@ def locate_one(values, val, issorted=False, tol=None):
 
     return match
 
-def locate_many(values, val, issorted=False):
+def locate_many(values, val, issorted=False, side='left'):
     """ Locate several values based on searchsorted
     """
     if issorted:
         matches = np.searchsorted(values, val)
     else:
         isort = np.argsort(values)
-        indices = np.searchsorted(values, val, sorter=isort)
+        indices = np.searchsorted(values, val, sorter=isort, side=side)
         # if `val` is not found, and is larger than the other values, indices
         # is equal to values.size (therefore leading to an error)
         # mode="clip" solves this problem by returning the next value (the last)

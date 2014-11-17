@@ -31,10 +31,22 @@ Also works with string indices
 >>> b = DimArray([1,2,3],[('x0', ['a','b','c'])])
 >>> b.reindex_axis(['b','d'])
 dimarray: 1 non-null elements (1 null)
-0 / x0 (2): b to d
+0 / x0 (2): 'b' to 'd'
 array([  2.,  nan])
 
+It is possible to fill the missing values with the preceding, or following values of the sorted array (see numpy.searchsorted for more ample documentation):
+
 See :meth:`dimarray.DimArray.reindex_axis`
+
+>>> b.reindex_axis(['b','d'], method='left')
+dimarray: 2 non-null elements (0 null)
+0 / x0 (2): 'b' to 'd'
+array([2, 3])
+
+>>> b.reindex_axis(['b','d'], method='right')
+dimarray: 2 non-null elements (0 null)
+0 / x0 (2): 'b' to 'd'
+array([3, 3])
 
 .. _reindex_like:
 
@@ -46,7 +58,7 @@ Same as reindex_axis, except that the new axes are searched for in another array
 >>> c = DimArray([[1,2,3], [4,5,6]],[('x0',["a","b"]),('x1',[1, 2, 3])])
 >>> c.reindex_like(b)
 dimarray: 6 non-null elements (3 null)
-0 / x0 (3): a to c
+0 / x0 (3): 'a' to 'c'
 1 / x1 (3): 1 to 3
 array([[  1.,   2.,   3.],
        [  4.,   5.,   6.],
@@ -59,10 +71,10 @@ See :meth:`dimarray.DimArray.reindex_like`
 Interpolation
 ^^^^^^^^^^^^^
 
-The `method=` parameter can be passed to `reindex_axis` and `reindex_like` with values "nearest" and "interp" to proceed to nearest and linear interpolation.
+Sometimes you do not want one-to-one re-indexing but interpolation. Use the `interp1d` function for linear, piecewise interpolation (wrapper around np.interp)
 
->>> # Can also reindex in "interp" mode
->>> a.reindex_axis([0,1,2,3], method='interp')
+>>> import dimarray as da
+>>> da.interp1d(a, [0,1,2,3])
 dimarray: 3 non-null elements (1 null)
 0 / x0 (4): 0 to 3
 array([ nan,  3. ,  3.5,  4. ])
@@ -70,8 +82,10 @@ array([ nan,  3. ,  3.5,  4. ])
 >>> import numpy as np
 >>> time=np.linspace(1950,1955,8)
 >>> v = DimArray(np.cos(time), axes=('time',time))
->>> w = v.reindex_axis(np.linspace(1948,1957,10), axis='time', method='interp')
->>> x = v.reindex_axis(np.linspace(1948,1957,10), axis='time', method='nearest')
+>>> #w = v.reindex_axis(np.linspace(1948,1957,10), axis='time', method='interp')
+>>> xl = v.reindex_axis(np.linspace(1948,1957,10), axis='time', method='left')
+>>> xr = v.reindex_axis(np.linspace(1948,1957,10), axis='time', method='right')
+>>> w = da.interp1d(v, np.linspace(1948,1957,10), axis='time')
 
 
 >>> import matplotlib.pyplot as plt
@@ -80,11 +94,12 @@ array([ nan,  3. ,  3.5,  4. ])
 >>> plt.plot(v.time, v.values, 's-', label='original')  # doctest: +SKIP
 >>> plt.plot(w.time, w.values, 'o-', label='interp')  # doctest: +SKIP
 >>> #plt.plot(w1.time, w.values, 'o--', color='k', label='interp')
->>> plt.plot(x.time, x.values, '*-',label='nearest') # doctest: +SKIP
+>>> plt.plot(xl.time, xl.values, '*-',label='left') # doctest: +SKIP
+>>> plt.plot(xr.time, xr.values, '+-',label='right') # doctest: +SKIP
 >>> plt.legend(loc='upper left')   # doctest: +SKIP
-<matplotlib.legend.Legend at 0x7f03c0673950>
+<matplotlib.legend.Legend at 0x7f3cdfc83c50>
 
-.. image:: reindexing_files/figure_15-1.png
+.. image:: reindexing_files/figure_18-1.png
 
 
 
