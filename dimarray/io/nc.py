@@ -327,8 +327,9 @@ class NetCDFVariable(NetCDFOnDisk):
     @values.setter
     def values(self, values):
         self[()] = values
+    @property
     def __array__(self):
-        return self.values[()] # returns a numpy array
+        return self.values[()].__array__ # returns a numpy array
     
 class DimArrayOnDisk(GetSetDelAttrMixin, NetCDFVariable, AbstractDimArray):
     _constructor = DimArray
