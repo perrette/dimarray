@@ -14,7 +14,7 @@ from .core.align import _check_stack_args, _get_axes, stack, concatenate, _check
 from .core import pandas_obj
 from .core.bases import AbstractDataset, GetSetDelAttrMixin
 
-class Dataset(GetSetDelAttrMixin, AbstractDataset, odict):
+class Dataset(AbstractDataset, odict, GetSetDelAttrMixin):
 # class Dataset(AbstractDataset, odict):
     """ Container for a set of aligned objects
     """

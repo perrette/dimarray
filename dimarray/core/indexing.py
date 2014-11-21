@@ -205,6 +205,10 @@ def _maybe_cast_type(values, newval):
     if values.dtype < dtype:
         values = np.asarray(values, dtype=dtype)
 
+    # on a 64bit system, works for float32 does not compare with float64 nor int32
+    elif values.dtype.kind == 'i' and values.dtype.kind == 'f':
+        values = np.asarray(values, dtype=float)
+
     # otherwise (no ordering relationship), just define an object type
     elif not (values.dtype  >= dtype):
         values = np.asarray(values, dtype=object)  

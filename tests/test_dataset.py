@@ -8,7 +8,7 @@ import dimarray as da
 from dimarray import Dataset
 
 
-class Structure(unittest.TestCase):
+class TestStructure(unittest.TestCase):
     """ Test dataset's structure
     """
     def setUp(self):
