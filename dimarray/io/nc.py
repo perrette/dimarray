@@ -30,7 +30,7 @@ FORMAT = get_option('io.nc.format') # for the doc
 #
 # Helper functions
 #
-def _maybe_convert_dtype(values):
+def _maybe_convert_dtype(values, format=None):
     """ strings are given "object" type in Axis object
     ==> assume all objects are actually strings
     NOTE: this will fail for other object-typed axes such as tuples
@@ -41,6 +41,10 @@ def _maybe_convert_dtype(values):
     if dtype > np.dtype('S1'): # all strings, this include objects dtype('O')
         values = np.asarray(values, dtype=object)
         dtype = str
+
+    # if the format is NETCDF3, uses int32 instead of int64
+    if format == "NETCDF3_CLASSIC" and dtype is np.dtype("int64"):
+        dtype = "int32"
     return values, dtype
 
 #
@@ -244,7 +248,7 @@ class DatasetOnDisk(GetSetDelAttrMixin, NetCDFOnDisk, AbstractDataset):
         """
         # if not isinstance(obj, da.DimArray):
         #     raise TypeError("Can only write Dataset, use `ds[name] = dima` to write a DimArray")
-        _, nctype = _maybe_convert_dtype(dima)
+        _, nctype = _maybe_convert_dtype(dima, format=self._ds.file_format)
 
         name = name or getattr(self, "name", None)
         if not name:
@@ -371,7 +375,7 @@ class DimArrayOnDisk(GetSetDelAttrMixin, NetCDFVariable, AbstractDimArray):
         # just create the variable and dimensions
         ds = self._ds
         dima = values # internal convention: values is a numpy array
-        values, nctype = _maybe_convert_dtype(dima)
+        values, nctype = _maybe_convert_dtype(values, format=self._ds.file_format)
 
         assert self._name in ds.variables.keys(), "variable does not exist, should have been created earlier!"
 
@@ -515,7 +519,7 @@ class AxisOnDisk(GetSetDelAttrMixin, NetCDFVariable, AbstractAxis):
 
         assert getattr(ax, 'name', name) == name, "inconsistent axis name"
 
-        values, nctype = _maybe_convert_dtype(ax)
+        values, nctype = _maybe_convert_dtype(ax, format=self._ds.file_format)
 
         # assign value to variable (finer-grained control in AxesOnDisk.append)
         if name not in self._ds.variables.keys(): 
@@ -603,7 +607,7 @@ and `ds.nc.createVariable`"""
         if dim not in self._ds.dimensions.keys():
             raise ValueError("{} dimension does not exist. Use axes.append() to create a new axis".format(dim))
 
-        values, nctype = _maybe_convert_dtype(ax)
+        values, nctype = _maybe_convert_dtype(ax, format=self._ds.file_format)
 
         if dim not in self._ds.variables.keys(): 
             v = self._ds.createVariable(dim, nctype, dim, **self._kwargs) 
