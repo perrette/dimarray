@@ -460,6 +460,60 @@ class Dataset(AbstractDataset, odict, GetSetDelAttrMixin):
         if values is False: values = None
         return self.set(values, axis=axis, name=name, **kwargs)
 
+    def rename_keys(self, mapper, inplace=False):
+        """ Rename all variables in the Dataset
+
+        Possible speedup compared to a classical dict-like operation 
+        since an additional check on the axes is avoided.
+
+        Parameters
+        ----------
+        mapper : dict-like or function to map oldname -> newname
+        inplace : bool, optional
+            if True, in-place modification, otherwise a copy with modified
+            keys is retuend (default: False)
+
+        Returns
+        -------
+        Dataset if inplace is False, otherwise None
+
+        Examples
+        --------
+        >>> ds = da.Dataset(a=da.zeros(shape=(3,)), b=da.zeros(shape=(3,2)))
+        >>> ds
+        Dataset of 2 variables
+        0 / x0 (3): 0 to 2
+        1 / x1 (2): 0 to 1
+        a: ('x0',)
+        b: ('x0', 'x1')
+        >>> ds.rename_keys({'b':'c'})
+        Dataset of 2 variables
+        0 / x0 (3): 0 to 2
+        1 / x1 (2): 0 to 1
+        a: ('x0',)
+        c: ('x0', 'x1')
+        """
+        if inplace:
+            ds = self
+        else:
+            ds = self.copy()
+
+        if isinstance(mapper, dict):
+            iterkeys = mapper.iteritems()
+        else:
+            if not callable(mapper):
+                raise TypeError("mapper must be callable")
+            iterkeys = [(old, mapper(old)) for old in ds.keys()]
+
+        for old, new in iterkeys:
+            val = super(Dataset, ds).__getitem__(old) # same as ds[old]
+            super(Dataset, ds).__setitem__(new, val)
+            super(Dataset, ds).__delitem__(old)
+
+        if not inplace:
+            return ds
+
+
 def stack_ds(datasets, axis, keys=None, align=False):
     """ stack dataset along a new dimension
 
