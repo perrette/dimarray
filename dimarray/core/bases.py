@@ -130,6 +130,9 @@ class AbstractAxis(AbstractHasMetadata):
         values = self.values[()]
         tol=tol or self._tol
 
+        if tol is not None and not self.is_numeric():
+            tol = None # ignore tol parameter for non-numeric axes (an error will be raised if element is not found)
+
         if type(val) is slice:
             start = locate_one(values, val.start, tol=tol, issorted=issorted) if val.start is not None else None
             stop = locate_one(values, val.stop, tol=tol, issorted=issorted)+1 if val.stop is not None else None
