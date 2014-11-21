@@ -1458,24 +1458,23 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     #
     #  I/O
     # 
-    def write_nc(self, f, name=None, mode='w', clobber=None, *args, **kwargs):
+    def write_nc(self, f, name=None, mode='w', clobber=None, format=None, *args, **kwargs):
         """ Write to netCDF
 
         Parameters
         ----------
-        f : file name or netCDF4.Dataset
+        f : file name
         name : variable name, optional
             must be provided if no attribute "name" is defined
-        mode : {'w', 'w-', 'a'}
-        **kwargs : key-word arguments to be passed to createVariable, if applicable
-            They include zlib, complevel.
+        mode, clobber, format : see netCDF4.Dataset
+        **kwargs : passed to netCDF4.Dataset.createVAriable (compression)
 
         See Also
         --------
         DatasetOnDisk
         """
         import dimarray.io.nc as ncio
-        f, close = ncio._maybe_open_file(f, mode=mode, clobber=clobber)
+        f, close = ncio._maybe_open_file(f, mode=mode, clobber=clobber, format=format)
         store = ncio.DatasetOnDisk(f, mode=mode, clobber=clobber)
         store.write(name, self, *args, **kwargs)
         if close: store.close()

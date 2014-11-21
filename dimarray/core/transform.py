@@ -92,6 +92,11 @@ def apply_along_axis(self, func, axis=None, skipna=False, args=(), **kwargs):
     -------
     DimArray, or scalar 
 
+    Notes
+    -----
+    If you have the bottleneck pacakge installed, its functions should work
+    with `apply_along_axis`, such as move_mean
+
     Examples
     --------
     >>> import dimarray as da
@@ -159,7 +164,9 @@ def apply_along_axis(self, func, axis=None, skipna=False, args=(), **kwargs):
         newaxes = [ax for ax in obj.axes if ax.name != name]
 
     # cumulative functions: axes remain unchanged
-    elif funcname in ('cumsum','cumprod','gradient'):
+    # same for moving (rolling) operations.
+    elif funcname in ('cumsum','cumprod','gradient') \
+        or 'move_' in funcname or 'cum' in funcname:
         newaxes = obj.axes.copy() 
 
     # diff: reduce axis size by one

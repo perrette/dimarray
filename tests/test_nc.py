@@ -217,13 +217,14 @@ def test_io(dim_array, tmpdir):
     fname = tmpdir.join("test.nc").strpath # have test.nc in some temporary directory
 
     a = DimArray([1,2], dims=['xx0'])
-    b = DimArray([3,4,5], dims=['xx1'])
+    b = DimArray([3.,4.,5.], dims=['xx1'])
     a.write_nc(fname,"a", mode='w')
     b.write_nc(fname,"b", mode='a')
     try:
         b.write_nc(fname.replace('.nc','netcdf3.nc'),"b", mode='w', format='NETCDF3_CLASSIC')
     except Exception, msg:
         warn("writing as NETCDF3_CLASSIC failed (known bug on 64bits systems): {msg}".format(msg=repr(msg)))
+    b.write_nc(fname.replace('.nc','netcdf3.nc'),name="b", mode='w', format='NETCDF3_CLASSIC')
 
     data = read_nc(fname)
     assert(np.all(data['a'] == a))

@@ -191,24 +191,25 @@ class Dataset(GetSetDelAttrMixin, AbstractDataset, odict):
     #
     # Backends
     #
-    def write_nc(self, f, mode='w', clobber=True, *args, **kwargs):
+    def write_nc(self, f, mode='w', clobber=True, format=None, **kwargs):
         """ Write Dataset to netCDF file.
 
         Wrapper around DatasetOnDisk
 
         Parameters
         ----------
-        f : file name or netCDF4.Dataset instance
-        mode : access mode, accordingly to netCDF4 
-        *args, **kwargs : passed to DatasetOnDisk.write
+        f : file name
+        mode, clobber, format : seel netCDF4-python doc
+        **kwargs : passed to netCDF4.Dataset.createVAriable (compression)
         """
         from dimarray.io.nc import DatasetOnDisk, nc, _maybe_open_file
-        f, close = _maybe_open_file(f, mode=mode, clobber=clobber)
-        store = DatasetOnDisk(f, mode=mode, clobber=clobber, *args, **kwargs)
+        f, close = _maybe_open_file(f, mode=mode, clobber=clobber,format=format)
+        store = DatasetOnDisk(f)
+        # store = DatasetOnDisk(f, mode=mode, clobber=clobber, format=format)
         for name in self.keys():
-            store.write(name, self[name], *args, **kwargs)
+            store.write(name, self[name], **kwargs)
         store.attrs.update(self.attrs) # attributes
-        if close: f.close()
+        if isinstance(f, nc.Dataset): store.close() # do not close (deprecated)
 
     def write(self, *args, **kwargs):
         warnings.warn("Deprecated. Use write_nc.", FutureWarning)
