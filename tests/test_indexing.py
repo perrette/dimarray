@@ -106,9 +106,10 @@ array([[ 4.,  3.],
        [ 6.,  6.]])
 
 """
+import numpy as np
 import pytest
 from dimarray import DimArray
-import numpy as np
+from dimarray.testing import assert_equal_dimarrays
 
 @pytest.fixture
 def v():
@@ -125,3 +126,31 @@ def test_take(v):
     assert np.all(a==c) 
     assert np.all(a==d) 
     assert np.all(a==e)
+
+def test_nloc():
+    # test nearest neighbor indexing
+    a = DimArray([1,2,3,4], axes=[[2., 4., -1., 3.]])
+
+    # scalar
+    a.nloc[2] == a[2]
+    a.nloc[2.4] == a[2]
+    a.nloc[2.6] == a[3]
+    a.nloc[10] == a[4]
+    a.nloc[-10] == a[-1]
+
+    # array
+    assert_equal_dimarrays(a.nloc[[2.1]], a[[2]])
+
+    # more dimensions
+    b = a.newaxis('newdim', [10,20], pos=1)
+    assert_equal_dimarrays(b.nloc[[2.1]], b[[2]])
+
+def tttest_nloc_mixed():
+    # test nearest neighbor indexing
+    a = DimArray([[1,2],[3,4],[5,6],[7,8]], labels=[["a","b","c","d"], [10.,20.]], dims=['x0','x1'], dtype=float) 
+    assert_equal_dimarrays(a.nloc[:,10.], a[:, 10.])
+    assert_equal_dimarrays(a.nloc[:,5.], a[:, 10.])
+    assert_equal_dimarrays(a.nloc[:,14.5], a[:, 10.])
+    assert_equal_dimarrays(a.nloc[:,15.5], a[:, 20.])
+    assert_equal_dimarrays(a.nloc['a'], a['a'])
+    assert_equal_dimarrays(a.nloc['e'], a['d'])
