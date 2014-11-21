@@ -44,6 +44,11 @@ def _maybe_convert_dtype(values, format=None):
 
     # if the format is NETCDF3, uses int32 instead of int64
     if format == "NETCDF3_CLASSIC" and dtype is np.dtype("int64"):
+        warnings.warn("convert int64 into int32 for writing to NETCDF3 format")
+        dtype = "int32"
+    elif format == "NETCDF3_64BIT" and dtype is np.dtype("int64"):
+        # it is strange that a warnings also occurs in the _64BIT version !
+        warnings.warn("convert int64 into int32 for writing to NETCDF3 format")
         dtype = "int32"
     return values, dtype
 

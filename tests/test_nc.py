@@ -212,7 +212,7 @@ class TestIO(object):
     #     cls.ds_disk = open_nc(cls.ncfile, mode='w', clobber=True) # open netCDF file for writing
     #     cls.ds.close()
 
-def test_io(dim_array, tmpdir): 
+def test_format(dim_array, tmpdir): 
 
     fname = tmpdir.join("test.nc").strpath # have test.nc in some temporary directory
 
@@ -220,11 +220,19 @@ def test_io(dim_array, tmpdir):
     b = DimArray([3.,4.,5.], dims=['xx1'])
     a.write_nc(fname,"a", mode='w')
     b.write_nc(fname,"b", mode='a')
-    try:
-        b.write_nc(fname.replace('.nc','netcdf3.nc'),"b", mode='w', format='NETCDF3_CLASSIC')
-    except Exception, msg:
-        warn("writing as NETCDF3_CLASSIC failed (known bug on 64bits systems): {msg}".format(msg=repr(msg)))
-    b.write_nc(fname.replace('.nc','netcdf3.nc'),name="b", mode='w', format='NETCDF3_CLASSIC')
+
+    # b.write_nc(fname.replace('.nc','netcdf3.nc'),name="b", mode='w', format='NETCDF3_CLASSIC')
+    ds = da.Dataset([('a',a),('b',b)])
+    
+    # NETCDF3_CLASSIC
+    ds.write_nc(fname.replace('.nc','netcdf3.nc'), mode='w', format='NETCDF3_CLASSIC')
+    dscheck = da.read_nc(fname.replace('.nc','netcdf3.nc'))
+    assert_equal_datasets(ds, dscheck)
+
+    # NETCDF3_64bit
+    ds.write_nc(fname.replace('.nc','netcdf3_64b.nc'), mode='w', format='NETCDF3_64BIT')
+    dscheck = da.read_nc(fname.replace('.nc','netcdf3_64b.nc'))
+    assert_equal_datasets(ds, dscheck)
 
     data = read_nc(fname)
     assert(np.all(data['a'] == a))
