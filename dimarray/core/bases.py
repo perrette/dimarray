@@ -248,6 +248,9 @@ class AbstractHasAxes(AbstractHasMetadata):
         if indices is None:
             indices = ()
 
+        if tol is None:
+            tol = getattr(self, '_tol', None)
+
         #
         # Convert indices to tuple, from a variety of input formats
         #
@@ -312,6 +315,9 @@ class AbstractHasAxes(AbstractHasMetadata):
 
 class AbstractDimArray(AbstractHasAxes):
 
+    # @property
+    # def tol(self):
+    #     raise NotImplementedError()
     @property
     def values(self):
         raise NotImplementedError()
@@ -456,6 +462,15 @@ class AbstractDimArray(AbstractHasAxes):
     def iloc(self):
         # return self if self._indexing == 'position' else self.ix
         return self if self._indexing == 'position' else self.ix
+
+    @property
+    def nloc(self):
+        # nearest neighbor loc
+        if self._tol == np.inf:
+            return self
+        dima = copy.copy(self)
+        dima._tol = np.inf # nearest neighbor search
+        return dima
 
 class AbstractDataset(AbstractHasAxes):
 
