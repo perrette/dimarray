@@ -20,9 +20,11 @@ class GetSetDelAttrMixin(object):
     __metadata_include__ = [] 
 
     def __getattr__(self, name):
-        if name not in self.__metadata_include__ \
+        if hasattr(self.__class__, name):
+            return object.__getattribute__(self, name)
+        elif name not in self.__metadata_include__ \
                 and (name.startswith('_') or name in self.__metadata_exclude__):
-            pass
+            pass # raise error
         elif hasattr(self, 'dims') and name in self.dims:
             return self.axes[name].values # return axis values
         elif name in self.attrs.keys():
@@ -314,6 +316,7 @@ class AbstractHasAxes(AbstractHasMetadata):
         return axes
 
 class AbstractDimArray(AbstractHasAxes):
+    _tol = None # define a tol attribute
 
     # @property
     # def tol(self):
