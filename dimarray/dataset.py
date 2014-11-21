@@ -513,6 +513,27 @@ class Dataset(AbstractDataset, odict, GetSetDelAttrMixin):
         if not inplace:
             return ds
 
+    def rename_axes(self, mapper, inplace=False):
+        """ Rename axes, analogous to rename_keys for axis names
+        """
+        if inplace:
+            ds = self
+        else:
+            ds = self.copy()
+
+        if isinstance(mapper, dict):
+            iterkeys = mapper.iteritems()
+        else:
+            if not callable(mapper):
+                raise TypeError("mapper must be callable")
+            iterkeys = [(old, mapper(old)) for old in ds.dims]
+
+        for old, new in iterkeys:
+            ds.axes[old].name = new
+
+        if not inplace:
+            return ds
+
 
 def stack_ds(datasets, axis, keys=None, align=False):
     """ stack dataset along a new dimension
