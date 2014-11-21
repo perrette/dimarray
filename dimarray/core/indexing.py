@@ -194,24 +194,34 @@ def getaxes_broadcast(obj, indices):
 
 
 def _maybe_cast_type(values, newval):
-    """ update values's dtype so that values[:] = newval will not fail.
+    """ cast rules (chosen so that no information is lost), especially
+    useful for axis values.
+    # a[:] = b : a.dtype.kind
+    # i <- f : f
+    # U <- S : U
+    # S <- U : U
+    # O <- * : O
+    # * <- O : O
+    # b <- * : O
+    # * <- b : O
     """
     # check numpy-equivalent dtype
     dtype = np.asarray(newval).dtype
-
-    # dtype comparison seems to be a good indicator of when type conversion works
-    # e.g. dtype('O') > dtype(int) , dtype('O') > dtype(str) and dtype(float) > dtype(int) all return True
-    # first convert Axis datatype to new values's type, if needed
-    if values.dtype < dtype:
-        values = np.asarray(values, dtype=dtype)
-
-    # on a 64bit system, works for float32 does not compare with float64 nor int32
-    elif values.dtype.kind == 'i' and values.dtype.kind == 'f':
+    
+    if values.dtype.kind == dtype.kind:
+        pass # same kind
+    elif values.dtype.kind == 'O':
+        pass # or already object
+    elif values.dtype.kind == 'f' and dtype.kind == 'i':
+        pass # ok
+    elif values.dtype.kind == 'i' and dtype.kind == 'f':
         values = np.asarray(values, dtype=float)
-
-    # otherwise (no ordering relationship), just define an object type
-    elif not (values.dtype  >= dtype):
-        values = np.asarray(values, dtype=object)  
+    elif values.dtype.kind == 'U' and dtype.kind == 'S':
+        pass
+    elif values.dtype.kind == 'S' and dtype.kind == 'U':
+        values = np.asarray(values, dtype=unicode)
+    else:
+        values = np.asarray(values, dtype=object)
 
     return values
 

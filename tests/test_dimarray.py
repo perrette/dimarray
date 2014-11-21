@@ -3,6 +3,7 @@
 import pytest
 import numpy as np
 from dimarray import DimArray, Axis
+from dimarray.testing import create_array, create_dimarray
 
 @pytest.fixture
 def ax0():
@@ -70,6 +71,41 @@ def test_labels(a, ax0, ax1):
     a.labels = [ new0, new1 ]
     assert np.all(a.axes['d0'].values == new0)
     assert np.all(a.axes['d1'].values == new1)
+
+def test_cast():
+    # a = asarray(a, dtype=t0)
+    # b = asarray(b, dtype=t1)
+    # a.put(b, cast=True)
+    # a.dtype.kind == t2
+    # test list of tuples (t0, t1, t2)
+    tests = [
+        (int, float, 'f'),
+        ('i', 'f', 'f'),
+        ('int32', 'float32', 'f'),
+        ('int64', 'float32', 'f'),
+        ('int64', 'float64', 'f'),
+        ('int32', 'float64', 'f'),
+        ('int32', 'float64', 'f'),
+        (float, object, 'O'),
+        ('f', 'O', 'O'),
+        ('f', str, 'O'),
+        ('i', str, 'O'),
+        ('i', unicode, 'O'),
+        ('f', unicode, 'O'),
+        (str, unicode, 'U'),
+        (unicode, str, 'U'),
+    ]
+    for test in tests:
+        print test
+        a = create_dimarray((5,), dtype=test[0])
+        b = create_dimarray((), dtype=test[1])
+        # a.ix[0] = b[()]
+        # print b
+        print a.dtype.kind, b.dtype.kind
+        a.put((),b, cast=True, indexing='position')
+        # print a
+        assert a.dtype.kind == test[2]
+
 
 #     >>> a = DimArray(axes=[[1,2,3]], dims=['x0'])
 #     >>> a.x0 
