@@ -10,7 +10,8 @@ from dimarray.decorators import format_doc
 
 from .core import DimArray, array, Axis, Axes
 from .core import align_axes, stack, concatenate
-from .core.align import _check_stack_args, _get_axes, stack, concatenate, _check_stack_axis, get_dims as _get_dims
+from .core.align import _check_stack_args, _get_axes, stack, concatenate, _check_stack_axis, get_dims as _get_dims, reindex_like
+from .core.indexing import locate_many
 from .core import pandas_obj
 from .core.bases import AbstractDataset, GetSetDelAttrMixin
 
@@ -533,6 +534,57 @@ class Dataset(AbstractDataset, odict, GetSetDelAttrMixin):
 
         if not inplace:
             return ds
+
+    def reindex_axis(self, values, axis=0, fill_value=np.nan, raise_error=False, method=None):
+        """ analogous to DimArray.reindex_axis, but for a whole Dataset 
+
+        See DimArray.reindex_axis for documention.
+        """
+        if isinstance(values, Axis):
+            newaxis = values
+            values = newaxis.values
+            axis = newaxis.name
+        elif np.isscalar(values) or type(values) is slice:
+            raise TypeError("Please provide list, array-like or Axis object to perform re-indexing")
+        else:
+            values = np.asarray(values)
+
+        # Get indices
+        ax = self.axes[axis]
+        # indices = ax.loc(values, mode='clip', side=method)
+        indices = locate_many(ax.values, values, side=method or 'left')
+
+        # Replace mismatch with missing values?
+        mask = ax.values.take(indices) != values
+        any_nan = np.any(mask)
+
+        new = self.__class__()
+        for k in self.keys():
+            newobj = self[k].take_axis(indices, axis, indexing='position')
+            if any_nan:
+                if raise_error:
+                    raise IndexError("Some values where not found in the axis: {}".format(values[mask]))
+                if method is None:
+                    newobj.put(mask, fill_value, axis=axis, inplace=True, indexing="position", cast=True)
+
+                # Make sure the axis values match the requested new axis
+                newobj.axes[axis][mask] = values[mask]
+            new[k] = newobj
+        new.attrs.update(self.attrs) # update metadata
+        return new
+
+    def reindex_like(self, other, **kwargs):
+        """Analogous to DimArray.reindex_like
+
+        >>> ds1 = da.Dataset(a=da.DimArray(axes=[[1,2,3]]))
+        >>> ds2 = da.Dataset(b=da.DimArray(axes=[[1.,3.],['a','b']]))
+        >>> ds2.reindex_like(ds1)
+        Dataset of 1 variable
+        0 / x0 (3): 1.0 to 3.0
+        1 / x1 (2): 'a' to 'b'
+        b: ('x0', 'x1')
+        """
+        return reindex_like(self, other, **kwargs)
 
 
 def stack_ds(datasets, axis, keys=None, align=False):
