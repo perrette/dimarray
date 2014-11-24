@@ -533,7 +533,7 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         for k, val in self.iter():
             yield val
 
-    def iter(self, axis=0):
+    def iter(self, axis=0, keepdims=False):
         """ Iterate over axis value and cross-section, along any axis (by default the first)
 
         for time, time_slice in myarray.iter('time'):
@@ -541,7 +541,7 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         """
         # iterate over axis values
         for i, k in enumerate(self.axes[axis].values):
-            val = self.take(i, axis=axis, indexing='position') # cross-section
+            val = self.take(i, axis=axis, indexing='position', keepdims=False) # cross-section
             yield k, val
 
     #
@@ -1060,6 +1060,12 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     reindex_axis = _align.reindex_axis
     reindex_like = _align.reindex_like
     sort_axis = _align.sort_axis
+
+    #
+    # Interpolation
+    #
+    interp_axis = _transform.interp_axis
+    interp_like = _transform.interp_like
 
     # Drop missing values
     dropna = missingvalues.dropna

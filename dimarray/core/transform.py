@@ -974,3 +974,108 @@ def std(self, *args, **kwargs):
     return self.var(*args, **kwargs)**0.5
 
 std.__doc__ = var.__doc__.replace('variance','standard deviation').replace('var','std').replace('DimArray.std','DimArray.var') # last one for See Also
+
+#
+# Other transformations added as methods
+#
+def apply_axis_transform(obj, func, newaxis, args=(), **kwargs):
+    """ apply a 1-D transformation on a N-D DimArray, sequentially on the sub-arrays
+
+    Parameters
+    ----------
+    obj : DimArray (N-D)
+    func : function to apply along the 1-D DimArray (1-D ==> 1-D)
+    newaxis : transformed axis
+    args, **kwargs : arguments to func
+
+    Returns
+    -------
+    DimArray (N-D)
+    """
+    newaxes = [newaxis] + [ax.copy() for ax in obj.axes if ax.name != newaxis.name]
+    newshape = [ax.size for ax in newaxes]
+
+    if obj.ndim == 1:
+        result = func(obj.values, *args, **kwargs)
+
+    else:
+        pos = obj.dims.index(newaxis.name)
+        shape2d = [newaxis.size, np.prod([s for i, s in enumerate(obj.shape) if i!=pos])]
+        result = np.empty(shape2d)
+        for i, fp in enumerate(obj.group((newaxis.name,), reverse=True, insert=0).values):
+            res = func(fp, *args, **kwargs)
+            result[i] = res # access to values
+        result = result.reshape(newshape)
+
+    dima = obj._constructor(result, newaxes, **obj.attrs)
+
+    return dima.transpose(obj.dims) # transpose back to original dimensions
+
+def interp_axis(self, values, axis=0, left=np.nan, right=np.nan):
+    """ interpolate along one axis
+
+    Parameters
+    ----------
+    values : 1d array-like
+    axis, optional : axis name or integer rank
+        required unless values is an Axis
+    left, right : fill_values at the edges
+
+    Returns
+    -------
+    dima : interpolated DimArray 
+
+    Examples
+    --------
+    >>> from dimarray import DimArray
+    >>> a = DimArray([3,4], axes=[[1,3]])
+    >>> a.interp_axis([1,2,3])
+    dimarray: 3 non-null elements (0 null)
+    0 / x0 (3): 1 to 3
+    array([ 3. ,  3.5,  4. ])
+    >>> b = DimArray([[1,2,3],[4,5,6]], axes=[['a','b'], [0,1,2]])
+    >>> b.interp_axis([0.5, 1.5], axis=1)
+    dimarray: 4 non-null elements (0 null)
+    0 / x0 (2): 'a' to 'b'
+    1 / x1 (2): 0.5 to 1.5
+    array([[ 1.5,  4.5],
+           [ 2.5,  5.5]])
+    """
+    pos, name = self._get_axis_info(axis)
+    newaxis = Axis(values, name) # necessary array & type checks 
+
+    # define 1-D numpy function
+    def func(values1d):
+        return np.interp(newaxis.values, self.axes[pos].values, values1d, left=left, right=right)
+
+    dima = apply_axis_transform(self, func, newaxis)
+    dima.attrs.update(self.attrs) # add metadata
+    return dima
+
+def interp_like(self, other, **kwargs):
+    """Successive application of interp_axis to match another DimArray or axes shape
+
+    Examples
+    --------
+    >>> from dimarray import DimArray
+    >>> a = DimArray([3,4], axes=[[1,3]], dims=['x1'])
+    >>> b = DimArray([[1,2,3],[4,5,6]], axes=[['a','b'], [1,2,3]], dims=['x0','x1'])
+    >>> a.interp_like(b)
+    dimarray: 3 non-null elements (0 null)
+    0 / x1 (3): 1 to 3
+    array([ 3. ,  3.5,  4. ])
+    """
+    if hasattr(other, 'axes'):
+        axes = other.axes
+    elif isinstance(other, Axes):
+        axes = other
+    else:
+        raise TypeError('expected DimArray or Axes, got {}: {}'.format(type(other), other))
+
+    newdims = [ax2.name for ax2 in axes]
+    obj = self
+    for ax in self.axes:
+        if ax.name in newdims:
+            newaxis = axes[ax.name].values
+            obj = obj.interp_axis(newaxis, axis=ax.name, **kwargs)
+    return obj

@@ -1,5 +1,6 @@
 """ Additional transformations
 """
+import warnings
 import numpy as np
 from dimarray.core import Axes, Axis
 
@@ -69,7 +70,7 @@ def apply_recursive(obj, dims, fun, *args, **kwargs):
 # INTERPOLATION
 #
 
-def interp1d_numpy(obj, values, axis=0, left=np.nan, right=np.nan):
+def interp1d_numpy(obj, values, axis=0, **kwargs):
     """ interpolate along one axis: wrapper around numpy's interp
 
     Parameters
@@ -82,31 +83,10 @@ def interp1d_numpy(obj, values, axis=0, left=np.nan, right=np.nan):
     -------
     interpolated data (n-d)
     """
-    pos, name = obj._get_axis_info(axis)
-    newaxis = Axis(values, name)
+    warnings.warn(FutureWarning("Deprecated. Use DimArray.interp_axis"))
+    return obj.interp_axis(values, axis=axis, **kwargs)
 
-    def interp1d(obj):
-        xp = obj.axes[newaxis.name].values
-        fp = obj.values
-        result = np.interp(newaxis.values, xp, fp, left=left, right=right)
-        return obj._constructor(result, [newaxis], **obj.attrs)
-
-    result = apply_recursive(obj, (newaxis.name,), interp1d)
-    return result.transpose(obj.dims) # transpose back to original dimensions
-
-def interp1d(obj, values, axis=0, order=1, **kwargs):
-    """ interpolate along one axis
-    """
-    if order == 1:
-        return interp1d_numpy(obj, values, axis, **kwargs)
-
-    else:
-        raise NotImplementedError('order: '+repr(order))
-        # dimal = obj.reindex_axis(values, axis, method='left')
-        # dimar = obj.reindex_axis(values, axis, method='right')
-        # return (dimal+dimar)*0.5
-        # raise NotImplementedError('order: '+repr(order))
-        #return obj.reindex_axis(values, axis, method=method **kwargs)
+interp1d = interp1d_numpy
 
 def interp2d(dim_array, newaxes, dims=(-2, -1), order=1, clip=False):
     """ bilinear interpolation
