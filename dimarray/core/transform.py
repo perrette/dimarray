@@ -975,42 +975,6 @@ def std(self, *args, **kwargs):
 
 std.__doc__ = var.__doc__.replace('variance','standard deviation').replace('var','std').replace('DimArray.std','DimArray.var') # last one for See Also
 
-#
-# Other transformations added as methods
-#
-def apply_axis_transform(obj, func, newaxis, args=(), **kwargs):
-    """ apply a 1-D transformation on a N-D DimArray, sequentially on the sub-arrays
-
-    Parameters
-    ----------
-    obj : DimArray (N-D)
-    func : function to apply along the 1-D DimArray (1-D ==> 1-D)
-    newaxis : transformed axis
-    args, **kwargs : arguments to func
-
-    Returns
-    -------
-    DimArray (N-D)
-    """
-    newaxes = [newaxis] + [ax.copy() for ax in obj.axes if ax.name != newaxis.name]
-    newshape = [ax.size for ax in newaxes]
-
-    if obj.ndim == 1:
-        result = func(obj.values, *args, **kwargs)
-
-    else:
-        pos = obj.dims.index(newaxis.name)
-        shape2d = [newaxis.size, np.prod([s for i, s in enumerate(obj.shape) if i!=pos])]
-        result = np.empty(shape2d)
-        for i, fp in enumerate(obj.group((newaxis.name,), reverse=True, insert=0).values):
-            res = func(fp, *args, **kwargs)
-            result[i] = res # access to values
-        result = result.reshape(newshape)
-
-    dima = obj._constructor(result, newaxes, **obj.attrs)
-
-    return dima.transpose(obj.dims) # transpose back to original dimensions
-
 def interp_axis(self, values, axis=0, left=np.nan, right=np.nan, issorted=None):
     """ interpolate along one axis
 
@@ -1031,18 +995,39 @@ def interp_axis(self, values, axis=0, left=np.nan, right=np.nan, issorted=None):
     Examples
     --------
     >>> from dimarray import DimArray
+
     >>> a = DimArray([3,4], axes=[[1,3]])
     >>> a.interp_axis([1,2,3])
     dimarray: 3 non-null elements (0 null)
     0 / x0 (3): 1 to 3
     array([ 3. ,  3.5,  4. ])
-    >>> b = DimArray([[1,2,3],[4,5,6]], axes=[['a','b'], [0,1,2]])
-    >>> b.interp_axis([0.5, 1.5], axis=1)
-    dimarray: 4 non-null elements (0 null)
+    
+    Axis is not sorted
+
+    >>> a = DimArray([3,0,1], axes=[[3,0,1]]) 
+    >>> a.interp_axis([1,2,3])
+    dimarray: 3 non-null elements (0 null)
+    0 / x0 (3): 1 to 3
+    array([ 1.,  2.,  3.])
+
+    N-Dimensional
+
+    >>> b = DimArray([[1,2,3],[4,5,6]], axes=[['a','b'], [0,1,2]]) # N-Dim
+    >>> b.interp_axis([0.5, 1.5, 2], axis=1)
+    dimarray: 6 non-null elements (0 null)
     0 / x0 (2): 'a' to 'b'
-    1 / x1 (2): 0.5 to 1.5
-    array([[ 1.5,  4.5],
-           [ 2.5,  5.5]])
+    1 / x1 (3): 0.5 to 2.0
+    array([[ 1.5,  2.5,  3. ],
+           [ 4.5,  5.5,  6. ]])
+
+    Out-of-bound handling (nan by default, but can be changed via left, right)
+
+    >>> b.interp_axis([-33, 1.5, 44], axis=1, left=-3.3, right=-4.4)
+    dimarray: 6 non-null elements (0 null)
+    0 / x0 (2): 'a' to 'b'
+    1 / x1 (3): -33.0 to 44.0
+    array([[-3.3,  2.5, -4.4],
+           [-3.3,  5.5, -4.4]])
     """
     pos, name = self._get_axis_info(axis)
     newaxis = Axis(values, name) # necessary array & type checks 
@@ -1056,12 +1041,38 @@ def interp_axis(self, values, axis=0, left=np.nan, right=np.nan, issorted=None):
         self = self.sort_axis(axis=pos)
         curaxis = self.axes[pos]
 
-    # define 1-D numpy function
-    def func(values1d):
-        return np.interp(newaxis.values, curaxis.values, values1d, left=left, right=right)
+    # use numpy's built-in for ndim == 1
+    if self.ndim <= 1:
+        newval = np.interp(newaxis.values, curaxis.values, self.values, left=left, right=right)
+        newaxes = Axes([newaxis])
+        dima = self._constructor(newval, newaxes)
+        dima.attrs.update(self.attrs) # add metadata
 
-    dima = apply_axis_transform(self, func, newaxis)
-    dima.attrs.update(self.attrs) # add metadata
+    # otherwise calculate linear weights, and re-use them
+    else:
+        newindices = np.interp(newaxis.values, self.axes[pos].values, np.arange(curaxis.size), left=-newaxis.size, right=-1)
+        outbounds_left = newindices == -newaxis.size
+        outbounds_right = newindices == -1
+        lhs_idx = np.asarray(newindices, dtype=int)
+        rhs_idx = np.asarray(np.ceil(newindices), dtype=int)
+        frac = newindices - lhs_idx
+
+        values = self.values.swapaxes(pos, 0) # make the interp axis the first axis
+        vleft = values[lhs_idx]
+        vright = values[rhs_idx]
+        frac = frac[(slice(None),)+(None,)*(self.ndim-1)] # broadcast frac for multiplication
+        newval = vleft + frac*(vright - vleft)
+
+        # fill values
+        newval[outbounds_left] = left
+        newval[outbounds_right] = right
+
+        # construct DimArray
+        newaxes = Axes([newaxis])
+        newaxes = [newaxis] + [ax.copy() for ax in self.axes if ax.name != newaxis.name]
+        dima = self._constructor(newval, newaxes).transpose(self.dims)
+        dima.attrs.update(self.attrs) # add metadata
+
     return dima
 
 def interp_like(self, other, **kwargs):
@@ -1091,3 +1102,40 @@ def interp_like(self, other, **kwargs):
             newaxis = axes[ax.name].values
             obj = obj.interp_axis(newaxis, axis=ax.name, **kwargs)
     return obj
+
+# #
+# # Other transformations added as methods
+# #
+# def apply_axis_transform(obj, func, newaxis, args=(), **kwargs):
+#     """ apply a 1-D transformation on a N-D DimArray, sequentially on the sub-arrays
+#
+#     Parameters
+#     ----------
+#     obj : DimArray (N-D)
+#     func : function to apply along the 1-D DimArray (1-D ==> 1-D)
+#     newaxis : transformed axis
+#     args, **kwargs : arguments to func
+#
+#     Returns
+#     -------
+#     DimArray (N-D)
+#     """
+#     newaxes = [newaxis] + [ax.copy() for ax in obj.axes if ax.name != newaxis.name]
+#     newshape = [ax.size for ax in newaxes]
+#
+#     if obj.ndim == 1:
+#         result = func(obj.values, *args, **kwargs)
+#
+#     else:
+#         pos = obj.dims.index(newaxis.name)
+#         shape2d = [newaxis.size, np.prod([s for i, s in enumerate(obj.shape) if i!=pos])]
+#         result = np.empty(shape2d)
+#         for i, fp in enumerate(obj.group((newaxis.name,), reverse=True, insert=0).values):
+#             res = func(fp, *args, **kwargs)
+#             result[i] = res # access to values
+#         result = result.reshape(newshape)
+#
+#     dima = obj._constructor(result, newaxes, **obj.attrs)
+#
+#     return dima.transpose(obj.dims) # transpose back to original dimensions
+
