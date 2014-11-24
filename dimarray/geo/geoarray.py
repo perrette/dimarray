@@ -33,9 +33,9 @@ class GeoArray(DimArray):
     """
     __metadata_include__ = ['grid_mapping', 'long_name', 'units', 'standard_name']
 
-    units = None
-    long_name = None
-    standard_name = None
+    # units = None
+    # long_name = None
+    # standard_name = None
 
     grid_mapping = None
 
@@ -183,21 +183,23 @@ class GeoArray(DimArray):
 class Coordinate(Axis):
     """ Subclass of Axis representing a space-time coordinate.
     """
-    standard_name = None
-    long_name = None
-    units = None
+    # _attrs = None
+    _name = None
+    _standard_name = None
+    _long_name = None
+    _units = None
 
     __metadata_include__  = ['standard_name', 'long_name', 'units'] # may be defined as class attributes
 
     def __init__(self, values, name=None, dtype=float, **kwargs):
 
         # Initialize the metadata with non-None class values
-        metadata = {k:getattr(self, k) for k in self.__metadata_include__ if getattr(self, k) is not None}
-
-        if name is None:
-            name = self.name # class attribute
+        metadata = {k:getattr(self, '_'+k) for k in self.__metadata_include__ if getattr(self, '_'+k) is not None}
 
         metadata.update(kwargs)
+
+        if name is None:
+            name = self._name # class attribute
 
         super(Coordinate, self).__init__(values, name, dtype=dtype, **metadata)
 
@@ -213,7 +215,7 @@ class Coordinate(Axis):
 class Time(Coordinate):
     """ Time coordinate
     """
-    name = "time"
+    _name = "time"
 
 #
 # Spatial coordinates
@@ -221,30 +223,30 @@ class Time(Coordinate):
 class X(Coordinate):
     """ X-horizontal coordinate on the projection plane
     """
-    name = 'x'
-    long_name = "horizontal x coordinate"
+    _name = 'x'
+    _long_name = "horizontal x coordinate"
 
 class Y(Coordinate):
     """ Y-horizontal coordinate on the projection plane
     """
-    name = 'y'
-    long_name = "horizontal y coordinate"
+    _name = 'y'
+    _long_name = "horizontal y coordinate"
 
 class Z(Coordinate):
     """ Vertical coordinate
     """
-    name = 'z'
-    long_name = "vertical z coordinate"
+    _name = 'z'
+    _long_name = "vertical z coordinate"
 
 # Longitude and Latitude as subclasses
 
 class Latitude(Y):
     """ Latitude Coordinate
     """
-    name = 'lat'
-    long_name = "latitude"
-    units = "degrees_north"
-    standard_name = "latitude"
+    _name = 'lat'
+    _long_name = "latitude"
+    _units = "degrees_north"
+    _standard_name = "latitude"
 
     def __init__(self, *args, **kwargs):
         # TODO: may need to perform additional test on sorted axes and so on
@@ -256,70 +258,7 @@ class Latitude(Y):
 class Longitude(X):
     """ Longitude Coordinate
     """
-    name='lon' 
-    long_name="longitude" 
-    units="degrees_east"
-    standard_name="longitude" 
-    modulo=360.
-
-
-#def _get_geoarray_cls(dims, globs=None):
-#    """ look whether a particular pre-defined array matches the dimensions
-#    """
-#    if globs is None: globs = globals()
-#    cls = None
-#    for obj in globs.keys():
-#        if isinstance(obj, globals()['GeoArray']):
-#            if tuple(dims) == cls._dimensions:
-#                cls = obj
-#
-#    return cls
-
-
-#class CommonGeoArray(GeoArray):
-#    #pass
-#    _order = ('items','time','lat','lon','height','sample')
-#    def __init__(self, values=None, *axes, **kwargs):
-#        """
-#        """
-#        assert (len(axes) == 0 or len(kwargs) ==0), "cant provide axes both as kwargs and list"
-#        assert self._dims is None or (len(axes) == self._dims or len(kwargs) == len(self._dims)), "dimension mismatch"
-#        if len(kwargs) > 0:
-#            for k in kwargs:
-#                if k not in self._order:
-#                    raise ValueError("unknown dimension, please provide as axes")
-#            if self._dims is not None:
-#                axes = [k,kwargs[k] for k in self._dims if k in kwargs]
-#            else:
-#                axes = [k,kwargs[k] for k in self._order if k in kwargs]
-#
-#        else:
-#            if self._dims is not None:
-#                assert tuple(ax.name for ax in axes) == self._dims, "dimension mismtach"
-#
-#        super(CommonGeoArray, self).__init__(values, axes)
-#        for k in kwargs: self.setncattr(k, kwargs[k])
-#    
-#    @classmethod
-#    def _constructor(cls, values, axes, **kwargs):
-#        dims = tuple(ax.name for ax in axes)
-#        class_ = _get_geoarray_cls(dims)
-#        if class_ is not None:
-#            obj = class_(values, *axes)
-#        else:
-#            obj = cls(values, *axes)
-#        for k in kwargs: obj.setncattr(k, kwargs[k])
-#        return obj
-
-#
-#class TimeSeries(GeoArray):
-#    _dims = ('time',)
-#
-#class Map(GeoArray):
-#    _dims = ('lat','lon')
-#
-#class TimeMap(GeoArray):
-#    _dims = ('time','lat','lon')
-#
-#class Sample(GeoArray):
-#    _dims = ('sample',)
+    _name='lon' 
+    _long_name="longitude" 
+    _units="degrees_east"
+    _standard_name="longitude" 
