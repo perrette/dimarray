@@ -115,7 +115,12 @@ class DatasetOnDisk(GetSetDelAttrMixin, NetCDFOnDisk, AbstractDataset):
         if isinstance(f, nc.Dataset):
             self._ds = f
         else:
-            self._ds = nc.Dataset(f, mode=mode, clobber=clobber, diskless=diskless, persist=persist, format=format)
+            try:
+                self._ds = nc.Dataset(f, mode=mode, clobber=clobber, diskless=diskless, persist=persist, format=format)
+            except UserWarning as error:
+                print error
+            except Exception as error: # indicate file name when issuing error
+                raise IOError("{}\n=> failed to open {} (mode={}, clobber={})".format(error.message, f, mode, clobber)) # easier to handle
         # assert self._kwargs is not None
         self._kwargs = kwargs
     @property
