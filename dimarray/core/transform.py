@@ -1058,6 +1058,7 @@ def interp_axis(self, values, axis=0, left=np.nan, right=np.nan, issorted=None):
         frac = newindices - lhs_idx
 
         values = self.values.swapaxes(pos, 0) # make the interp axis the first axis
+        values = self.values.swapaxes(pos, 0) # make the interp axis the first axis
         vleft = values[lhs_idx]
         vright = values[rhs_idx]
         frac = frac[(slice(None),)+(None,)*(self.ndim-1)] # broadcast frac for multiplication
@@ -1067,10 +1068,12 @@ def interp_axis(self, values, axis=0, left=np.nan, right=np.nan, issorted=None):
         newval[outbounds_left] = left
         newval[outbounds_right] = right
 
+        # transpose back
+        newval = newval.swapaxes(pos, 0)
+
         # construct DimArray
-        newaxes = Axes([newaxis])
-        newaxes = [newaxis] + [ax.copy() for ax in self.axes if ax.name != newaxis.name]
-        dima = self._constructor(newval, newaxes).transpose(self.dims)
+        newaxes = [ax.copy() if ax.name != newaxis.name else newaxis for ax in self.axes]
+        dima = self._constructor(newval, newaxes)
         dima.attrs.update(self.attrs) # add metadata
 
     return dima

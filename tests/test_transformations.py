@@ -1,9 +1,13 @@
 import sys
 from warnings import warn
+import unittest
+
 import numpy as np
 from numpy.testing import assert_allclose as _assert_allclose, assert_equal
-import dimarray as da
 import pytest
+
+import dimarray as da
+from dimarray.testing import assert_equal_dimarrays
 from dimarray.tools import anynan
 
 def assert_allclose(x, y, *args, **kwargs):
@@ -163,3 +167,55 @@ def test_operations():
     assert_allclose(a*a , a**2)
     assert_allclose((a - a.values) , a - a)
 
+
+class TestInterp(unittest.TestCase):
+
+    def setUp(self):
+        size = 4
+        index = np.array([1,4,3,2.])
+        dima = da.DimArray(index, axes=[index])
+        self.index = index
+        self.dima = dima
+        self.size = size
+
+        newindex = self.index.copy()
+        np.random.shuffle(newindex)
+        self.newindex = newindex
+
+    def testVsNumpy(self):
+        dima = self.dima
+        newindex = self.newindex
+
+        dima_sorted = dima.sort_axis()
+
+        expected = np.interp(newindex, dima_sorted.x0, dima_sorted.values)  # np.interp, pure numpy
+
+        actual = dima_sorted.interp_axis(newindex, issorted=True)
+        _assert_allclose(actual.values, expected) 
+        _assert_allclose(actual.axes[0], newindex) 
+
+        actual = dima.interp_axis(newindex) # additional-presorting
+        _assert_allclose(actual.values, expected) 
+        _assert_allclose(actual.axes[0], newindex) 
+
+    def testWeights(self):
+        " a bit more than just numpy.interp wrapper, re-used weights..."
+        dima = self.dima
+        newindex = self.newindex
+
+        dima2d = dima.newaxis('bla', pos=1)
+
+        dima_s = dima.sort_axis()
+        expected = np.interp(newindex, dima_s.x0, dima_s.values)  # np.interp, pure numpy
+        actual = dima2d.interp_axis(newindex).squeeze().values  # self-computed weights using np.interp
+
+        _assert_allclose(actual, expected)
+
+    def test3d(self):
+        " test 3-D interp"
+        dima_3d = self.dima.newaxis('bla',np.arange(2)).newaxis('bli',np.arange(3)) # should be 10^4 slower
+        interpolated = dima_3d.interp_axis(self.newindex, axis=-1)
+        for i in xrange(2):
+            actual = interpolated.ix[i,0]
+            expected = dima_3d.ix[i,0].interp_axis(self.newindex) # use np.interp directly
+            assert_equal_dimarrays(actual, expected)
