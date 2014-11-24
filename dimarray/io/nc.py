@@ -272,6 +272,11 @@ class DatasetOnDisk(GetSetDelAttrMixin, NetCDFOnDisk, AbstractDataset):
 
             kw = self._kwargs.copy() 
             kw.update(kwargs)
+            # add _FillValue or missing_value attribute to fill_value
+            if 'fill_value' not in kw and hasattr(dima, '_FillValue'):
+                kw['fill_value'] = dima._FillValue
+            elif 'fill_value' not in kw and hasattr(dima, 'missing_value'):
+                kw['fill_value'] = dima.missing_value
             self._ds.createVariable(name, nctype, dima.dims, **kw)
 
         DimArrayOnDisk(self._ds, name)[()] = dima
@@ -665,6 +670,7 @@ class AttrsOnDisk(object):
     def __init__(self, obj):
         self.obj = obj
     def __setitem__(self, name, value):
+        if name == "_FillValue": return
         self.obj.setncattr(name, value)
     def __getitem__(self, name):
         return self.obj.getncattr(name)
