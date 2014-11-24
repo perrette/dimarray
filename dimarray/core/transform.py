@@ -1011,7 +1011,7 @@ def apply_axis_transform(obj, func, newaxis, args=(), **kwargs):
 
     return dima.transpose(obj.dims) # transpose back to original dimensions
 
-def interp_axis(self, values, axis=0, left=np.nan, right=np.nan):
+def interp_axis(self, values, axis=0, left=np.nan, right=np.nan, issorted=None):
     """ interpolate along one axis
 
     Parameters
@@ -1020,6 +1020,9 @@ def interp_axis(self, values, axis=0, left=np.nan, right=np.nan):
     axis, optional : axis name or integer rank
         required unless values is an Axis
     left, right : fill_values at the edges
+    issorted : None or bool, optional
+        indicates wether the original axis is sorted, to skip pre-sorting step
+        by default None: a check is performed, and the axis is sorted if needed
 
     Returns
     -------
@@ -1044,9 +1047,18 @@ def interp_axis(self, values, axis=0, left=np.nan, right=np.nan):
     pos, name = self._get_axis_info(axis)
     newaxis = Axis(values, name) # necessary array & type checks 
 
+    # sort the axis if needed, to apply numpy interp
+    curaxis = self.axes[pos]
+    if issorted is None:
+        issorted = np.all(curaxis.values[1:] >= curaxis.values[:-1])
+
+    if not issorted:
+        self = self.sort_axis(axis=pos)
+        curaxis = self.axes[pos]
+
     # define 1-D numpy function
     def func(values1d):
-        return np.interp(newaxis.values, self.axes[pos].values, values1d, left=left, right=right)
+        return np.interp(newaxis.values, curaxis.values, values1d, left=left, right=right)
 
     dima = apply_axis_transform(self, func, newaxis)
     dima.attrs.update(self.attrs) # add metadata
