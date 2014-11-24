@@ -7,15 +7,16 @@ import numpy as np
 
 import dimarray as da  # for the doctest, so that they are testable via py.test
 from dimarray.decorators import format_doc
+from dimarray.config import get_option
 
 from .core import DimArray, array, Axis, Axes
 from .core import align_axes, stack, concatenate
 from .core.align import _check_stack_args, _get_axes, stack, concatenate, _check_stack_axis, get_dims as _get_dims, reindex_like
 from .core.indexing import locate_many
 from .core import pandas_obj
-from .core.bases import AbstractDataset, GetSetDelAttrMixin
+from .core.bases import AbstractDataset, GetSetDelAttrMixin, OpMixin
 
-class Dataset(AbstractDataset, odict, GetSetDelAttrMixin):
+class Dataset(AbstractDataset, odict, OpMixin, GetSetDelAttrMixin):
 # class Dataset(AbstractDataset, odict):
     """ Container for a set of aligned objects
     """
@@ -586,6 +587,67 @@ class Dataset(AbstractDataset, odict, GetSetDelAttrMixin):
         """
         return reindex_like(self, other, **kwargs)
 
+    #
+    # Operations
+    #
+    def _binary_op(self, func, other):
+        """ generalize DimArray operation to a Dataset, for each key
+
+        In case the keys differ, returns the intersection of the two datasets
+
+        Just for testing:
+        >>> ds = Dataset(b=DimArray([[0.,1],[1,2]]))
+        >>> -ds
+        Dataset of 1 variable
+        0 / x0 (2): 0 to 1
+        1 / x1 (2): 0 to 1
+        b: ('x0', 'x1')
+        >>> -ds["b"]
+        dimarray: 4 non-null elements (0 null)
+        0 / x0 (2): 0 to 1
+        1 / x1 (2): 0 to 1
+        array([[-0., -1.],
+               [-1., -2.]])
+        >>> np.all(ds == ds)
+        True
+        >>> assert isinstance(-ds, Dataset)
+        >>> assert isinstance(ds/0.5, Dataset)
+        >>> assert isinstance(ds*0, Dataset)
+        >>> (-ds -ds + ds/0.5 + ds*0+1)['b']
+        dimarray: 4 non-null elements (0 null)
+        0 / x0 (2): 0 to 1
+        1 / x1 (2): 0 to 1
+        array([[ 1.,  1.],
+               [ 1.,  1.]])
+        >>> ds += 1
+        >>> ds['b']
+        dimarray: 4 non-null elements (0 null)
+        0 / x0 (2): 0 to 1
+        1 / x1 (2): 0 to 1
+        array([[ 1.,  2.],
+               [ 2.,  3.]])
+        """
+        assert isinstance(other, Dataset) or np.isscalar(other), "can only combine Datasets objects (func={})".format(func.__name__)
+        # align all axes first
+        reindex = get_option("op.reindex")
+        if reindex and hasattr(other, 'axes') and other.axes != self.axes:
+            other.reindex_like(self)
+        # now proceed to operation
+        res = self.__class__()
+        for k1 in self.keys():
+            if hasattr(other, 'keys'):
+                for k2 in other.keys():
+                    if k1 == k2:
+                        res[k1] = self[k1]._binary_op(func, other[k2])
+            else:
+                res[k1] = self[k1]._binary_op(func, other)
+        return res
+
+    def _unary_op(self, func):
+        res = self.__class__()
+        for k in self.keys():
+            res[k] = self[k]._unary_op(func)
+        return res
 
 def stack_ds(datasets, axis, keys=None, align=False):
     """ stack dataset along a new dimension

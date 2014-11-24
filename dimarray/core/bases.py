@@ -318,6 +318,42 @@ class AbstractHasAxes(AbstractHasMetadata):
                 axes.append(ax)
         return axes
 
+class OpMixin(object):
+    """ overload basic operations
+    """
+    def _unary_op(self, func):
+        raise NotImplementedError()
+    def _binary_op(self, func, other):
+        raise NotImplementedError()
+    def _rbinary_op(self, func, other):
+        return other._binary_op(func, self) # default only
+    # def _cmp(self, func, other):
+    #     return self._binary_op(func, other) # default only
+
+    def __neg__(self): return self._unary_op(np.ndarray.__neg__)
+    def __pos__(self): return self._unary_op(np.ndarray.__pos__)
+    def __sqrt__(self, other): return self._unary_op(np.sqrt)
+    def __invert__(self): return self._unary_op(np.invert)
+
+    def __add__(self, other): return self._binary_op(np.add, other)
+    def __sub__(self, other): return self._binary_op(np.subtract, other)
+    def __mul__(self, other): return self._binary_op(np.multiply, other)
+
+    def __div__(self, other): return self._binary_op(np.true_divide, other) # TRUE DIVIDE
+    def __truediv__(self, other): return self._binary_op(np.true_divide, other)
+    def __floordiv__(self, other): return self._binary_op(np.floor_divide, other)
+
+    def __pow__(self, other): return self._binary_op(np.power, other)
+
+    # reverse order operation
+    def __radd__(self, other): return self + other
+    def __rmul__(self, other): return self * other
+    def __rsub__(self, other): return self._rbinary_op(np.subtract, other)
+    def __rdiv__(self, other): return self._rbinary_op(np.true_divide, other)
+    def __rpow__(self, other): return self._rbinary_op(np.power, other)
+
+
+
 class AbstractDimArray(AbstractHasAxes):
     _tol = None # define a tol attribute
 
