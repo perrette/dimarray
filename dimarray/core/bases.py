@@ -207,7 +207,6 @@ class AbstractHasAxes(AbstractHasMetadata):
                 raise ValueError("dimensions number mismatch")
             newdims = dict(zip(self.dims, newdims))
         for old in newdims.keys():
-            print "rename dim:",self.axes[old].name,newdims[old]
             self.axes[old].name = newdims[old]
 
     @property
@@ -317,6 +316,53 @@ class AbstractHasAxes(AbstractHasMetadata):
             if not np.isscalar(ax): # do not include scalar axes
                 axes.append(ax)
         return axes
+
+    #
+    # returns axis position and name based on either of them
+    #
+    def _get_axis_info(self, axis):
+        """ axis position and name
+
+        Parameters
+        ----------
+        axis : `int` or `str` or None
+
+        Returns
+        -------
+        idx : `int`, axis position
+        name : `str` or None, axis name
+        """
+        if axis is None:
+            return None, None
+
+        if type(axis) in (str, unicode):
+            idx = self.dims.index(axis)
+
+        elif type(axis) is int:
+            idx = axis
+
+        else:
+            raise TypeError("axis must be int or str, got:"+repr(axis))
+
+        name = self.axes[idx].name
+        return idx, name
+
+    def _get_axes_info(self, axes):
+        """ return axis (dimension) positions AND names from a sequence of axis (dimension) positions OR names
+
+        Parameters
+        ----------
+        axes : sequence of str or int, representing axis (dimension) 
+            names or positions, possibly mixed up.
+
+        Returns
+        -------
+        pos : list of `int` indicating dimension's rank in the array
+        names : list of dimension names
+        """
+        pos, names = zip(*[self._get_axis_info(x) for x in axes])
+        return pos, names
+
 
 class OpMixin(object):
     """ overload basic operations

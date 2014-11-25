@@ -12,6 +12,7 @@ from dimarray.config import get_option
 from .core import DimArray, array, Axis, Axes
 from .core import align_axes, stack, concatenate
 from .core.align import _check_stack_args, _get_axes, stack, concatenate, _check_stack_axis, get_dims as _get_dims, reindex_like
+from .core.transform import interp_like
 from .core.indexing import locate_many
 from .core import pandas_obj
 from .core.bases import AbstractDataset, GetSetDelAttrMixin, OpMixin
@@ -536,6 +537,67 @@ class Dataset(AbstractDataset, odict, OpMixin, GetSetDelAttrMixin):
         if not inplace:
             return ds
 
+    def reduce_axis(self, func, axis=0, keepdims=False, keepattrs=False, **kwargs):
+        """ reduce an axis in a Dataset
+
+        Parameters
+        ----------
+        func : operation that can be applied on a numpy array, 
+            which takes `axis` int argument
+        keepdims : whether or not the axis is removed by the transformation
+        **kwargs : passed to func
+        """
+        # prepare new axes
+        pos, name = self._get_axis_info(axis)
+        if keepdims:
+            newaxes = [ax.copy() if ax.name != name else Axis(func(ax.values, axis=0, **kwargs), ax.name) for ax in self.axes]
+        else:
+            newaxes = [ax.copy() for ax in self.axes if ax.name != name ]
+        newdims = [ax.name for ax in newaxes]
+
+        # initialize dataset
+        dataset = self.__class__()
+        dataset.axes = newaxes
+
+        # apply function to all elements
+        for k in self.keys():
+            item = self[k]
+            # skip DimArrays without the dimension of interest
+            try:
+                pos, _ = item._get_axis_info(name)
+            except:
+                dataset[k] = item # no axis is present
+                continue
+            newval = func(item.values, axis=pos, **kwargs)
+            dima = DimArray(newval, [newaxes[newdims.index(dim)] for dim in item.dims if dim in newdims])
+            if keepattrs: 
+                dima.attrs.update(item.attrs)
+            # super(Dataset, dataset).__setitem__(k, dima)
+            dataset[k] = dima # for now with check
+
+        if keepattrs: 
+            dataset.attrs.update(self.attrs) # keep metadata?
+        return dataset
+
+    def take_axis(self, indices, axis=0, indexing=None, mode='raise'):
+        """ Analogous to DimArray.take_axis
+        """
+        if not np.iterable(indices):
+            raise TypeError("indices must be iterable")
+        indexing = indexing or getattr(self, "_indexing", None) or get_option("indexing.by")
+        if indexing == "label":
+            indices = self.axes[axis].loc(indices, mode=mode)
+        if mode not in ('raise', 'clip', 'wrap'):
+            mode = 'raise'
+        return self.reduce_axis(np.take, indices=indices, axis=axis, mode=mode, keepattrs=True, keepdims=True)
+
+    def sort_axis(self, axis=0, kind='quicksort'):
+        """Analogous to DimArray.sort_axis, for each element in a Dataset
+        """
+        index = self.axes[axis].values
+        ii = index.argsort(kind=kind) # the default
+        return self.take_axis(ii, axis=axis, indexing='position')
+
     def reindex_axis(self, values, axis=0, fill_value=np.nan, raise_error=False, method=None):
         """ analogous to DimArray.reindex_axis, but for a whole Dataset 
 
@@ -550,29 +612,24 @@ class Dataset(AbstractDataset, odict, OpMixin, GetSetDelAttrMixin):
         else:
             values = np.asarray(values)
 
-        # Get indices
-        ax = self.axes[axis]
-        # indices = ax.loc(values, mode='clip', side=method)
-        indices = locate_many(ax.values, values, side=method or 'left')
+        # take axis, do not raise error
+        dataset = self.take_axis(values, axis=axis, indexing='label', 
+                                 mode='raise' if raise_error else 'clip')
 
         # Replace mismatch with missing values?
-        mask = ax.values.take(indices) != values
+        newax = dataset.axes[axis]
+        mask = newax.values != values
         any_nan = np.any(mask)
 
-        new = self.__class__()
-        for k in self.keys():
-            newobj = self[k].take_axis(indices, axis, indexing='position')
-            if any_nan:
-                if raise_error:
-                    raise IndexError("Some values where not found in the axis: {}".format(values[mask]))
-                if method is None:
-                    newobj.put(mask, fill_value, axis=axis, inplace=True, indexing="position", cast=True)
+        if any_nan:
+            # Make sure the axis values match the requested new axis
+            dataset.axes[axis][mask] = values[mask]
 
-                # Make sure the axis values match the requested new axis
-                newobj.axes[axis][mask] = values[mask]
-            new[k] = newobj
-        new.attrs.update(self.attrs) # update metadata
-        return new
+            for k in dataset.keys():
+                if method is None:
+                    dataset[k].put(mask, fill_value, axis=axis, inplace=True, indexing="position", cast=True)
+
+        return dataset
 
     def reindex_like(self, other, **kwargs):
         """Analogous to DimArray.reindex_like
@@ -586,6 +643,61 @@ class Dataset(AbstractDataset, odict, OpMixin, GetSetDelAttrMixin):
         b: ('x0', 'x1')
         """
         return reindex_like(self, other, **kwargs)
+
+    def interp_axis(self, values, axis=0, left=np.nan, right=np.nan, issorted=None):
+        """ Analogous to DimArray.interp_axis
+        """
+        # copy some of DimArray.interp_axis code to re-use the weights
+        pos, name = self._get_axis_info(axis)
+        newaxis = Axis(values, name) # necessary array & type checks 
+
+        # sort the axis if needed, to apply numpy interp
+        curaxis = self.axes[pos]
+        if issorted is None:
+            issorted = np.all(curaxis.values[1:] >= curaxis.values[:-1])
+
+        if not issorted:
+            self = self.sort_axis(axis=pos)
+            curaxis = self.axes[pos]
+
+        # get interp weights
+        newindices = np.interp(newaxis.values, self.axes[pos].values, np.arange(curaxis.size), left=-newaxis.size, right=-1)
+        outbounds_left = newindices == -newaxis.size
+        outbounds_right = newindices == -1
+        lhs_idx = np.asarray(newindices, dtype=int)
+        rhs_idx = np.asarray(np.ceil(newindices), dtype=int)
+        frac = newindices - lhs_idx
+
+        def func(arr, axis):
+            " numpy ==> numpy "
+            # pre-broadcast dimensions
+            if arr.ndim > 1:
+                values = arr.swapaxes(axis, 0) # make the interp axis the first axis
+                _frac = frac[(slice(None),)+(None,)*(arr.ndim-1)] # broadcast frac for multiplication
+            else:
+                _frac = frac
+
+            # compute the weighted sum
+            vleft = arr[lhs_idx]
+            vright = arr[rhs_idx]
+            newval = vleft + _frac*(vright - vleft)
+
+            # fill values
+            newval[outbounds_left] = left
+            newval[outbounds_right] = right
+
+            # transpose back
+            if arr.ndim > 1:
+                newval = newval.swapaxes(axis, 0)
+            return newval
+
+        # loop over all dimarray
+        return self.reduce_axis(func, axis=axis, keepdims=True, keepattrs=True)
+
+    def interp_like(self, other, **kwargs):
+        """Analogous to DimArray.interp_like
+        """
+        return interp_like(self, other, **kwargs)
 
     #
     # Operations

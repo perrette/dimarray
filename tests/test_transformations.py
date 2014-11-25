@@ -7,7 +7,7 @@ from numpy.testing import assert_allclose as _assert_allclose, assert_equal
 import pytest
 
 import dimarray as da
-from dimarray.testing import assert_equal_dimarrays
+from dimarray.testing import assert_equal_dimarrays, assert_equal_datasets
 from dimarray.tools import anynan
 
 def assert_allclose(x, y, *args, **kwargs):
@@ -219,3 +219,30 @@ class TestInterp(unittest.TestCase):
             actual = interpolated.ix[i,0]
             expected = dima_3d.ix[i,0].interp_axis(self.newindex) # use np.interp directly
             assert_equal_dimarrays(actual, expected)
+
+    def testDataset(self):
+        " make sure the dataset version is consistent "
+        c = self.dima.sort_axis()
+        print c.dims
+        c.dims = ('x0_sorted',)
+        ds = da.Dataset(a=self.dima, b=self.dima*2, c=c)
+
+        actual = ds.interp_axis(self.newindex, axis='x0')
+        expected = da.Dataset(**{k:ds[k].interp_axis(self.newindex, axis='x0') if 'x0' in ds[k].dims else ds[k] for k in ds.keys()})
+        
+        print 'for a'
+        print self.newindex
+        print actual['a']
+        print expected['a']
+        print 'for b'
+        print actual['b']
+        print expected['b']
+        print 'for c'
+        print c
+        print actual['c']
+        print expected['c']
+
+        print ""
+        print "datasets assert"
+
+        assert_equal_datasets(actual, expected)

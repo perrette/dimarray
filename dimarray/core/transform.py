@@ -1057,11 +1057,11 @@ def interp_axis(self, values, axis=0, left=np.nan, right=np.nan, issorted=None):
         rhs_idx = np.asarray(np.ceil(newindices), dtype=int)
         frac = newindices - lhs_idx
 
-        values = self.values.swapaxes(pos, 0) # make the interp axis the first axis
+        # compute the weighted sum
         values = self.values.swapaxes(pos, 0) # make the interp axis the first axis
         vleft = values[lhs_idx]
         vright = values[rhs_idx]
-        frac = frac[(slice(None),)+(None,)*(self.ndim-1)] # broadcast frac for multiplication
+        frac = frac[(slice(None),)+(None,)*(values.ndim-1)] # broadcast frac for multiplication
         newval = vleft + frac*(vright - vleft)
 
         # fill values

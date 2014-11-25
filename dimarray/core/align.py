@@ -698,7 +698,7 @@ def reindex_like(self, other, **kwargs):
     return obj
 
 
-def sort_axis(a, axis=0, key=None):
+def sort_axis(a, axis=0, key=None, kind='quicksort'):
     """ sort an axis 
 
     Parameters
@@ -712,6 +712,8 @@ def sort_axis(a, axis=0, key=None):
         Any other object with __getitem__ attribute may also be used as key,
         such as a dictionary.
         If None (the default), axis label is used for sorting.
+    kind : str, optional
+        sort algorigthm (see numpy.sort for more info)
 
     Returns
     --------
@@ -751,15 +753,14 @@ def sort_axis(a, axis=0, key=None):
     index = a.axes[axis].values
 
     # convert key to a function
-    if not hasattr(key, '__call__') and hasattr(key, '__getitem__'):
-        key = key.__getitem__
-
     if key is None:
-        ii = index.argsort()
+        ii = index.argsort(kind=kind) # the default
     else:
+        if not hasattr(key, '__call__') and hasattr(key, '__getitem__'):
+            key = key.__getitem__
         ii = argsort(index, key)
 
-    return a.take(ii, axis=axis, indexing='position')
+    return a.take_axis(ii, axis=axis, indexing='position')
 
 
 def argsort(seq, key=None):

@@ -353,15 +353,7 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 
     @dims.setter
     def dims(self, newdims):
-        if not np.iterable(newdims): 
-            raise TypeError("new dims must be iterable")
-        if not isinstance(newdims, dict):
-            if len(newdims) != len(self.dims):
-                raise ValueError("Can only rename all dimensions at once, unless a dictionary is provided")
-            newdims = dict(zip(self.dims, newdims))
-        for old in newdims.keys():
-            print "rename dim:",self.axes[old].name,newdims[old]
-            self.axes[old].name = newdims[old]
+        self._set_dims(newdims)
 
     @classmethod
     def from_nested(cls, nested_data, labels=None, dims=None, align=True):
@@ -543,52 +535,6 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         for i, k in enumerate(self.axes[axis].values):
             val = self.take(i, axis=axis, indexing='position', keepdims=False) # cross-section
             yield k, val
-
-    #
-    # returns axis position and name based on either of them
-    #
-    def _get_axis_info(self, axis):
-        """ axis position and name
-
-        Parameters
-        ----------
-        axis : `int` or `str` or None
-
-        Returns
-        -------
-        idx : `int`, axis position
-        name : `str` or None, axis name
-        """
-        if axis is None:
-            return None, None
-
-        if type(axis) in (str, unicode):
-            idx = self.dims.index(axis)
-
-        elif type(axis) is int:
-            idx = axis
-
-        else:
-            raise TypeError("axis must be int or str, got:"+repr(axis))
-
-        name = self.axes[idx].name
-        return idx, name
-
-    def _get_axes_info(self, axes):
-        """ return axis (dimension) positions AND names from a sequence of axis (dimension) positions OR names
-
-        Parameters
-        ----------
-        axes : sequence of str or int, representing axis (dimension) 
-            names or positions, possibly mixed up.
-
-        Returns
-        -------
-        pos : list of `int` indicating dimension's rank in the array
-        names : list of dimension names
-        """
-        pos, names = zip(*[self._get_axis_info(x) for x in axes])
-        return pos, names
 
 
     #
