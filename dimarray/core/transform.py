@@ -975,6 +975,55 @@ def std(self, *args, **kwargs):
 
 std.__doc__ = var.__doc__.replace('variance','standard deviation').replace('var','std').replace('DimArray.std','DimArray.var') # last one for See Also
 
+#
+# linear interpolation along an axis
+#
+
+# sort the axis if needed, to apply numpy interp
+def _interp_internal_maybe_sort(obj, axis, issorted):
+    curaxis = obj.axes[axis]
+    if issorted is None:
+        issorted = np.all(curaxis.values[1:] >= curaxis.values[:-1])
+    if not issorted:
+        obj = obj.sort_axis(axis=axis)
+    return obj
+
+# get interp weights
+def _interp_internal_get_weights(oldx, newx):
+    " compute necessary indices and weights to perform linear interpolation "
+    newindices = np.interp(newx, oldx, np.arange(oldx.size), left=-oldx.size, right=-1)
+    left_idx = newindices == -newx.size # out-of-bounds
+    right_idx = newindices == -1
+    lhs_idx = np.asarray(newindices, dtype=int)
+    rhs_idx = np.asarray(np.ceil(newindices), dtype=int)
+    frac = newindices - lhs_idx
+    # return lhs_idx, rhs_idx, frac, left_idx, right_idx
+    return {'lhs_idx':lhs_idx, 'rhs_idx':rhs_idx, 'frac':frac, 'left_idx':left_idx,'right_idx':right_idx}
+
+# apply interp from weights
+def _interp_internal_from_weight(arr, axis, left, right, lhs_idx, rhs_idx, frac, left_idx, right_idx):
+    " numpy ==> numpy "
+    # pre-broadcast dimensions
+    if arr.ndim > 1:
+        arr = arr.swapaxes(axis, 0) # make the interp axis the first axis
+        _frac = frac[(slice(None),)+(None,)*(arr.ndim-1)] # broadcast frac for multiplication
+    else:
+        _frac = frac
+
+    # compute the weighted sum
+    vleft = arr[lhs_idx]
+    vright = arr[rhs_idx]
+    newval = vleft + _frac*(vright - vleft)
+
+    # fill values
+    newval[left_idx] = left
+    newval[right_idx] = right
+
+    # transpose back
+    if arr.ndim > 1:
+        newval = newval.swapaxes(axis, 0)
+    return newval
+
 def interp_axis(self, values, axis=0, left=np.nan, right=np.nan, issorted=None):
     """ interpolate along one axis
 
@@ -1033,48 +1082,22 @@ def interp_axis(self, values, axis=0, left=np.nan, right=np.nan, issorted=None):
     newaxis = Axis(values, name) # necessary array & type checks 
 
     # sort the axis if needed, to apply numpy interp
-    curaxis = self.axes[pos]
-    if issorted is None:
-        issorted = np.all(curaxis.values[1:] >= curaxis.values[:-1])
-
-    if not issorted:
-        self = self.sort_axis(axis=pos)
-        curaxis = self.axes[pos]
+    obj = _interp_internal_maybe_sort(self, axis, issorted)
+    curaxis = obj.axes[axis]
 
     # use numpy's built-in for ndim == 1
-    if self.ndim <= 1:
-        newval = np.interp(newaxis.values, curaxis.values, self.values, left=left, right=right)
+    if obj.ndim <= 1:
+        newval = np.interp(newaxis.values, curaxis.values, obj.values, left=left, right=right)
         newaxes = Axes([newaxis])
-        dima = self._constructor(newval, newaxes)
-        dima.attrs.update(self.attrs) # add metadata
 
     # otherwise calculate linear weights, and re-use them
     else:
-        newindices = np.interp(newaxis.values, self.axes[pos].values, np.arange(curaxis.size), left=-newaxis.size, right=-1)
-        outbounds_left = newindices == -newaxis.size
-        outbounds_right = newindices == -1
-        lhs_idx = np.asarray(newindices, dtype=int)
-        rhs_idx = np.asarray(np.ceil(newindices), dtype=int)
-        frac = newindices - lhs_idx
+        kwargs = _interp_internal_get_weights(curaxis.values, newaxis.values)
+        newval = _interp_internal_from_weight(obj.values, axis=pos, left=left, right=right, **kwargs)
+        newaxes = [ax.copy() if ax.name != newaxis.name else newaxis for ax in obj.axes]
 
-        # compute the weighted sum
-        values = self.values.swapaxes(pos, 0) # make the interp axis the first axis
-        vleft = values[lhs_idx]
-        vright = values[rhs_idx]
-        frac = frac[(slice(None),)+(None,)*(values.ndim-1)] # broadcast frac for multiplication
-        newval = vleft + frac*(vright - vleft)
-
-        # fill values
-        newval[outbounds_left] = left
-        newval[outbounds_right] = right
-
-        # transpose back
-        newval = newval.swapaxes(pos, 0)
-
-        # construct DimArray
-        newaxes = [ax.copy() if ax.name != newaxis.name else newaxis for ax in self.axes]
-        dima = self._constructor(newval, newaxes)
-        dima.attrs.update(self.attrs) # add metadata
+    dima = obj._constructor(newval, newaxes)
+    dima.attrs.update(obj.attrs) # add metadata
 
     return dima
 

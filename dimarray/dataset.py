@@ -12,7 +12,7 @@ from dimarray.config import get_option
 from .core import DimArray, array, Axis, Axes
 from .core import align_axes, stack, concatenate
 from .core.align import _check_stack_args, _get_axes, stack, concatenate, _check_stack_axis, get_dims as _get_dims, reindex_like
-from .core.transform import interp_like
+from .core.transform import interp_like, _interp_internal_from_weight, _interp_internal_get_weights, _interp_internal_maybe_sort
 from .core.indexing import locate_many
 from .core import pandas_obj
 from .core.bases import AbstractDataset, GetSetDelAttrMixin, OpMixin
@@ -651,56 +651,13 @@ class Dataset(AbstractDataset, odict, OpMixin, GetSetDelAttrMixin):
         newaxis = Axis(values, self.axes[axis].name) # necessary array & type checks 
 
         # sort the axis if needed, to apply numpy interp
-        def _interp_internal_maybe_sort(obj, axis, issorted):
-            curaxis = obj.axes[axis]
-            if issorted is None:
-                issorted = np.all(curaxis.values[1:] >= curaxis.values[:-1])
-            if not issorted:
-                obj = obj.sort_axis(axis=axis)
-            return obj
-
         obj = _interp_internal_maybe_sort(self, axis, issorted)
         curaxis = obj.axes[axis]
 
-        # get interp weights
-        def _interp_internal_get_weights(oldx, newx):
-            " compute necessary indices and weights to perform linear interpolation "
-            newindices = np.interp(newx, oldx, np.arange(oldx.size), left=-oldx.size, right=-1)
-            left_idx = newindices == -newaxis.size # out-of-bounds
-            right_idx = newindices == -1
-            lhs_idx = np.asarray(newindices, dtype=int)
-            rhs_idx = np.asarray(np.ceil(newindices), dtype=int)
-            frac = newindices - lhs_idx
-            # return lhs_idx, rhs_idx, frac, left_idx, right_idx
-            return {'lhs_idx':lhs_idx, 'rhs_idx':rhs_idx, 'frac':frac, 'left_idx':left_idx,'right_idx':right_idx}
-
         kwargs = _interp_internal_get_weights(curaxis.values, newaxis.values)
 
-        def _interp_internal_from_weight(arr, axis, lhs_idx, rhs_idx, frac, left_idx, right_idx):
-            " numpy ==> numpy "
-            # pre-broadcast dimensions
-            if arr.ndim > 1:
-                values = arr.swapaxes(axis, 0) # make the interp axis the first axis
-                _frac = frac[(slice(None),)+(None,)*(arr.ndim-1)] # broadcast frac for multiplication
-            else:
-                _frac = frac
-
-            # compute the weighted sum
-            vleft = arr[lhs_idx]
-            vright = arr[rhs_idx]
-            newval = vleft + _frac*(vright - vleft)
-
-            # fill values
-            newval[left_idx] = left
-            newval[right_idx] = right
-
-            # transpose back
-            if arr.ndim > 1:
-                newval = newval.swapaxes(axis, 0)
-            return newval
-
         # loop over all dimarray
-        return obj.reduce_axis(_interp_internal_from_weight, axis=axis, keepdims=True, keepattrs=True, **kwargs)
+        return obj.reduce_axis(_interp_internal_from_weight, axis=axis, keepdims=True, keepattrs=True, left=left, right=right, **kwargs)
 
     def interp_like(self, other, **kwargs):
         """Analogous to DimArray.interp_like
