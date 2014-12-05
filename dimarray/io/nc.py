@@ -543,7 +543,10 @@ class AxisOnDisk(GetSetDelAttrMixin, NetCDFVariable, AbstractAxis):
 
         if np.isscalar(indices): 
             assert values.size == 1
-            values = values[0]
+            if values.ndim == 0:
+                values = values[()]
+            else:
+                values = values[0]
 
         ds.variables[name][indices] = values
 
