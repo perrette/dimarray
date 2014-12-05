@@ -92,6 +92,11 @@ def apply_along_axis(self, func, axis=None, skipna=False, args=(), **kwargs):
     -------
     DimArray, or scalar 
 
+    Notes
+    -----
+    If you have the bottleneck pacakge installed, its functions should work
+    with `apply_along_axis`, such as move_mean
+
     Examples
     --------
     >>> import dimarray as da
@@ -101,7 +106,7 @@ def apply_along_axis(self, func, axis=None, skipna=False, args=(), **kwargs):
     >>> c = da.stack([a,b],keys=['a','b'],axis='items')
     >>> c
     dimarray: 7 non-null elements (1 null)
-    0 / items (2): a to b
+    0 / items (2): 'a' to 'b'
     1 / x0 (2): 0 to 1
     2 / x1 (2): 0 to 1
     array([[[  0.,   1.],
@@ -159,7 +164,9 @@ def apply_along_axis(self, func, axis=None, skipna=False, args=(), **kwargs):
         newaxes = [ax for ax in obj.axes if ax.name != name]
 
     # cumulative functions: axes remain unchanged
-    elif funcname in ('cumsum','cumprod','gradient'):
+    # same for moving (rolling) operations.
+    elif funcname in ('cumsum','cumprod','gradient') \
+        or 'move_' in funcname or 'cum' in funcname:
         newaxes = obj.axes.copy() 
 
     # diff: reduce axis size by one
@@ -173,7 +180,7 @@ def apply_along_axis(self, func, axis=None, skipna=False, args=(), **kwargs):
     else:
         raise Exception("cannot find new axes for this transformation: "+repr(funcname))
 
-    newobj = obj._constructor(result, newaxes, **obj._metadata)
+    newobj = obj._constructor(result, newaxes, **obj.attrs)
 
     # add stamp
     #stamp = "{transform}({axis})".format(transform=funcname, axis=str(obj.axes[idx]))
@@ -562,9 +569,8 @@ def diff(self, axis=-1, scheme="backward", keepaxis=False, n=1):
     else:
         raise ValueError("scheme must be one of 'forward', 'backward', 'central', got {}".format(scheme))
 
-    newaxes = obj.axes.copy() 
-    newaxes[idx] = newaxis
-    newobj = obj._constructor(result, newaxes, **obj._metadata)
+    newaxes = [ax.copy() if ax.name != name else newaxis for ax in obj.axes]
+    newobj = obj._constructor(result, newaxes, **obj.attrs)
 
     return newobj
 
@@ -710,16 +716,17 @@ def _get_weights(self, axis=None, mirror_nans=True, weights=None):
            [ 1.        ,  1.        ],
            [ 0.17364818,  0.17364818]])
 
-    It possible to mix up axis and dict-input weights
-
+    # It possible to mix up axis and dict-input weights
+    #
     >>> v.axes['lat'].weights = w
-    >>> v._get_weights(weights={{'lon':lambda x:((x+180)/100)**2}}) 
-    dimarray: 6 non-null elements (0 null)
-    0 / lat (3): -80 to 80
-    1 / lon (2): -180 to 180
-    array([[ 0.       ,  1.5628336],
-           [ 0.       ,  9.       ],
-           [ 0.       ,  1.5628336]])
+
+    # >>> v._get_weights(weights={{'lon':lambda x:((x+180)/100)**2}}) 
+    # dimarray: 6 non-null elements (0 null)
+    # 0 / lat (3): -80 to 80
+    # 1 / lon (2): -180 to 180
+    # array([[ 0.       ,  1.5628336],
+    #        [ 0.       ,  9.       ],
+    #        [ 0.       ,  1.5628336]])
 
     But if the transformation is required on one axis only, 
     weights on other axes are not accounted for since they
@@ -967,3 +974,194 @@ def std(self, *args, **kwargs):
     return self.var(*args, **kwargs)**0.5
 
 std.__doc__ = var.__doc__.replace('variance','standard deviation').replace('var','std').replace('DimArray.std','DimArray.var') # last one for See Also
+
+#
+# linear interpolation along an axis
+#
+
+# sort the axis if needed, to apply numpy interp
+def _interp_internal_maybe_sort(obj, axis, issorted):
+    curaxis = obj.axes[axis]
+    if issorted is None:
+        issorted = np.all(curaxis.values[1:] >= curaxis.values[:-1])
+    if not issorted:
+        obj = obj.sort_axis(axis=axis)
+    return obj
+
+# get interp weights
+def _interp_internal_get_weights(oldx, newx):
+    " compute necessary indices and weights to perform linear interpolation "
+    newindices = np.interp(newx, oldx, np.arange(oldx.size), left=-oldx.size, right=-1)
+    left_idx = newindices == -newx.size # out-of-bounds
+    right_idx = newindices == -1
+    lhs_idx = np.asarray(newindices, dtype=int)
+    rhs_idx = np.asarray(np.ceil(newindices), dtype=int)
+    frac = newindices - lhs_idx
+    # return lhs_idx, rhs_idx, frac, left_idx, right_idx
+    return {'lhs_idx':lhs_idx, 'rhs_idx':rhs_idx, 'frac':frac, 'left_idx':left_idx,'right_idx':right_idx}
+
+# apply interp from weights
+def _interp_internal_from_weight(arr, axis, left, right, lhs_idx, rhs_idx, frac, left_idx, right_idx):
+    " numpy ==> numpy "
+    # pre-broadcast dimensions
+    if arr.ndim > 1:
+        arr = arr.swapaxes(axis, 0) # make the interp axis the first axis
+        _frac = frac[(slice(None),)+(None,)*(arr.ndim-1)] # broadcast frac for multiplication
+    else:
+        _frac = frac
+
+    # compute the weighted sum
+    vleft = arr[lhs_idx]
+    vright = arr[rhs_idx]
+    newval = vleft + _frac*(vright - vleft)
+
+    # fill values
+    newval[left_idx] = left
+    newval[right_idx] = right
+
+    # transpose back
+    if arr.ndim > 1:
+        newval = newval.swapaxes(axis, 0)
+    return newval
+
+def interp_axis(self, values, axis=0, left=np.nan, right=np.nan, issorted=None):
+    """ interpolate along one axis
+
+    Parameters
+    ----------
+    values : 1d array-like
+    axis, optional : axis name or integer rank
+        required unless values is an Axis
+    left, right : fill_values at the edges
+    issorted : None or bool, optional
+        indicates wether the original axis is sorted, to skip pre-sorting step
+        by default None: a check is performed, and the axis is sorted if needed
+
+    Returns
+    -------
+    dima : interpolated DimArray 
+
+    Examples
+    --------
+    >>> from dimarray import DimArray
+
+    >>> a = DimArray([3,4], axes=[[1,3]])
+    >>> a.interp_axis([1,2,3])
+    dimarray: 3 non-null elements (0 null)
+    0 / x0 (3): 1 to 3
+    array([ 3. ,  3.5,  4. ])
+    
+    Axis is not sorted
+
+    >>> a = DimArray([3,0,1], axes=[[3,0,1]]) 
+    >>> a.interp_axis([1,2,3])
+    dimarray: 3 non-null elements (0 null)
+    0 / x0 (3): 1 to 3
+    array([ 1.,  2.,  3.])
+
+    N-Dimensional
+
+    >>> b = DimArray([[1,2,3],[4,5,6]], axes=[['a','b'], [0,1,2]]) # N-Dim
+    >>> b.interp_axis([0.5, 1.5, 2], axis=1)
+    dimarray: 6 non-null elements (0 null)
+    0 / x0 (2): 'a' to 'b'
+    1 / x1 (3): 0.5 to 2.0
+    array([[ 1.5,  2.5,  3. ],
+           [ 4.5,  5.5,  6. ]])
+
+    Out-of-bound handling (nan by default, but can be changed via left, right)
+
+    >>> b.interp_axis([-33, 1.5, 44], axis=1, left=-3.3, right=-4.4)
+    dimarray: 6 non-null elements (0 null)
+    0 / x0 (2): 'a' to 'b'
+    1 / x1 (3): -33.0 to 44.0
+    array([[-3.3,  2.5, -4.4],
+           [-3.3,  5.5, -4.4]])
+    """
+    pos, name = self._get_axis_info(axis)
+    newaxis = Axis(values, name) # necessary array & type checks 
+
+    # sort the axis if needed, to apply numpy interp
+    obj = _interp_internal_maybe_sort(self, axis, issorted)
+    curaxis = obj.axes[axis]
+
+    # use numpy's built-in for ndim == 1
+    if obj.ndim <= 1:
+        newval = np.interp(newaxis.values, curaxis.values, obj.values, left=left, right=right)
+        newaxes = Axes([newaxis])
+
+    # otherwise calculate linear weights, and re-use them
+    else:
+        kwargs = _interp_internal_get_weights(curaxis.values, newaxis.values)
+        newval = _interp_internal_from_weight(obj.values, axis=pos, left=left, right=right, **kwargs)
+        newaxes = [ax.copy() if ax.name != newaxis.name else newaxis for ax in obj.axes]
+
+    dima = obj._constructor(newval, newaxes)
+    dima.attrs.update(obj.attrs) # add metadata
+
+    return dima
+
+def interp_like(self, other, **kwargs):
+    """Successive application of interp_axis to match another DimArray or axes shape
+
+    Examples
+    --------
+    >>> from dimarray import DimArray
+    >>> a = DimArray([3,4], axes=[[1,3]], dims=['x1'])
+    >>> b = DimArray([[1,2,3],[4,5,6]], axes=[['a','b'], [1,2,3]], dims=['x0','x1'])
+    >>> a.interp_like(b)
+    dimarray: 3 non-null elements (0 null)
+    0 / x1 (3): 1 to 3
+    array([ 3. ,  3.5,  4. ])
+    """
+    if hasattr(other, 'axes'):
+        axes = other.axes
+    elif isinstance(other, Axes):
+        axes = other
+    else:
+        raise TypeError('expected DimArray or Axes, got {}: {}'.format(type(other), other))
+
+    newdims = [ax2.name for ax2 in axes]
+    obj = self
+    for ax in self.axes:
+        if ax.name in newdims:
+            newaxis = axes[ax.name].values
+            obj = obj.interp_axis(newaxis, axis=ax.name, **kwargs)
+    return obj
+
+# #
+# # Other transformations added as methods
+# #
+# def apply_axis_transform(obj, func, newaxis, args=(), **kwargs):
+#     """ apply a 1-D transformation on a N-D DimArray, sequentially on the sub-arrays
+#
+#     Parameters
+#     ----------
+#     obj : DimArray (N-D)
+#     func : function to apply along the 1-D DimArray (1-D ==> 1-D)
+#     newaxis : transformed axis
+#     args, **kwargs : arguments to func
+#
+#     Returns
+#     -------
+#     DimArray (N-D)
+#     """
+#     newaxes = [newaxis] + [ax.copy() for ax in obj.axes if ax.name != newaxis.name]
+#     newshape = [ax.size for ax in newaxes]
+#
+#     if obj.ndim == 1:
+#         result = func(obj.values, *args, **kwargs)
+#
+#     else:
+#         pos = obj.dims.index(newaxis.name)
+#         shape2d = [newaxis.size, np.prod([s for i, s in enumerate(obj.shape) if i!=pos])]
+#         result = np.empty(shape2d)
+#         for i, fp in enumerate(obj.group((newaxis.name,), reverse=True, insert=0).values):
+#             res = func(fp, *args, **kwargs)
+#             result[i] = res # access to values
+#         result = result.reshape(newshape)
+#
+#     dima = obj._constructor(result, newaxes, **obj.attrs)
+#
+#     return dima.transpose(obj.dims) # transpose back to original dimensions
+

@@ -1,19 +1,9 @@
-bugfix:
-    added __ne__ attribute to DimArray (a != b)
-    align (reindex) axes involving a None singleton
-    bugfix: weighted mean: py.test now work on geoarray
-
-new features:
-    dimarray.geo module now handles transformation using cartopy
-    CF-conform transformation are automatically mapped from proj4
-    arguments
-
-deprecations:
-
-incompatible api change:
-    dimarray.geo was cleared from previous code (apart from GeoArray)
-    reset_axis, set_axis
-    weights parameter simplified for mean, std, and var
-
-    
-
+major changes: indexing and netCDF I/O were rewritten from the bottom up
+- indexing: now uses numpy.searchsorted (with prior sorting of arrays) when more than element is searched.
+==> much shorter source code, and just a factor 2 slower than pandas re-indexing
+==> no dependency on pandas anymore
+- netCDF I/O: DatasetOnDisk allows exploring a netCDF Dataset on disk without loading it, with the Dataset/DimArray representation and indexing conventions for loading. It is more complete wrapper around netCDF4-python, returning a DimArray instead of numpy array. Underlying netCDF4 object is accessible to the user if other low-level 
+operations are required.
+- convergence toward xray/pandas API:
+introduction of iloc, loc, sel, isel
+- also introduction of nloc for nearest neighbor indexing

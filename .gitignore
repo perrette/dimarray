@@ -1,6 +1,8 @@
 dimarray/version.py
 dimarray/datasets/unzipped
 
+*.swp
+
 .ipynb_checkpoints
 docs/_build/doctrees
 

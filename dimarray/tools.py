@@ -14,6 +14,8 @@ except ImportError:
         ----------
          a: numpy array
         """
+        if a.size == 0:
+            return False
         return np.isnan(a.min(axis=axis))
 
 def pandas_obj(values, *axes):
@@ -74,3 +76,6 @@ def is_array1d_equiv(a):
             res = False
     return res
 
+def is_numeric(a):
+    " for a ndarray "
+    return a.dtype.kind in ("i, f")

@@ -33,7 +33,7 @@ via its `axes` and `dims` parameters:
 >>> a = DimArray([[1.,2,3], [4,5,6]], axes=[['a', 'b'], [1950, 1960, 1970]], dims=['variable', 'time']) 
 >>> a
 dimarray: 6 non-null elements (0 null)
-0 / variable (2): a to b
+0 / variable (2): 'a' to 'b'
 1 / time (3): 1950 to 1970
 array([[ 1.,  2.,  3.],
        [ 4.,  5.,  6.]])
@@ -52,7 +52,7 @@ Basic numpy transformations are also in there:
 
 >>> a.mean(axis='time')
 dimarray: 2 non-null elements (0 null)
-0 / variable (2): a to b
+0 / variable (2): 'a' to 'b'
 array([ 2.,  5.])
 
 Can export to `pandas` for pretty printing:

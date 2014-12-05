@@ -1,5 +1,6 @@
 """ Additional transformations
 """
+import warnings
 import numpy as np
 from dimarray.core import Axes, Axis
 
@@ -69,41 +70,23 @@ def apply_recursive(obj, dims, fun, *args, **kwargs):
 # INTERPOLATION
 #
 
-def interp1d_numpy(obj, values=None, axis=0, left=np.nan, right=np.nan):
+def interp1d_numpy(obj, values, axis=0, **kwargs):
     """ interpolate along one axis: wrapper around numpy's interp
 
     Parameters
     ----------
     obj : DimArray
-    newaxis_values : 1d array, or Axis object
-    newaxis_name, optional : `str` (axis name), required if newaxis is an array
+    values : 1d array, or Axis object
+    axis, optional : `str` (axis name), required if newaxis is an array
 
     Returns
     -------
     interpolated data (n-d)
     """
-    newaxis = Axis(values, axis)
+    warnings.warn(FutureWarning("Deprecated. Use DimArray.interp_axis"))
+    return obj.interp_axis(values, axis=axis, **kwargs)
 
-    def interp1d(obj):
-        """ 2-D interpolation function appled recursively on the object
-        """
-        xp = obj.axes[newaxis.name].values
-        fp = obj.values
-        result = np.interp(newaxis.values, xp, fp, left=left, right=right)
-        return obj._constructor(result, [newaxis], **obj._metadata)
-
-    result = apply_recursive(obj, (newaxis.name,), interp1d)
-    return result.transpose(obj.dims) # transpose back to original dimensions
-
-def interp1d(obj, values=None, axis=0, order=1, **kwargs):
-    """ interpolate along one axis
-    """
-    if order == 1:
-        return interp1d_numpy(obj, values, axis, **kwargs)
-
-    else:
-        raise NotImplementedError('order: '+repr(order))
-        #return obj.reindex_axis(values, axis, method=method **kwargs)
+interp1d = interp1d_numpy
 
 def interp2d(dim_array, newaxes, dims=(-2, -1), order=1, clip=False):
     """ bilinear interpolation
@@ -228,6 +211,6 @@ def interp2d(dim_array, newaxes, dims=(-2, -1), order=1, clip=False):
     dim_array_int = dim_array_int.transpose(dims_orig)
 
     # add metadata
-    dim_array_int._metadata(dim_array._metadata())
+    dim_array_int.attrs.update(dim_array.attrs)
 
     return dim_array_int

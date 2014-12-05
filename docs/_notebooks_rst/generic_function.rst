@@ -42,5 +42,5 @@ This function applies to any kind of input array, as long as the "time" dimensio
 >>> a = DimArray([[1,2,3,4],[5,6,7,8]], axes=[['a','b'],[2000,2001,2002,2003]], dims=['items','time'])
 >>> time_mean(a)  # average over the full time axis
 dimarray: 2 non-null elements (0 null)
-0 / items (2): a to b
+0 / items (2): 'a' to 'b'
 array([ 2.5,  6.5])

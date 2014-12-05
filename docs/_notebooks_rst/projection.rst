@@ -31,53 +31,93 @@ Let's use a real-world example of surface velocity data from Joughin et al (2010
 
 >>> ncfile = get_ncfile('greenland_velocity.nc')
 >>> ds = read_nc(ncfile)
->>> #print ds.summary()
+>>> #ds.summary()
 >>> ds
 Dataset of 6 variables
 0 / y1 (113): -3400000.0 to -600000.0
 1 / x1 (61): -800000.0 to 700000.0
-surfvelmag: ('y1', 'x1')
-lat: ('y1', 'x1')
-lon: ('y1', 'x1')
-surfvely: ('y1', 'x1')
-surfvelx: ('y1', 'x1')
+surfvelmag: (u'y1', u'x1')
+lat: (u'y1', u'x1')
+lon: (u'y1', u'x1')
+surfvely: (u'y1', u'x1')
+surfvelx: (u'y1', u'x1')
 mapping: nan
 
 "lon" and "lat" are not the standard coordinates here. But "x1" and "y1". Let's have a closer look:
 
->>> print ds.axes.summary()
+>>> ds.summary()
+Dataset of 6 variables
+<BLANKLINE>
+//dimensions:
 0 / y1 (113): -3400000.0 to -600000.0
-        units : meters
-        long_name : Cartesian y-coordinate
-        standard_name : projection_y_coordinate
+    units: u'meters'
+    long_name: u'Cartesian y-coordinate'
+    standard_name: u'projection_y_coordinate'
 1 / x1 (61): -800000.0 to 700000.0
-        units : meters
-        long_name : Cartesian x-coordinate
-        standard_name : projection_x_coordinate
+    units: u'meters'
+    long_name: u'Cartesian x-coordinate'
+    standard_name: u'projection_x_coordinate'
+<BLANKLINE>
+//variables:
+surfvelmag: (u'y1', u'x1')
+    grid_mapping: u'mapping'
+    reference: u'Joughin I., Smith B.E., Howat I.M., Scambos T., Moon T., "Greenland flow variability from ice-sheet wide velocity mapping", JGlac 56(197), 2010.'
+    note: u'Ian Joughin notes that "Having any papers that use the data we provided to searise cite this paper [the reference provided] gives us something we can track through ISI and report to NASA to satisfy their metrics requirements, which is a necessary evil to ensure continued production of such data sets.  So ... any publication of results based on this data should cite the above paper."'
+    long_name: u'Surface Velocity Magnitude'
+    units: u'meters/year'
+lat: (u'y1', u'x1')
+    units: u'degreeN'
+    long_name: u'Latitude'
+    standard_name: u'latitude'
+    grid_mapping: u'mapping'
+lon: (u'y1', u'x1')
+    units: u'degreeE'
+    long_name: u'Longitude'
+    standard_name: u'longitude'
+    grid_mapping: u'mapping'
+surfvely: (u'y1', u'x1')
+    grid_mapping: u'mapping'
+    reference: u'Joughin I., Smith B.E., Howat I.M., Scambos T., Moon T., "Greenland flow variability from ice-sheet wide velocity mapping", JGlac 56(197), 2010.'
+    note: u'Ian Joughin notes that "Having any papers that use the data we provided to searise cite this paper [the reference provided] gives us something we can track through ISI and report to NASA to satisfy their metrics requirements, which is a necessary evil to ensure continued production of such data sets.  So ... any publication of results based on this data should cite the above paper."'
+    long_name: u'y-Component of Ice Surface Velocity'
+    standard_name: u'land_ice_y_velocity'
+    units: u'meters/year'
+surfvelx: (u'y1', u'x1')
+    grid_mapping: u'mapping'
+    reference: u'Joughin I., Smith B.E., Howat I.M., Scambos T., Moon T., "Greenland flow variability from ice-sheet wide velocity mapping", JGlac 56(197), 2010.'
+    note: u'Ian Joughin notes that "Having any papers that use the data we provided to searise cite this paper [the reference provided] gives us something we can track through ISI and report to NASA to satisfy their metrics requirements, which is a necessary evil to ensure continued production of such data sets.  So ... any publication of results based on this data should cite the above paper."'
+    long_name: u'x-Component of Ice Surface Velocity'
+    standard_name: u'land_ice_x_velocity'
+    units: u'meters/year'
+mapping: nan
+    ellipsoid: u'WGS84'
+    latitude_of_projection_origin: 90.0
+    straight_vertical_longitude_from_pole: -39.0
+    standard_parallel: 71.0
+    false_northing: 0.0
+    grid_mapping_name: u'polar_stereographic'
+    false_easting: 0.0
+<BLANKLINE>
+//global attributes:
+    Creators: u'Jesse Johnson, Brian Hand, Tim Bocek - University of Montana'
+    Conventions: u'CF-1.3'
+    History: u'Original data set created February 2009'
+    Comments: u'Extracted from Greenland Standard Data Set by M. Perrette in 2014 to be part of dimarray.geo CRS transform test suite'
+    Title: u'Greenland Standard Data Set'
 
 
 They are obviously projection coordinates. 2-dimensional longitude and latitude coordinates are also present in the dataset.
 
 Examining closer the attributes of 'surfvelmag' variable, a "grid_mapping" attribute is present:
 
->>> ds['surfvelmag']._metadata() # doctest: +SKIP
-{'grid_mapping': u'mapping',
- 'long_name': u'Surface Velocity Magnitude',
- 'note': u'Ian Joughin notes that "Having any papers that use the data we provided to searise cite this paper [the reference provided] gives us something we can track through ISI and report to NASA to satisfy their metrics requirements, which is a necessary evil to ensure continued production of such data sets.  So ... any publication of results based on this data should cite the above paper."',
- 'reference': u'Joughin I., Smith B.E., Howat I.M., Scambos T., Moon T., "Greenland flow variability from ice-sheet wide velocity mapping", JGlac 56(197), 2010.',
- 'units': u'meters/year'}
+>>> ds['surfvelmag'].attrs # doctest: +SKIP
+OrderedDict([(u'grid_mapping', u'mapping'), (u'reference', u'Joughin I., Smith B.E., Howat I.M., Scambos T., Moon T., "Greenland flow variability from ice-sheet wide velocity mapping", JGlac 56(197), 2010.'), (u'note', u'Ian Joughin notes that "Having any papers that use the data we provided to searise cite this paper [the reference provided] gives us something we can track through ISI and report to NASA to satisfy their metrics requirements, which is a necessary evil to ensure continued production of such data sets.  So ... any publication of results based on this data should cite the above paper."'), (u'long_name', u'Surface Velocity Magnitude'), (u'units', u'meters/year')])
 
 "grid_mapping" is a string which points to another variable in the dataset, here "mapping". This is according to CF-conventions. *mapping* is a dummy variable whose attributes contain the information needed to define a coordinate reference system. 
 
->>> grid_mapping = ds['mapping']._metadata()
+>>> grid_mapping = ds['mapping'].attrs
 >>> grid_mapping # doctest: +SKIP
-{'ellipsoid': u'WGS84',
- 'false_easting': 0.0,
- 'false_northing': 0.0,
- 'grid_mapping_name': u'polar_stereographic',
- 'latitude_of_projection_origin': 90.0,
- 'standard_parallel': 71.0,
- 'straight_vertical_longitude_from_pole': -39.0}
+OrderedDict([(u'ellipsoid', u'WGS84'), (u'latitude_of_projection_origin', 90.0), (u'straight_vertical_longitude_from_pole', -39.0), (u'standard_parallel', 71.0), (u'false_northing', 0.0), (u'grid_mapping_name', u'polar_stereographic'), (u'false_easting', 0.0)])
 
 We can use matplotlib's contourf to get a feeling for what that all mean. Below using regular x1, y1 grid, in the projection plane.
 
@@ -87,9 +127,9 @@ We can use matplotlib's contourf to get a feeling for what that all mean. Below 
 >>> ax = gca() # get plot axis
 >>> ax.set_aspect('equal') # equal aspect ratio
 >>> ax.set_xticks([-500e3,0,500e3]) # ticks every 500 km  # doctest: +SKIP
-[<matplotlib.axis.XTick at 0x7f4aeb6a1810>,
- <matplotlib.axis.XTick at 0x7f4aeb64c8d0>,
- <matplotlib.axis.XTick at 0x7f4aeb4b8c50>]
+[<matplotlib.axis.XTick at 0x7f924d5dc650>,
+ <matplotlib.axis.XTick at 0x7f924d66ae90>,
+ <matplotlib.axis.XTick at 0x7f924d49d7d0>]
 
 .. image:: projection_files/figure_16-1.png
 
@@ -98,7 +138,7 @@ We can use matplotlib's contourf to get a feeling for what that all mean. Below 
 And now plotting versus lon and lat (irregular, 2-D grid in this case):
 
 >>> contourf(ds['lon'], ds['lat'], log(clip(v, 1e-3,inf))); colorbar()  # doctest: +SKIP
-<matplotlib.colorbar.Colorbar instance at 0x7f4aeb3571b8>
+<matplotlib.colorbar.Colorbar instance at 0x7f924d3156c8>
 
 .. image:: projection_files/figure_18-1.png
 
@@ -118,7 +158,7 @@ The :func:`dimarray.geo.crs.get_crs` function returns the most adequate projecti
 
 >>> stere = get_crs(grid_mapping)
 >>> stere # doctest: +SKIP
-<dimarray.geo.crs.PolarStereographic at 0x7f4aeb65bc50>
+<dimarray.geo.crs.PolarStereographic at 0x7f924d6301d0>
 
 All projection classes defined in dimarray inherit from :class:cartopy.crs.CRS. A few common transformations have a Cartopy equivalent, and are defined as subclass, where possible.
 
@@ -157,8 +197,8 @@ Let's do our first transformation with diamrray and cartopy
 >>> vt = transform(v, from_crs=stere, to_crs=ccrs.PlateCarree())
 >>> vt
 geoarray: 3208 non-null elements (3685 null)
-0 / y (113): 58.6292691402 to 84.4819014732 (Y)
-1 / x (61): -92.1301023542 to 10.398705355 (X)
+0 / y (113): 58.6292691402 to 84.4819014732
+1 / x (61): -92.1301023542 to 10.398705355
 array(...)
 
 The coordinates are quite messy, let's do something better by providing the final domain.
@@ -166,8 +206,8 @@ The coordinates are quite messy, let's do something better by providing the fina
 >>> vt = transform(v, from_crs=stere, to_crs=ccrs.PlateCarree(), xt=np.arange(-92,10,0.25), yt=np.arange(59,85,0.25))
 >>> vt
 geoarray: 20259 non-null elements (22173 null)
-0 / y (104): 59.0 to 84.75 (Y)
-1 / x (408): -92.0 to 9.75 (X)
+0 / y (104): 59.0 to 84.75
+1 / x (408): -92.0 to 9.75
 array(...)
 
 .. note :: If xt and yt are not provided, they are determined by a forward transformation of the (meshed) original coordinates onto the new coordinate system and by building a regular grid from the transformed (irregular) coordinates. In any case, xt and yt then need to be mapped back into the original coordinate system, where the dimarray is interpolated. For that reason, it is preferable to provide xt and yt, so that only one (backward !) transformation is performed.
@@ -176,7 +216,7 @@ Double-check against earlier figures, this looks all right:
 
 >>> h = log(clip(vt,1e-3,inf)).contourf(levels=np.linspace(-7.5, 10, 8))  # doctest: +SKIP
 >>> colorbar(h) # doctest: +SKIP
-<matplotlib.colorbar.Colorbar instance at 0x7f4aea347b90>
+<matplotlib.colorbar.Colorbar instance at 0x7f924c37ed40>
 
 .. image:: projection_files/figure_40-1.png
 
@@ -200,9 +240,9 @@ That is the original field on the projection plane.
 >>> ax = gca()
 >>> ax.set_aspect('equal') # equal aspect ratio
 >>> ax.set_xticks([-500e3,0,500e3]) # ticks every 500 km  # doctest: +SKIP
-[<matplotlib.axis.XTick at 0x7f4aeaa4fb90>,
- <matplotlib.axis.XTick at 0x7f4aea22e450>,
- <matplotlib.axis.XTick at 0x7f4ae95a3f50>]
+[<matplotlib.axis.XTick at 0x7f924d4f7450>,
+ <matplotlib.axis.XTick at 0x7f924c1c9790>,
+ <matplotlib.axis.XTick at 0x7f924b55bdd0>]
 
 .. image:: projection_files/figure_45-1.png
 
@@ -233,10 +273,10 @@ Transforming vectors in longitude latitude coordinates does not make much sense 
 >>> ax = gca()
 >>> ax.set_aspect('equal') # equal aspect ratio
 >>> ax.set_xticks([-1000e3,0]) # ticks every 1000 km  # doctest: +SKIP
-/home/perrette/anaconda/lib/python2.7/site-packages/numpy/ma/core.py:783: RuntimeWarning: invalid value encountered in greater_equal
+/home/perrette/anaconda/lib/python2.7/site-packages/numpy/ma/core.py:785: RuntimeWarning: invalid value encountered in greater_equal
   return umath.absolute(a) * self.tolerance >= umath.absolute(b)
-[<matplotlib.axis.XTick at 0x7f4aea051c10>,
- <matplotlib.axis.XTick at 0x7f4aea03db90>]
+[<matplotlib.axis.XTick at 0x7f924c0a6910>,
+ <matplotlib.axis.XTick at 0x7f924c0467d0>]
 
 .. image:: projection_files/figure_50-2.png
 

@@ -101,7 +101,7 @@ def _create_Axes_with_metadata(xt, yt, grid_mapping):
             meta = grid_mapping._x_metadata
             name = meta.pop('name', 'x')
             xt = X(xt, name)
-            xt._metadata = meta
+            xt.attrs = meta
 
         else:
             xt = X(xt, 'x')
@@ -111,7 +111,7 @@ def _create_Axes_with_metadata(xt, yt, grid_mapping):
             meta = grid_mapping._y_metadata
             name = meta.pop('name', 'y')
             yt = Y(yt, name)
-            yt._metadata(meta)
+            yt.attrs = meta
 
         else:
             yt = Y(yt, 'y')
@@ -290,7 +290,7 @@ def transform(geo_array, to_crs, from_crs=None, \
     transformed = transformed.transpose(dims_orig)
 
     # add metadata
-    transformed._metadata(geo_array._metadata())
+    transformed.attrs.update(geo_array.attrs)
 
     _add_grid_mapping_metadata(transformed, to_crs)
 
@@ -392,8 +392,8 @@ def transform_vectors(u, v, to_crs, from_crs=None, \
         ut, vt = grouped_obj.ungroup(axis=0).swapaxes('vector_components',0)
 
     # add metadata
-    ut._metadata(u._metadata())
-    vt._metadata(v._metadata())
+    ut.attrs.update(u.attrs)
+    vt.attrs.update(v.attrs)
 
     _add_grid_mapping_metadata(ut, to_crs)
     _add_grid_mapping_metadata(vt, to_crs)

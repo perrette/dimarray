@@ -23,7 +23,7 @@ Provide a list of axis values (`axes=` parameter) and a list of axis names (`dim
 >>> a = DimArray([[1.,2,3], [4,5,6]], axes=[['a', 'b'], [1950, 1960, 1970]], dims=['variable', 'time'])
 >>> a
 dimarray: 6 non-null elements (0 null)
-0 / variable (2): a to b
+0 / variable (2): 'a' to 'b'
 1 / time (3): 1950 to 1970
 array([[ 1.,  2.,  3.],
        [ 4.,  5.,  6.]])
@@ -38,7 +38,7 @@ DimArray axes can also be initialized via a list of tuples (axis name, axis valu
 >>> a = DimArray([[1.,2,3], [4,5,6]], axes=[('variable', ['a', 'b']), ('time', [1950, 1960, 1970])])
 >>> a
 dimarray: 6 non-null elements (0 null)
-0 / variable (2): a to b
+0 / variable (2): 'a' to 'b'
 1 / time (3): 1950 to 1970
 array([[ 1.,  2.,  3.],
        [ 4.,  5.,  6.]])
@@ -61,7 +61,7 @@ It is possible to define a dimarray as a dictionary of dictionary. The only addi
 >>> 
 >>> DimArray(dict_, dims=['dim1','dim2'])
 dimarray: 6 non-null elements (0 null)
-0 / dim1 (2): a to b
+0 / dim1 (2): 'a' to 'b'
 1 / dim2 (3): 1 to 3
 array([[ 11,  22,  33],
        [111, 222, 333]])

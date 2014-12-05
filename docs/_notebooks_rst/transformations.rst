@@ -21,7 +21,7 @@ Most numpy transformations are built in. Let's create some data to try it out:
 >>> a = DimArray([[1,2,3],[4,5,6]], axes=[['a','b'], [2000,2001,2002]], dims=['time', 'items'])
 >>> a
 dimarray: 6 non-null elements (0 null)
-0 / time (2): a to b
+0 / time (2): 'a' to 'b'
 1 / items (3): 2000 to 2002
 array([[1, 2, 3],
        [4, 5, 6]])

@@ -46,8 +46,12 @@ rcParams['display.max'] = 100
 rcParamsHelp['display.max'] = "int (default: 100): max array size shown. Note: if set to large values (e.g. inf), follows numpy display.\n"
 
 # options for optimization
-rcParams['optim.use_pandas'] = True
+rcParams['optim.use_pandas'] = False
 rcParamsHelp['optim.use_pandas'] = 'bool (default: True). If True, use pandas for indexing by default'
+
+# options for netcdf
+rcParams['io.nc.format'] = 'NETCDF4' 
+rcParamsHelp['io.nc.format'] = 'Default format to use when writing to netCDF file (default: "NETCDF4")'
 
 
 def set_option(name, value):

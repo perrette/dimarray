@@ -18,7 +18,7 @@ Let's use this dimarray as example:
 >>> a = DimArray([[1.,2,3], [4,5,6]], axes=[['a', 'b'], [1950, 1960, 1970]], dims=['variable', 'time'])
 >>> a
 dimarray: 6 non-null elements (0 null)
-0 / variable (2): a to b
+0 / variable (2): 'a' to 'b'
 1 / time (3): 1950 to 1970
 array([[ 1.,  2.,  3.],
        [ 4.,  5.,  6.]])
@@ -37,14 +37,14 @@ array([[ 1.,  2.,  3.],
 while its axes are stored in `axes`:
 
 >>> a.axes
-0 / variable (2): a to b
+0 / variable (2): 'a' to 'b'
 1 / time (3): 1950 to 1970
 
 An axis is the equivalent of pandas's index, except that it always has a name. Each axis can be accessed by its rank or its name:
 
 >>> ax0 = a.axes[0]         # "variable" axis by rank 
 >>> ax0
-variable (2): a to b
+variable (2): 'a' to 'b'
 
 >>> ax1 = a.axes['time']    # "time" axis by name
 >>> ax1
@@ -82,7 +82,7 @@ Numpy-like attributes `dtype`, `shape`, `size` or `ndim` are defined, and are no
 while dimensions are located in an `axes` attribute, an `Axes` instance
 
 >>> a.axes
-0 / variable (2): a to b
+0 / variable (2): 'a' to 'b'
 1 / time (3): 1950 to 1970
 
 Individual axes can be accessed as well, which are `Axis` instances.
@@ -102,16 +102,14 @@ The straightforward way to define them is via the standard `.` syntax to access 
 >>> a.units = 'myunits'
 
 
-The `_metadata` property returns a dictionary of metadata, for checking:
+All metadata are stored in an `attrs` dictionary attribute (via overloading __setattr__):
 
->>> a._metadata # doctest: +SKIP
-{'name': 'myname', 'units': 'myunits'}
+>>> a.attrs
+OrderedDict([('name', 'myname'), ('units', 'myunits')])
 
 Metadata are conserved by slicing and along-axis transformation, but are lost with any other transformation.
 
->>> a[:]._metadata  # doctest: +SKIP
-{'name': 'myname', 'units': 'myunits'}
+>>> a[:].attrs
+OrderedDict([('name', 'myname'), ('units', 'myunits')])
 
-.. note:: Currently metadata are not stored in the `_metadata` attribute but quite classically in the class's `__dict__` attribute. `_metadata` is only a convenience property that makes a copy of all non-private instance attributes. Therefore modifying its values element-wise will have no effect on actual metadata. 
-
-.. note:: Any attribute starting with  `_` will not show up in `_metadata`. This `private` attributes will not be conserved via indexing or transformation, and will not be written to netCDF. They can still be read from a netCDF file, though.
+.. note:: For metadata that could conflict with protected attributes, or with axis names, please use `attrs` directly to set or get the metadata.

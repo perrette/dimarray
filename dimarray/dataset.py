@@ -1,30 +1,26 @@
 """ collection of base obeje
 """
+from __future__ import absolute_import
 from collections import OrderedDict as odict
 import warnings, copy
 import numpy as np
 
 import dimarray as da  # for the doctest, so that they are testable via py.test
 from dimarray.decorators import format_doc
+from dimarray.config import get_option
 
-from core import DimArray, array, Axis, Axes
-from core import align_axes, stack, concatenate
-from core.align import _check_stack_args, _get_axes, stack, concatenate, _check_stack_axis, get_dims as _get_dims
-from core import pandas_obj
-from core.metadata import MetadataBase
-from core.axes import _doc_reset_axis
+from .core import DimArray, array, Axis, Axes
+from .core import align_axes, stack, concatenate
+from .core.align import _check_stack_args, _get_axes, stack, concatenate, _check_stack_axis, get_dims as _get_dims, reindex_like
+from .core.transform import interp_like, _interp_internal_from_weight, _interp_internal_get_weights, _interp_internal_maybe_sort
+from .core.indexing import locate_many
+from .core import pandas_obj
+from .core.bases import AbstractDataset, GetSetDelAttrMixin, OpMixin
 
-class Dataset(odict, MetadataBase):
+class Dataset(AbstractDataset, odict, OpMixin, GetSetDelAttrMixin):
+# class Dataset(AbstractDataset, odict):
     """ Container for a set of aligned objects
     """
-    @property
-    def axes(self):
-        return self._axes
-
-    @axes.setter
-    def axes(self, axes):
-        self._axes = axes
-
     _constructor = DimArray
 
     def __init__(self, *args, **kwargs):
@@ -39,7 +35,8 @@ class Dataset(odict, MetadataBase):
         data = odict(*args, **kwargs)
 
         # Basic initialization
-        self.axes = Axes()
+        self._axes = Axes()
+        self._attrs = odict()
 
         # initialize an ordered dictionary
         super(Dataset, self).__init__()
@@ -66,10 +63,22 @@ class Dataset(odict, MetadataBase):
             self[key] = value
 
     @property
+    def axes(self):
+        return self._axes
+
+    @axes.setter
+    def axes(self, newaxes):
+        for ax in newaxes:
+            if ax.name in self.dims:
+                self.axes[ax.name] = ax
+            else:
+                self.axes.append(ax)
+
+    @property
     def dims(self):
         """ tuple of dimensions contained in the Dataset, consistently with DimArray's `dims`
         """
-        return tuple([ax.name for ax in self.axes])
+        return tuple([ax.name for ax in self._axes])
 
     @dims.setter
     def dims(self, newdims):
@@ -85,40 +94,11 @@ class Dataset(odict, MetadataBase):
             oldname = self.axes[i].name
             self.axes[i].name = newname
 
-            # axes in individual items will be updated automatically 
-            # since they are all references of the central axes
-
-    def _repr(self, metadata=True):
-        """ string representation
+    @property
+    def labels(self):
+        """ tuple of axis values contained in the Dataset, consistently with DimArray's `labels`
         """
-        lines = []
-        header = "Dataset of %s variables" % (len(self))
-        if len(self) == 1: header = header.replace('variables','variable')
-        lines.append(header)
-        lines.append(self.axes._repr(metadata=metadata))
-
-        # display single variables
-        for nm in self.keys():
-            v = self[nm]
-            repr_dims = repr(v.dims)
-            if repr_dims == "()": repr_dims = v.values
-            vlines = []
-            vlines.append("{}".format(repr_dims))
-            if metadata and len(v._metadata()) > 0:
-                vlines.append(v._metadata_summary())
-            lines.append(nm+': '+"\n".join(vlines))
-
-        if metadata and len(self._metadata()) > 0:
-            lines.append('//global attributes:')
-            lines.append(self._metadata_summary())
-
-        return "\n".join(lines)
-
-    def summary(self):
-        return self._repr(metadata=True)
-
-    def __repr__(self):
-        return self._repr(metadata=False)
+        return tuple([ax.values for ax in self.axes])
 
     #
     # overload dictionary methods
@@ -149,7 +129,6 @@ class Dataset(odict, MetadataBase):
         >>> ds = Dataset()
         >>> ds
         Dataset of 0 variables
-        <BLANKLINE>
         >>> a = DimArray([0, 1, 2], dims=('time',))
         >>> ds['yo'] = a 
         >>> ds['yo']
@@ -176,7 +155,7 @@ class Dataset(odict, MetadataBase):
         # shallow copy of the DimArray so that its axes attribute can be 
         # modified without affecting the original array
         val = copy.copy(val)  
-        val.axes = copy.deepcopy(val.axes)
+        val._axes = copy.deepcopy(val.axes)
 
         # Check dimensions
         # make sure axes match those of the dataset
@@ -200,14 +179,9 @@ class Dataset(odict, MetadataBase):
 
         super(Dataset, self).__setitem__(key, val)
 
-        # now just checking 
-        test_internal = super(Dataset, self).__getitem__(key)
-        for ax in test_internal.axes:
-            assert self.axes[ax.name] is ax
-
     def copy(self):
         ds2 = super(Dataset, self).copy() # odict method, copy axes but not metadata
-        ds2._metadata(self._metadata())
+        ds2.attrs.update(self.attrs)
         return ds2
 
     def __eq__(self, other):
@@ -218,30 +192,39 @@ class Dataset(odict, MetadataBase):
                 and np.all([np.all(self[k] == other[k]) for k in self.keys()])
 
     #
+    # Backends
     #
-    #
-    def write_nc(self, f, *args, **kwargs):
-        """ Save dataset in netCDF file.
+    def write_nc(self, f, mode='w', clobber=True, format=None, **kwargs):
+        """ Write Dataset to netCDF file.
 
-        If you see this documentation, it means netCDF4 is not installed on your system 
-        and you will not be able to use this functionality.
+        Wrapper around DatasetOnDisk
+
+        Parameters
+        ----------
+        f : file name
+        mode, clobber, format : seel netCDF4-python doc
+        **kwargs : passed to netCDF4.Dataset.createVAriable (compression)
         """
-        import io.nc as ncio
-        ncio._write_dataset(f, self, *args, **kwargs)
+        from dimarray.io.nc import DatasetOnDisk, nc, _maybe_open_file
+        f, close = _maybe_open_file(f, mode=mode, clobber=clobber,format=format)
+        store = DatasetOnDisk(f)
+        # store = DatasetOnDisk(f, mode=mode, clobber=clobber, format=format)
+        for name in self.keys():
+            store.write(name, self[name], **kwargs)
+        store.attrs.update(self.attrs) # attributes
+        if isinstance(f, nc.Dataset): store.close() # do not close (deprecated)
 
-    write = write_nc
+    def write(self, *args, **kwargs):
+        warnings.warn("Deprecated. Use write_nc.", FutureWarning)
+        self.write_nc(*args, **kwargs)
 
     @classmethod
     def read_nc(cls, f, *args, **kwargs):
         """ Read dataset from netCDF file.
-
-        If you see this documentation, it means netCDF4 is not installed on your system 
-        and you will not be able to use this functionality.
         """
-        import io.nc as ncio
-        return ncio._read_dataset(f, *args, **kwargs)
-
-    #read = read_nc
+        warnings.warn("Deprecated. Use dimarray.read_nc or dimarray.open_nc", FutureWarning)
+        return da.io.nc.read_nc(f, *args, **kwargs)
+    read = read_nc
 
     def to_array(self, axis=None, keys=None):
         """ Convert to DimArray
@@ -281,18 +264,40 @@ class Dataset(odict, MetadataBase):
 
         return self._constructor(data, axes)
 
-    # 
-    # REMOVE THESE FUNCTIONS AS NON-ESSENTIAL ???
-    #
-    def take(self, indices, axis=0, raise_error=False, **kwargs):
-        """ analogous to DimArray's take, but for each DimArray of the Dataset
+    def take(self, names=None, indices=None, axis=0, indexing=None, tol=None, keepdims=False):
+        """ Analogous to DimArray's take, but for each DimArray of the Dataset
 
         Parameters
         ----------
-        indices : scalar, or array-like, or slice
-        axis : axis name (str)
-        raise_error : raise an error if a variable does not have the desired dimension
-        **kwargs : arguments passed to the axis locator, similar to `take`, such as `indexing` or `keepdims`
+        names : list of variables to read, optional
+        indices : int or list or slice (single-dimensional indices)
+                   or a tuple of those (multi-dimensional)
+                   or `dict` of { axis name : axis indices }
+            Indices refer to Dataset axes. Any item that does not possess
+            one of the dimensions will not be indexed along that dimension.
+            For example, scalar items will be left unchanged whatever indices
+            are provided.
+        axis : None or int or str, optional
+            if specified and indices is a slice, scalar or an array, assumes 
+            indexing is along this axis.
+        indexing : {'label', 'position'}, optional
+            Indexing mode. 
+            - "label": indexing on axis labels (default)
+            - "position": use numpy-like position index
+            Default value can be changed in dimarray.rcParams['indexing.by']
+        tol : float, optional
+            tolerance when looking for numerical values, e.g. to use nearest 
+            neighbor search, default `None`.
+        keepdims : bool, optional 
+            keep singleton dimensions (default False)
+
+        Returns
+        -------
+        Dataset
+
+        See Also
+        --------
+        DimArrayOnDisk.read, DimArray.take
 
         Examples
         --------
@@ -304,54 +309,48 @@ class Dataset(odict, MetadataBase):
         0 / time (4): 1950 to 1953
         a: ('time',)
         b: ('time',)
-        >>> ds.take(1951, axis='time')
+        >>> ds.take(indices=1951, axis='time')
         Dataset of 2 variables
-        <BLANKLINE>
         a: 2.0
         b: 11.0
-        >>> ds.take(0, axis='time', indexing='position')
+        >>> ds.take(indices=0, axis='time', indexing='position')
         Dataset of 2 variables
-        <BLANKLINE>
         a: 1.0
         b: nan
         >>> ds['c'] = DimArray([[1,2],[11,22],[111,222],[3,4]], axes=[('time', [1950,1951,1952,1953]),('item',['a','b'])])
-        >>> ds.take({'time':1950})
+        >>> ds.take(indices={'time':1950})
         Dataset of 3 variables
-        0 / item (2): a to b
+        0 / item (2): 'a' to 'b'
         a: 1.0
         b: nan
         c: ('item',)
-        >>> ds.take({'time':1950})['c']
+        >>> ds.take(indices={'time':1950})['c']
         dimarray: 2 non-null elements (0 null)
-        0 / item (2): a to b
+        0 / item (2): 'a' to 'b'
         array([1, 2])
-        >>> ds.take({'item':'b'})
+        >>> ds.take(indices={'item':'b'})
         Dataset of 3 variables
         0 / time (4): 1950 to 1953
         a: ('time',)
         b: ('time',)
         c: ('time',)
         """
-        # first find the index for the shared axes
-        kw_indices = {self.axes[i].name:ind for i,ind in enumerate(self.axes.loc(indices, axis=axis, **kwargs))}
+        # automatically read all variables to load (except for the dimensions)
+        if names is None:
+            names = self.keys()
+        elif isinstance(names, basestring):
+            raise TypeError("Please provide a sequence of variables to read.")
 
-        # then apply take in 'position' mode
-        newdata = self.__class__()
-        # loop over variables
-        for k in self.keys():
-            v = self[k]
-            # loop over axes to index on
-            for axis in kw_indices.keys():
-                if np.ndim(v) == 0 or axis not in v.dims: 
-                    if raise_error: 
-                        raise ValueError("{} does not have dimension {} ==> set raise_error=False to keep this variable unchanged".format(k, axis))
-                    else:
-                        continue
-                # slice along one axis
-                v = v.take({axis:kw_indices[axis]}, indexing='position')
-            newdata[k] = v
+        tuple_indices = self._get_indices(indices, axis=axis, tol=tol, keepdims=keepdims, indexing=indexing)
+        dict_indices = {dim:tuple_indices[i] for i, dim in enumerate(self.dims)}
 
-        return newdata
+        data = Dataset()
+        # start with the axes, to make sure the ordering is maintained
+        data.axes = self._getaxes_ortho(tuple_indices) 
+        for nm in names:
+            data[nm] = self[nm].take(indices={dim:dict_indices[dim] for dim in self[nm].dims}, indexing='position')
+        data.attrs.update(self.attrs) # dataset's metadata
+        return data
 
     def _apply_dimarray_axis(self, funcname, *args, **kwargs):
         """ Apply a function on every Dataset variable. 
@@ -381,7 +380,7 @@ class Dataset(odict, MetadataBase):
         >>> ds = Dataset(a=a, b=b)
         >>> ds.mean(axis='time')
         Dataset of 2 variables
-        0 / items (2): a to b
+        0 / items (2): 'a' to 'b'
         a: 2.0
         b: ('items',)
         >>> ds.mean(axis='items')
@@ -397,17 +396,6 @@ class Dataset(odict, MetadataBase):
     def median(self, axis=0, **kwargs): return self._apply_dimarray_axis('median', axis=axis, **kwargs)
     def sum(self, axis=0, **kwargs): return self._apply_dimarray_axis('sum', axis=axis, **kwargs)
 
-    def __getattr__(self, att):
-        """ allow access of dimensions
-        """
-        # check for dimensions
-        if att in self.dims:
-            ax = self.axes[att]
-            return ax.values # return numpy array
-
-        else:
-            raise AttributeError("{} object has no attribute {}".format(self.__class__.__name__, att))
-
     def to_dict(self):
         """ export to dict
         """
@@ -418,20 +406,39 @@ class Dataset(odict, MetadataBase):
         """
         return odict([(nm, self[nm]) for nm in self.keys()])
 
-    @format_doc(**_doc_reset_axis)
-    def set_axis(self, values=None, axis=0, inplace=False, **kwargs):
-        """ (re)set axis values and attributes in all dimarrays present in the dataset
-
+    def set_axis(self, values=None, axis=0, name=None, inplace=False, **kwargs):
+        """ Set axis values, name and attributes of the Dataset
+        
         Parameters
         ----------
-        {values}
-        {axis}
-        {inplace}
-        {kwargs}
+        values : numpy array-like or mapper (callable or dict), optional
+            - array-like : new axis values, must have exactly the same 
+            length as original axis
+            - dict : establish a map between original and new axis values
+            - callable : transform each axis value into a new one
+            - if None, axis values are left unchanged
+            Default to None.
+        axis : int or str, optional
+            axis to be (re)set
+        name : str, optional
+            rename axis
+        inplace : bool, optional
+            modify dataset axis in-place (True) or return copy (False)? 
+            (default False)
+        **kwargs : key-word arguments
+            Also reset other axis attributes, which can be single metadata
+            or other axis attributes, via using `setattr`
+            This includes special attributes `weights` and `attrs` (the latter
+            reset all attributes)
 
         Returns
         -------
         Dataset instance, or None if inplace is True
+
+        Notes
+        -----
+        This affects all DimArray present in the Dataset, since they share the same
+        axes.
 
         Examples
         --------
@@ -440,68 +447,284 @@ class Dataset(odict, MetadataBase):
         >>> ds['b'] = da.zeros(shape=(3,4)) # dimensions 'x0', 'x1'
         >>> ds.set_axis(['a','b','c'], axis='x0')
         Dataset of 2 variables
-        0 / x0 (3): a to c
+        0 / x0 (3): 'a' to 'c'
         1 / x1 (4): 0 to 3
         a: ('x0',)
         b: ('x0', 'x1')
         """
-        if inplace is False:
-            self = self.copy()
-        ## update every dimarray in the dict
-        #axis_name = self.axes[axis].name
-        #for nm in self.keys():
-        #    if not axis_name in self[nm].dims:
-        #        continue
-        #    super(Dataset, self).__setitem__(nm, self[nm].set_axis(values, axis, inplace=False, **kwargs) )
+        if not inplace: self = self.copy()
+        self.axes[axis].set(values=values, inplace=True, name=name, **kwargs)
+        if not inplace: return self
 
-        # update the main axis instance
-        self.axes = self.axes.set_axis(values, axis, inplace=False, **kwargs)
+    def reset(self, values=None, axis=0, name=None, **kwargs):
+        "deprecated, see Dataset.set" 
+        warnings.warn("Deprecated. Use Dataset.set", FutureWarning)
+        if values is None: values = np.arange(self.size)
+        if values is False: values = None
+        return self.set(values, axis=axis, name=name, **kwargs)
 
-        if inplace is False:
-            return self
+    def rename_keys(self, mapper, inplace=False):
+        """ Rename all variables in the Dataset
 
-    @format_doc(**_doc_reset_axis)
-    def reset_axis(self, axis=0, inplace=False, **kwargs):
-        """ (re)set axis values and attributes in all dimarrays present in the dataset
+        Possible speedup compared to a classical dict-like operation 
+        since an additional check on the axes is avoided.
 
         Parameters
         ----------
-        {axis}
-        {inplace}
-        {kwargs}
+        mapper : dict-like or function to map oldname -> newname
+        inplace : bool, optional
+            if True, in-place modification, otherwise a copy with modified
+            keys is retuend (default: False)
 
         Returns
         -------
-        Dataset instance, or None if inplace is True
+        Dataset if inplace is False, otherwise None
 
         Examples
         --------
-        >>> ds = Dataset()
-        >>> ds['a'] = da.zeros(axes=[['a','b','c']])  # some dimarray with dimension 'x0'
-        >>> ds['b'] = da.zeros(axes=[['a','b','c'], [11,22,33,44]]) # dimensions 'x0', 'x1'
-        >>> ds.reset_axis(axis='x0')
+        >>> ds = da.Dataset(a=da.zeros(shape=(3,)), b=da.zeros(shape=(3,2)))
+        >>> ds
         Dataset of 2 variables
         0 / x0 (3): 0 to 2
-        1 / x1 (4): 11 to 44
+        1 / x1 (2): 0 to 1
         a: ('x0',)
         b: ('x0', 'x1')
+        >>> ds.rename_keys({'b':'c'})
+        Dataset of 2 variables
+        0 / x0 (3): 0 to 2
+        1 / x1 (2): 0 to 1
+        a: ('x0',)
+        c: ('x0', 'x1')
         """
-        if inplace is False:
-            self = self.copy()
+        if inplace:
+            ds = self
+        else:
+            ds = self.copy()
 
-        ## update every dimarray in the dict
-        #axis_name = self.axes[axis].name
-        #for nm in self.keys():
-        #    if not axis_name in self[nm].dims:
-        #        continue
-        #    super(Dataset, self).__setitem__(nm, self[nm].reset_axis(axis, inplace=False, **kwargs) )
+        if isinstance(mapper, dict):
+            iterkeys = mapper.iteritems()
+        else:
+            if not callable(mapper):
+                raise TypeError("mapper must be callable")
+            iterkeys = [(old, mapper(old)) for old in ds.keys()]
 
-        # update the main axis instance
-        self.axes = self.axes.reset_axis(axis, inplace=False, **kwargs)
+        for old, new in iterkeys:
+            val = super(Dataset, ds).__getitem__(old) # same as ds[old]
+            super(Dataset, ds).__setitem__(new, val)
+            super(Dataset, ds).__delitem__(old)
 
-        if inplace is False:
-            return self
+        if not inplace:
+            return ds
 
+    def rename_axes(self, mapper, inplace=False):
+        """ Rename axes, analogous to rename_keys for axis names
+        """
+        if inplace:
+            ds = self
+        else:
+            ds = self.copy()
+
+        if isinstance(mapper, dict):
+            iterkeys = mapper.iteritems()
+        else:
+            if not callable(mapper):
+                raise TypeError("mapper must be callable")
+            iterkeys = [(old, mapper(old)) for old in ds.dims]
+
+        for old, new in iterkeys:
+            ds.axes[old].name = new
+
+        if not inplace:
+            return ds
+
+    def reduce_axis(self, func, axis=0, keepdims=False, keepattrs=False, **kwargs):
+        """ reduce an axis in a Dataset
+
+        Parameters
+        ----------
+        func : operation that can be applied on a numpy array, 
+            which takes `axis` int argument
+        keepdims : whether or not the axis is removed by the transformation
+        **kwargs : passed to func
+        """
+        # prepare new axes
+        pos, name = self._get_axis_info(axis)
+        if keepdims:
+            newaxes = [ax.copy() if ax.name != name else Axis(func(ax.values, axis=0, **kwargs), ax.name) for ax in self.axes]
+        else:
+            newaxes = [ax.copy() for ax in self.axes if ax.name != name ]
+        newdims = [ax.name for ax in newaxes]
+
+        # initialize dataset
+        dataset = self.__class__()
+        dataset.axes = newaxes
+
+        # apply function to all elements
+        for k in self.keys():
+            item = self[k]
+            # skip DimArrays without the dimension of interest
+            try:
+                pos, _ = item._get_axis_info(name)
+            except:
+                dataset[k] = item # no axis is present
+                continue
+            newval = func(item.values, axis=pos, **kwargs)
+            dima = DimArray(newval, [newaxes[newdims.index(dim)] for dim in item.dims if dim in newdims])
+            if keepattrs: 
+                dima.attrs.update(item.attrs)
+            # super(Dataset, dataset).__setitem__(k, dima)
+            dataset[k] = dima # for now with check
+
+        if keepattrs: 
+            dataset.attrs.update(self.attrs) # keep metadata?
+        return dataset
+
+    def take_axis(self, indices, axis=0, indexing=None, mode='raise'):
+        """ Analogous to DimArray.take_axis
+        """
+        if not np.iterable(indices):
+            raise TypeError("indices must be iterable")
+        indexing = indexing or getattr(self, "_indexing", None) or get_option("indexing.by")
+        if indexing == "label":
+            indices = self.axes[axis].loc(indices, mode=mode)
+        if mode not in ('raise', 'clip', 'wrap'):
+            mode = 'raise'
+        return self.reduce_axis(np.take, indices=indices, axis=axis, mode=mode, keepattrs=True, keepdims=True)
+
+    def sort_axis(self, axis=0, kind='quicksort'):
+        """Analogous to DimArray.sort_axis, for each element in a Dataset
+        """
+        index = self.axes[axis].values
+        ii = index.argsort(kind=kind) # the default
+        return self.take_axis(ii, axis=axis, indexing='position')
+
+    def reindex_axis(self, values, axis=0, fill_value=np.nan, raise_error=False, method=None):
+        """ analogous to DimArray.reindex_axis, but for a whole Dataset 
+
+        See DimArray.reindex_axis for documention.
+        """
+        if isinstance(values, Axis):
+            newaxis = values
+            values = newaxis.values
+            axis = newaxis.name
+        elif np.isscalar(values) or type(values) is slice:
+            raise TypeError("Please provide list, array-like or Axis object to perform re-indexing")
+        else:
+            values = np.asarray(values)
+
+        # take axis, do not raise error
+        dataset = self.take_axis(values, axis=axis, indexing='label', 
+                                 mode='raise' if raise_error else 'clip')
+
+        # Replace mismatch with missing values?
+        newax = dataset.axes[axis]
+        mask = newax.values != values
+        any_nan = np.any(mask)
+
+        if any_nan:
+            # Make sure the axis values match the requested new axis
+            dataset.axes[axis][mask] = values[mask]
+
+            for k in dataset.keys():
+                if method is None:
+                    dataset[k].put(mask, fill_value, axis=axis, inplace=True, indexing="position", cast=True)
+
+        return dataset
+
+    def reindex_like(self, other, **kwargs):
+        """Analogous to DimArray.reindex_like
+
+        >>> ds1 = da.Dataset(a=da.DimArray(axes=[[1,2,3]]))
+        >>> ds2 = da.Dataset(b=da.DimArray(axes=[[1.,3.],['a','b']]))
+        >>> ds2.reindex_like(ds1)
+        Dataset of 1 variable
+        0 / x0 (3): 1.0 to 3.0
+        1 / x1 (2): 'a' to 'b'
+        b: ('x0', 'x1')
+        """
+        return reindex_like(self, other, **kwargs)
+
+    def interp_axis(self, values, axis=0, left=np.nan, right=np.nan, issorted=None):
+        """ Analogous to DimArray.interp_axis
+        """
+        # copy some of DimArray.interp_axis code to re-use the weights
+        newaxis = Axis(values, self.axes[axis].name) # necessary array & type checks 
+
+        # sort the axis if needed, to apply numpy interp
+        obj = _interp_internal_maybe_sort(self, axis, issorted)
+        curaxis = obj.axes[axis]
+
+        kwargs = _interp_internal_get_weights(curaxis.values, newaxis.values)
+
+        # loop over all dimarray
+        return obj.reduce_axis(_interp_internal_from_weight, axis=axis, keepdims=True, keepattrs=True, left=left, right=right, **kwargs)
+
+    def interp_like(self, other, **kwargs):
+        """Analogous to DimArray.interp_like
+        """
+        return interp_like(self, other, **kwargs)
+
+    #
+    # Operations
+    #
+    def _binary_op(self, func, other):
+        """ generalize DimArray operation to a Dataset, for each key
+
+        In case the keys differ, returns the intersection of the two datasets
+
+        Just for testing:
+        >>> ds = Dataset(b=DimArray([[0.,1],[1,2]]))
+        >>> -ds
+        Dataset of 1 variable
+        0 / x0 (2): 0 to 1
+        1 / x1 (2): 0 to 1
+        b: ('x0', 'x1')
+        >>> -ds["b"]
+        dimarray: 4 non-null elements (0 null)
+        0 / x0 (2): 0 to 1
+        1 / x1 (2): 0 to 1
+        array([[-0., -1.],
+               [-1., -2.]])
+        >>> np.all(ds == ds)
+        True
+        >>> assert isinstance(-ds, Dataset)
+        >>> assert isinstance(ds/0.5, Dataset)
+        >>> assert isinstance(ds*0, Dataset)
+        >>> (-ds -ds + ds/0.5 + ds*0+1)['b']
+        dimarray: 4 non-null elements (0 null)
+        0 / x0 (2): 0 to 1
+        1 / x1 (2): 0 to 1
+        array([[ 1.,  1.],
+               [ 1.,  1.]])
+        >>> ds += 1
+        >>> ds['b']
+        dimarray: 4 non-null elements (0 null)
+        0 / x0 (2): 0 to 1
+        1 / x1 (2): 0 to 1
+        array([[ 1.,  2.],
+               [ 2.,  3.]])
+        """
+        assert isinstance(other, Dataset) or np.isscalar(other), "can only combine Datasets objects (func={})".format(func.__name__)
+        # align all axes first
+        reindex = get_option("op.reindex")
+        if reindex and hasattr(other, 'axes') and other.axes != self.axes:
+            other.reindex_like(self)
+        # now proceed to operation
+        res = self.__class__()
+        for k1 in self.keys():
+            if hasattr(other, 'keys'):
+                for k2 in other.keys():
+                    if k1 == k2:
+                        res[k1] = self[k1]._binary_op(func, other[k2])
+            else:
+                res[k1] = self[k1]._binary_op(func, other)
+        return res
+
+    def _unary_op(self, func):
+        res = self.__class__()
+        for k in self.keys():
+            res[k] = self[k]._unary_op(func)
+        return res
 
 def stack_ds(datasets, axis, keys=None, align=False):
     """ stack dataset along a new dimension
@@ -529,7 +752,7 @@ def stack_ds(datasets, axis, keys=None, align=False):
     >>> ds2 = Dataset({'a':a*2,'b':b*2}) # dataset of 2 variables from a second experiment
     >>> stack_ds([ds, ds2], axis='stackdim', keys=['exp1','exp2'])
     Dataset of 2 variables
-    0 / stackdim (2): exp1 to exp2
+    0 / stackdim (2): 'exp1' to 'exp2'
     1 / dima (3): 0 to 2
     2 / dimb (2): 0 to 1
     a: ('stackdim', 'dima')
@@ -594,7 +817,7 @@ def concatenate_ds(datasets, axis=0):
     >>> ds2 = Dataset({'a':a2,'b':b2}) # dataset of 2 variables from a second experiment
     >>> concatenate_ds([ds, ds2])
     Dataset of 2 variables
-    0 / x0 (6): a to f
+    0 / x0 (6): 'a' to 'f'
     1 / x1 (2): 1 to 2
     a: ('x0',)
     b: ('x0', 'x1')

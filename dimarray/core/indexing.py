@@ -1,12 +1,12 @@
-""" Module to deal with indexing
+""" Old indexing functions ==> imported from indexing.py. 
+In the process of being rewritten.
 """
-import numpy as np
 import functools
 import copy 
-
-from axes import Axis, Axes, GroupedAxis, is_regular, make_multiindex
+import numpy as np
 from dimarray.tools import is_DimArray
 from dimarray.config import get_option
+from dimarray.compat.pycompat import iteritems, range
 
 #__all__ = ["take", "put", "reindex_axis", "reindex_like"]
 __all__ = []
@@ -17,7 +17,7 @@ TOLERANCE=None
 _doc_broadcast_arrays = """
     broadcast_arrays : bool, optional
     
-      True, by default, consistently with numpy
+      False, by default.
     
       if False, indexing with list or array of indices will behave like
       Matlab TM does, which means that it will index on each individual dimensions.
@@ -34,67 +34,54 @@ _doc_broadcast_arrays = """
       """.strip()
 
 
-def is_boolean_index(indices, shape):
-    """ check if something like a[a>2] is performed for ndim > 1
-    """
-    #indices = np.index_exp[indices]
-    #if len(shape) > 1 and len(indices) == 1:
-    if isinstance(indices, np.ndarray) or is_DimArray(indices):
-        if indices.shape == shape:
-            if indices.dtype == np.dtype(bool):
-                return True
+def locate_one(values, val, issorted=False, tol=None, side='left'):
+    " Locate one value in an axis"
+    if tol is not None:
+        try:
+            dist = np.abs(values - val)
+            match = np.argmin(dist)
+        except TypeError as error:
+            raise TypeError("`tol` parameter only valid for numeric axes")
+        if dist[match] > tol:
+            raise IndexError("Did not find element `{}` in the axis with `tol={}`".format(repr(val), repr(tol)))
 
-    return False # otherwise
+    elif issorted:
+        match = np.searchsorted(values, val, side=side)
 
-def _fill_ellipsis(indices, ndim):
-    """ replace Ellipsis
-    """
-    if indices is Ellipsis:
-        return slice(None)
-
-    elif type(indices) is not tuple:
-        return indices
-
-    # Implement some basic patterns
-    is_ellipsis = np.array([ix is Ellipsis for ix in indices])
-    ne = is_ellipsis.sum()
-
-    if ne == 0:
-        return indices
-
-    elif ne > 1:
-        raise NotImplementedError('Only support one Ellipsis')
-
-    # From here, one Ellipsis is present
-    i = np.where(is_ellipsis)[0]
-    indices = indices[:i] + (slice(None),)*(ndim - len(indices) + 1) + indices[(i+1):]
-    return indices
-
-def array_indices(indices_numpy, shape):
-    """ Replace non-iterable (incl. slices) with arrays
-
-    indices_numpy : multi-index
-    shape: shape of array to index
-    """
-    dummy_ix = []
-    for i,ix in enumerate(indices_numpy):
-        if not np.iterable(ix):
-            if type(ix) is slice:
-                ix = np.arange(shape[i])[ix]
-            else:
-                ix = np.array([ix])
-        
-        # else make sure we have an array, and if book, evaluate to arrays
+    else:
+        matches = np.where(values == val)[0]
+        if matches.size > 0:
+            match = matches[0]
         else:
-            ix = np.asarray(ix)
-            if ix.dtype is np.dtype(bool):
-                ix = np.where(ix)[0]
+            raise IndexError("Element not found in axis: {}".format(repr(val)))
 
-        dummy_ix.append(ix)
-    return dummy_ix
+    return match
 
+def locate_many(values, val, issorted=False, side='left'):
+    """ Locate several values based on searchsorted
+    """
+    if issorted:
+        matches = np.searchsorted(values, val)
+    else:
+        isort = np.argsort(values)
+        indices = np.searchsorted(values, val, sorter=isort, side=side)
+        # if `val` is not found, and is larger than the other values, indices
+        # is equal to values.size (therefore leading to an error)
+        # mode="clip" solves this problem by returning the next value (the last)
+        matches = isort.take(indices, mode='clip') 
+
+    return matches
+
+#
+# Functions to 
+#
 def broadcast_indices(indices):
-    """ if any array index is present, broadcast all arrays and integer indices on the same shape
+    """ Broadcast a tuple of indices onto a same shape.
+    
+    Notes
+    -----
+    If any array index is present, broadcast all arrays and integer indices on the same shape.
+    This is the opposite of `ix_`.
     """
     aindices = []
 
@@ -125,285 +112,24 @@ def broadcast_indices(indices):
 
     return aindices
 
-def ix_(indices_numpy, shape):
-    # convert to matlab-like compatible indices
-    """ convert numpy-like to matlab-like indices
 
-    indices_numpy : indices to convert
-    shape : shape of the array, to convert slices
-    """
-    dummy_ix = array_indices(indices_numpy, shape)
-    return np.ix_(*dummy_ix)
-
-#def _remove_trailing_slice(indices_numpy):
-#    """ remove trailing slice(None) from a tuple index
-#    """
-    # matching array size is useful 
-
-def _get_keyword_indices(obj, indices, axis=0):
-    """ get dictionary of indices
-    """
-    try:
-        axes = obj.axes
-    except:
-        raise TypeError(" must be a DimArray instance !")
-
-    # convert to dictionary
-    if type(indices) is tuple or isinstance(indices, dict) or isinstance(indices, Axis):
-        assert axis in (None, 0), "cannot have axis > 0 for tuple (multi-dimensional) indexing"
-
-    if isinstance(indices, Axis):
-        newaxis = indices
-        kw = {newaxis.name: newaxis.values}
-
-    elif type(indices) is tuple:
-        kw = {axes[i].name: ind for i, ind in enumerate(indices)}
-
-    elif type(indices) in (list, np.ndarray) or np.isscalar(indices):
-        kw = {axes[axis].name:indices}
-
-    elif isinstance(indices, dict):
-        kw = indices
-
-    else:
-        raise TypeError("indices not understood: {}, axis={}".format(indices, axis))
-
-    return kw
-
-@property
-def size(self):
-    return np.size(self.values)
-
-
-def take(self, indices, axis=0, indexing="label", tol=TOLERANCE, keepdims=False, broadcast_arrays=True, mode='raise'):
-    """ Retrieve values from a DimArray
-
-    Parameters
-    ----------
-    indices : int or list or slice (single-dimensional indices)
-               or a tuple of those (multi-dimensional)
-               or `dict` of {{ axis name : axis values }}
-    axis : int or str, optional
-    indexing : "label" or "position", optional
-           - "position": use numpy-like position index (default)
-           - "label": indexing on axis labels
-           default is "label"
-    tol : float or None, optional
-        tolerance when looking for numerical values, e.g. to use nearest neighbor search, default `None`
-    keepdims : bool, optional 
-        keep singleton dimensions?
-    {broadcast_arrays}
-    mode : "raise", "clip", "wrap", optional
-         analogous to numpy.ndarray.take's mode parameter, only valid (for now) if indexing is 'position'
-
-    Returns
-    -------
-    indexed_array : DimArray instance or scalar
-
-    See Also
-    --------
-    put
-
-    Examples
-    --------
-
-    >>> from dimarray import DimArray
-    >>> v = DimArray([[1,2,3],[4,5,6]], axes=[["a","b"], [10.,20.,30.]], dims=['d0','d1'], dtype=float) 
-    >>> v
-    dimarray: 6 non-null elements (0 null)
-    0 / d0 (2): a to b
-    1 / d1 (3): 10.0 to 30.0
-    array([[ 1.,  2.,  3.],
-           [ 4.,  5.,  6.]])
-
-    Indexing via axis values (default)
-
-    >>> a = v[:,10]   # python slicing method
-    >>> a
-    dimarray: 2 non-null elements (0 null)
-    0 / d0 (2): a to b
-    array([ 1.,  4.])
-    >>> b = v.take(10, axis=1)  # take, by axis position
-    >>> c = v.take(10, axis='d1')  # take, by axis name
-    >>> d = v.take({{'d1':10}})  # take, by dict {{axis name : axis values}}
-    >>> (a==b).all() and (a==c).all() and (a==d).all()
-    True
-
-    Indexing via integer index (indexing="position" or `ix` property)
-
-    >>> np.all(v.ix[:,0] == v[:,10])
-    True
-    >>> np.all(v.take(0, axis="d1", indexing="position") == v.take(10, axis="d1"))
-    True
-
-    Multi-dimensional indexing
-
-    >>> v["a", 10]  # also work with string axis
-    1.0
-    >>> v.take(('a',10))  # multi-dimensional, tuple
-    1.0
-    >>> v.take({{'d0':'a', 'd1':10}})  # dict-like arguments
-    1.0
-
-    Take a list of indices
-
-    >>> a = v[:,[10,20]] # also work with a list of index
-    >>> a
-    dimarray: 4 non-null elements (0 null)
-    0 / d0 (2): a to b
-    1 / d1 (2): 10.0 to 20.0
-    array([[ 1.,  2.],
-           [ 4.,  5.]])
-    >>> b = v.take([10,20], axis='d1')
-    >>> np.all(a == b)
-    True
-
-    Take a slice:
-
-    >>> c = v[:,10:20] # axis values: slice includes last element
-    >>> c
-    dimarray: 4 non-null elements (0 null)
-    0 / d0 (2): a to b
-    1 / d1 (2): 10.0 to 20.0
-    array([[ 1.,  2.],
-           [ 4.,  5.]])
-    >>> d = v.take(slice(10,20), axis='d1') # `take` accepts `slice` objects
-    >>> np.all(c == d)
-    True
-    >>> v.ix[:,0:1] # integer position: does *not* include last element
-    dimarray: 2 non-null elements (0 null)
-    0 / d0 (2): a to b
-    1 / d1 (1): 10.0 to 10.0
-    array([[ 1.],
-           [ 4.]])
-
-    Keep dimensions 
-
-    >>> a = v[["a"]]
-    >>> b = v.take("a",keepdims=True)
-    >>> np.all(a == b)
-    True
-
-    tolerance parameter to achieve "nearest neighbour" search
-
-    >>> v.take(12, axis="d1", tol=5)
-    dimarray: 2 non-null elements (0 null)
-    0 / d0 (2): a to b
-    array([ 1.,  4.])
-
-    # Matlab like multi-indexing
-
-    >>> v = DimArray(np.arange(2*3*4).reshape(2,3,4))
-    >>> v.box[[0,1],:,[0,0,0]].shape
-    (2, 3, 3)
-    >>> v.box[[0,1],:,[0,0]].shape # here broadcast_arrays = False
-    (2, 3, 2)
-    >>> v[[0,1],:,[0,0]].shape # that is traditional numpy, with broadcasting on same shape
-    (2, 3)
-    >>> v.values[[0,1],:,[0,0]].shape # a proof of it
-    (2, 3)
-
-    >>> a = DimArray(np.arange(2*3).reshape(2,3))
-
-    >>> a[a > 3] # FULL ARRAY: return a numpy array in n-d case (at least for now)
-    dimarray: 2 non-null elements (0 null)
-    0 / x0,x1 (2): (1, 1) to (1, 2)
-    array([4, 5])
-
-    >>> a[a.x0 > 0] # SINGLE AXIS: only first axis
-    dimarray: 3 non-null elements (0 null)
-    0 / x0 (1): 1 to 1
-    1 / x1 (3): 0 to 2
-    array([[3, 4, 5]])
-
-    >>> a[:, a.x1 > 0] # only second axis 
-    dimarray: 4 non-null elements (0 null)
-    0 / x0 (2): 0 to 1
-    1 / x1 (2): 1 to 2
-    array([[1, 2],
-           [4, 5]])
-
-    >>> a.box[a.x0 > 0, a.x1 > 0]  # AXIS-BASED (need `box` to prevent broadcasting)
-    dimarray: 2 non-null elements (0 null)
-    0 / x0 (1): 1 to 1
-    1 / x1 (2): 1 to 2
-    array([[4, 5]])
-
-    Ommit `indices` parameter when putting a DimArray
-
-    >>> a = DimArray([0,1,2,3,4], ['a','b','c','d','e'])
-    >>> b = DimArray([5,6], ['c','d'])
-    >>> a.put(b)
-    dimarray: 5 non-null elements (0 null)
-    0 / x0 (5): a to e
-    array([0, 1, 5, 6, 4])
-
-    Ellipsis (only one supported)
-
-    >>> a = DimArray(np.arange(2*3*4*5).reshape(2,3,4,5))
-    >>> a[0,...,0].shape
-    (3, 4)
-    >>> a[...,0,0].shape
-    (2, 3)
-    """
-    assert indexing in ("position", "values", "label"), "invalid mode: "+repr(indexing)
-
-    # SPECIAL CASE: full scale boolean array
-    if self.ndim > 1 and is_boolean_index(indices, self.shape):
-        indices = np.where(np.asarray(indices))
-        newvalues = self.values[indices]
-
-        # return a scalar if size is 1
-        if np.size(newvalues) <= 1:
-            return newvalues
-
-        # or return a DimArray with axes as tuple
-        newaxisvalues = zip(*[self.axes[i].values[ii] for i, ii in enumerate(indices)])
-        newaxisname = ",".join(self.dims)
-        newaxis = Axis(newaxisvalues, newaxisname)
-        newobj = self._constructor(newvalues, [newaxis], **self._metadata)
-        return newobj
-
-    indices = _fill_ellipsis(indices, self.ndim)
-
-    indices_numpy = self.axes.loc(indices, axis=axis, position_index=(indexing == "position"), keepdims=keepdims, tol=tol)
-    #try:
-    #    indices_numpy = obj.axes.loc(indices, axis=axis, position_index=(indexing == "position"), keepdims=keepdims, tol=tol)
-    #except IndexError, msg:
-    #    raise IndexError(msg)
-
-    # broadcast array-indices & integers, numpy's classical
-    if broadcast_arrays:
-        return _take_broadcast(self, indices_numpy)
-
-    # matlab-like, do not broadcast array-indices but simply sample values along each dimension independently
-    else:
-        return _take_box(self, indices_numpy)
-
-take.__doc__ = take.__doc__.format(broadcast_arrays=_doc_broadcast_arrays)
-
-def _take_broadcast(a, indices):
+def getaxes_broadcast(obj, indices):
     """ broadcast array-indices & integers, numpy's classical
 
     Examples
     --------
     >>> import dimarray as da
     >>> a = da.zeros(shape=(3,4,5,6))
-    >>> a[:,[0, 1],:,2].shape
+    >>> a.take((slice(None),[0, 1],slice(None),2), broadcast=True).shape
     (2, 3, 5)
-    >>> a[:,[0, 1],2,:].shape
+    >>> a.take((slice(None),[0, 1],2,slice(None)), broadcast=True).shape
     (3, 2, 6)
     """
-    # new values
-    newval = a.values[indices]  
-
-    # if the new values is a scalar, then just return it
-    if np.isscalar(newval):
-        return newval
+    from dimarray import Axis, Axes
 
     # new axes: broacast indices (should do the same as above, since integers are just broadcast)
     indices2 = broadcast_indices(indices)
-    # assert np.all(newval == a.values[indices2])
+    # assert np.all(newval == obj.values[indices2])
 
     # make a multi-axis with tuples
     is_array2 = np.array([np.iterable(ix) for ix in indices2])
@@ -411,7 +137,7 @@ def _take_broadcast(a, indices):
 
     # If none or one array is present, easy
     if nb_array2 <= 1:
-        newaxes = [a.axes[i][ix] for i, ix in enumerate(indices) if not np.isscalar(ix)] # indices or indices2, does not matter
+        newaxes = [obj.axes[i][ix] for i, ix in enumerate(indices) if not np.isscalar(ix)] # indices or indices2, does not matter
 
     # else, finer check needed
     else:
@@ -422,9 +148,9 @@ def _take_broadcast(a, indices):
         # Determine where the axis will be inserted
         # - need to consider the integers as well (broadcast as arrays)
         # - if two indexed dimensions are not contiguous, new axis placed at first position...
-        # a = zeros((3,4,5,6))
-            # a[:,[1,2],:,0].shape ==> (2, 3, 5)
-            # a[:,[1,2],0,:].shape ==> (3, 2, 6)
+        # obj = zeros((3,4,5,6))
+            # obj[:,[1,2],:,0].shape ==> (2, 3, 5)
+            # obj[:,[1,2],0,:].shape ==> (3, 2, 6)
         array_ix_pos2 = np.where(is_array2)[0]
         if np.any(np.diff(array_ix_pos2) > 1):  # that mean, if two indexed dimensions are not contiguous
             insert = 0
@@ -435,18 +161,18 @@ def _take_broadcast(a, indices):
         # ...if originally only one array was provided, use these values correspondingly
         if len(array_ix_pos) == 1:
             i = array_ix_pos[0]
-            values = a.axes[i].values[indices[i]]
-            name = a.axes[i].name
+            values = obj.axes[i].values[indices[i]]
+            name = obj.axes[i].name
 
         # ...else use a list of tuples
         else:
-            values = zip(*[a.axes[i].values[indices2[i]] for i in array_ix_pos])
-            name = ",".join([a.axes[i].name for i in array_ix_pos])
+            values = zip(*[obj.axes[i].values[indices2[i]] for i in array_ix_pos])
+            name = ",".join([obj.axes[i].name for i in array_ix_pos])
 
         broadcastaxis = Axis(values, name)
 
         newaxes = Axes()
-        for i, ax in enumerate(a.axes):
+        for i, ax in enumerate(obj.axes):
 
             # axis is already part of the broadcast axis: skip
             if is_array2[i]:
@@ -464,629 +190,143 @@ def _take_broadcast(a, indices):
         # insert the right new axis at the appropriate position
         newaxes.insert(insert, broadcastaxis)
 
-    return a._constructor(newval, newaxes, **a._metadata)
+    return newaxes
 
-def _take_box(a, indices):
-    """ matlab-like, do not broadcast array-indices but simply sample values along each dimension independently
 
-    a: DimArray
-    indices: numpy indices
+def _maybe_cast_type(values, newval):
+    """ cast rules (chosen so that no information is lost), especially
+    useful for axis values.
+    # a[:] = b : a.dtype.kind
+    # i <- f : f
+    # U <- S : U
+    # S <- U : U
+    # O <- * : O
+    # * <- O : O
+    # b <- * : O
+    # * <- b : O
     """
-    # If there any array index?
-    any_array = np.any([np.iterable(ix) for ix in indices])
+    # check numpy-equivalent dtype
+    dtype = np.asarray(newval).dtype
+    
+    if values.dtype.kind == dtype.kind:
+        pass # same kind
+    elif values.dtype.kind == 'O':
+        pass # or already object
+    elif values.dtype.kind == 'f' and dtype.kind == 'i':
+        pass # ok
+    elif values.dtype.kind == 'i' and dtype.kind == 'f':
+        values = np.asarray(values, dtype=float)
+    elif values.dtype.kind == 'U' and dtype.kind == 'S':
+        pass
+    elif values.dtype.kind == 'S' and dtype.kind == 'U':
+        values = np.asarray(values, dtype=unicode)
+    else:
+        values = np.asarray(values, dtype=object)
 
-    # convert each index to iterable if broadast_arrays is False
-    if not any_array:
-        return _take_broadcast(a, indices)
+    return values
 
-    # case where at least one array is present
-    # e.g. np.zeros((2,2,2))[0,:,[0,0,0]] is of dimension 3 x 2, because the first dimension is broadcast to 3
-    indices_ = ix_(indices, a.shape)
+#####################################################################
+#  The threee functions below have been taken from xray.core.indexing
+#####################################################################
 
-    # new numpy values
-    newval = a.values[indices_] 
+def expanded_indexer(key, ndim):
+    """Given a key for indexing an ndarray, return an equivalent key which is a
+    tuple with length equal to the number of dimensions.
 
-    # need to squeeze these dimensions where original index is an integer
-    for i in reversed(range(len(indices))):
-        if np.isscalar(indices[i]):
-            newval = np.squeeze(newval, axis=i)
-
-    # if scalar, just return it
-    if np.isscalar(newval):
-        return newval
-
-    # New axes
-    newaxes = [a.axes[i][ix] for i, ix in enumerate(indices) if not np.isscalar(ix)] # indices or indices2, does not matter
-
-    return a._constructor(newval, newaxes, **a._metadata)
-
-def _put(obj, val_, indices_numpy_, inplace=False, convert=False):
-    """ put values in a DimArray using numpy integers, in the numpy way
+    The expansion is done by replacing all `Ellipsis` items with the right
+    number of full slices and then padding the key with full slices so that it
+    reaches the appropriate dimensionality.
     """
-    if not inplace:
-        obj = obj.copy()
-
-    try:
-        obj.values[indices_numpy_] = val_
-
-    # convert to val.dtype if needed
-    except ValueError, msg:
-        if not convert: raise
-        dtype = np.asarray(val_).dtype
-        if obj.dtype is not dtype:
-            obj.values = np.asarray(obj.values, dtype=dtype)
-        obj.values[indices_numpy_] = val_
-
-    if not inplace:
-        return obj
-
-def put(self, val, indices=None, axis=0, indexing="label", tol=TOLERANCE, convert=False, inplace=False, broadcast_arrays=True):
-    """ Put new values into DimArray (inplace)
-
-    Parameters
-    ----------
-    val : array-like
-        values to put in the array
-    indices : misc, optional
-        see `DimArray.take` for indexing rules. indices may be omitted if 
-        val is a DimArray (will then deduce `indices` from its axes)
-    axis : int or str or None, optional
-        for single index (see help on `DimArray.take`)
-    indexing : "position" or "label", optional
-        default is "label" for indexing by axis label instead of integer position on the axis
-    convert : bool, optional
-        convert array to val's type
-    inplace : bool, optional
-        If True, modify array values in place, otherwise make and return a 
-        copy.  Default is False
-    {broadcast_arrays}
-
-    Returns
-    -------
-    None: (inplace modification)
-
-    See Also
-    --------
-    DimArray.take
-
-    Examples
-    --------
-    >>> from dimarray import DimArray
-    >>> a = DimArray(np.zeros((2,2)), [('d0',['a','b']), ('d1',[10.,20.])])
-
-    Index by values
-
-    >>> b = a.put(1, indices={{'d0': 'b'}})
-    >>> b
-    dimarray: 4 non-null elements (0 null)
-    0 / d0 (2): a to b
-    1 / d1 (2): 10.0 to 20.0
-    array([[ 0.,  0.],
-           [ 1.,  1.]])
-    >>> a['b'] = 2   # slicing equivalent
-    >>> a
-    dimarray: 4 non-null elements (0 null)
-    0 / d0 (2): a to b
-    1 / d1 (2): 10.0 to 20.0
-    array([[ 0.,  0.],
-           [ 2.,  2.]])
-
-    Index by position
-
-    >>> b = a.put(3, indices=1, axis='d1', indexing="position")
-    >>> b
-    dimarray: 4 non-null elements (0 null)
-    0 / d0 (2): a to b
-    1 / d1 (2): 10.0 to 20.0
-    array([[ 0.,  3.],
-           [ 2.,  3.]])
-    >>> a.ix[:,1] = 4  # slicing equivalent
-    >>> a
-    dimarray: 4 non-null elements (0 null)
-    0 / d0 (2): a to b
-    1 / d1 (2): 10.0 to 20.0
-    array([[ 0.,  4.],
-           [ 2.,  4.]])
-
-
-    Multi-dimension, multi-index
-
-    >>> b = a.put(5, indices={{'d0':'b', 'd1':[10.]}})
-    >>> b
-    dimarray: 4 non-null elements (0 null)
-    0 / d0 (2): a to b
-    1 / d1 (2): 10.0 to 20.0
-    array([[ 0.,  4.],
-           [ 5.,  4.]])
-    >>> a["b",[10]] = 6
-    >>> a
-    dimarray: 4 non-null elements (0 null)
-    0 / d0 (2): a to b
-    1 / d1 (2): 10.0 to 20.0
-    array([[ 0.,  4.],
-           [ 6.,  4.]])
-
-    Inplace
-
-    >>> a.put(6, indices={{'d0':'b', 'd1':[10.]}}, inplace=True)
-
-    Multi-Index tests (not straightforward to get matlab-like behaviour)
-
-    >>> big = DimArray(np.zeros((2,3,4,5)))
-    >>> indices = {{'x0':0 ,'x1':[2,1],'x3':[1,4]}}
-    >>> sub = big.take(indices, broadcast_arrays=False)*0
-    >>> sub.dims == ('x1','x2','x3')
-    True
-    >>> sub.shape == (2,4,2)
-    True
-    >>> big.put(sub+1, indices, inplace=True, broadcast_arrays=False)
-    >>> sub2 = big.take(indices, broadcast_arrays=False)
-    >>> np.all(sub+1 == sub2)
-    True
-    """
-    assert indexing in ("position", "values", "label"), "invalid mode: "+repr(indexing)
-
-    if indices is None:
-
-        # DimArray as subarray: infer indices from its axes
-        if is_DimArray(val):
-            indices = {ax.name:ax.values for ax in val.axes}
-            broadcast_arrays = False  
-
-        elif np.isscalar(val):
-            raise ValueError("indices must be provided for non-DimArray or non-matching shape. See also `fill` method.")
-
+    if not isinstance(key, tuple):
+        # numpy treats non-tuple keys equivalent to tuples of length 1
+        key = (key,)
+    new_key = []
+    # handling Ellipsis right is a little tricky, see:
+    # http://docs.scipy.org/doc/numpy/reference/arrays.indexing.html#advanced-indexing
+    found_ellipsis = False
+    for k in key:
+        if k is Ellipsis:
+            if not found_ellipsis:
+                new_key.extend((ndim + 1 - len(key)) * [slice(None)])
+                found_ellipsis = True
+            else:
+                new_key.append(slice(None))
         else:
-            raise ValueError("indices must be provided for non-DimArray or non-matching shape")
+            new_key.append(k)
+    if len(new_key) > ndim:
+        raise IndexError('too many indices')
+    new_key.extend((ndim - len(new_key)) * [slice(None)])
+    return tuple(new_key)
 
-    else:
-            indices = _fill_ellipsis(indices, self.ndim)
+
+def canonicalize_indexer(key, ndim):
+    """Given an indexer for orthogonal array indexing, return an indexer that
+    is a tuple composed entirely of slices, integer ndarrays and native python
+    ints.
+    """
+    def canonicalize(indexer):
+        if not isinstance(indexer, slice):
+            indexer = np.asarray(indexer)
+            if indexer.ndim == 0:
+                indexer = int(np.asscalar(indexer))
+            if isinstance(indexer, np.ndarray):
+                if indexer.ndim != 1:
+                    raise ValueError('orthogonal array indexing only supports '
+                                     '1d arrays')
+                if indexer.dtype.kind == 'b':
+                    indexer, = np.nonzero(indexer)
+                elif indexer.dtype.kind != 'i':
+                    raise ValueError('invalid subkey %r for integer based '
+                                     'array indexing; all subkeys must be '
+                                     'slices, integers or sequences of '
+                                     'integers or Booleans' % indexer)
+        return indexer
+
+    return tuple(canonicalize(k) for k in expanded_indexer(key, ndim))
 
 
-    # SPECIAL CASE: full scale boolean array
-    if is_boolean_index(indices, self.shape):
-        return _put(self, val, np.asarray(indices), inplace=inplace, convert=convert)
-
-    indices_numpy = self.axes.loc(indices, axis=axis, position_index=(indexing == "position"), tol=tol)
-
-    # do nothing for full-array, boolean indexing
-    #if len(indices_numpy) == 1 and isinstance
-
-    # Convert to matlab-like indexing
-    if not broadcast_arrays:
-
-        indices_array = array_indices(indices_numpy, self.shape)
-        indices_numpy_ = np.ix_(*indices_array)
-        shp = [len(ix) for ix in indices_array] # get an idea of the shape
-
-        ## ...first check that val's shape is consistent with originally required indices
-        # if DimArray, transpose to the right shape
-        if is_DimArray(val):
-            newdims = [d for d in self.dims if d in val.dims] + [d for d in val.dims if d not in self.dims]
-            val = val.transpose(newdims)
-
-        # only check for n-d array of size and dimensions > 1
-        if np.size(val) > 1 and np.ndim(val) > 1 and np.any(np.array(shp) > 1):
-            shp1 = [d for d in shp if d > 1]
-            shp2 = [d for d in np.shape(val) if d > 1]
-            if shp1 != shp2:
-                raise ValueError('array is not broadcastable to correct shape (got values: {} but inferred from indices {})'.format(shp2, shp1))
-    #
-    #    # ...then reshape to new matlab-like form
-        if np.isscalar(val):
-            val_ = val
-        elif np.size(val) == 1:
-            val_ = np.squeeze(val)
+def orthogonal_indexer(key, shape):
+    """Given a key for orthogonal array indexing, returns an equivalent key
+    suitable for indexing a numpy.ndarray with fancy indexing.
+    """
+    def expand_key(k, length):
+        if isinstance(k, slice):
+            return np.arange(k.start or 0, k.stop or length, k.step or 1)
         else:
-            val = np.asarray(val)
-            val_ = np.reshape(val, shp)
-
-    else:
-        val_ = val
-        indices_numpy_ = indices_numpy
-
-    return _put(self, val_, indices_numpy_, inplace=inplace, convert=convert)
-
-put.__doc__ = put.__doc__.format(broadcast_arrays=_doc_broadcast_arrays)
-#take.__doc__ = take.__doc__.format(broadcast_arrays=_doc_broadcast_arrays)
-
-def fill(self, val):
-    """ anologous to numpy's fill (in-place operation)
-    """
-    self.values.fill(val) 
-
-#
-# Variants 
-#
-def take_na(obj, indices, axis=0, indexing="label", tol=TOLERANCE, keepdims=False, fill_value=np.nan, repna=True, broadcast_arrays=True):
-    """ like take but replace any missing value with NaNs
-
-    additional parameters:
-    na : replacement value, by default np.nan
-    """
-    #assert not broadcast_arrays, "check potential problem with array broadcasting"
-    assert indexing in ("position", "values", "label"), "invalid mode: "+repr(indexing)
-    indices_numpy = obj.axes.loc(indices, axis=axis, position_index=(indexing == "position"), keepdims=keepdims, tol=tol, raise_error=not repna)
-
-    indices_numpy, indices_mask = _filter_bad_indices(indices_numpy, obj.dims)
-    result = take(obj, indices_numpy, indexing="position", broadcast_arrays=broadcast_arrays)
-#    if np.isscalar(result):
-#        return result if indices_mask is None else na
-    put(result, fill_value, indices_mask, convert=True, inplace=True, tol=tol, indexing="position", broadcast_arrays=broadcast_arrays)
-
-    # correct axis values
-    if indices_mask is not None:
-
-        #multi_indices = make_multiindex(indices, len(obj.axes)) # tuple of appropriate size
-        indices = np.index_exp[indices] # make sure we have a tuple
-        for i, dim in enumerate(indices_mask):
-            ix = indices_mask[dim]
-            result.axes[dim].values[ix] = np.asarray(indices[i])[ix]
-
-    return result
-
-def _filter_bad_indices(multi_index, dims):
-    """ replace NaN indices by zeros
-
-    Parameters
-    ----------
-        multi_index: tuple of `int` or `slice` objects
-
-    Returns
-    -------
-        indices_nanfree: same as multi_index with NaNs replaced with 0
-        indices_mask: multi-index of NaNs for the sliced array
-        bad_ix: `dict` of `bool` 1-D arrays to indicate the locations of bad indices
-    """
-    multi_index = np.index_exp[multi_index]
-
-    indices_nanfree = list(multi_index)
-    indices_mask = {}
-
-    for i, indices in enumerate(multi_index):
-        dim = dims[i]
-
-        if indices is None: 
-            indices_mask[dim] = slice(None) # all NaNs
-
-        if type(indices) is slice: 
-            continue
-
-        if type(indices) is int: 
-            continue
-
-        assert np.iterable(indices)
-
-        bad = np.array([ix is None for ix in indices])
-        valid_indices = np.zeros_like(bad, dtype=int)
-        valid_indices[~bad] = [indices[k] for k, skip in enumerate(bad) if not skip]
-
-        indices_mask[dim] = bad
-        indices_nanfree[i] = valid_indices
-
-    return tuple(indices_nanfree), indices_mask
-
-###
-### INTERP MODE?
-###
-##
-##    # Pick-up values 
-##    if mode == "interp":
-##        result = _take_interp(obj, indices_numpy)
-##
-##
-##
-##
-### Pick-up values 
-##if mode == "interp":
-##    result = _take_interp(obj, indices_numpy)
-##
-##
-
-#    #
-#    # add an extra "where" method
-#    #
-#    def where(self, condition, otherwise=None, axis=None):
-#        """ 
-#        parameters:
-#        -----------
-#
-#            condition: bool array of same size as self, unless `axis=` is provided
-#                 OR    `str` indicating a condition on axes
-#            otherwise: array of same size as self or scalar, replacement value when condition is False
-#            axis     : if provided, interpret the condition as applying along an axis
-#
-#        returns:
-#        --------
-#            
-#            array with self values when condition is True, and `otherwise` if False
-#            if only `condition` is provided, return axis values for which `condition` is True
-#
-#        Examples:
-#        ---------
-#            a.where(a > 0)
-#        """
-#        # convert scalar to the right shape
-#        if np.size(otherwise) == 1:
-#            otherwise += np.zeros_like(self.values)
-#
-#        # evaluate str condition
-#        if type(condition) is str:
-#            result = eval(condition, {ax.name:ax.values})
-#
-#        result = np.where(condition, [self.values, otherwise])
-
-#
-# Reindex axis
-#
-
-##    if position_index: repna = False # do not fill in with NaNs if position index
-##
-##    # Filter bad from good indices: this would happen only for repna=True
-##    if repna:
-##        indices_numpy, indices_mask = _filter_bad_indices(indices_numpy)
-##
-##    #
-##    # SLICE or PICK ITEMS
-##    #
-##        
-##
-##    #
-##    # NOW REPLACE MISSING DATA with NaNs
-##    #
-##    if repna and indices_mask is not None:
-##        result = _fill_bad_indices(result, indices_mask, indices)
-
-#    # fix type in interp mode
-#    ix = np.asarray(ix) # make sure ix is an array
-#    if not np.isscalar(result):
-#        result.axes[axis].values = np.array(result.axes[axis].values, dtype=ix.dtype)
-
-def reindex_axis(self, values, axis=0, method='exact', repna=True, fill_value=np.nan, tol=TOLERANCE, use_pandas=None):
-    """ reindex an array along an axis
-
-    Parameters
-    ----------
-    values : array-like or Axis
-        new axis values
-    axis : int or str, optional
-        axis number or name
-    method : str, optional
-        "exact" (default), "nearest", "interp" 
-    repna : bool, optional
-        if False, raise error when an axis value is not present 
-        otherwise just replace with NaN. Defaulf is True
-    fill_value: bool, optional
-        value to use instead of missing data
-    tol: float, optional
-        re-index with a particular tolerance (can be longer)
-    use_pandas: bool, optional
-      if True (the default), convert to pandas for re-indexing 
-      If any special option (method, tol) is set or if modulo axes are present 
-      or, of course, if pandas is not installed,
-      this option is set to False by default.
-
-    Returns
-    -------
-    dimarray: DimArray instance
-
-    Examples
-    --------
-    Basic reindexing: fill missing values with NaN
-
-    >>> import dimarray as da
-    >>> a = da.DimArray([1,2,3],('x0', [1,2,3]))
-    >>> b = da.DimArray([3,4],('x0',[1,3]))
-    >>> b.reindex_axis([1,2,3])
-    dimarray: 2 non-null elements (1 null)
-    0 / x0 (3): 1 to 3
-    array([  3.,  nan,   4.])
-
-    Or replace with anything else, like -9999
-
-    >>> b.reindex_axis([1,2,3], fill_value=-9999)
-    dimarray: 3 non-null elements (0 null)
-    0 / x0 (3): 1 to 3
-    array([    3, -9999,     4])
-
-    "nearest" mode
-
-    >>> b.reindex_axis([0,1,2,3], method='nearest') # out-of-bound to NaN
-    dimarray: 3 non-null elements (1 null)
-    0 / x0 (4): 0 to 3
-    array([ nan,   3.,   3.,   4.])
-
-    "interp" mode
-
-    >>> b.reindex_axis([0,1,2,3], method='interp') # out-of-bound to NaN
-    dimarray: 3 non-null elements (1 null)
-    0 / x0 (4): 0 to 3
-    array([ nan,  3. ,  3.5,  4. ])
-    """
-    if isinstance(values, Axis):
-        newaxis = values
-        values = newaxis.values
-        axis = newaxis.name
-
-    axis_id = self.axes.get_idx(axis)
-    ax = self.axes[axis_id] # Axis object
-    axis_nm = ax.name
-
-    # do nothing if axis is same or only None element
-    if ax.values[0] is None or np.all(values==ax.values):
-        return self
-
-    # check whether pandas can be used for re-indexing
-    if use_pandas is None:
-        use_pandas = get_option('optim.use_pandas')
-
-    # ...any special option activated?
-    if method != 'exact' or tol is not None or \
-            ax.tol is not None or ax.modulo is not None \
-            or self.ndim > 4:  # pandas defined up to 4-D
-                use_pandas = False
-
-    # ...is pandas installed?
-    try:
-        import pandas
-    except ImportError:
-        use_pandas = False
-
-    # re-index using pandas
-    if use_pandas:
-        pandasobj = self.to_pandas()
-        try:
-            newpandas = pandasobj.reindex_axis(values, axis=axis_id, fill_value=fill_value)
-        except TypeError:
-            # older versions of pandas do not have the fill_value parameter
-            newpandas = pandasobj.reindex_axis(values, axis=axis_id)
-
-        newobj = self.from_pandas(newpandas) # use class method from_pandas
-        newobj._metadata(self._metadata())    # add metadata back
-        newobj.axes[axis_id].name = axis_nm  # give back original name
-
-    # indices along which to sample
-    elif method == "exact":
-        newobj = take_na(self, values, axis=axis, repna=repna, fill_value=fill_value)
-
-    elif method in ("nearest", "interp"):
-        from interpolation import interp
-        newobj = interp(self, values, axis=axis, method=method, repna=repna)
-
-    else:
-        raise ValueError("invalid reindex_axis method: "+repr(method))
-
-    #assert np.all((np.isnan(ax0.values) | (ax0.values == ax1.values))), "pb when reindexing"
-    return newobj
-
-
-def _reindex_axes(self, axes, **kwargs):
-    """ reindex according to a list of axes
-    """
-    obj = self
-    newdims = [ax2.name for ax2 in axes]
-    for ax in self.axes:
-        if ax.name in newdims:
-            newaxis = axes[ax.name].values
-            obj = obj.reindex_axis(newaxis, axis=ax.name, **kwargs)
-
-    return obj
-
-def reindex_like(self, other, method='exact', **kwargs):
-    """ reindex_like : re-index like another dimarray / axes instance
-
-    Applies reindex_axis on each axis to match another DimArray
-
-    Parameters
-    ----------
-    other : DimArray or Axes instance
-    method : str, optional
-        reindexing method, see :ref:`reindex_axis` for more information
-
-    Returns
-    -------
-    DimArray
-
-    Notes
-    -----
-    only reindex axes which are present in other
-
-    Examples
-    --------
-    >>> import dimarray as da
-    >>> b = da.DimArray([3,4],('x0',[1,3]))
-    >>> c = da.DimArray([[1,2,3], [1,2,3]],[('x1',["a","b"]),('x0',[1, 2, 3])])
-    >>> b.reindex_like(c, method='interp')
-    dimarray: 3 non-null elements (0 null)
-    0 / x0 (3): 1 to 3
-    array([ 3. ,  3.5,  4. ])
-    """
-    if hasattr(other, 'axes'):
-        axes = other.axes
-    elif isinstance(other, Axes):
-        axes = other
-    else:
-        raise TypeError('expected DimArray or Axes, got {}: {}'.format(type(other), other))
-    return _reindex_axes(self, axes, method=method, **kwargs)
-
-
-def sort_axis(a, axis=0, key=None):
-    """ sort an axis 
-
-    Parameters
-    ----------
-    a : DimArray (this argument is pre-assigned when using as bound method)
-    axis : int or str, optional
-        axis by position (int) or name (str) (default: 0)
-    key : callable or dict-like, optional
-        function that is called on each axis label and 
-        whose return value is used for sorting instead of axis label.
-        Any other object with __getitem__ attribute may also be used as key,
-        such as a dictionary.
-        If None (the default), axis label is used for sorting.
-
-    Returns
-    --------
-    sorted : new DimArray with sorted axis
-
-    Examples
-    --------
-    Basic
-
-    >>> from dimarray import DimArray
-    >>> a = DimArray([10,20,30], labels=[2, 0, 1])
-    >>> a
-    dimarray: 3 non-null elements (0 null)
-    0 / x0 (3): 2 to 1
-    array([10, 20, 30])
-
-    >>> a.sort_axis()
-    dimarray: 3 non-null elements (0 null)
-    0 / x0 (3): 0 to 2
-    array([20, 30, 10])
-
-    >>> a.sort_axis(key=lambda x: -x)
-    dimarray: 3 non-null elements (0 null)
-    0 / x0 (3): 2 to 0
-    array([10, 30, 20])
-
-    Multi-dimensional
-     
-    >>> a = DimArray([[10,20,30],[40,50,60]], labels=[[0, 1], ['a','c','b']])
-    >>> a.sort_axis(axis=1)
-    dimarray: 6 non-null elements (0 null)
-    0 / x0 (2): 0 to 1
-    1 / x1 (3): a to c
-    array([[10, 30, 20],
-           [40, 60, 50]])
-    """
-    index = a.axes[axis].values
-
-    # convert key to a function
-    if not hasattr(key, '__call__') and hasattr(key, '__getitem__'):
-        key = key.__getitem__
-
-    if key is None:
-        ii = index.argsort()
-    else:
-        ii = argsort(index, key)
-
-    return a.take(ii, axis=axis, indexing='position')
-
-def argsort(seq, key=None):
-    """ equivalent of numpy's argsort in basic python
-
-    Modified after http://stackoverflow.com/questions/3382352/equivalent-of-numpy-argsort-in-basic-python
-
-    >>> a = ['a', 'd', 'c']
-    >>> argsort(a)
-    [0, 2, 1]
-    >>> argsort(a, key=lambda x: {'a':2,'c':1,'d':0}[x])
-    [1, 2, 0]
-    """
-    if key is None:
-        _key = seq.__getitem__
-    else:
-        _key = lambda x: key(seq.__getitem__(x))
-    return sorted(range(len(seq)), key=_key)
-
+            return k
+
+    # replace Ellipsis objects with slices
+    key = list(canonicalize_indexer(key, len(shape)))
+    # replace 1d arrays and slices with broadcast compatible arrays
+    # note: we treat integers separately (instead of turning them into 1d
+    # arrays) because integers (and only integers) collapse axes when used with
+    # __getitem__
+    non_int_keys = [n for n, k in enumerate(key) if not isinstance(k, (int, np.integer))]
+
+    def full_slices_unselected(n_list):
+        def all_full_slices(key_index):
+            return all(isinstance(key[n], slice) and key[n] == slice(None)
+                       for n in key_index)
+        if not n_list:
+            return n_list
+        elif all_full_slices(range(n_list[0] + 1)):
+            return full_slices_unselected(n_list[1:])
+        elif all_full_slices(range(n_list[-1], len(key))):
+            return full_slices_unselected(n_list[:-1])
+        else:
+            return n_list
+
+    # However, testing suggests it is OK to keep contiguous sequences of full
+    # slices at the start or the end of the key. Keeping slices around (when
+    # possible) instead of converting slices to arrays significantly speeds up
+    # indexing.
+    # (Honestly, I don't understand when it's not OK to keep slices even in
+    # between integer indices if as array is somewhere in the key, but such are
+    # the admittedly mind-boggling ways of numpy's advanced indexing.)
+    array_keys = full_slices_unselected(non_int_keys)
+
+    array_indexers = np.ix_(*(expand_key(key[n], shape[n])
+                              for n in array_keys))
+    for i, n in enumerate(array_keys):
+        key[n] = array_indexers[i]
+    return tuple(key)
