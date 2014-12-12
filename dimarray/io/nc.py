@@ -1093,5 +1093,7 @@ def _maybe_open_file(f, mode='r', clobber=None, verbose=False, format=None):
             else:
                 print "write to",fname
         close = True
+    else:
+        close = False # leave it open
 
     return f, close
