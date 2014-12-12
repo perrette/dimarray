@@ -180,11 +180,13 @@ class DatasetOnDisk(GetSetDelAttrMixin, NetCDFOnDisk, AbstractDataset):
         dict_indices = {dim:tuple_indices[i] for i, dim in enumerate(self.dims)}
 
         data = Dataset()
-        # start with the axes, to make sure the ordering is maintained
-        data.axes = self._getaxes_ortho(tuple_indices) 
         for nm in names:
             data[nm] = self[nm].read(indices={dim:dict_indices[dim] for dim in self[nm].dims}, indexing='position')
         data.attrs.update(self.attrs) # dataset's metadata
+
+        # reorder the axes in the dataset to match input
+        data.axes = Axes(data.axes[dim] for dim in self.dims if dim in data.dims)
+
         return data
 
     def __getitem__(self, name):
