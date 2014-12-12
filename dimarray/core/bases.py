@@ -1,6 +1,7 @@
 """ Base classes
 """
 from __future__ import absolute_import
+import warnings
 from collections import OrderedDict as odict
 import numpy as np
 import copy
@@ -427,9 +428,15 @@ class AbstractDimArray(AbstractHasAxes):
 
     # The indexing machinery in functional form, 
     # to be called by __getitem__ with default arguments
-    def _getitem(self, indices=None, axis=0, indexing=None, tol=None, broadcast=None, keepdims=False):
+    def _getitem(self, indices=None, axis=0, indexing=None, tol=None, broadcast=None, keepdims=False,
+                 broadcast_arrays=None,  # back-compatibility for broadcast
+                 ):
         if indices is None:
             indices = ()
+
+        if broadcast_arrays is not None:
+            warnings.warn(FutureWarning("broadcast_arrays is deprecated, use broadcast instead"))
+            broadcast = broadcast_arrays
 
         if broadcast is None: 
             if self._broadcast is None:
