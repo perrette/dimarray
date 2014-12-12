@@ -264,7 +264,9 @@ class Dataset(AbstractDataset, odict, OpMixin, GetSetDelAttrMixin):
 
         return self._constructor(data, axes)
 
-    def take(self, names=None, indices=None, axis=0, indexing=None, tol=None, keepdims=False):
+    def take(self, names=None, indices=None, axis=0, indexing=None, tol=None, keepdims=False,
+            raise_error=True, #
+             ):
         """ Analogous to DimArray's take, but for each DimArray of the Dataset
 
         Parameters
@@ -335,6 +337,9 @@ class Dataset(AbstractDataset, odict, OpMixin, GetSetDelAttrMixin):
         b: ('time',)
         c: ('time',)
         """
+        if raise_error is not None:
+            warnings.warn(FutureWarning("raise_error is deprecated: now always True"))
+
         # automatically read all variables to load (except for the dimensions)
         if names is None:
             names = self.keys()
