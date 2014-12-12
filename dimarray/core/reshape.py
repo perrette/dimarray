@@ -365,7 +365,7 @@ def newaxis(self, name, values=None, pos=0):
     array([[1, 1],
            [2, 2]])
     """
-    assert isinstance(name, str), "name must be string"
+    assert isinstance(name, basestring), "name must be string"
     if name in self.dims:
         raise ValueError("dimension already present: "+name)
 
@@ -554,7 +554,7 @@ def reshape(self, *newdims, **kwargs):
 
     # Remove unwanted singleton dimensions, if any
     for dim in o.dims:
-        assert isinstance(dim, str), "newdims must be a tuple of axis names (`str`)"
+        assert isinstance(dim, basestring), "newdims must be a tuple of axis names (`str`)"
         if dim not in newdims_ungrouped:
             o = o.squeeze(dim)
 
