@@ -1604,9 +1604,12 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     @classmethod
     def from_arrays(cls, *args, **kwargs):
         """ use dimarray.array instead """
-        kwargs['cls'] = cls
+        # kwargs['cls'] = cls
         warnings.warn(FutureWarning('from_arrays is deprecated, use DimArray() or concatenate() or stack() or Dataset().to_array() instead'))
-        return array(*args, **kwargs)
+        return cls(array(*args, **kwargs))
+
+# back compat
+from_arrays = DimArray.from_arrays
 
 def array(data, *args, **kwargs):
     """ initialize a DimArray by providing axes as key-word arguments
