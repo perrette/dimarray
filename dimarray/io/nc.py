@@ -127,7 +127,9 @@ class DatasetOnDisk(GetSetDelAttrMixin, NetCDFOnDisk, AbstractDataset):
     def _obj(self):
         return self._ds
 
-    def read(self, names=None, indices=None, axis=0, indexing=None, tol=None, keepdims=False):
+    def read(self, names=None, indices=None, axis=0, indexing=None, tol=None, keepdims=False,
+             verbose=False, # back-compatibility
+             ):
         """ Read values from disk
 
         Parameters
@@ -163,6 +165,9 @@ class DatasetOnDisk(GetSetDelAttrMixin, NetCDFOnDisk, AbstractDataset):
         open_nc : examples of use
         DimArrayOnDisk.read, DatasetOnDisk.write, DimArray.take
         """
+        if verbose:
+            # print "Read ",self.filename
+            pass
         # automatically read all variables to load (except for the dimensions)
         if names is None:
             names = self.keys()
