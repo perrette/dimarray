@@ -289,8 +289,16 @@ def orthogonal_indexer(key, shape):
     """Given a key for orthogonal array indexing, returns an equivalent key
     suitable for indexing a numpy.ndarray with fancy indexing.
     """
+    def positive_slice_bounds(k, length):
+        " remove negative slice indices "
+        start, stop, step = k.start, k.stop, k.step
+        if start and start < 0: start = length + start
+        if stop and stop < 0: stop = length + stop
+        return slice(start, stop, step)
+
     def expand_key(k, length):
         if isinstance(k, slice):
+            k = positive_slice_bounds(k, length)
             return np.arange(k.start or 0, k.stop or length, k.step or 1)
         else:
             return k
@@ -327,6 +335,7 @@ def orthogonal_indexer(key, shape):
 
     array_indexers = np.ix_(*(expand_key(key[n], shape[n])
                               for n in array_keys))
+
     for i, n in enumerate(array_keys):
         key[n] = array_indexers[i]
     return tuple(key)
