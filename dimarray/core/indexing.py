@@ -299,7 +299,17 @@ def orthogonal_indexer(key, shape):
     def expand_key(k, length):
         if isinstance(k, slice):
             k = positive_slice_bounds(k, length)
-            return np.arange(k.start or 0, k.stop or length, k.step or 1)
+            step = k.step or 1
+
+            # default values for start, stop
+            if step > 0:
+                start = k.start or 0
+                stop = k.stop or length
+            else:
+                start = k.start or length-1
+                stop = k.stop or -1
+            
+            return np.arange(start, stop, step)
         else:
             return k
 
