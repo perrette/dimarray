@@ -562,7 +562,7 @@ class AxisOnDisk(GetSetDelAttrMixin, NetCDFVariable, AbstractAxis):
         try:
             self.attrs.update(attrs)
         except Exception as error:
-            warnings.warn(error)
+            warnings.warn(error.message)
 
     def __getitem__(self, indices):
         values = self.values[indices]
@@ -686,7 +686,14 @@ class AttrsOnDisk(object):
         self.obj = obj
     def __setitem__(self, name, value):
         if name == "_FillValue": return
-        self.obj.setncattr(name, value)
+        try:
+            self.obj.setncattr(name, value)
+        except TypeError as error:
+            warnings.warn(error.message)
+            if type(value) is bool:
+                warnings.warn("convert boolean to integer")
+                self.obj.setncattr(name, int(value))
+
     def __getitem__(self, name):
         return self.obj.getncattr(name)
     def __delitem__(self, name):
