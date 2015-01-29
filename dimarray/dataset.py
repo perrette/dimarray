@@ -265,7 +265,7 @@ class Dataset(AbstractDataset, odict, OpMixin, GetSetDelAttrMixin):
         return self._constructor(data, axes)
 
     def take(self, names=None, indices=None, axis=0, indexing=None, tol=None, keepdims=False,
-            raise_error=True, #
+            raise_error=None, #
              ):
         """ Analogous to DimArray's take, but for each DimArray of the Dataset
 
