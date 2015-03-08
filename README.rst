@@ -124,6 +124,12 @@ The drawback is that everything then needs to happen within the anaconda/minicon
 folder. I was not successful in using conda with a simple `pip install conda` and
 `conda init`.
 
+For Ubuntu users, installing from source is made relatively easy by following the 
+step-by-step instructions provided at
+https://code.google.com/p/netcdf4-python/wiki/UbuntuInstall. Note I also made a script
+out of these instructions, to be found here, with slightly updated versions (at the 
+time of writing): https://gist.github.com/perrette/cd815d03830b53e24c82.
+
 Contributions
 -------------
 All suggestions for improvement or direct contributions are very welcome.
