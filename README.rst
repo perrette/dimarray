@@ -106,29 +106,17 @@ Alternatively, you can use pip to download and install the version from pypi (co
 
 Notes on installing netCDF4
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+- On windows [binaries are available](http://www.unidata.ucar.edu/software/netcdf/docs/winbin.html).
+- On Ubuntu, using apt-get is the easiest way (as indicated in 
+[python-netcdf4 github repository](https://github.com/Unidata/netcdf4-python/blob/master/.travis.yml)):
+
+    sudo apt-get install libhdf5-serial-dev netcdf-bin libnetcdf-dev
+
+- From source.  
 Installing the netCDF4 python module from source can be cumbersome, because 
-it depends on netCDF4 and (especially) HDF5 C libraries that need to be compiled with 
-specific flags (http://unidata.github.io/netcdf4-python).
-
-For windows binaries are available, which is handy. On Ubuntu, I tried anaconda
-and it worked well (Enthought and xyPython might work as well). 
-Download anaconda (full version) (http://continuum.io/downloads) or 
-miniconda executable (http://conda.pydata.org/miniconda.html). This should 
-make the `conda` command available. Then just do:
-
-.. code:: bash
-
-    conda install netCDF4 
-
-The drawback is that everything then needs to happen within the anaconda/miniconda 
-folder. I was not successful in using conda with a simple `pip install conda` and
-`conda init`.
-
-For Ubuntu users, installing from source is made relatively easy by following the 
-step-by-step instructions provided at
-https://code.google.com/p/netcdf4-python/wiki/UbuntuInstall. Note I also made a script
-out of these instructions, to be found here, with slightly updated versions (at the 
-time of writing): https://gist.github.com/perrette/cd815d03830b53e24c82.
+it depends on netCDF4 and (especially) HDF5 C libraries that need to 
+be compiled with specific flags (http://unidata.github.io/netcdf4-python). 
+[Install from source on Ubuntu](https://code.google.com/p/netcdf4-python/wiki/UbuntuInstall).
 
 Contributions
 -------------
