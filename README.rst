@@ -108,7 +108,10 @@ Notes on installing netCDF4
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 - On Ubuntu, using apt-get is the easiest way (as indicated at https://github.com/Unidata/netcdf4-python/blob/master/.travis.yml):
 
-    sudo apt-get install libhdf5-serial-dev netcdf-bin libnetcdf-dev
+
+.. code:: bash
+
+   sudo apt-get install libhdf5-serial-dev netcdf-bin libnetcdf-dev
 
 - On windows binaries are available: http://www.unidata.ucar.edu/software/netcdf/docs/winbin.html
 
