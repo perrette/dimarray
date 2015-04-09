@@ -20,6 +20,15 @@ from .core.bases import AbstractDataset, GetSetDelAttrMixin, OpMixin
 class Dataset(AbstractDataset, odict, OpMixin, GetSetDelAttrMixin):
 # class Dataset(AbstractDataset, odict):
     """ Container for a set of aligned objects
+    
+    >>> ds = da.Dataset()
+    >>> ds['a'] = np.arange(3) 
+    >>> ds['b'] = [1,2,3]       
+    >>> ds.set_axis(['a','b','c'], name='myaxis')
+    Dataset of 2 variables
+    0 / myaxis (3): 'a' to 'c'
+    a: ('myaxis',)
+    b: ('myaxis',)
     """
     _constructor = DimArray
 
@@ -48,12 +57,8 @@ class Dataset(AbstractDataset, odict, OpMixin, GetSetDelAttrMixin):
         # Check everything is a DimArray
         #for key, value in zip(keys, values):
         for i, key in enumerate(keys):
-            value = values[i]
-            if not isinstance(value, DimArray):
-                if np.isscalar(value):
-                    values[i] = self._constructor(value)
-                else:
-                    raise TypeError("A Dataset can only store DimArray instances, got {}: {}".format(key, value))
+            if not isinstance(values[i], DimArray):
+                values[i] = self._constructor(values[i])
 
         # Align objects
         values = align_axes(*values)
@@ -135,22 +140,9 @@ class Dataset(AbstractDataset, odict, OpMixin, GetSetDelAttrMixin):
         dimarray: 3 non-null elements (0 null)
         0 / time (3): 0 to 2
         array([0, 1, 2])
-        >>> ds['ya'] = a.values  # also accepts numpy array if shape matches
-        >>> ds['ya']
-        dimarray: 3 non-null elements (0 null)
-        0 / time (3): 0 to 2
-        array([0, 1, 2])
         """
         if not isinstance(val, DimArray):
-            if np.isscalar(val):
-                val = self._constructor(val)
-            elif hasattr(val, '__array__'):
-                if np.shape(val) == tuple([ax.size for ax in self.axes]):
-                    val = self._constructor(val, axes=self.axes) # make a dimarray with same axes
-                else:
-                    raise ValueError("array_like shape does not match, use DimArray if dimensions vary within the dataset")
-            else:
-                raise TypeError("can only append DimArray instances")
+            val = self._constructor(val)
 
         # shallow copy of the DimArray so that its axes attribute can be 
         # modified without affecting the original array
@@ -185,7 +177,7 @@ class Dataset(AbstractDataset, odict, OpMixin, GetSetDelAttrMixin):
         return ds2
 
     def __eq__(self, other):
-        """ test equality but bypass annoying numpy's __eq__ method
+        """ test equality but bypass numpy's __eq__ method
         """
         return isinstance(other, Dataset) and self.keys() == other.keys() \
                 and self.axes == other.axes \
