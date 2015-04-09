@@ -5,7 +5,7 @@ notifications:
   email: false
 before_install:
   - sudo apt-get install libhdf5-serial-dev netcdf-bin libnetcdf-dev
-  - pip install numpy
+  - pip install numpy netcdf4
 install:
   - python setup.py build
   - python setup.py install
