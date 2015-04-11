@@ -78,6 +78,7 @@ class Dataset(AbstractDataset, odict, OpMixin, GetSetDelAttrMixin):
                 self.axes[ax.name] = ax
             else:
                 self.axes.append(ax)
+        assert isinstance(self.axes, Axes)
 
     @property
     def dims(self):
@@ -116,6 +117,10 @@ class Dataset(AbstractDataset, odict, OpMixin, GetSetDelAttrMixin):
         super(Dataset, self).__delitem__(item)
         #del super(Dataset, self)[item]
 
+        self._maybe_delete_axes(axes)
+
+    def _maybe_delete_axes(self, axes):
+        """ delete axes if not found in the dataset """
         # update axes
         for ax in axes:
             found = False
@@ -144,6 +149,13 @@ class Dataset(AbstractDataset, odict, OpMixin, GetSetDelAttrMixin):
         if not isinstance(val, DimArray):
             val = self._constructor(val)
 
+        # Remove any superfluous axis
+        # first remove old element to make sure axes at not leftover
+        if key in self.keys(): 
+            _maybe_obsolete_axes = [ax for ax in self[key].axes if ax.name not in val.dims]
+        else:
+            _maybe_obsolete_axes = []
+
         # shallow copy of the DimArray so that its axes attribute can be 
         # modified without affecting the original array
         val = copy.copy(val)  
@@ -170,6 +182,11 @@ class Dataset(AbstractDataset, odict, OpMixin, GetSetDelAttrMixin):
             assert val.axes[i] is self.axes[newaxis.name]
 
         super(Dataset, self).__setitem__(key, val)
+
+        # Remove obsolete axes
+
+        if len(_maybe_obsolete_axes) > 0:
+            self._maybe_delete_axes(_maybe_obsolete_axes)
 
     def copy(self):
         ds2 = super(Dataset, self).copy() # odict method, copy axes but not metadata
