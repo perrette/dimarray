@@ -525,7 +525,8 @@ class Dataset(AbstractDataset, odict, OpMixin, GetSetDelAttrMixin):
         for old, new in iterkeys:
             val = super(Dataset, ds).__getitem__(old) # same as ds[old]
             super(Dataset, ds).__setitem__(new, val)
-            super(Dataset, ds).__delitem__(old)
+            if old != new:
+                super(Dataset, ds).__delitem__(old)
 
         if not inplace:
             return ds
