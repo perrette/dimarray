@@ -154,3 +154,35 @@ def test_nloc_mixed():
     assert_equal_dimarrays(a.nloc[:,15.5], a[:, 20.])
     assert_equal_dimarrays(a.nloc['a'], a['a'])
     # assert_equal_dimarrays(a.nloc['e'], a['d'])
+
+def test_slices_sorted():
+    " test slices in an increasing axis"
+    a = DimArray([1.5, 2.5, 3.5], axes=[[1.5, 2.5, 3.5]], dims=['dim0'])
+    a0 = DimArray([2.5, 3.5], axes=[[2.5, 3.5]], dims=['dim0'])
+    a1 = DimArray([2.5], axes=[[2.5]], dims=['dim0'])
+    assert_equal_dimarrays(a[2.5:3.5], a0)
+    assert_equal_dimarrays(a[2.5:4], a0)
+    assert_equal_dimarrays(a[2:], a0)
+    assert_equal_dimarrays(a[2:3], a1)
+    assert_equal_dimarrays(a[3:2:-1], a1)
+
+def test_slices_decreasing():
+    " test slices in a decreasing axis"
+    a = DimArray([3.5, 2.5, 1.5], axes=[[3.5, 2.5, 1.5]], dims=['dim0'])
+    a0 = DimArray([3.5, 2.5], axes=[[3.5, 2.5]], dims=['dim0'])
+    a1 = DimArray([2.5], axes=[[2.5]], dims=['dim0'])
+    assert_equal_dimarrays(a[3.5:2.5], a0)
+    assert_equal_dimarrays(a[2.5:3.5:-1], a0[::-1])
+    assert_equal_dimarrays(a[4:2.5], a0)
+    assert_equal_dimarrays(a[3:2], a1)
+
+def test_slices_mixed():
+    a = DimArray([2.5, 3.5, 1.5], axes=[[2.5, 3.5, 1.5]], dims=['dim0'])
+    a0 = DimArray([3.5, 1.5], axes=[[3.5, 1.5]], dims=['dim0'])
+    assert_equal_dimarrays(a[3.5:1.5], a0)
+    assert_equal_dimarrays(a[1.5:3.5:-1], a0[::-1])
+
+def test_slices_objects():
+    a = DimArray(['c','a','b'], axes=[['c','a','b']], dims=['dim0'])
+    a0 = DimArray(['c','a'], axes=[['c','a']], dims=['dim0'])
+    assert_equal_dimarrays(a['c':'a'], a0)

@@ -8,7 +8,7 @@ import numpy as np
 from dimarray.tools import is_DimArray, is_array1d_equiv
 from dimarray.decorators import format_doc
 from .bases import AbstractAxis, AbstractAxes, GetSetDelAttrMixin
-from .indexing import _maybe_cast_type
+from .indexing import _maybe_cast_type, is_monotonic
 
 __all__ = ["Axis","Axes"]
 
@@ -37,17 +37,6 @@ def _check_axis_values(values, dtype=None):
         values = np.asarray(values, dtype=object)
 
     return values
-
-def is_monotonic(values):
-    """ test whether an array is monotonically increasing or decreasing
-    """
-    if values.size < 2:
-        monotonic = True
-    else:
-        increasing = values[1:] >= values[:-1] 
-        decreasing = values[1:] <= values[:-1]
-        monotonic = np.all(increasing) or np.all(decreasing)
-    return monotonic
 
 #
 # Axis class

@@ -61,7 +61,7 @@ def locate_many(values, val, issorted=False, side='left'):
     """ Locate several values based on searchsorted
     """
     if issorted:
-        matches = np.searchsorted(values, val)
+        matches = np.searchsorted(values, val, side=side)
     else:
         isort = np.argsort(values)
         indices = np.searchsorted(values, val, sorter=isort, side=side)
@@ -71,6 +71,109 @@ def locate_many(values, val, issorted=False, side='left'):
         matches = isort.take(indices, mode='clip') 
 
     return matches
+
+def _locate_slice_strict(values, start, stop, step, issorted=False):
+    " locate slice with strictly matching bounds"
+    istart = locate_one(values, start, issorted=issorted) if start is not None else None
+    istop = locate_one(values, stop, issorted=issorted) if stop is not None else None
+    # include last element
+    if stop is not None:
+        istop += -1+2*(step is None or step>0)
+    return istart, istop
+
+def locate_slice(values, start, stop, step, issorted=False):
+    """ Return integer indices for a slice
+
+    For consistency with integer slices, and to make most use of slices 
+    for sorted numerical axes (such as gridded data), 
+    start and stop are searched for as a bounding box on the sorted numerical axis.
+    start and stop are INCLUSIVE (stop belongs to the selected interval), for
+    back-compatibility and compatibility with pandas.
+    NOTE this is not the case for integer (axis position slices)
+    """
+    # special treatment for non-numeric (objects, boolean,...?) axes: just look for elements
+    if not is_numeric(values):
+        return _locate_slice_strict(values, start, stop, step, issorted=issorted)
+
+    # bbox-like slices only make sense for monotonically varying axes
+    if not issorted:
+        monotonic = is_monotonic_equal(values)
+        issorted = monotonic and values[-1] >= values[0]
+    else:
+        monotonic = True
+
+    if not monotonic:
+        return _locate_slice_strict(values, start, stop, step, issorted=issorted)
+
+    # make sure that for numeric axes, the slice bounds are also numeric
+    if start is not None and not is_numeric(np.asarray(start)):
+        raise TypeError('numeric slice required for numeric axis')
+    if stop is not None and not is_numeric(np.asarray(stop)):
+        raise TypeError('numeric slice required for numeric axis')
+
+    # At that point, consider slicing on monotonically varying numerical axes
+    # ==> allow non-exact bounds, and interpret as a bounding box (inclusive of edges)
+    if not issorted:
+        inverted_axis = True
+    else:
+        inverted_axis = False
+
+    if step is None or step > 0:
+        right, left = 'right', 'left'
+    else:
+        right, left = 'left', 'right'
+
+    if start is not None:
+        if inverted_axis:
+            istart = values.size - np.searchsorted(values[::-1], start, side=right)
+        else:
+            istart = np.searchsorted(values, start, side=left)
+
+        if step is not None and step < 0:
+            istart -= 1
+    else:
+        istart = None
+
+    if stop is not None:
+        if inverted_axis:
+            istop = values.size - np.searchsorted(values[::-1], stop, side=left)
+        else:
+            istop = np.searchsorted(values, stop, side=right)
+
+        if step is not None and step < 0:
+            if istop == 0:
+                istop = None   # 
+            else:
+                istop -= 1
+
+    else:
+        istop = None
+
+    return istart, istop
+
+#
+# Check array ordering
+#
+def _is_ordered(values, cmp_):
+    if values.size < 2:
+        return True
+    else:
+        return np.all(cmp_(values[1:],values[:-1]))
+def is_increasing(values):
+    return _is_ordered(values, np.greater)
+def is_increasing_equal(values):
+    return _is_ordered(values, np.greater_equal)
+def is_decreasing(values):
+    return _is_ordered(values, np.less)
+def is_decreasing_equal(values):
+    return _is_ordered(values, np.less_equal)
+def is_monotonic(values):
+    return is_increasing(values) or is_decreasing(values)
+def is_monotonic_equal(values):
+    return is_increasing_equal(values) or is_decreasing_equal(values)
+
+def is_numeric(values):
+    return values.dtype.kind in ('f','i','u')
 
 #
 # Functions to 

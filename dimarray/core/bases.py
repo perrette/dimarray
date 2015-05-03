@@ -8,7 +8,7 @@ import copy
 from dimarray.config import get_option
 from dimarray.compat.pycompat import iteritems, zip
 from dimarray.tools import is_numeric
-from .indexing import locate_one, locate_many, expanded_indexer
+from .indexing import locate_one, locate_many, locate_slice, expanded_indexer
 from .prettyprinting import repr_axis, repr_dataset, repr_axes, str_axes, str_dataset, str_dimarray
 
 class GetSetDelAttrMixin(object):
@@ -107,7 +107,7 @@ class AbstractAxis(AbstractHasMetadata):
         tol: None or float, optional
             If different from None, search nearest neighbour, with a certain 
             tolerance (np.argmin is used). None by default. This option is 
-            applicable for numerical axes only. 
+            applicable for numerical axes only. It does not apply for slices.
         issorted: bool, optional
             If True, assume the axis is sorted with increasing values (faster search)
         mode: {'raise', 'clip'}, optional
@@ -127,6 +127,17 @@ class AbstractAxis(AbstractHasMetadata):
         searched for, and the first element is returned.
         For array-like indexer, the axis is sorted and np.searchsorted is applied.
         If tol is provided, a `np.argmin(np.abs(a-val))` is used.
+
+        Examples
+        --------
+        >>> from dimarray import Axis
+        >>> ax = Axis([1.5, 2.5, 3.5], 'myaxis')
+        >>> ax.loc(2.5)
+        1
+        >>> ax.loc(slice(2, 3))
+        slice(1, 2, None)
+        >>> ax.loc(slice(2, 3.5))
+        slice(1, 3, None)
         """
         values = self.values[()]
         tol=tol or self._tol
@@ -135,9 +146,8 @@ class AbstractAxis(AbstractHasMetadata):
             tol = None # ignore tol parameter for non-numeric axes (an error will be raised if element is not found)
 
         if type(val) is slice:
-            start = locate_one(values, val.start, tol=tol, issorted=issorted) if val.start is not None else None
-            stop = locate_one(values, val.stop, tol=tol, issorted=issorted)+1 if val.stop is not None else None
-            matches = slice(start, stop, val.step)
+            istart, istop = locate_slice(values, val.start, val.stop, val.step, issorted=issorted)
+            matches = slice(istart, istop, val.step)
 
         elif np.isscalar(val):
             matches = locate_one(values, val, tol=tol, issorted=issorted)
