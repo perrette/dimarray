@@ -1516,7 +1516,7 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     contour = plotting.contour
     pcolor = plotting.pcolor
 
-    def set_axis(self, values=None, axis=0, name=None, inplace=False, **kwargs):
+    def set_axis(self, values=None, axis=0, name=None, inplace=True, **kwargs):
         """ Set axis values, name and attributes
         
         Parameters
@@ -1534,7 +1534,7 @@ mismatch between values and axes""".format(inferred, self.values.shape)
             rename axis
         inplace : bool, optional
             modify dataset axis in-place (True) or return copy (False)? 
-            (default False)
+            (default True)
         **kwargs : key-word arguments
             Also reset other axis attributes, which can be single metadata
             or other axis attributes, via using `setattr`
@@ -1543,7 +1543,7 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 
         Returns
         -------
-        DimArray instance, or None if inplace is True
+        None, or DimArray instance if inplace is False
 
         Examples
         --------
@@ -1555,28 +1555,28 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 
         Provide new values for the whole axis
 
-        >>> a.set_axis(list('abcd'))
+        >>> a.set_axis(list('abcd'), inplace=False)
         dimarray: 4 non-null elements (0 null)
         0 / time (4): 'a' to 'd'
         array([1, 2, 3, 4])
 
         Update just a few of the values
 
-        >>> a.set_axis({1900:-9999})
+        >>> a.set_axis({1900:-9999}, inplace=False)
         dimarray: 4 non-null elements (0 null)
         0 / time (4): -9999 to 1903
         array([1, 2, 3, 4])
 
         Or transform axis values
 
-        >>> a.set_axis(lambda x: x*0.01)
+        >>> a.set_axis(lambda x: x*0.01, inplace=False)
         dimarray: 4 non-null elements (0 null)
         0 / time (4): 19.0 to 19.03
         array([1, 2, 3, 4])
 
         Only change name. 
 
-        >>> a.set_axis(name='year')
+        >>> a.set_axis(name='year', inplace=False)
         dimarray: 4 non-null elements (0 null)
         0 / year (4): 1900 to 1903
         array([1, 2, 3, 4])

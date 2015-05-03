@@ -25,6 +25,7 @@ class Dataset(AbstractDataset, odict, OpMixin, GetSetDelAttrMixin):
     >>> ds['a'] = np.arange(3) 
     >>> ds['b'] = [1,2,3]       
     >>> ds.set_axis(['a','b','c'], name='myaxis')
+    >>> ds
     Dataset of 2 variables
     0 / myaxis (3): 'a' to 'c'
     a: ('myaxis',)
@@ -420,7 +421,7 @@ class Dataset(AbstractDataset, odict, OpMixin, GetSetDelAttrMixin):
         """
         return odict([(nm, self[nm]) for nm in self.keys()])
 
-    def set_axis(self, values=None, axis=0, name=None, inplace=False, **kwargs):
+    def set_axis(self, values=None, axis=0, name=None, inplace=True, **kwargs):
         """ Set axis values, name and attributes of the Dataset
         
         Parameters
@@ -438,7 +439,7 @@ class Dataset(AbstractDataset, odict, OpMixin, GetSetDelAttrMixin):
             rename axis
         inplace : bool, optional
             modify dataset axis in-place (True) or return copy (False)? 
-            (default False)
+            (default True)
         **kwargs : key-word arguments
             Also reset other axis attributes, which can be single metadata
             or other axis attributes, via using `setattr`
@@ -460,6 +461,7 @@ class Dataset(AbstractDataset, odict, OpMixin, GetSetDelAttrMixin):
         >>> ds['a'] = da.zeros(shape=(3,))  # some dimarray with dimension 'x0'
         >>> ds['b'] = da.zeros(shape=(3,4)) # dimensions 'x0', 'x1'
         >>> ds.set_axis(['a','b','c'], axis='x0')
+        >>> ds
         Dataset of 2 variables
         0 / x0 (3): 'a' to 'c'
         1 / x1 (4): 0 to 3
@@ -477,7 +479,7 @@ class Dataset(AbstractDataset, odict, OpMixin, GetSetDelAttrMixin):
         if values is False: values = None
         return self.set(values, axis=axis, name=name, **kwargs)
 
-    def rename_keys(self, mapper, inplace=False):
+    def rename_keys(self, mapper, inplace=True):
         """ Rename all variables in the Dataset
 
         Possible speedup compared to a classical dict-like operation 
@@ -488,11 +490,11 @@ class Dataset(AbstractDataset, odict, OpMixin, GetSetDelAttrMixin):
         mapper : dict-like or function to map oldname -> newname
         inplace : bool, optional
             if True, in-place modification, otherwise a copy with modified
-            keys is retuend (default: False)
+            keys is returned (default: True)
 
         Returns
         -------
-        Dataset if inplace is False, otherwise None
+        None, or Dataset if inplace is False
 
         Examples
         --------
@@ -504,6 +506,7 @@ class Dataset(AbstractDataset, odict, OpMixin, GetSetDelAttrMixin):
         a: ('x0',)
         b: ('x0', 'x1')
         >>> ds.rename_keys({'b':'c'})
+        >>> ds
         Dataset of 2 variables
         0 / x0 (3): 0 to 2
         1 / x1 (2): 0 to 1
@@ -531,7 +534,7 @@ class Dataset(AbstractDataset, odict, OpMixin, GetSetDelAttrMixin):
         if not inplace:
             return ds
 
-    def rename_axes(self, mapper, inplace=False):
+    def rename_axes(self, mapper, inplace=True):
         """ Rename axes, analogous to rename_keys for axis names
         """
         if inplace:

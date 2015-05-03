@@ -896,7 +896,7 @@ def read_nc(f, names=None, *args, **kwargs):
     directly relevant to identify the experiment:
     
     >>> getmodel = lambda x: os.path.basename(x).split('.')[1] # extract model name from path
-    >>> temp.set_axis(getmodel, axis='model', inplace=True) # would return a copy if inplace is not specified
+    >>> temp.set_axis(getmodel, axis='model') # would return a copy if inplace is not specified
     >>> temp
     dimarray: 9114 non-null elements (6671 null)
     0 / model (7): 'CSIRO-Mk3-6-0' to 'MPI-ESM-MR'
@@ -908,6 +908,7 @@ def read_nc(f, names=None, *args, **kwargs):
 
     >>> ds = da.read_nc(direc+'/cmip5.*.nc', align=True, axis='model')
     >>> ds.set_axis(getmodel, axis='model')
+    >>> ds
     Dataset of 2 variables
     0 / model (7): 'CSIRO-Mk3-6-0' to 'MPI-ESM-MR'
     1 / time (451): 1850 to 2300

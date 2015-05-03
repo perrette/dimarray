@@ -184,7 +184,7 @@ class Axis(GetSetDelAttrMixin, AbstractAxis):
         return Axis(values, self.name, weights=weights, tol=self.tol, **self.attrs)
 
 
-    def set(self, values=None, name=None, inplace=False, **kwargs):
+    def set(self, values=None, name=None, inplace=True, **kwargs):
         """ Set axis values and / or attributes
 
         Parameters
@@ -200,7 +200,7 @@ class Axis(GetSetDelAttrMixin, AbstractAxis):
             give axis a new name
         inplace : bool, optional
             modify axis in-place (True) or return copy (False)? 
-            (default False)
+            (default True)
         **kwargs : key-word arguments
             Also reset other axis attributes, which can be single metadata
             or other axis attributes, via using `setattr`
@@ -209,7 +209,7 @@ class Axis(GetSetDelAttrMixin, AbstractAxis):
 
         Returns
         -------
-        Axis instance, or None if inplace is True
+        None, or Axis instance inplace is False
         """
         if inplace: 
             ax = self
