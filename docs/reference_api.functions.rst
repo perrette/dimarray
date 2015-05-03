@@ -25,10 +25,6 @@ Join
 
 -------------------------
 
-.. autofunction:: dimarray.aggregate
-
--------------------------
-
 .. autofunction:: dimarray.stack_ds
 
 -------------------------

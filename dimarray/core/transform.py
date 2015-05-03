@@ -287,18 +287,18 @@ def _get_func(funcname, skipna):
     return getattr(np, funcname)
 
 def _deal_with_axis(obj, axis):
-    """ deal with the `axis` parameter 
+    """Handle the `axis` parameter 
 
     Parameters
     ----------
-        obj: DimArray object
-        axis: `int` or `str` or `tuple` or None
+    obj: DimArray object
+    axis: `int` or `str` or `tuple` or None
 
     Returns
     -------
-        newobj: reshaped obj if axis is tuple otherwise obj
-        idx   : axis index
-        name  : axis name
+    newobj: reshaped obj if axis is tuple otherwise obj
+    idx   : axis index
+    name  : axis name
     """
     # before applying the function on the collapsed array
     if type(axis) in (tuple, list):
