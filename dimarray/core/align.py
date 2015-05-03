@@ -1,13 +1,14 @@
 """ Functions associated to array alignment
 """
 from collections import OrderedDict as odict
-import numpy as np
 import itertools
-from axes import Axes, Axis
 import warnings
-from dimarray.tools import is_DimArray
+import numpy as np
+
 from dimarray.config import get_option
-from .indexing import locate_many
+from dimarray.tools import is_DimArray
+from dimarray.core.axes import Axes, Axis
+from dimarray.core.indexing import locate_many
 
 def broadcast_arrays(*arrays):
     """ Analogous to numpy.broadcast_arrays
@@ -145,8 +146,7 @@ def align_dims(*arrays):
 
     return newarrays
 
-
-def align_axes(*arrays):
+def align_axes(*arrays, **kwargs):
     """ align axes of a list of DimArray arrays by reindexing
 
     Examples
@@ -175,6 +175,10 @@ def align_axes(*arrays):
            [ 2.,  3.],
            [ 4.,  5.]])]
     """
+    join = kwargs.pop('join', get_option('align.join'))
+    if len(kwargs) > 0:
+        raise TypeError("align_axes() got unexpected argument(s): "+", ".join(kwargs.keys()))
+
     # convert any scalar to dimarray
     from dimarray import DimArray
     arrays = list(arrays)
@@ -194,13 +198,13 @@ def align_axes(*arrays):
         ii = filter(lambda i: d in arrays[i].dims, range(len(arrays)))
 
         # common axis to reindex on
-        ax_values = _common_axis(*[arrays[i].axes[d] for i in ii])
+        ax_values = _common_axis([arrays[i].axes[d] for i in ii], join)
 
         # update arrays
         for i, o in enumerate(arrays):
             if i not in ii:
                 continue
-            if o.axes[d] == ax_values:
+            if np.all(o.axes[d] == ax_values):
                 continue
 
             arrays[i] = o.reindex_axis(ax_values, axis=d)
@@ -208,29 +212,32 @@ def align_axes(*arrays):
     return arrays
 
 
-def _common_axis(*axes):
+def _common_axis(axes, join):
     """ find the common axis among a list of axes ==> proceed recursively
     """
     assert len(axes) > 0
 
+    # recursion end
     if len(axes) == 1:
         return axes[0]
 
-#    elif len(axes) == 2:
-#        ax0, ax1 = axes
-#        return ax0.union(ax1)
+    # recursive call
+    ax0 = axes[0]
+    ax1 = _common_axis(axes[1:],join)
 
+    # special cases
+    # do not include None unless we have a singleton
+    if ax0[0] is None:
+        return ax1
+    if len(ax1) == 1 and ax1[0] is None:
+        return ax0
+
+    # actual work
+    if join == 'outer':
+        com_axis = ax0.union(ax1)
     else:
-        ax0 = axes[0]
-        ax1 = _common_axis(*axes[1:])
-
-        # do not include None unless we have a singleton
-        if ax0[0] is None:
-            return ax1
-        elif len(ax1) == 1 and ax1[0] is None:
-            return ax0
-        else:
-            return ax0.union(ax1)
+        com_axis = ax0.intersection(ax1)
+    return com_axis
 
 def _check_stack_args(arrays, keys=None):
     """ generic function to deal with arguments for stacking

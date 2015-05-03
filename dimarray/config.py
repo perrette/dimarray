@@ -41,6 +41,9 @@ rcParamsHelp['op.broadcast'] = "bool (default: True). If True, broadcast arrays 
 rcParams['op.reindex'] = True
 rcParamsHelp['op.reindex'] = "bool (default True). If True, reindex axis before an operation, such as to match two time series. Otherwise (if False), size and indices must exactly match.\n"
 
+rcParams['align.join'] = "outer"
+rcParamsHelp['align.join'] = "str (default: 'outer'). Default alignment mode. Also used if op.reindex is True\n"
+
 # options for display
 rcParams['display.max'] = 100 
 rcParamsHelp['display.max'] = "int (default: 100): max array size shown. Note: if set to large values (e.g. inf), follows numpy display.\n"
