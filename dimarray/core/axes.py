@@ -7,10 +7,26 @@ import numpy as np
 
 from dimarray.tools import is_DimArray, is_array1d_equiv
 from dimarray.decorators import format_doc
-from .bases import AbstractAxis, AbstractAxes, GetSetDelAttrMixin
-from .indexing import _maybe_cast_type, is_monotonic
+from dimarray.core.bases import AbstractAxis, AbstractAxes, GetSetDelAttrMixin
+from dimarray.core.indexing import _maybe_cast_type, is_monotonic
 
 __all__ = ["Axis","Axes"]
+
+# def _merge_sorted_arrays(a, b, drop_duplicates=True):
+#     """Merge two sorted arrays
+#
+#     Parameters
+#     ----------
+#     a : array-like
+#     b : array-like
+#     drop_duplicates : bool, optional (default True)
+#     """
+#     i = np.searchsorted(a, b)
+#     joined = np.insert(a, i, b)
+#     if drop_duplicates:
+#         joined = np.unique(joined)
+#     return joined
+
 
 def _check_axis_values(values, dtype=None):
     """ convert Axis type to have "object" instead of string
@@ -243,11 +259,11 @@ class Axis(GetSetDelAttrMixin, AbstractAxis):
         return self.set(values, axis=axis, name=name, **kwargs)
 
     def union(self, other):
-        """ join two Axis objects
+        """Join two Axis objects
         
         Notes
         -----
-        This removes singletons by default
+        This removes duplicates by default
 
         Examples
         --------
@@ -271,26 +287,37 @@ class Axis(GetSetDelAttrMixin, AbstractAxis):
         elif other.values.size == 0:
             return self
 
-        # use unique and concatenate to make things simpler
-        #TODO:use searchsorted
-        joined = np.unique(np.concatenate((self.values, other.values)))
-
-        # join two sorted axes?
         if self.is_monotonic() and other.is_monotonic():
-            def is_increasing(ax):
-                return ax.size < 2 or ax.values[1] >= ax.values[0]
-            def is_decreasing(ax):
-                return ax.size < 2 or ax.values[1] <= ax.values[0]
-            if is_increasing(self) and is_increasing(other):
-                joined.sort()
-            elif is_decreasing(self) and is_decreasing(other):
-                joined2 = joined[::-1] # reverse should be increasing
-                joined2.sort()
-                joined = joined2[::-1] # back to normal
-            else:
-                joined.sort() # one increases, the other decreases !
+            # join two sorted axes
+            joined = np.union1d(self.values, other.values)
+            if self.values[-1] <= self.values[0]: # decreasing !
+                joined = joined[::-1]
+
+        else:
+            # no ordering, just concatenate and drop doublons
+            joined = np.unique(np.concatenate((self.values, other.values)))
 
         return Axis(joined, self.name)
+
+    def intersection(self, other):
+        """Join two Axis objects by taking the intersection
+        """
+        if isinstance(other, Axis):
+            assert self.name == other.name, "axes have different names, cannot make union"
+        else:
+            other = Axis(other, self.name) # to give it the same methods is_monotonic etc...
+
+        if np.all(self.values == other.values):
+            # TODO: check other attributes such as weights
+            return self.copy()
+        elif self.values.size == 0:
+            return Axis([], self.name)
+        elif other.values.size == 0:
+            return Axis([], self.name)
+
+        # some differ...
+        # TODO: also add metadata
+        return Axis(np.intersect1d(self.values, other.values), self.name)
 
     def is_monotonic(self):
         """ return True if Axis is monotonic
