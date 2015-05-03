@@ -387,35 +387,16 @@ def canonicalize_indexer(key, ndim):
 
     return tuple(canonicalize(k) for k in expanded_indexer(key, ndim))
 
+def is_full_slice(value):
+    return isinstance(value, slice) and value == slice(None)
+
+def _expand_slice(slice_, size):
+        return np.arange(*slice_.indices(size))
 
 def orthogonal_indexer(key, shape):
     """Given a key for orthogonal array indexing, returns an equivalent key
     suitable for indexing a numpy.ndarray with fancy indexing.
     """
-    def positive_slice_bounds(k, length):
-        " remove negative slice indices "
-        start, stop, step = k.start, k.stop, k.step
-        if start and start < 0: start = length + start
-        if stop and stop < 0: stop = length + stop
-        return slice(start, stop, step)
-
-    def expand_key(k, length):
-        if isinstance(k, slice):
-            k = positive_slice_bounds(k, length)
-            step = k.step or 1
-
-            # default values for start, stop
-            if step > 0:
-                start = k.start or 0
-                stop = k.stop or length
-            else:
-                start = k.start or length-1
-                stop = k.stop or -1
-            
-            return np.arange(start, stop, step)
-        else:
-            return k
-
     # replace Ellipsis objects with slices
     key = list(canonicalize_indexer(key, len(shape)))
     # replace 1d arrays and slices with broadcast compatible arrays
@@ -426,8 +407,7 @@ def orthogonal_indexer(key, shape):
 
     def full_slices_unselected(n_list):
         def all_full_slices(key_index):
-            return all(isinstance(key[n], slice) and key[n] == slice(None)
-                       for n in key_index)
+            return all(is_full_slice(key[n]) for n in key_index)
         if not n_list:
             return n_list
         elif all_full_slices(range(n_list[0] + 1)):
@@ -446,9 +426,11 @@ def orthogonal_indexer(key, shape):
     # the admittedly mind-boggling ways of numpy's advanced indexing.)
     array_keys = full_slices_unselected(non_int_keys)
 
-    array_indexers = np.ix_(*(expand_key(key[n], shape[n])
-                              for n in array_keys))
+    def maybe_expand_slice(k, length):
+        return _expand_slice(k, length) if isinstance(k, slice) else k
 
+    array_indexers = np.ix_(*[maybe_expand_slice(key[n], shape[n])
+                              for n in array_keys])
     for i, n in enumerate(array_keys):
         key[n] = array_indexers[i]
     return tuple(key)
