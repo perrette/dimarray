@@ -269,7 +269,7 @@ def transform(geo_array, to_crs, from_crs=None, \
     else:
         # first reshape to 3-D, flattening everything except horizontal_coordinates coordinates
         # TODO: optimize by computing and re-using weights?
-        obj = geo_array.group((x0.name, y0.name), reverse=True, insert=0)  
+        obj = geo_array.flatten((x0.name, y0.name), reverse=True, insert=0)  
         newvalues = []
         for k, suba in obj.iter(axis=0): # iterate over the first dimension
             #newval = interp(suba.values, xt_2d, yt_2d, xt_2dr, yt_2dr)
@@ -278,8 +278,8 @@ def transform(geo_array, to_crs, from_crs=None, \
 
         # stack the arrays together
         newvalues = np.array(newvalues)
-        grouped_obj = geo_array._constructor(newvalues, [obj.axes[0], yt, xt])
-        transformed = grouped_obj.ungroup(axis=0)
+        flattened_obj = geo_array._constructor(newvalues, [obj.axes[0], yt, xt])
+        transformed = flattened_obj.unflatten(axis=0)
 
     # reshape back
     # ...replace old axis names by new ones of the projection
@@ -376,7 +376,7 @@ def transform_vectors(u, v, to_crs, from_crs=None, \
         # first reshape to 3-D components, flattening everything except horizontal coordinates
         # TODO: optimize by computing and re-using weights?
         obj = stack([u, v], axis='vector_components', keys=['u','v'])
-        obj = obj.group(('vector_components', x0.name, y0.name), reverse=True, insert=0) # 
+        obj = obj.flatten(('vector_components', x0.name, y0.name), reverse=True, insert=0) # 
         newvalues = []
         for k, suba in obj.iter(axis=0): # iterate over the first dimension
             # First transform vector components onto the new coordinate system
@@ -387,9 +387,9 @@ def transform_vectors(u, v, to_crs, from_crs=None, \
             newvalues.append(np.array([_ui, _vi]))
 
         # stack the arrays together
-        newvalues = np.array(newvalues) # 4-D : grouped, vector_components, y, x
-        grouped_obj = _constructor(newvalues, [obj.axes[0], obj.axes[1], yt, xt])
-        ut, vt = grouped_obj.ungroup(axis=0).swapaxes('vector_components',0)
+        newvalues = np.array(newvalues) # 4-D : flattened, vector_components, y, x
+        flattened_obj = _constructor(newvalues, [obj.axes[0], obj.axes[1], yt, xt])
+        ut, vt = flattened_obj.unflatten(axis=0).swapaxes('vector_components',0)
 
     # add metadata
     ut.attrs.update(u.attrs)

@@ -145,7 +145,7 @@ def dropna(self, axis=0, minvalid=None, na=np.nan):
 
     else:
         nans = _isnan(self, na=na) 
-        nans = nans.group([dim for dim in self.dims if dim != name], insert=0) # in first position
+        nans = nans.flatten([dim for dim in self.dims if dim != name], insert=0) # in first position
         count_nans_axis = nans.sum(axis=0) # number of points valid along that axis
         count_vals_axis = (~nans).sum(axis=0) # number of points valid along that axis
         #count_nans_axis = nans.sum(axis=[dim for dim in a.dims if dim != name]) # number of points valid along that axis

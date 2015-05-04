@@ -989,8 +989,11 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     transpose = _reshape.transpose
     rollaxis = _reshape.rollaxis
     broadcast = _reshape.broadcast
-    groupby = _reshape.groupby
+    # groupby = _reshape.groupby
     swapaxes = _reshape.swapaxes
+    flatten = _reshape.flatten
+    unflatten = _reshape.unflatten
+    # deprecated
     group = _reshape.group
     ungroup = _reshape.ungroup
     

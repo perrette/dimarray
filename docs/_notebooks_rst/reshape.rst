@@ -63,12 +63,12 @@ array([[1, 3],
        [2, 4],
        [3, 5]])
 
-.. _group_and_ungroup_[experimental]:
+.. _flatten_and_unflatten_[experimental]:
 
-group and ungroup [experimental]
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+flatten and unflatten [experimental]
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-As a new, experimental feature, it is possible to flatten (group) or any subset of dimensions. Corresponding axes are converted in GroupedAxis objects. It is similar to numpy's flatten method but applies selectively on a set of axes. 
+As a new, experimental feature, it is possible to flatten or any subset of dimensions. Corresponding axes are converted in FlattenedAxis objects. It is similar to numpy's flatten method but may apply selectively on a set of axes. 
 
 >>> import numpy as np
 >>> data = np.arange(2*3*4).reshape(2,3,4)
@@ -88,7 +88,7 @@ array([[[ 0,  1,  2,  3],
 
 Flatten a set of dimensions:
 
->>> w = v.group(('lat','lon'))
+>>> w = v.flatten(('lat','lon'))
 >>> w
 dimarray: 24 non-null elements (0 null)
 0 / time (2): 1950 to 1955
@@ -96,16 +96,16 @@ dimarray: 24 non-null elements (0 null)
 array([[ 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11],
        [12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]])
 
-Along-axis transformations use that feature and can group any subset of axes prior to the operation:
+Along-axis transformations use that feature and can flatten any subset of axes prior to the operation:
 
 >>> v.mean(axis=('lat','lon'))
 dimarray: 2 non-null elements (0 null)
 0 / time (2): 1950 to 1955
 array([  5.5,  17.5])
 
-Any grouped axis can be reshaped back to full n-d array via **`ungroup`**
+Any flattened axis can be reshaped back to full n-d array via **`unflatten`**
 
->>> w.ungroup()
+>>> w.unflatten()
 dimarray: 24 non-null elements (0 null)
 0 / time (2): 1950 to 1955
 1 / lat (3): -90.0 to 90.0
@@ -123,9 +123,9 @@ array([[[ 0,  1,  2,  3],
 reshape [experimental]
 ^^^^^^^^^^^^^^^^^^^^^^
 
-:py:meth:`dimarray.DimArray.reshape` is similar but not the same as numpy ndarray's :ref:`reshape <http://docs.scipy.org/doc/numpy/reference/generated/numpy.reshape.html>`. It takes only axis names as parameters. It is a high-level function that makes use of `newaxis`, `squeeze`, `group` and `ungroup` to reshape the array. It differs from numpy in that it cannot "break" an existing dimension (unless it is a GroupedAxis). It also performs :py:meth:`transpose` as needed to match the required shape. 
+:py:meth:`dimarray.DimArray.reshape` is similar but not the same as numpy ndarray's :ref:`reshape <http://docs.scipy.org/doc/numpy/reference/generated/numpy.reshape.html>`. It takes only axis names as parameters. It is a high-level function that makes use of `newaxis`, `squeeze`, `flatten` and `unflatten` to reshape the array. It differs from numpy in that it cannot "break" an existing dimension (unless it is a FlattenedAxis). It also performs :py:meth:`transpose` as needed to match the required shape. 
 
-Here an example where high-dimensional data is converted into a pandas' DataFrame for displaying result of a sensitivity analysis. GroupedAxis are converted into MultiIndex before passing to pandas.
+Here an example where high-dimensional data is converted into a pandas' DataFrame for displaying result of a sensitivity analysis. FlattenedAxis are converted into MultiIndex before passing to pandas.
 
 >>> large_array = DimArray(np.arange(2*2*5*2).reshape(2,2,5,2), dims=('A','B','C','D'))
 >>> large_array.reshape('A,D','B,C').to_pandas()
@@ -139,7 +139,4 @@ A D
 
 .. raw:: html
      :file: reshape_files/output_21-0.html
-
-
-
 

@@ -193,7 +193,7 @@ def interp2d(dim_array, newaxes, dims=(-2, -1), order=1, clip=False):
     else:
         # first reshape to 3-D, flattening everything except horizontal_coordinates coordinates
         # TODO: optimize by computing and re-using weights?
-        dim_array = dim_array.group((x0.name, y0.name), reverse=True, insert=0)  
+        dim_array = dim_array.flatten((x0.name, y0.name), reverse=True, insert=0)  
         newvalues = []
         for k, suba in dim_array.iter(axis=0): # iterate over the first dimension
             newval = interp(suba.values, x0.values, y0.values, xi2, yi2, masked=not clip)
@@ -201,8 +201,8 @@ def interp2d(dim_array, newaxes, dims=(-2, -1), order=1, clip=False):
 
         # stack the arrays together
         newvalues = np.array(newvalues)
-        grouped_dim_array = dim_array._constructor(newvalues, [dim_array.axes[0], yi, xi])
-        dim_array_int = grouped_dim_array.ungroup(axis=0)
+        flattened_dim_array = dim_array._constructor(newvalues, [dim_array.axes[0], yi, xi])
+        dim_array_int = flattened_dim_array.unflatten(axis=0)
 
     # reshape back
     # ...replace old axis names by new ones of the projection

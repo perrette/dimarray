@@ -9,6 +9,7 @@ import functools
 from axes import Axis, Axes, GroupedAxis
 #from dimarray.tools import is_DimArray
 import dimarray as da
+from dimarray.tools import deprecated_func
 
 #
 # Broadcast
@@ -107,7 +108,7 @@ def transpose(self, *dims):
 
     See also
     ---------
-    reshape, group, ungroup, newaxis
+    reshape, flatten, unflatten, newaxis
 
     Examples
     --------
@@ -440,7 +441,7 @@ def squeeze(self, axis=None):
 
     return self._constructor(res, newaxes, **self.attrs)
 
-def _ungroup_dims(dims):
+def _unflatten_dims(dims):
     """ ['a','b,c','d'] ==> ['a','b','c','d']
     """
     flatdims = []
@@ -453,14 +454,14 @@ def _ungroup_dims(dims):
 # Reshape by adding/removing as many singleton axes as needed to match prescribed dimensions
 #
 def reshape(self, *newdims, **kwargs):
-    """ Add/remove/group dimensions to conform array to new dimensions
+    """ Add/remove/flatten dimensions to conform array to new dimensions
     
     Parameters
     ----------
     newdims : tuple or list or variable list of dimension names {str} 
         Any dimension now present in the array is added as singleton dimension
-        Any dimension name containing a comma is interpreting as a grouping command.
-        All dimensions to group have to exist already.
+        Any dimension name containing a comma is interpreting as a flattening command.
+        All dimensions to flatten have to exist already.
 
     transpose : bool
         if True, transpose dimensions to match new order (default True)
@@ -473,7 +474,7 @@ def reshape(self, *newdims, **kwargs):
 
     See also
     --------
-    group, ungroup, transpose, newaxis
+    flatten, unflatten, transpose, newaxis
 
     Examples
     --------
@@ -536,18 +537,18 @@ def reshape(self, *newdims, **kwargs):
     # check that newd dimensions
     assert len(newdims) == len(set(newdims)), "must not contain duplicate axes !"
 
-    # First ungroup the array to compare with flattened newdims
-    o = self.ungroup()
+    # First unflatten the array to compare with flattened newdims
+    o = self.unflatten()
 
-    # Temporarily replace "," by ";" in any dimension with is NOT a grouped axis, and flatten all dimensions apart from that
+    # Temporarily replace "," by ";" in any dimension with is NOT a flattened axis, and flatten all dimensions apart from that
     newdims_renamed = []
     for d in newdims:
         if ',' in d and d in o.dims:
             d = d.replace(',',';')
         newdims_renamed.append(d)
-    newdims_ungrouped = _ungroup_dims(newdims_renamed) 
+    newdims_unflattened = _unflatten_dims(newdims_renamed) 
 
-    assert len(newdims_ungrouped) == len(set(newdims_ungrouped)), "must not contain duplicate axes !"
+    assert len(newdims_unflattened) == len(set(newdims_unflattened)), "must not contain duplicate axes !"
 
     for ax in o.axes:
         ax.name = ax.name.replace(',',';')
@@ -555,27 +556,27 @@ def reshape(self, *newdims, **kwargs):
     # Remove unwanted singleton dimensions, if any
     for dim in o.dims:
         assert isinstance(dim, basestring), "newdims must be a tuple of axis names (`str`)"
-        if dim not in newdims_ungrouped:
+        if dim not in newdims_unflattened:
             o = o.squeeze(dim)
 
     # Transpose array to match existing dimensions
     if transpose:
-        o = o.transpose([dim for dim in newdims_ungrouped if dim in o.dims])
+        o = o.transpose([dim for dim in newdims_unflattened if dim in o.dims])
 
     # check sortedness
     else:
-        if tuple([d for d in o.dims if d in newdims_ungrouped]) != tuple([d for d in newdims_ungrouped if d in o.dims]):
+        if tuple([d for d in o.dims if d in newdims_unflattened]) != tuple([d for d in newdims_unflattened if d in o.dims]):
             raise ValueError("First transpose the array before reshaping, or set parameter `transpose=True`")
 
     # Add missing dimensions by inserting singleton axes
-    for i, dim in enumerate(newdims_ungrouped):
+    for i, dim in enumerate(newdims_unflattened):
         if dim not in o.dims:
             o = o.newaxis(dim, pos=i)
 
     # Group dimensions as required
     for i, d in enumerate(newdims_renamed):
         if ',' in d:
-            o = o.group(d.split(','), insert=i)
+            o = o.flatten(d.split(','), insert=i)
 
     # Replace back ';' by ','
     for ax in o.axes:
@@ -588,26 +589,27 @@ def reshape(self, *newdims, **kwargs):
 
 
 #
-# Group/ungroup subsets of axes to perform operations on partly flattened array
+# Group/unflatten subsets of axes to perform operations on partly flattened array
 #
-def group(self, *dims, **kwargs):
-    """ group (or flatten) a subset of dimensions
+def flatten(self, *dims, **kwargs):
+    """Flatten all or a subset of dimensions
 
     Parameters
     ----------
-    dims : list or tuple of axis names
+    dims : list or tuple of axis names, optional
+        by default, all dimensions
     reverse : bool, optional
         if True, reverse behaviour: dims are interpreted as 
-        the dimensions to keep, and all the other dimensions are grouped
+        the dimensions to keep, and all the other dimensions are flattened
         default is False
     insert : int, optional
-        position where to insert the grouped axis 
-        (by default, any grouped dimension is inserted at 
-        the position of the first axis involved in grouping)
+        position where to insert the flattened axis 
+        (by default, any flattened dimension is inserted at 
+        the position of the first axis involved in flattening)
 
     Returns
     -------
-    grouped_array : DimArray
+    flattened_array : DimArray
         appropriately reshaped, with collapsed dimensions as first axis (tuples)
 
     This is useful to do a regional mean with missing values
@@ -623,6 +625,29 @@ def group(self, *dims, **kwargs):
 
     Examples
     --------
+
+    Flatten all dimensions 
+
+    >>> from dimarray import DimArray
+    >>> a = DimArray([[1,2,3],[4,5,6]])
+    >>> a
+    dimarray: 6 non-null elements (0 null)
+    0 / x0 (2): 0 to 1
+    1 / x1 (3): 0 to 2
+    array([[1, 2, 3],
+           [4, 5, 6]])
+
+    >>> b = a.flatten()
+    >>> b
+    dimarray: 6 non-null elements (0 null)
+    0 / x0,x1 (6): (0, 0) to (1, 2)
+    array([1, 2, 3, 4, 5, 6])
+
+    >>> b.labels
+    (array([(0, 0), (0, 1), (0, 2), (1, 0), (1, 1), (1, 2)], dtype=object),)
+
+    Flatten a subset of dimensions only
+
     >>> from dimarray import DimArray
     >>> np.random.seed(0)
     >>> values = np.arange(2*3*4).reshape(2,3,4)
@@ -640,7 +665,7 @@ def group(self, *dims, **kwargs):
             [16, 17, 18, 19],
             [20, 21, 22, 23]]])
 
-    >>> w = v.group(('lat','lon'), insert=1)
+    >>> w = v.flatten(('lat','lon'), insert=1)
     >>> w 
     dimarray: 24 non-null elements (0 null)
     0 / time (2): 1950 to 1955
@@ -648,12 +673,12 @@ def group(self, *dims, **kwargs):
     array([[ 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11],
            [12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]])
 
-    >>> np.all( w.ungroup() == v )
+    >>> np.all( w.unflatten() == v )
     True
 
     But be careful, the order matter !
 
-    >>> v.group(('lon','lat'), insert=1)
+    >>> v.flatten(('lon','lat'), insert=1)
     dimarray: 24 non-null elements (0 null)
     0 / time (2): 1950 to 1955
     1 / lon,lat (12): (-180.0, -90.0) to (180.0, 90.0)
@@ -662,7 +687,7 @@ def group(self, *dims, **kwargs):
 
     Useful to average over a group of dimensions:
 
-    >>> v.group(('lon','lat'), insert=0).mean(axis=0)
+    >>> v.flatten(('lon','lat'), insert=0).mean(axis=0)
     dimarray: 2 non-null elements (0 null)
     0 / time (2): 1950 to 1955
     array([  5.5,  17.5])
@@ -688,10 +713,10 @@ def group(self, *dims, **kwargs):
             reorder = True
 
     if len(dims) == 0: 
-        raise ValueError("dims must have length > 0")
+        dims = self.dims
 
     if type(dims) not in (tuple, list, set):
-        raise TypeError("dimensions to group must be a list or a tuple  or a set")
+        raise TypeError("dimensions to flatten must be a list or a tuple  or a set")
 
     # make sure dims contains axis names
     _ , dims = self._get_axes_info(dims)
@@ -701,12 +726,12 @@ def group(self, *dims, **kwargs):
     if reverse:
         dims = [d for d in self.dims if d not in dims]
 
-    # reorder dimensions to group and convert to tuple
+    # reorder dimensions to flatten and convert to tuple
     if reorder: # only if provided as set
         dims = [d for d in self.dims if d in dims] # do not reorder, this may matter
     dims = tuple(dims)
 
-    n = len(dims) # number of dimensions to group
+    n = len(dims) # number of dimensions to flatten
     ii = self.dims.index(dims[0]) # start
 
     # dimension to insert the new axis at
@@ -722,9 +747,9 @@ def group(self, *dims, **kwargs):
     
         b = self.transpose(newdims) # dimensions to factorize in the front
 
-        return b.group(dims, insert=insert)
+        return b.flatten(dims, insert=insert)
 
-    # Create a new grouped axis
+    # Create a new flattened axis
     newaxis = GroupedAxis(*[ax for ax in self.axes if ax.name in dims])
 
     # New axes
@@ -740,61 +765,28 @@ def group(self, *dims, **kwargs):
 
     return new
 
-def flatten(self):
-    """ flatten a DimArray into a 1-D DimArray
-    
-    analogous to numpy's flatten, but conserves axes with a GroupedAxis object
+group = deprecated_func(flatten, 'group')
 
-    Returns
-    -------
-    DimArray
-
-    See also
-    --------
-    reshape, group, ungroup
-
-    Examples
-    --------
-    >>> from dimarray import DimArray
-    >>> a = DimArray([[1,2,3],[4,5,6]])
-    >>> a
-    dimarray: 6 non-null elements (0 null)
-    0 / x0 (2): 0 to 1
-    1 / x1 (3): 0 to 2
-    array([[1, 2, 3],
-           [4, 5, 6]])
-
-    >>> b = a.flatten()
-    >>> b
-    dimarray: 6 non-null elements (0 null)
-    0 / x0,x1 (6): (0, 0) to (1, 2)
-    array([1, 2, 3, 4, 5, 6])
-
-    >>> b.labels
-    (array([(0, 0), (0, 1), (0, 2), (1, 0), (1, 1), (1, 2)], dtype=object),)
-    """
-    return self.group(self.dims)
-
-def ungroup(self, axis=None):
-    """ undo grouping (inflate array)
+def unflatten(self, axis=None):
+    """ undo flatten (inflate array)
 
     Parameters
     ----------
     axis : int or str or None, optional
-        axis to ungroup
-        default to None to ungroup all
+        axis to unflatten
+        default to None to unflatten all
 
     Returns
     -------
     DimArray
 
     """
-    # by default, ungroup all
+    # by default, unflatten all
     if axis is None:
-        grouped_axes = [ax.name for ax in self.axes if isinstance(ax, GroupedAxis)]
+        flattened_axes = [ax.name for ax in self.axes if isinstance(ax, GroupedAxis)]
         obj = self
-        for axis in grouped_axes:
-            obj = obj.ungroup(axis=axis)
+        for axis in flattened_axes:
+            obj = obj.unflatten(axis=axis)
         return obj
 
     assert type(axis) in (str, int), "axis must be integer or string"
@@ -809,6 +801,8 @@ def ungroup(self, axis=None):
     newaxes = self.axes[:axis] + group.axes + self.axes[axis+1:]
 
     return self._constructor(newvalues, newaxes, **self.attrs)
+
+ungroup = deprecated_func(unflatten, 'ungroup')
 
 #
 # groupby method
@@ -867,32 +861,32 @@ class GroupBy(object):
 #for op in _trans:
 #    GroupBy.__dict__[op] = Desc(op, axis=-1)
 
-def groupby(self, *dims):
-    """ group by one or several variables along which stat functions can be applied
-
-    .. note:: EXPERIMENTAL: will probably be removed or renamed in future releases
-
-    Parameters
-    ----------
-    *dims: variable list of dims to keep, all others are flattened
-
-    Returns
-    -------
-    GroupBy object
-
-    Notes 
-    -----
-    this method is experimental and may change in the future
-
-    Examples
-    --------
-    >>> from dimarray import DimArray
-    >>> a = DimArray([[1,2,3],[4,5,6]], [('x',[1,2]), ('items',['a','b','c'])])
-    >>> a = a.newaxis('y',4) # add an axis of length 4
-    >>> a.groupby('items').mean()
-    dimarray: 3 non-null elements (0 null)
-    0 / items (3): 'a' to 'c'
-    array([ 2.5,  3.5,  4.5])
-    """
-    obj = group(self, dims, reverse=True, insert=0).T
-    return GroupBy(obj, dims)
+# def groupby(self, *dims):
+#     """ group by one or several variables along which stat functions can be applied
+#
+#     .. note:: EXPERIMENTAL: will probably be removed or renamed in future releases
+#
+#     Parameters
+#     ----------
+#     *dims: variable list of dims to keep, all others are flattened
+#
+#     Returns
+#     -------
+#     GroupBy object
+#
+#     Notes 
+#     -----
+#     this method is experimental and may change in the future
+#
+#     Examples
+#     --------
+#     >>> from dimarray import DimArray
+#     >>> a = DimArray([[1,2,3],[4,5,6]], [('x',[1,2]), ('items',['a','b','c'])])
+#     >>> a = a.newaxis('y',4) # add an axis of length 4
+#     >>> a.groupby('items').mean()
+#     dimarray: 3 non-null elements (0 null)
+#     0 / items (3): 'a' to 'c'
+#     array([ 2.5,  3.5,  4.5])
+#     """
+#     obj = group(self, dims, reverse=True, insert=0).T
+#     return GroupBy(obj, dims)

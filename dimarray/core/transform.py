@@ -302,7 +302,7 @@ def _deal_with_axis(obj, axis):
     # before applying the function on the collapsed array
     if type(axis) in (tuple, list):
         idx = 0
-        newobj = obj.group(axis, insert=idx)
+        newobj = obj.flatten(axis, insert=idx)
         #idx = obj.dims.index(axis[0])  # position where the new axis has been inserted
         #ax = newobj.axes[idx] 
         ax = newobj.axes[0]
@@ -506,7 +506,7 @@ def diff(self, axis=-1, scheme="backward", keepaxis=False, n=1):
         return np.diff(self.values, n=n, axis=None)
 
     # Deal with `axis` parameter, whether `int`, `str` or `tuple`
-    # possibly grouping dimensions if axis is tuple
+    # possibly flattening dimensions if axis is tuple
     obj, idx, name = _deal_with_axis(self, axis)
 
     # Recursive call if n > 1
@@ -611,7 +611,7 @@ _doc_weights = dict(
 
         axis = """
     axis : int or str or tuple, optional
-        axis or group of axes to apply the transform on
+        axis or sequence of axes to apply the transform on
         """.strip(),
 
         skipna = """
@@ -865,7 +865,7 @@ def _get_weights(self, axis=None, mirror_nans=True, weights=None):
 
 @format_doc(**_doc_weights)
 def mean(self, axis=None, skipna=False, weights=None):
-    """ mean over an axis or group of axes, possibly weighted 
+    """ mean over an axis or sequence of axes, possibly weighted 
 
     {descr} 
 
@@ -933,7 +933,7 @@ def mean(self, axis=None, skipna=False, weights=None):
 
 @format_doc(**_doc_weights)
 def var(self, axis=None, skipna=False, weights=None, ddof=0):
-    """ variance over an axis or group of axes, possibly weighted 
+    """ variance over an axis or sequence of axes, possibly weighted 
 
     Parameters
     ----------
@@ -1155,7 +1155,7 @@ def interp_like(self, other, **kwargs):
 #         pos = obj.dims.index(newaxis.name)
 #         shape2d = [newaxis.size, np.prod([s for i, s in enumerate(obj.shape) if i!=pos])]
 #         result = np.empty(shape2d)
-#         for i, fp in enumerate(obj.group((newaxis.name,), reverse=True, insert=0).values):
+#         for i, fp in enumerate(obj.flatten((newaxis.name,), reverse=True, insert=0).values):
 #             res = func(fp, *args, **kwargs)
 #             result[i] = res # access to values
 #         result = result.reshape(newshape)
