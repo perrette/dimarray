@@ -37,6 +37,14 @@ def dim_array(ncvar_shape, ncvar_type, ncdim_type, seed):
 def data_set(seed):
     return create_dataset(seed=seed)
 
+@pytest.fixture(params=['i','f','S','M'])
+def axis(request):
+    " provide an axis with several types"
+    if request.param in ('i','f','S'):
+        arr = np.array(np.arange(3), dtype=request.param)
+    else:
+        arr = np.array(['1970-01-01', '1970-06-01', '1980-08-01'], dtype='datetime64')
+    return da.Axis(arr, 'dim0')
 
 class ReadTest(object):
     """ Ancestor class for reading netCDF files, to be inherited, is not executed as test
@@ -243,3 +251,15 @@ def test_format(dim_array, tmpdir):
 
 def test_open_nc(tmpdir):
     pass
+
+def test_roundtrip_datetime(axis, tmpdir):
+    a = da.DimArray(np.arange(axis.size), axes=[axis])
+
+    # write
+    fname = tmpdir.join("test_datetime.nc").strpath # have test.nc in some temporary directory
+    a.write_nc(fname, 'myarray') # write 
+
+    # read-back
+    actual = da.read_nc(fname, 'myarray')
+
+    assert_equal_dimarrays(actual, expected=a)

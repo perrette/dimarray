@@ -1,6 +1,7 @@
 """ NetCDF I/O to access and save geospatial data
 """
 import os
+import re
 import glob, copy
 from collections import OrderedDict as odict
 from functools import partial
@@ -30,7 +31,7 @@ FORMAT = get_option('io.nc.format') # for the doc
 #
 # Helper functions
 #
-def _maybe_convert_dtype(values, format=None):
+def maybe_encode_values(values, format=None):
     """ strings are given "object" type in Axis object
     ==> assume all objects are actually strings
     NOTE: this will fail for other object-typed axes such as tuples
@@ -38,8 +39,11 @@ def _maybe_convert_dtype(values, format=None):
     # if dtype is np.dtype('O'):
     values = np.asarray(values)
     dtype = values.dtype
-    if dtype > np.dtype('S1'): # all strings, this include objects dtype('O')
+    if dtype.kind in ('S','O'):
         values = np.asarray(values, dtype=object)
+        dtype = str
+    elif dtype.kind == 'M': # np.datetime64
+        values = np.asarray(np.datetime_as_string(values), dtype=object)
         dtype = str
 
     # if the format is NETCDF3, uses int32 instead of int64
@@ -51,6 +55,37 @@ def _maybe_convert_dtype(values, format=None):
         warnings.warn("convert int64 into int32 for writing to NETCDF3 format")
         dtype = "int32"
     return values, dtype
+
+# quick and dirty conversion from string
+TIME_UNITS = ['years','months','days','hours','seconds']
+
+def hastimeunits(ncvar):
+    return hasattr(ncvar, 'units') and np.any([units in ncvar.units for units in TIME_UNITS])
+
+def istimevariable(ncvar):
+    """Return True if a netCDF4 variable represents time
+    """
+    return hastimeunits(ncvar) or \
+        (ncvar.size > 0 and isinstance(ncvar[0], basestring) \
+         and re.match('\d\d(\d\d)?-\d\d-\d\d',ncvar[0]))
+
+class NCTimeVariableWrapper(object):
+    """Subclass of netCDF4 variable that performs conversions
+    to datetime64 object when indexing. Should only be used for 
+    object or string types
+    """
+    def __init__(self, ncvar):
+        self.ncvar = ncvar
+    def __getitem__(self, idx):
+        arr = self.ncvar[idx]
+        if arr.dtype.kind in ('S','O'):
+            try:
+                arr = np.asarray(arr, dtype='datetime64')
+            except:
+                pass
+        return arr
+    def __getattr__(self, att):
+        return getattr(self.ncvar, att)
 
 #
 # Define an open_nc function return an on-disk Dataset object, more similar to 
@@ -265,7 +300,7 @@ class DatasetOnDisk(GetSetDelAttrMixin, NetCDFOnDisk, AbstractDataset):
         """
         # if not isinstance(obj, da.DimArray):
         #     raise TypeError("Can only write Dataset, use `ds[name] = dima` to write a DimArray")
-        _, nctype = _maybe_convert_dtype(dima, format=self._ds.file_format)
+        _, nctype = maybe_encode_values(dima, format=self._ds.file_format)
 
         name = name or getattr(self, "name", None)
         if not name:
@@ -398,7 +433,7 @@ class DimArrayOnDisk(GetSetDelAttrMixin, NetCDFVariable, AbstractDimArray):
         # just create the variable and dimensions
         ds = self._ds
         dima = values # internal convention: values is a numpy array
-        values, nctype = _maybe_convert_dtype(values, format=self._ds.file_format)
+        values, nctype = maybe_encode_values(values, format=self._ds.file_format)
 
         assert self._name in ds.variables.keys(), "variable does not exist, should have been created earlier!"
 
@@ -417,17 +452,18 @@ class DimArrayOnDisk(GetSetDelAttrMixin, NetCDFVariable, AbstractDimArray):
         if isinstance(dima, DimArray):
             for i, ax in enumerate(self.axes):
                 idx = indices[i]
-                val = dima.axes[ax.name]
+                axis = dima.axes[ax.name]
                 # write unlimited dimensions
                 if self._ds.dimensions[ax.name].isunlimited():
-                    self.axes[ax.name][idx] = val
-
+                    self.axes[ax.name][idx] = axis
                 else:
+                    # dimension variable already written, simple check
                     ondisk = self.axes[ax.name][idx if not np.isscalar(idx) else [idx]].values
-                    inmemory = val.values
+                    inmemory = axis.values
+                    # inmemory, _ = maybe_encode_values(axis.values)
                     if not np.all(ondisk == inmemory):
-                        assert np.all(ondisk == inmemory)
-                        raise ValueError("axes values differ in the netCDF file, try using a numpy array instead, or re-index\
+                        # assert np.all(ondisk == inmemory)
+                        warnings.warn("axes values differ in the netCDF file, try using a numpy array instead, or re-index\
                                       the dimarray prior to assigning to netCDF")
 
         # do all the indexing and assignment via IndexedArray class
@@ -480,8 +516,8 @@ class DimArrayOnDisk(GetSetDelAttrMixin, NetCDFVariable, AbstractDimArray):
     def _setvalues_ortho(self, idx_tuple, values, cast=False):
         if cast is True:
             warnings.warn("`cast` parameter is ignored")
-        # values = _maybe_convert_dtype_array(values)
-        values, nctype = _maybe_convert_dtype(values)
+        # values = maybe_encode_values(values)
+        values, nctype = maybe_encode_values(values)
         self.values[idx_tuple] = values
 
     def _getvalues_ortho(self, idx_tuple):
@@ -518,7 +554,11 @@ class AxisOnDisk(GetSetDelAttrMixin, NetCDFVariable, AbstractAxis):
         ds = self._ds
         if name in ds.variables.keys():
             # assume that the variable and dimension have the same name
-            values = ds.variables[name]
+            ncvar = ds.variables[name]
+            if istimevariable(ncvar):
+                values = NCTimeVariableWrapper(ncvar)
+            else:
+                values = ncvar
         else:
             # default, dummy dimension axis
             msg = "'{}' dimension not found, define integer range".format(name)
@@ -542,7 +582,7 @@ class AxisOnDisk(GetSetDelAttrMixin, NetCDFVariable, AbstractAxis):
 
         assert getattr(ax, 'name', name) == name, "inconsistent axis name"
 
-        values, nctype = _maybe_convert_dtype(ax, format=self._ds.file_format)
+        values, nctype = maybe_encode_values(ax, format=self._ds.file_format)
 
         # assign value to variable (finer-grained control in AxesOnDisk.append)
         if name not in self._ds.variables.keys(): 
@@ -640,7 +680,7 @@ and `ds.nc.createVariable`"""
         if dim not in self._ds.dimensions.keys():
             raise ValueError("{} dimension does not exist. Use axes.append() to create a new axis".format(dim))
 
-        values, nctype = _maybe_convert_dtype(ax, format=self._ds.file_format)
+        values, nctype = maybe_encode_values(ax, format=self._ds.file_format)
 
         if dim not in self._ds.variables.keys(): 
             v = self._ds.createVariable(dim, nctype, dim, **self._kwargs) 
