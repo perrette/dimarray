@@ -6,7 +6,7 @@ import numpy as np
 from collections import OrderedDict
 import functools
 
-from axes import Axis, Axes, GroupedAxis
+from axes import Axis, Axes, MultiAxis
 #from dimarray.tools import is_DimArray
 import dimarray as da
 from dimarray.tools import deprecated_func
@@ -750,7 +750,7 @@ def flatten(self, *dims, **kwargs):
         return b.flatten(dims, insert=insert)
 
     # Create a new flattened axis
-    newaxis = GroupedAxis(*[ax for ax in self.axes if ax.name in dims])
+    newaxis = MultiAxis(*[ax for ax in self.axes if ax.name in dims])
 
     # New axes
     newaxes = [ax for ax in self.axes if ax.name not in dims]
@@ -783,7 +783,7 @@ def unflatten(self, axis=None):
     """
     # by default, unflatten all
     if axis is None:
-        flattened_axes = [ax.name for ax in self.axes if isinstance(ax, GroupedAxis)]
+        flattened_axes = [ax.name for ax in self.axes if isinstance(ax, MultiAxis)]
         obj = self
         for axis in flattened_axes:
             obj = obj.unflatten(axis=axis)
@@ -794,7 +794,7 @@ def unflatten(self, axis=None):
     group = self.axes[axis]    # axis to expand
     axis = self.dims.index(group.name) # make axis be an integer
 
-    assert isinstance(group, GroupedAxis), "can only ungroup a GroupedAxis"
+    assert isinstance(group, MultiAxis), "can only unflatten a MultiAxis"
 
     newshape = self.shape[:axis] + tuple(ax.size for ax in group.axes) + self.shape[axis+1:]
     newvalues = self.values.reshape(newshape)

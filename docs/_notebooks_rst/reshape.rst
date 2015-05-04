@@ -68,7 +68,7 @@ array([[1, 3],
 flatten and unflatten [experimental]
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-As a new, experimental feature, it is possible to flatten or any subset of dimensions. Corresponding axes are converted in FlattenedAxis objects. It is similar to numpy's flatten method but may apply selectively on a set of axes. 
+As a new, experimental feature, it is possible to flatten or any subset of dimensions. Corresponding axes are converted in MultiAxis objects. It is similar to numpy's flatten method but may apply selectively on a set of axes. 
 
 >>> import numpy as np
 >>> data = np.arange(2*3*4).reshape(2,3,4)
@@ -123,9 +123,9 @@ array([[[ 0,  1,  2,  3],
 reshape [experimental]
 ^^^^^^^^^^^^^^^^^^^^^^
 
-:py:meth:`dimarray.DimArray.reshape` is similar but not the same as numpy ndarray's :ref:`reshape <http://docs.scipy.org/doc/numpy/reference/generated/numpy.reshape.html>`. It takes only axis names as parameters. It is a high-level function that makes use of `newaxis`, `squeeze`, `flatten` and `unflatten` to reshape the array. It differs from numpy in that it cannot "break" an existing dimension (unless it is a FlattenedAxis). It also performs :py:meth:`transpose` as needed to match the required shape. 
+:py:meth:`dimarray.DimArray.reshape` is similar but not the same as numpy ndarray's :ref:`reshape <http://docs.scipy.org/doc/numpy/reference/generated/numpy.reshape.html>`. It takes only axis names as parameters. It is a high-level function that makes use of `newaxis`, `squeeze`, `flatten` and `unflatten` to reshape the array. It differs from numpy in that it cannot "break" an existing dimension (unless it is a MultiAxis). It also performs :py:meth:`transpose` as needed to match the required shape. 
 
-Here an example where high-dimensional data is converted into a pandas' DataFrame for displaying result of a sensitivity analysis. FlattenedAxis are converted into MultiIndex before passing to pandas.
+Here an example where high-dimensional data is converted into a pandas' DataFrame for displaying result of a sensitivity analysis. MultiAxis are converted into MultiIndex before passing to pandas.
 
 >>> large_array = DimArray(np.arange(2*2*5*2).reshape(2,2,5,2), dims=('A','B','C','D'))
 >>> large_array.reshape('A,D','B,C').to_pandas()

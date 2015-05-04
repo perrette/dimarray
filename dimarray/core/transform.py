@@ -5,7 +5,7 @@ from functools import partial, wraps
 
 from dimarray.tools import anynan, is_DimArray, format_doc
 
-from axes import Axis, Axes, GroupedAxis
+from axes import Axis, Axes
 
 # check whether bottleneck is present
 try:

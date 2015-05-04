@@ -15,7 +15,7 @@ from dimarray import plotting
 
 # from .metadata import MetadataBase
 from .bases import AbstractDimArray, GetSetDelAttrMixin, OpMixin
-from .axes import Axis, Axes, GroupedAxis
+from .axes import Axis, Axes, MultiAxis
 from .indexing import _maybe_cast_type, getaxes_broadcast, orthogonal_indexer
 from .align import broadcast_arrays, align, stack
 
@@ -61,7 +61,7 @@ class DimArray(AbstractDimArray, OpMixin, GetSetDelAttrMixin):
 
     See Also
     --------
-    Axes, Axis, GroupedAxis, Dataset
+    Axes, Axis, MultiAxis, Dataset
     read_nc, stack, concatenate
 
     Examples
@@ -1261,7 +1261,7 @@ mismatch between values and axes""".format(inferred, self.values.shape)
             if dims is not None: name = dims[i]
             if name is None: name = 'x%i'% (i)
 
-            # Multi-Index: make a Grouped Axis object
+            # Multi-Index: make a MultiAxis object
             if isinstance(ax, pd.MultiIndex):
 
                 # level names
@@ -1271,7 +1271,7 @@ mismatch between values and axes""".format(inferred, self.values.shape)
                         names[j] = '%s_%i'%(name,j)
 
                 miaxes = Axes.from_arrays(ax.levels, dims=names)
-                axis = GroupedAxis(*miaxes)
+                axis = MultiAxis(*miaxes)
 
             # Index: Make a simple Axis
             else:

@@ -10,4 +10,4 @@ introduction of iloc, loc, sel, isel
 - also introduction of nloc for nearest neighbor indexing
 - removed : `aggregate`
 - renamed align_axes into align, add "join=" parameter "inner" or "outer"
-- group and ungroup replaced by flatten and unflatten
+- group and ungroup renamed as flatten and unflatten, GroupedAxis as MultiAxis

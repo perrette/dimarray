@@ -465,7 +465,7 @@ class Axis(GetSetDelAttrMixin, AbstractAxis):
         return ax
 
 
-class GroupedAxis(Axis):
+class MultiAxis(Axis):
     """ an Axis which is a grouping of several axes flattened together
     """
     __metadata_exclude__ = Axis.__metadata_exclude__ + ['axes']
