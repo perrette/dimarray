@@ -8,3 +8,5 @@ operations are required.
 - convergence toward xray/pandas API:
 introduction of iloc, loc, sel, isel
 - also introduction of nloc for nearest neighbor indexing
+- removed : `aggregate`
+- renamed align_axes into align, add "join=" parameter "inner" or "outer"
