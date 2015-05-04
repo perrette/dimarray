@@ -74,7 +74,7 @@ def maybe_encode_values(values, format=None):
 TIME_UNITS = ['years','months','days','hours','minutes', 'seconds']
 
 def hastimeunits(ncvar):
-    regexpr = "{}".format("|".join(TIME_UNITS))
+    regexpr = "{} +since".format("|".join(TIME_UNITS))
     return hasattr(ncvar, 'units') and re.match(regexpr, ncvar.units)
 
 def istimevariable(ncvar):
