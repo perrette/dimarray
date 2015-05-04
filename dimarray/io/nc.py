@@ -74,7 +74,7 @@ def maybe_encode_values(values, format=None):
 TIME_UNITS = ['years','months','days','hours','minutes', 'seconds']
 
 def hastimeunits(ncvar):
-    regexpr = "({}) +since".format("|".join(TIME_UNITS))
+    regexpr = "{}".format("|".join(TIME_UNITS))
     return hasattr(ncvar, 'units') and re.match(regexpr, ncvar.units)
 
 def istimevariable(ncvar):
@@ -96,8 +96,8 @@ class NCTimeVariableWrapper(object):
         if arr.dtype.kind in ('S','O'):
             try:
                 arr = np.asarray(arr, dtype='datetime64')
-            except:
-                pass
+            except Exception as error:
+                warnings.warn("Failed to convert to datetime64\n"+error.message)
         else:
             arr = decode_cf_datetime(arr, getattr(self.ncvar, 'units',None), getattr(self.ncvar, 'calendar', None))
         return arr
