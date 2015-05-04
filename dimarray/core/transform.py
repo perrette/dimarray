@@ -3,8 +3,7 @@
 import numpy as np
 from functools import partial, wraps
 
-from dimarray.decorators import format_doc
-from dimarray.tools import anynan, is_DimArray
+from dimarray.tools import anynan, is_DimArray, format_doc
 
 from axes import Axis, Axes, GroupedAxis
 

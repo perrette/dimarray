@@ -6,7 +6,7 @@ import warnings, copy
 import numpy as np
 
 import dimarray as da  # for the doctest, so that they are testable via py.test
-from dimarray.decorators import format_doc
+from dimarray.tools import format_doc
 from dimarray.config import get_option
 
 from .core import DimArray, array, Axis, Axes

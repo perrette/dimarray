@@ -5,8 +5,7 @@ import string
 import copy
 import numpy as np
 
-from dimarray.tools import is_DimArray, is_array1d_equiv
-from dimarray.decorators import format_doc
+from dimarray.tools import is_DimArray, is_array1d_equiv, format_doc
 from dimarray.core.bases import AbstractAxis, AbstractAxes, GetSetDelAttrMixin
 from dimarray.core.indexing import _maybe_cast_type, is_monotonic
 

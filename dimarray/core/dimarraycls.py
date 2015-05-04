@@ -9,9 +9,8 @@ import copy
 import warnings
 from collections import OrderedDict as odict
 
-from dimarray.tools import anynan, pandas_obj
+from dimarray.tools import anynan, pandas_obj, format_doc
 from dimarray.config import get_option
-from dimarray.decorators import format_doc
 from dimarray import plotting
 
 # from .metadata import MetadataBase

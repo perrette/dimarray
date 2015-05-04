@@ -81,6 +81,25 @@ def is_numeric(a):
     " for a ndarray "
     return a.dtype.kind in ("i, f")
 
+# =======================
+# A few useful decorators
+# =======================
+def format_doc(*args, **kwargs):
+    """ Apply `format` to docstring
+    """
+    def pseudo_decorator(func):
+        """ not a real decorator as it modifies the function in place
+        """
+        try:
+            func.__doc__ = func.__doc__.format(*args, **kwargs)
+        except AttributeError: # non writable
+            func.__func__.__doc__ = func.__func__.__doc__.format(*args, **kwargs)
+            #print "failed for", func
+            #func = _update_doc(func, *args, **kwargs)
+        return func
+
+    return pseudo_decorator
+
 def deprecated_func(fun, old_name, msg=None, doc=None):
     """Decorator to deprecate a function
     """
@@ -94,3 +113,12 @@ def deprecated_func(fun, old_name, msg=None, doc=None):
         doc = "Deprecated. Now renamed to "+fun.__name__ 
     fun_depr.__doc__ = doc
     return fun_depr
+
+# ================
+# User-information
+# ================
+github="github.com/perrette/dimarray"
+github_issues="github.com/perrette/dimarray/issues"
+
+def file_an_issue_message():
+    return "Please report any problem or feature request at {}".format(github_issues)

@@ -11,7 +11,7 @@ import dimarray as da
 #from geo.data.index import to_slice, _slice3D
 
 from dimarray.compat.pycompat import basestring, zip
-from dimarray.decorators import format_doc
+from dimarray.tools import format_doc
 from dimarray.dataset import Dataset, concatenate_ds, stack_ds
 from dimarray.core import DimArray, Axis, Axes
 from dimarray.config import get_option

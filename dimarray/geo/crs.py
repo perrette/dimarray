@@ -40,8 +40,7 @@ import dimarray.compat.cartopy as compat_crs
 
 from collections import OrderedDict as odict
 
-from dimarray.decorators import format_doc
-from dimarray.info import file_an_issue_message
+from dimarray.tools import format_doc, file_an_issue_message
 
 # check cartopy version
 def _check_cartopy_version():
