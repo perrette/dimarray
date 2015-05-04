@@ -133,9 +133,9 @@ def main():
     for icell, cell in enumerate(get_cells(nb)):
         text.append('\n\n') # new line
 
-        # code cells
         if cell['cell_type'] == 'code':
 
+            # format source code
             code_lines = []
             for code in get_cell_source(cell):
                 # do not add '>>>' if indent
@@ -147,23 +147,9 @@ def main():
                     code = '... '+code
                 code_lines.append(code)
 
+            # format outputs
             output_lines = []
             for ioutput, output in enumerate(cell['outputs']):
-
-                if nb['nbformat'] < 4:
-                    output_text = output['text'] # nbformat < 4
-                else:
-                    output_text = output['data']["text/plain"] # nbformat >= 4
-
-                # replace with blankline for doctest
-                for i, line in enumerate(output_text):
-                    if line == '\n':
-                        output_text[i] = "<BLANKLINE>\n" 
-
-                    #elif "<matplotlib.axes.AxesSubplot" in line:
-                    #elif "<matplotlib.contour.QuadContourSet" in line:
-                    elif "<matplotlib." in line and not "+SKIP" in code_lines[-1]: # whatever that is a figure
-                        code_lines[-1] += ' # doctest: +SKIP' # don't bother with doctets
 
                 # figure
                 if output['output_type'] == 'display_data':
@@ -196,19 +182,30 @@ def main():
 
                 elif output['output_type'] in ('execute_result','pyout','stream'):
 
+                    if nb['nbformat'] < 4 or output['output_type'] == 'stream':
+                        output_text = output['text'] # nbformat < 4
+                        output_html = output.pop('html', None)
+                    else:
+                        output_text = output['data']["text/plain"] # nbformat >= 4
+                        output_html = output['data'].pop('text/html', None)
+
+                    # replace with blankline for doctest
+                    for i, line in enumerate(output_text):
+                        if line == '\n':
+                            output_text[i] = "<BLANKLINE>\n" 
+
+                        #elif "<matplotlib.axes.AxesSubplot" in line:
+                        #elif "<matplotlib.contour.QuadContourSet" in line:
+                        elif "<matplotlib." in line and not "+SKIP" in code_lines[-1]: # whatever that is a figure
+                            code_lines[-1] += ' # doctest: +SKIP' # don't bother with doctets
+
                     # write text output
                     output_lines.extend(output_text)
 
                     # if html, display after the text
-                    if 'html' in output.keys():
+                    
+                    if output_html:
         
-                        # does not seem to work
-                        # print "html found"
-                        # output_lines.append('\n\n')
-                        # output_lines.append('.. raw:: html')
-                        # output_lines.extend(output['html'])
-                        # output_lines.append('\n\n')
-                        # save html
                         filename = 'output_{}-{}.html'.format(icell, ioutput)
                         filefull = join(filesdir, filename)
                         if not os.path.exists(filesdir):
@@ -218,7 +215,7 @@ def main():
                         #with open(filefull, mode='w') as f:
                         print "Save html to", filefull
                         try:
-                            f.writelines(output['html']) # write html
+                            f.writelines(output_html) # write html
                         except Exception as msg:
                             print "Failed !!!"
                             print(msg)
@@ -258,7 +255,6 @@ def main():
                     # parse title in markdown mode
                     title = line.lstrip('#').strip()
                     lev = line.count('#') - title.count('#') # on the right side
-                    print 'MAKE TITLE level',lev
                     lines = make_heading(title, lev, symbols)
                     text.extend(lines)
 

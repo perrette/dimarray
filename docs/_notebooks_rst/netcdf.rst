@@ -32,7 +32,7 @@ Then access the variable of choice
 >>> %matplotlib inline # doctest: +SKIP 
 >>> _ = data['temp'].plot()
 >>> _ = plt.legend(loc='upper left') # doctest: +SKIP
-Using matplotlib backend: Qt4Agg
+Using matplotlib backend: TkAgg
 Populating the interactive namespace from numpy and matplotlib
 
 
@@ -48,10 +48,10 @@ Load only one variable
 >>> data = read_nc(ncfile,'temp', indices={"time":-1}, indexing='position')  #  integer position indexing
 
 
-.. __Read_from_multiple_files:
+.. _Read_from_multiple_files:
 
- Read from multiple files
--------------------------
+Read from multiple files
+------------------------
 
 Read variable 'temp' across multiple files (representing various climate models). 
 In this case the variable is a time series, whose length may vary across experiments 
@@ -191,7 +191,13 @@ DimArrayOnDisk: 'myvar' (6)
 1 / scenario (3): u'a' to u'c'
 
 >>> ds2['myvar'].values  # doctest: +SKIP
-<netCDF4.Variable at 0x7f68969cf440>
+<type 'netCDF4.Variable'>
+int64 myvar(time, scenario)
+    units: myunits
+    bla: bla
+unlimited dimensions: 
+current shape = (2, 3)
+filling on, default _FillValue of -9223372036854775806 used
 
 >>> ds2['myvar'][:]
 dimarray: 6 non-null elements (0 null)
