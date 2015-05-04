@@ -3,7 +3,7 @@ License
 =======
 
 dimarray is distributed under a 3-clause ("Simplified" or "New") BSD
-license. Parts of basemap, cartopy and iris which have BSD compatible 
+license. Parts of xray, basemap and cartopy which have BSD compatible 
 licenses are included.
 
 dimarray license
@@ -42,19 +42,10 @@ GNU Lesser General Public License for more details.
 You should have received a copy of the GNU Lesser General Public License
 along with cartopy.  If not, see <http://www.gnu.org/licenses/>.
 
-iris license
+xray licence
 ============
-(C) British Crown Copyright 2013, Met Office
-
-Iris is free software: you can redistribute it and/or modify it under
-the terms of the GNU Lesser General Public License as published by the
-Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-Iris is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Lesser General Public License for more details.
-
-You should have received a copy of the GNU Lesser General Public License
-along with Iris.  If not, see <http://www.gnu.org/licenses/>.
+Apache License
+Version 2.0, January 2004
+http://www.apache.org/licenses/
+See full licence (at the time of use)
+https://github.com/xray/xray/blob/52e1fddd46cfb9be83de2f68e9b145b72eb90a71/LICENSE

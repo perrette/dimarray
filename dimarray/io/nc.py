@@ -20,6 +20,8 @@ from dimarray.core.bases import AbstractDimArray, AbstractDataset, AbstractAxis,
 # from dimarray.core.metadata import _repr_metadata
 from dimarray.core.prettyprinting import repr_axis, repr_axes, repr_dimarray, repr_dataset, repr_attrs
 
+from .conventions import encode_cf_datetime, decode_cf_datetime
+
 __all__ = ['read_nc','summary_nc', 'write_nc']
 
 
@@ -39,12 +41,24 @@ def maybe_encode_values(values, format=None):
     # if dtype is np.dtype('O'):
     values = np.asarray(values)
     dtype = values.dtype
+    cf_attrs = {}
+
     if dtype.kind in ('S','O'):
-        values = np.asarray(values, dtype=object)
+        encoded = np.asarray(values, dtype=object)
         dtype = str
-    elif dtype.kind == 'M': # np.datetime64
-        values = np.asarray(np.datetime_as_string(values), dtype=object)
-        dtype = str
+    elif np.issubdtype(dtype, np.datetime64):
+        # values = np.asarray(np.datetime_as_string(values), dtype=object)
+        # dtype = str
+        encoded, units, calendar = encode_cf_datetime(values)
+        dtype = encoded.dtype
+        cf_attrs['calendar'] = calendar
+        cf_attrs['units'] = units
+    elif np.issubdtype(dtype, np.timedelta64):
+        encoded, units = encode_cf_timedelta(values)
+        cf_attrs['units'] = units
+        dtype = encoded.dtype
+    else:
+        encoded = values
 
     # if the format is NETCDF3, uses int32 instead of int64
     if format == "NETCDF3_CLASSIC" and dtype is np.dtype("int64"):
@@ -54,13 +68,14 @@ def maybe_encode_values(values, format=None):
         # it is strange that a warnings also occurs in the _64BIT version !
         warnings.warn("convert int64 into int32 for writing to NETCDF3 format")
         dtype = "int32"
-    return values, dtype
+    return encoded, dtype, cf_attrs
 
 # quick and dirty conversion from string
-TIME_UNITS = ['years','months','days','hours','seconds']
+TIME_UNITS = ['years','months','days','hours','minutes', 'seconds']
 
 def hastimeunits(ncvar):
-    return hasattr(ncvar, 'units') and np.any([units in ncvar.units for units in TIME_UNITS])
+    regexpr = "({}) +since".format("|".join(TIME_UNITS))
+    return hasattr(ncvar, 'units') and re.match(regexpr, ncvar.units)
 
 def istimevariable(ncvar):
     """Return True if a netCDF4 variable represents time
@@ -83,6 +98,8 @@ class NCTimeVariableWrapper(object):
                 arr = np.asarray(arr, dtype='datetime64')
             except:
                 pass
+        else:
+            arr = decode_cf_datetime(arr, getattr(self.ncvar, 'units',None), getattr(self.ncvar, 'calendar', None))
         return arr
     def __getattr__(self, att):
         return getattr(self.ncvar, att)
@@ -300,7 +317,7 @@ class DatasetOnDisk(GetSetDelAttrMixin, NetCDFOnDisk, AbstractDataset):
         """
         # if not isinstance(obj, da.DimArray):
         #     raise TypeError("Can only write Dataset, use `ds[name] = dima` to write a DimArray")
-        _, nctype = maybe_encode_values(dima, format=self._ds.file_format)
+        _, nctype, cf_attrs = maybe_encode_values(dima, format=self._ds.file_format)
 
         name = name or getattr(self, "name", None)
         if not name:
@@ -326,7 +343,9 @@ class DatasetOnDisk(GetSetDelAttrMixin, NetCDFOnDisk, AbstractDataset):
                 kw['fill_value'] = dima.missing_value
             self._ds.createVariable(name, nctype, dima.dims, **kw)
 
-        DimArrayOnDisk(self._ds, name)[()] = dima
+        dimaondisk = DimArrayOnDisk(self._ds, name)
+        dimaondisk[()] = dima
+        dimaondisk.attrs.update(cf_attrs) # calendar?
 
     __setitem__ = write
 
@@ -433,13 +452,14 @@ class DimArrayOnDisk(GetSetDelAttrMixin, NetCDFVariable, AbstractDimArray):
         # just create the variable and dimensions
         ds = self._ds
         dima = values # internal convention: values is a numpy array
-        values, nctype = maybe_encode_values(values, format=self._ds.file_format)
+        values, nctype, cf_attrs = maybe_encode_values(values, format=self._ds.file_format)
 
         assert self._name in ds.variables.keys(), "variable does not exist, should have been created earlier!"
 
         # add attributes
         if hasattr(dima,'attrs'):
             self.attrs.update(dima.attrs)
+            self.attrs.update(cf_attrs) # calendar?
 
         # special case: index == slice(None) and self.ndim == 0
         # This would fail with numpy, but not with netCDF4
@@ -517,8 +537,9 @@ class DimArrayOnDisk(GetSetDelAttrMixin, NetCDFVariable, AbstractDimArray):
         if cast is True:
             warnings.warn("`cast` parameter is ignored")
         # values = maybe_encode_values(values)
-        values, nctype = maybe_encode_values(values)
+        values, nctype, cf_attrs = maybe_encode_values(values)
         self.values[idx_tuple] = values
+        self.attrs.update(cf_attrs)
 
     def _getvalues_ortho(self, idx_tuple):
         res = self.values[idx_tuple]
@@ -548,22 +569,28 @@ class AxisOnDisk(GetSetDelAttrMixin, NetCDFVariable, AbstractAxis):
             raise TypeError("only string names allowed")
         self._name = name
 
+    def _isdefined(self):
+        return self._name in self._ds.variables
+    def _ncvar(self):
+        return self._ds.variables[self._name]
+    def _ncdim(self):
+        return self._ds.dimensions[self._name]
+    def _istime(self):
+        return self._isdefined() and istimevariable(self._ncvar())
+
     @property
     def values(self):
-        name = self._name
-        ds = self._ds
-        if name in ds.variables.keys():
-            # assume that the variable and dimension have the same name
-            ncvar = ds.variables[name]
-            if istimevariable(ncvar):
+        if self._isdefined():
+            ncvar = self._ncvar()
+            if self._istime():
                 values = NCTimeVariableWrapper(ncvar)
             else:
                 values = ncvar
         else:
             # default, dummy dimension axis
-            msg = "'{}' dimension not found, define integer range".format(name)
+            msg = "'{}' dimension not found, define integer range".format(self._name)
             warnings.warn(msg)
-            values = np.arange(len(ds.dimensions[name]))
+            values = np.arange(len(self._ncdim()))
         return values
 
     @property
@@ -576,13 +603,20 @@ class AxisOnDisk(GetSetDelAttrMixin, NetCDFVariable, AbstractAxis):
             self._ds.renameVariable(self._name, new)
         self._name = new
 
+    @property
+    def attrs(self):
+        if self._istime():
+            return AttrsOnDisk(self._obj, exclude=['calendar','units'])
+        else:
+            return AttrsOnDisk(self._obj)
+
     def __setitem__(self, indices, ax):
         ds = self._ds
         name = self._name
 
         assert getattr(ax, 'name', name) == name, "inconsistent axis name"
 
-        values, nctype = maybe_encode_values(ax, format=self._ds.file_format)
+        values, nctype, cf_attrs = maybe_encode_values(ax, format=self._ds.file_format)
 
         # assign value to variable (finer-grained control in AxesOnDisk.append)
         if name not in self._ds.variables.keys(): 
@@ -603,6 +637,7 @@ class AxisOnDisk(GetSetDelAttrMixin, NetCDFVariable, AbstractAxis):
             self.attrs.update(attrs)
         except Exception as error:
             warnings.warn(error.message)
+        self.attrs.update(cf_attrs)
 
     def __getitem__(self, indices):
         values = self.values[indices]
@@ -680,12 +715,13 @@ and `ds.nc.createVariable`"""
         if dim not in self._ds.dimensions.keys():
             raise ValueError("{} dimension does not exist. Use axes.append() to create a new axis".format(dim))
 
-        values, nctype = maybe_encode_values(ax, format=self._ds.file_format)
+        values, nctype, cf_attrs = maybe_encode_values(ax, format=self._ds.file_format)
 
         if dim not in self._ds.variables.keys(): 
             v = self._ds.createVariable(dim, nctype, dim, **self._kwargs) 
 
         self[dim][:] = ax
+        self[dim].attrs.update(cf_attrs)
         # v[:] = values
 
     def append(self, ax, size=None, **kwargs):
@@ -729,8 +765,9 @@ and `ds.nc.createVariable`"""
 class AttrsOnDisk(object):
     """ represent netCDF Dataset or Variable Attribute
     """
-    def __init__(self, obj):
+    def __init__(self, obj, exclude=None):
         self.obj = obj
+        self.exclude = exclude
     def __setitem__(self, name, value):
         if name == "_FillValue": return
         try:
@@ -749,7 +786,10 @@ class AttrsOnDisk(object):
         for k in attrs.keys():
             self[k] = attrs[k]
     def keys(self):
-        return getattr(self.obj,'ncattrs', lambda :[])()
+        keys = getattr(self.obj,'ncattrs', lambda :[])()
+        if self.exclude is not None:
+            keys = [k for k in keys if k not in self.exclude]
+        return keys
     def values(self):
         return [self.obj.getncattr(k) for k in self.obj.ncattrs()]
     def todict(self):
