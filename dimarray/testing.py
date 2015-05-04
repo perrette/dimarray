@@ -80,7 +80,7 @@ def create_dataset(seed=SEED, dtypes = ("float", "int","int32", "int64", "str", 
 
     return ds
 
-def assert_equal_axis(actual, expected, metadata=True):
+def assert_equal_axes(actual, expected, metadata=True):
     assert isinstance(expected, da.Axis)
     assert isinstance(actual, da.Axis)
     assert actual == expected
@@ -103,7 +103,7 @@ def assert_equal_dimarrays(actual, expected, metadata=True, approx=False):
 
     # check the axes
     for actual_axis, expected_axis in zip(actual.axes, expected.axes):
-        assert_equal_axis(actual_axis, expected_axis, metadata=metadata)
+        assert_equal_axes(actual_axis, expected_axis, metadata=metadata)
 
     # check the metadata
     if metadata:

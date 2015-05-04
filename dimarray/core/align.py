@@ -1,4 +1,4 @@
-""" Functions associated to array alignment
+""" Functions and dimarray methods associated to array alignment
 """
 from collections import OrderedDict as odict
 import itertools
@@ -9,6 +9,87 @@ from dimarray.config import get_option
 from dimarray.tools import is_DimArray
 from dimarray.core.axes import Axes, Axis
 from dimarray.core.indexing import locate_many
+
+__all__ = ["broadcast_arrays", "align", "stack", "concatenate"]
+
+def get_dims(*arrays):
+    """ find all dimensions from a variable list of arrays
+    Note: not in public API, but used by other modules
+    """
+    dims = []
+    for o in arrays:
+        for dim in o.dims:
+            if dim not in dims:
+                dims.append(dim)
+    return dims
+
+def _get_axes(*arrays):
+    """ find list of axes from a list of axis-aligned DimArray objects
+    """
+    dims = get_dims(*arrays) # all dimensions present in objects
+    axes = Axes()
+
+    for dim in dims:
+
+        common_axis = None
+
+        for o in arrays:
+
+            # skip missing dimensions
+            if dim not in o.dims: continue
+
+            axis = o.axes[dim]
+
+            # update values
+            if common_axis is None or (common_axis.size==1 and axis.size > 1):
+                common_axis = axis
+
+            # Test alignment for non-singleton axes
+            if not (axis.size == 1 or np.all(axis.values==common_axis.values)):
+                raise ValueError("axes are not aligned")
+
+        # append new axis
+        axes.append(common_axis)
+
+    return axes
+
+def align_dims(*arrays):
+    """ Align dimensions of a list of arrays so that they are ready for broadcast.
+    
+    Method: inserting singleton axes at the right place and transpose where needed.
+    Note : not part of public API, but used in other dimarray modules
+
+    Examples
+    --------
+    >>> import dimarray as da
+    >>> import numpy as np
+    >>> x = da.DimArray(np.arange(2), dims=('x0',))
+    >>> y = da.DimArray(np.arange(3), dims=('x1',))
+    >>> align_dims(x, y)
+    [dimarray: 2 non-null elements (0 null)
+    0 / x0 (2): 0 to 1
+    1 / x1 (1): None to None
+    array([[0],
+           [1]]), dimarray: 3 non-null elements (0 null)
+    0 / x0 (1): None to None
+    1 / x1 (3): 0 to 2
+    array([[0, 1, 2]])]
+    """
+    # If dimensions are already equal, do nothing
+    lst = {o.dims for o in arrays}
+    if len(lst) == 1:
+        return arrays
+
+    # Determine the dimensions of the result
+    newdims = get_dims(*arrays) 
+
+    # Reshape all DimArrays
+    newarrays = []
+    for o in arrays:
+        o = o.reshape(newdims)
+        newarrays.append(o)
+
+    return newarrays
 
 def broadcast_arrays(*arrays):
     """ Analogous to numpy.broadcast_arrays
@@ -63,109 +144,80 @@ def broadcast_arrays(*arrays):
 
     return newarrays
 
-
-
-def get_dims(*arrays):
-    """ find all dimensions from a variable list of arrays
+def _common_axis(axes, join):
+    """ find the common axis among a list of axes ==> proceed recursively
     """
-    dims = []
-    for o in arrays:
-        for dim in o.dims:
-            if dim not in dims:
-                dims.append(dim)
+    assert len(axes) > 0
 
-    return dims
+    # recursion end
+    if len(axes) == 1:
+        return axes[0]
 
+    # recursive call
+    ax0 = axes[0]
+    ax1 = _common_axis(axes[1:],join)
 
-def _get_axes(*arrays):
-    """ find list of axes from a list of axis-aligned DimArray objects
-    """
-    dims = get_dims(*arrays) # all dimensions present in objects
-    axes = Axes()
+    # special cases
+    # do not include None unless we have a singleton
+    if ax0[0] is None:
+        return ax1
+    if len(ax1) == 1 and ax1[0] is None:
+        return ax0
 
-    for dim in dims:
+    # TODO: make a separate version of the axis module
+    # with helper functions that do the basic work, without the whole
+    # Axis machinery. This may limit the possibility of optimizing the 
+    # Axes via hidden attributes, but this would also make things simpler
+    # and prevents false "good" ideas (such as indeed, adding hidden attributes)
+    if join == 'outer':
+        com_axis = ax0.union(ax1)
+    else:
+        com_axis = ax0.intersection(ax1)
+    return com_axis
 
-        common_axis = None
+def align(*arrays, **kwargs):
+    """Align axes of a list of DimArray arrays by reindexing
 
-        for o in arrays:
+    Parameters
+    ----------
+    array1, array2, ... : variable list of DimArrays
+    join : {"outer", "inner"}, optional
+        method to find the common axis
+        "outer" : union of all axes, missing values filled with NaNs
+        "inner" : intersection of all axes
+        Default to "outer" (can be changed with `dimarray.set_option('align.join","inner")`)
 
-            # skip missing dimensions
-            if dim not in o.dims: continue
+    Returns
+    -------
+    aligned_array1, aligned_array2, ... : list of aligned DimArrays
 
-            axis = o.axes[dim]
-
-            # update values
-            if common_axis is None or (common_axis.size==1 and axis.size > 1):
-                common_axis = axis
-
-            # Test alignment for non-singleton axes
-            if not (axis.size == 1 or np.all(axis.values==common_axis.values)):
-                raise ValueError("axes are not aligned")
-
-        # append new axis
-        axes.append(common_axis)
-
-
-    return axes
-
-
-def align_dims(*arrays):
-    """ Align dimensions of a list of arrays so that they are ready for broadcast.
-    
-    Method: inserting singleton axes at the right place and transpose where needed.
+    See Also
+    --------
+    `DimArray.reindex`, `DimArray.reindex_like`
 
     Examples
     --------
-    >>> import dimarray as da
-    >>> import numpy as np
-    >>> x = da.DimArray(np.arange(2), dims=('x0',))
-    >>> y = da.DimArray(np.arange(3), dims=('x1',))
-    >>> da.align_dims(x, y)
-    [dimarray: 2 non-null elements (0 null)
-    0 / x0 (2): 0 to 1
-    1 / x1 (1): None to None
-    array([[0],
-           [1]]), dimarray: 3 non-null elements (0 null)
-    0 / x0 (1): None to None
-    1 / x1 (3): 0 to 2
-    array([[0, 1, 2]])]
-    """
-    # If dimensions are already equal, do nothing
-    lst = {o.dims for o in arrays}
-    if len(lst) == 1:
-        return arrays
-
-    # Determine the dimensions of the result
-    newdims = get_dims(*arrays) 
-
-    # Reshape all DimArrays
-    newarrays = []
-    for o in arrays:
-        o = o.reshape(newdims)
-        newarrays.append(o)
-
-    return newarrays
-
-def align_axes(*arrays, **kwargs):
-    """ align axes of a list of DimArray arrays by reindexing
-
-    Examples
-    --------
-    >>> from dimarray import DimArray
+    >>> from dimarray import DimArray, align
     >>> a = DimArray([0,1,2],axes=[[0,1,2]])
-    >>> b = DimArray([2,3],axes=[[2,3]])
-    >>> align_axes(a, b)
+    >>> b = DimArray([1,2,3],axes=[[1,2,3]])
+    >>> align(a, b)
     [dimarray: 3 non-null elements (1 null)
     0 / x0 (4): 0 to 3
-    array([  0.,   1.,   2.,  nan]), dimarray: 2 non-null elements (2 null)
+    array([  0.,   1.,   2.,  nan]), dimarray: 3 non-null elements (1 null)
     0 / x0 (4): 0 to 3
-    array([ nan,  nan,   2.,   3.])]
+    array([ nan,   1.,   2.,   3.])]
+    >>> align(a, b, join='inner')
+    [dimarray: 2 non-null elements (0 null)
+    0 / x0 (2): 1 to 2
+    array([1, 2]), dimarray: 2 non-null elements (0 null)
+    0 / x0 (2): 1 to 2
+    array([1, 2])]
 
     Also work on multi-dimensional arrays
      
     >>> a = DimArray([0,1], axes=[[0,1]]) # on 'x0' only
     >>> b = DimArray([[0,1],[2,3.],[4.,5.]], axes=[[0,1,2],[1,2]]) # one more element along the 1st dimension, 2nd dimension ignored
-    >>> align_axes(a, b)
+    >>> align(a, b)
     [dimarray: 2 non-null elements (1 null)
     0 / x0 (3): 0 to 2
     array([  0.,   1.,  nan]), dimarray: 6 non-null elements (0 null)
@@ -177,7 +229,7 @@ def align_axes(*arrays, **kwargs):
     """
     join = kwargs.pop('join', get_option('align.join'))
     if len(kwargs) > 0:
-        raise TypeError("align_axes() got unexpected argument(s): "+", ".join(kwargs.keys()))
+        raise TypeError("align() got unexpected argument(s): "+", ".join(kwargs.keys()))
 
     # convert any scalar to dimarray
     from dimarray import DimArray
@@ -211,33 +263,7 @@ def align_axes(*arrays, **kwargs):
 
     return arrays
 
-
-def _common_axis(axes, join):
-    """ find the common axis among a list of axes ==> proceed recursively
-    """
-    assert len(axes) > 0
-
-    # recursion end
-    if len(axes) == 1:
-        return axes[0]
-
-    # recursive call
-    ax0 = axes[0]
-    ax1 = _common_axis(axes[1:],join)
-
-    # special cases
-    # do not include None unless we have a singleton
-    if ax0[0] is None:
-        return ax1
-    if len(ax1) == 1 and ax1[0] is None:
-        return ax0
-
-    # actual work
-    if join == 'outer':
-        com_axis = ax0.union(ax1)
-    else:
-        com_axis = ax0.intersection(ax1)
-    return com_axis
+align_axes = align  # for internal use, so that it does not conflict with "align" parameter
 
 def _check_stack_args(arrays, keys=None):
     """ generic function to deal with arguments for stacking
@@ -351,6 +377,26 @@ def stack(arrays, axis=None, keys=None, align=False):
     _constructor = arrays[0]._constructor # DimArray
     return _constructor(data, axes=newaxes)
 
+def _concatenate_axes(axes):
+    """ concatenate Axis objects
+
+    axes: list of Axis objects
+
+    >>> a = Axis([1,2,3],'x0')
+    >>> b = Axis([5,6,7],'x0')
+    >>> ax = _concatenate_axes((a, b))
+    >>> ax.name
+    'x0'
+    >>> ax.values
+    array([1, 2, 3, 5, 6, 7])
+    """
+    #assert np.iterable(axes) and axes
+    #if not isinstance(axes[0], Axis): raise TypeError()
+    if len({ax.name for ax in axes}) != 1: 
+        print axes
+        raise ValueError("axis names differ!")
+    values = np.concatenate([ax.values for ax in axes])
+    return Axis(values, axes[0].name)
 
 def concatenate(arrays, axis=0, check_other_axes=True):
     """ concatenate several DimArrays
@@ -430,27 +476,9 @@ def concatenate(arrays, axis=0, check_other_axes=True):
 
     return arrays[0]._constructor(values, newaxes)
 
-def _concatenate_axes(axes):
-    """ concatenate Axis objects
-
-    axes: list of Axis objects
-
-    >>> a = Axis([1,2,3],'x0')
-    >>> b = Axis([5,6,7],'x0')
-    >>> ax = _concatenate_axes((a, b))
-    >>> ax.name
-    'x0'
-    >>> ax.values
-    array([1, 2, 3, 5, 6, 7])
-    """
-    #assert np.iterable(axes) and axes
-    #if not isinstance(axes[0], Axis): raise TypeError()
-    if len({ax.name for ax in axes}) != 1: 
-        print axes
-        raise ValueError("axis names differ!")
-    values = np.concatenate([ax.values for ax in axes])
-    return Axis(values, axes[0].name)
-
+##############################################################
+# The functions below are meant to be used as DimArray methods
+##############################################################
 
 #
 # Reindex axis

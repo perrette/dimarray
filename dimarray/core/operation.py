@@ -6,7 +6,7 @@ import numpy as np
 import warnings
 
 from dimarray.tools import is_DimArray
-from .align import align_dims, align_axes
+from .align import  align_dims, align as align_axes
 from .axes import Axes
 
 def operation(func, o1, o2, reindex=True, broadcast=True, constructor=None):

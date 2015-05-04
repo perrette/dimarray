@@ -10,7 +10,7 @@ from dimarray.decorators import format_doc
 from dimarray.config import get_option
 
 from .core import DimArray, array, Axis, Axes
-from .core import align_axes, stack, concatenate
+from .core import align as align_axes, stack, concatenate
 from .core.align import _check_stack_args, _get_axes, stack, concatenate, _check_stack_axis, get_dims as _get_dims, reindex_like
 from .core.transform import interp_like, _interp_internal_from_weight, _interp_internal_get_weights, _interp_internal_maybe_sort
 from .core.indexing import locate_many

@@ -54,6 +54,38 @@ def _check_axis_values(values, dtype=None):
 
     return values
 
+def _check_axes_merge(self, other):
+    """Check self and other axes prior a merge operation:
+    name and type must match
+    """
+    # name
+    if isinstance(other, Axis):
+        assert self.name == other.name, "axes have different names, cannot merge"
+    else:
+        other = Axis(other, self.name) # to give it the same methods is_monotonic etc...
+    # type
+    kind, consistent_kinds = _get_cast_kind(self.values.dtype.kind, other.values.dtype.kind)
+    if self.dtype.kind != kind:
+        self = self.cast(kind)
+    if other.dtype.kind != kind:
+        other = other.cast(kind)
+    return self, other, consistent_kinds
+
+def _get_cast_kind(kind0, kind1):
+    """determine the kind to cast into
+    """
+    if kind0 == kind1:
+        return kind0, True
+    elif 'O' in (kind0, kind1):
+        return 'O', False
+    elif 'f' in (kind0, kind1): # float and integer
+        return 'f', True
+    elif 'i' in (kind0, kind1): # inclues unsigned?
+        return 'i', True
+    else:
+        # in doubt...
+        return 'O', False
+
 #
 # Axis class
 #
@@ -258,6 +290,12 @@ class Axis(GetSetDelAttrMixin, AbstractAxis):
         if values is False: values = None
         return self.set(values, axis=axis, name=name, **kwargs)
 
+    def cast(self, dtype):
+        " copy axis and cast into a new type"
+        ax = Axis(np.asarray(self.values, dtype=dtype), self.name)
+        ax.attrs.update(self.attrs)
+        return ax
+
     def union(self, other):
         """Join two Axis objects
         
@@ -274,10 +312,7 @@ class Axis(GetSetDelAttrMixin, AbstractAxis):
         array([-3,  0,  1,  2,  3,  4,  6])
         """
         #assert isinstance(other, Axis), "can only make the Union of two Axis objects"
-        if isinstance(other, Axis):
-            assert self.name == other.name, "axes have different names, cannot make union"
-        else:
-            other = Axis(other, self.name) # to give it the same methods is_monotonic etc...
+        self, other, consistent_kinds = _check_axes_merge(self, other)
         
         if np.all(self.values == other.values):
             # TODO: check other attributes such as weights
@@ -287,7 +322,11 @@ class Axis(GetSetDelAttrMixin, AbstractAxis):
         elif other.values.size == 0:
             return self
 
-        if self.is_monotonic() and other.is_monotonic():
+        def _same_slope(a, b):
+            " both decreasing or both increasing "
+            return (a[-1]>=a[0])==(b[-1]>=b[0])
+
+        if consistent_kinds and self.is_monotonic() and other.is_monotonic() and _same_slope(self.values, other.values):
             # join two sorted axes
             joined = np.union1d(self.values, other.values)
             if self.values[-1] <= self.values[0]: # decreasing !
@@ -295,17 +334,17 @@ class Axis(GetSetDelAttrMixin, AbstractAxis):
 
         else:
             # no ordering, just concatenate and drop doublons
-            joined = np.unique(np.concatenate((self.values, other.values)))
+            not_in_self = np.in1d(other.values, self.values, invert=True)
+            joined = np.concatenate((self.values, other.values[not_in_self]))
 
-        return Axis(joined, self.name)
+        ax = Axis(joined, self.name)
+        ax.attrs.update(self.attrs)
+        return ax
 
     def intersection(self, other):
         """Join two Axis objects by taking the intersection
         """
-        if isinstance(other, Axis):
-            assert self.name == other.name, "axes have different names, cannot make union"
-        else:
-            other = Axis(other, self.name) # to give it the same methods is_monotonic etc...
+        self, other, consistent_kinds = _check_axes_merge(self, other)
 
         if np.all(self.values == other.values):
             # TODO: check other attributes such as weights
@@ -315,9 +354,18 @@ class Axis(GetSetDelAttrMixin, AbstractAxis):
         elif other.values.size == 0:
             return Axis([], self.name)
 
-        # some differ...
-        # TODO: also add metadata
-        return Axis(np.intersect1d(self.values, other.values), self.name)
+        # numpy.intersect1d would be nicer but it would also sort the arrays...
+        # restrict other with values in self
+        in_self = np.in1d(other.values, self.values)
+        oth = other.values[in_self]
+        # restrict self values in restricted other
+        in_other = np.in1d(self.values, oth)
+        newval = self.values[in_other]
+        
+        ax = Axis(newval, self.name)
+        ax.attrs.update(self.attrs)
+        return ax
+        # return Axis(np.intersect1d(self.values, other.values), self.name)
 
     def is_monotonic(self):
         """ return True if Axis is monotonic

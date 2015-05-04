@@ -18,7 +18,7 @@ from dimarray import plotting
 from .bases import AbstractDimArray, GetSetDelAttrMixin, OpMixin
 from .axes import Axis, Axes, GroupedAxis
 from .indexing import _maybe_cast_type, getaxes_broadcast, orthogonal_indexer
-from .align import broadcast_arrays, align_axes, stack
+from .align import broadcast_arrays, align, stack
 
 from . import transform as _transform  # numpy along-axis transformations, interpolation
 from . import reshape as _reshape      # change array shape and dimensions
@@ -26,7 +26,6 @@ from . import operation as _operation  # operation between DimArrays
 from . import missingvalues # operation between DimArrays
 # from . import indexing as _indexing
 from . import align as _align
-# from .align import broadcast_arrays, align_axes, stack
 from .prettyprinting import repr_dimarray
 
 __all__ = ["DimArray", "array"]
@@ -1700,7 +1699,7 @@ def array(data, *args, **kwargs):
         broadcast = kwargs.pop('broadcast', True)
 
         if reindex:
-            data = align_axes(*data)
+            data = align(*data)
 
         if broadcast:
             data = broadcast_arrays(*data) # make sure the arrays have the same dimension

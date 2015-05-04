@@ -2,6 +2,7 @@
 import pytest
 import numpy as np
 from dimarray import Axis, Axes
+from dimarray.testing import assert_equal_axes
 
 @pytest.fixture
 def ax0():
@@ -39,3 +40,55 @@ def test_append(ax0, ax1):
     axes.append(ax1)
     assert ax1 is axes[1]
 
+@pytest.fixture(params=['f','i','O'])
+def dtype(request):
+    return np.dtype(request.param)
+
+def test_merge_increasing(dtype):
+    ax0 = Axis([1,2,3], 'd0', dtype=dtype)
+    ax1 = Axis([2,3,4], 'd0', dtype=dtype)
+
+    ax2 = ax0.union(ax1)
+    expected = Axis([1,2,3,4], 'd0', dtype=dtype)
+    assert_equal_axes(expected, ax2)
+
+    ax3 = ax0.intersection(ax1)
+    expected = Axis([2,3], 'd0', dtype=dtype)
+    assert_equal_axes(expected, ax3)
+
+def test_merge_decreasing(dtype):
+    ax0 = Axis([3,2,1], 'd0', dtype=dtype)
+    ax1 = Axis([4,3,2], 'd0', dtype=dtype)
+
+    ax2 = ax0.union(ax1)
+    expected = Axis([4,3,2,1], 'd0', dtype=dtype)
+    assert_equal_axes(expected, ax2)
+
+    ax3 = ax0.intersection(ax1)
+    expected = Axis([3,2], 'd0', dtype=dtype)
+    assert_equal_axes(expected, ax3)
+
+def test_merge_chaos(dtype):
+    ax0 = Axis([1,2,4], 'd0', dtype=dtype)
+    ax1 = Axis([3,4,1], 'd0', dtype=dtype)
+
+    ax2 = ax0.union(ax1)
+    # input axes are not sorted, do nothing
+    expected = Axis([1,2,4,3], 'd0', dtype=dtype)
+    assert_equal_axes(expected, ax2)
+
+    ax3 = ax0.intersection(ax1)
+    expected = Axis([1,4], 'd0', dtype=dtype)
+    assert_equal_axes(expected, ax3)
+
+def test_merge_mixed_type():
+    ax0 = Axis(['a','b',33,11], 'd0', dtype='O')
+    ax1 = Axis([11., 33., 22.], 'd0')
+
+    ax2 = ax0.union(ax1)
+    expected = Axis(['a','b', 33, 11, 22.], 'd0', dtype='O')
+    assert_equal_axes(expected, ax2)
+
+    ax3 = ax0.intersection(ax1)
+    expected = Axis([33, 11], 'd0', dtype='O')
+    assert_equal_axes(expected, ax3)

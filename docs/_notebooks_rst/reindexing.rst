@@ -1,15 +1,13 @@
 .. This file was generated automatically from the ipython notebook:
-.. notebooks/reindexing.ipynb
+.. reindexing.v3.ipynb
 .. To modify this file, edit the source notebook and execute "make rst"
 
-.. _page_reindexing:
+.. _page_reindexing.v3:
 
-
-.. _Reindexing__align_axes:
 
 Reindexing: align axes
-----------------------
-:download:`Download notebook </notebooks/reindexing.ipynb>` 
+======================
+:download:`Download notebook </reindexing.v3.ipynb>` 
 
 
 Reindexing is the action of shrinking or extending an array to match a new index, in some ways similar to interpolation, except that by default, the new index has to be present, or it is filled with NaN. Actual interpolation is performed by passing `method="nearest"` or `method="interp"` parameter.
@@ -71,10 +69,9 @@ See :meth:`dimarray.DimArray.reindex_like`
 Interpolation
 ^^^^^^^^^^^^^
 
-Sometimes you do not want one-to-one re-indexing but interpolation. Use the `interp1d` function for linear, piecewise interpolation (wrapper around np.interp)
+Sometimes you do not want one-to-one re-indexing but interpolation. Use the `DimArray.interp_axis` method for linear, piecewise interpolation (wrapper around np.interp)
 
->>> import dimarray as da
->>> da.interp1d(a, [0,1,2,3])
+>>> a.interp_axis([0,1,2,3])
 dimarray: 3 non-null elements (1 null)
 0 / x0 (4): 0 to 3
 array([ nan,  3. ,  3.5,  4. ])
@@ -85,7 +82,7 @@ array([ nan,  3. ,  3.5,  4. ])
 >>> #w = v.reindex_axis(np.linspace(1948,1957,10), axis='time', method='interp')
 >>> xl = v.reindex_axis(np.linspace(1948,1957,10), axis='time', method='left')
 >>> xr = v.reindex_axis(np.linspace(1948,1957,10), axis='time', method='right')
->>> w = da.interp1d(v, np.linspace(1948,1957,10), axis='time')
+>>> w = v.interp_axis(np.linspace(1948,1957,10), axis='time')
 
 
 >>> import matplotlib.pyplot as plt
@@ -97,27 +94,27 @@ array([ nan,  3. ,  3.5,  4. ])
 >>> plt.plot(xl.time, xl.values, '*-',label='left') # doctest: +SKIP
 >>> plt.plot(xr.time, xr.values, '+-',label='right') # doctest: +SKIP
 >>> plt.legend(loc='upper left')   # doctest: +SKIP
-<matplotlib.legend.Legend at 0x7f3cdfc83c50>
+<matplotlib.legend.Legend at 0x7fe5a780f090>
 
 .. image:: reindexing_files/figure_18-1.png
 
 
 
-.. _align_axes:
+.. _align:
 
-align_axes
-^^^^^^^^^^
+align
+^^^^^
 
-It is also possible to proceed to axis alignment on a sequence of arrays (not in interpolation mode!):
+It is also possible to proceed to axis alignment on a sequence of arrays
 
 >>> # align axes
->>> from dimarray import align_axes
+>>> from dimarray import align
 >>> x = DimArray([1,2,3],('x0',[1,2,3]))
 >>> y = DimArray([3,4],('x0',[2,4]))
->>> xa, ya = align_axes(x, y)
+>>> xa, ya = align(x, y)
 >>> ya
 dimarray: 2 non-null elements (2 null)
 0 / x0 (4): 1 to 4
 array([ nan,   3.,  nan,   4.])
 
-See :func:`dimarray.align_axes`
+See :func:`dimarray.align`

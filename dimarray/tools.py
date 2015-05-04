@@ -1,6 +1,7 @@
 """ tools
 """
 import inspect
+import warnings
 import numpy as np
 
 # check if an array has any nan
@@ -79,3 +80,17 @@ def is_array1d_equiv(a):
 def is_numeric(a):
     " for a ndarray "
     return a.dtype.kind in ("i, f")
+
+def deprecated_func(fun, old_name, msg=None, doc=None):
+    """Decorator to deprecate a function
+    """
+    if msg is None:
+        msg = "Function {} is deprecated, use {} instead".format(old_name, fun.__name__)
+    def fun_depr(*args, **kwargs):
+        warnings.warn(msg, FutureWarning)
+        return fun(*args, **kwargs)
+
+    if doc is None:
+        doc = "Deprecated. Now renamed to "+fun.__name__ 
+    fun_depr.__doc__ = doc
+    return fun_depr
