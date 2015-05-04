@@ -101,8 +101,8 @@ class Axis(GetSetDelAttrMixin, AbstractAxis):
     """
     __metadata_exclude__ = ['values','name','weights']
 
-    def __init__(self, values, name="", defaultname="", weights=None, dtype=None, tol=None, **kwargs):
-        self.name = name or getattr(values, "name", defaultname)
+    def __init__(self, values, name="", weights=None, dtype=None, tol=None, **kwargs):
+        self.name = name or getattr(values, "name", "")
         self._values = _check_axis_values(values, dtype)
         self.name = name 
         self.weights = weights # additional checks
@@ -458,7 +458,7 @@ class Axis(GetSetDelAttrMixin, AbstractAxis):
             ax = cls(ax[1], ax[0]) # values, name
         else:
             try:
-                ax = cls(ax, defaultname=defaultname)
+                ax = cls(np.asarray(ax), getattr(ax,'name',defaultname))
             except Exception as error: 
                 print error.message
                 raise TypeError("Cannot convert to Axis object: {}. \nPlease provide an Axis instance or (name, values) tuple".format(type(ax)))
