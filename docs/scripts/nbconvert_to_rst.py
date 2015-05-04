@@ -23,7 +23,8 @@ from os.path import basename, splitext, join, commonprefix
 import json
 
 # to convert images
-from IPython.utils import py3compat
+from IPython.utils.py3compat import cast_bytes
+# from ipython_genutils.py3compat import cast_bytes  # ipython 3
 import base64
 
 # command-line args
@@ -40,10 +41,40 @@ def read_nb(fname):
     f.close()
     return nb
 
-def make_label(title):
-    """ label for future reference
+def get_cells(nb):
+    """ worksheets disappeared in v4
     """
-    return '.. _'+title.replace(' ','_').replace(':','_')+':'
+    if nb['nbformat'] < 4:
+        cells = nb['worksheets'][0]['cells']
+    else:
+        cells = nb['cells']
+    return cells
+
+def get_cell_source(cell):
+    try:
+        src = cell['source']
+    except:
+        src = cell['input'] # nbformat < 4
+    return src
+
+def make_heading(title, lev, symbols=SYMBOLS):
+    lines = []
+    offset = 1 # start at heading level 1
+    sym = symbols[lev-offset]
+
+    #add a label to the title, with file name and title separated by '_', 
+    # and whitespace also replaced by '_'
+    # do not put a label on level 1 (top) title since this would interfere with page label
+    if lev != 1:
+        label = '.. _'+title.replace(' ','_').replace(':','_')+':' +'\n'
+        lines.append(label)
+        lines.append('\n')
+
+    lines.append(title)
+    lines.append('\n')
+    lines.append(sym*len(title))
+
+    return lines
 
 def main():
 
@@ -99,14 +130,14 @@ def main():
 #    if args['--download']:
 #        text.append(download)
 
-    for icell, cell in enumerate(nb['worksheets'][0]['cells']):
+    for icell, cell in enumerate(get_cells(nb)):
         text.append('\n\n') # new line
 
         # code cells
         if cell['cell_type'] == 'code':
 
             code_lines = []
-            for code in cell['input']:
+            for code in get_cell_source(cell):
                 # do not add '>>>' if indent
                 if code.startswith('%'): # magic commadn
                     code = code.strip() + ' # doctest: +SKIP \n' # don't bother with doctets
@@ -119,10 +150,15 @@ def main():
             output_lines = []
             for ioutput, output in enumerate(cell['outputs']):
 
+                if nb['nbformat'] < 4:
+                    output_text = output['text'] # nbformat < 4
+                else:
+                    output_text = output['data']["text/plain"] # nbformat >= 4
+
                 # replace with blankline for doctest
-                for i, line in enumerate(output['text']):
+                for i, line in enumerate(output_text):
                     if line == '\n':
-                        output['text'][i] = "<BLANKLINE>\n" 
+                        output_text[i] = "<BLANKLINE>\n" 
 
                     #elif "<matplotlib.axes.AxesSubplot" in line:
                     #elif "<matplotlib.contour.QuadContourSet" in line:
@@ -139,8 +175,11 @@ def main():
                         os.makedirs(filesdir) # create fig directory
 
                     # make some conversions (after: https://github.com/ipython/ipython/blob/master/IPython/nbconvert/preprocessors/extractoutput.py)
-                    data = output['png']
-                    data = py3compat.cast_bytes(data)
+                    if nb['nbformat'] < 4:
+                        data = output['png']
+                    else:
+                        data = "".join(output['data']['image/png'])
+                    data = cast_bytes(data)
                     data = base64.decodestring(data)
                     # write to file
                     with open(figfull, mode='w') as fig:
@@ -153,12 +192,12 @@ def main():
                     output_lines.append('\n\n')
                     output_lines.append('.. image:: '+figinc)
                     output_lines.append('\n\n')
-                    #output_lines.extend(output['text'])
+                    #output_lines.extend(output_text)
 
-                elif output['output_type'] in ('pyout','stream'):
+                elif output['output_type'] in ('execute_result','pyout','stream'):
 
                     # write text output
-                    output_lines.extend(output['text'])
+                    output_lines.extend(output_text)
 
                     # if html, display after the text
                     if 'html' in output.keys():
@@ -196,11 +235,11 @@ def main():
                         #output_lines.append('.. include:: '+fileinc)
                         #output_lines.append('.. image:: '+fileinc)
                         output_lines.append('\n\n')
-                        #output_lines.extend(output['text'])
+                        #output_lines.extend(output_text)
 
                 else:
                     print "Warning: unknown output type:",output['output_type']
-                    output_lines.extend(output['text'])
+                    output_lines.extend(output_text)
 
             # Here should include figures
 
@@ -212,7 +251,28 @@ def main():
         elif cell['cell_type'] == 'markdown':
 
             md = cell['source']
-            text.extend(md)
+
+            for line in md:
+
+                if line.startswith('#'):
+                    # parse title in markdown mode
+                    title = line.lstrip('#').strip()
+                    lev = line.count('#') - title.count('#') # on the right side
+                    print 'MAKE TITLE level',lev
+                    lines = make_heading(title, lev, symbols)
+                    text.extend(lines)
+
+                    # append TOC
+                    if insert_toc:
+                        text.append(toc)
+                        insert_toc = False
+
+                    # insert download link
+                    if insert_download:
+                        text.append(download)
+                        insert_download = False
+                else:
+                    text.append(line)
 
             # convert to markdornw to rst? long and make things worse
             #rst = [pypandoc.convert(m, 'rst', format='markdown') for m in md]
@@ -224,21 +284,9 @@ def main():
             title = cell['source'][0] # assume one line only
             lev = cell['level']
 
-            offset = 1 # start at heading level 1
-            sym = symbols[lev-offset]
+            lines = make_heading(title, lev, symbols)
 
-            #add a label to the title, with file name and title separated by '_', 
-            # and whitespace also replaced by '_'
-            # do not put a label on level 1 (top) title since this would interfere with page label
-            if lev != 1:
-                label = make_label(title)+'\n'
-                text.append(label)
-                text.append('\n')
-
-            text.append(title)
-            text.append('\n')
-            text.append(sym*len(title))
-
+            text.extend(lines)
 
             # append TOC
             if insert_toc:

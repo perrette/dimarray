@@ -13,7 +13,6 @@ Documentation
    netcdf.rst
    projection.rst
    reindexing.rst
-   reindexing_nb3.rst
    reshape.rst
    transformations.rst
    tutorial.rst

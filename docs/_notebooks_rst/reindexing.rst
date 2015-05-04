@@ -1,13 +1,13 @@
 .. This file was generated automatically from the ipython notebook:
-.. reindexing.v3.ipynb
+.. notebooks/reindexing.ipynb
 .. To modify this file, edit the source notebook and execute "make rst"
 
-.. _page_reindexing.v3:
+.. _page_reindexing:
 
 
 Reindexing: align axes
 ======================
-:download:`Download notebook </reindexing.v3.ipynb>` 
+:download:`Download notebook </notebooks/reindexing.ipynb>` 
 
 
 Reindexing is the action of shrinking or extending an array to match a new index, in some ways similar to interpolation, except that by default, the new index has to be present, or it is filled with NaN. Actual interpolation is performed by passing `method="nearest"` or `method="interp"` parameter.
