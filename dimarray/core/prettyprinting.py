@@ -20,10 +20,16 @@ def repr_axis(self, metadata=False):
     dim = self.name
     size = self.size
     first, last = self._bounds()
-    if getattr(self.dtype, 'kind', None) == 'f':
-        repr_ = "{dim} ({size}): {first} to {last}".format(dim=dim, size=size, first=first, last=last)
+    if self.dtype.kind == 'M':
+        first, last = str(first), str(last)
+    elif self.dtype.kind == 'f':
+        pass
     else:
-        repr_ = "{dim} ({size}): {first} to {last}".format(dim=dim, size=size, first=repr(first), last=repr(last))
+        first, last = repr(first), repr(last)
+    # if getattr(self.dtype, 'kind', None) == 'f':
+    repr_ = "{dim} ({size}): {first} to {last}".format(dim=dim, size=size, first=first, last=last)
+    # else:
+    #     repr_ = "{dim} ({size}): {first} to {last}".format(dim=dim, size=size, first=repr(first), last=repr(last))
     if metadata and len(self.attrs)>0:
         repr_ += "\n"+str_attrs(self.attrs)
     return repr_

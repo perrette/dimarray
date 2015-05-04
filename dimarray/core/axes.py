@@ -527,12 +527,6 @@ class GroupedAxis(Axis):
         """
         return [ax.values for ax in self.axes]
 
-    def _repr(self, metadata=True):
-        """ string representation
-        """ 
-        first, last = zip(*[ax._bounds() for ax in self.axes])
-        return "{} ({}): {} to {}".format(self.name, self.size, first, last)
-
     def __str__(self):
         return ",".join([str(ax) for ax in self.axes])
 

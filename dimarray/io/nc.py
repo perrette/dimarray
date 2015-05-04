@@ -599,6 +599,13 @@ class AxisOnDisk(GetSetDelAttrMixin, NetCDFVariable, AbstractAxis):
             first, last = 0, size-1
         return first, last
 
+    @property
+    def dtype(self):
+        if self._name in self._ds.variables.keys():
+            return np.dtype(self._ds.variables[self._name].dtype)
+        else:
+            return np.dtype('i')
+
 class AxesOnDisk(AbstractAxes):
     def __init__(self, ds, dims, **kwargs):
         self._ds = ds

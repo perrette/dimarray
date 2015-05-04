@@ -34,8 +34,16 @@ _doc_broadcast_arrays = """
       """.strip()
 
 
+def _maybe_convert_datetime64(val):
+    if isinstance(val, basestring): 
+        val = np.datetime64(val)
+    return val
+
 def locate_one(values, val, issorted=False, tol=None, side='left'):
     " Locate one value in an axis"
+    if values.dtype.kind == 'M': # datetime64 object
+        val = _maybe_convert_datetime64(val)
+
     if tol is not None:
         try:
             dist = np.abs(values - val)
