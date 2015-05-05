@@ -1,19 +1,19 @@
 """ Numpy-like Axis transformations
 """
-import numpy as np
 from functools import partial, wraps
-
-from dimarray.tools import anynan, is_DimArray, format_doc
-
-from axes import Axis, Axes
+import itertools
+import numpy as np
 
 # check whether bottleneck is present
 try:
     import bottleneck
     _hasbottleneck = True
-
 except ImportError:
     _hasbottleneck = False
+
+from dimarray.tools import anynan, is_DimArray, format_doc
+from axes import Axis, Axes
+
 
 #
 # Some general documention which is used in several methods
@@ -1128,39 +1128,39 @@ def interp_like(self, other, **kwargs):
             obj = obj.interp_axis(newaxis, axis=ax.name, **kwargs)
     return obj
 
-# #
-# # Other transformations added as methods
-# #
-# def apply_axis_transform(obj, func, newaxis, args=(), **kwargs):
-#     """ apply a 1-D transformation on a N-D DimArray, sequentially on the sub-arrays
+# Groupy: this is not really a multi-dimensional operation, so we could just remove it.
+# dima.to_pandas().groupby(...) is more instructive anyway because of the display.
+# def groupby(self, by):
+#     """groupby method similar to pandas (only work for 1-D array - see DimArray.flatten)
 #
 #     Parameters
 #     ----------
-#     obj : DimArray (N-D)
-#     func : function to apply along the 1-D DimArray (1-D ==> 1-D)
-#     newaxis : transformed axis
-#     args, **kwargs : arguments to func
-#
+#     by : array-like (currently 1-D only)
+#     
 #     Returns
 #     -------
-#     DimArray (N-D)
+#     GroupBy instance
 #     """
-#     newaxes = [newaxis] + [ax.copy() for ax in obj.axes if ax.name != newaxis.name]
-#     newshape = [ax.size for ax in newaxes]
+#     by = np.asarray(by)
+#     if self.shape != by.shape:
+#         raise ValueError('shape mismatch')
+#     by = by.flatten()
+#     # groups = itertools.groupby(self.values.flatten()[sorter], lambda by[sorter].tolist())
+#     # groups = [(values[sorter[slice_.start]], sorter[slice_]) for slice_ in slices]
+#     return GroupBy(self.values.flatten(), by)
 #
-#     if obj.ndim == 1:
-#         result = func(obj.values, *args, **kwargs)
-#
-#     else:
-#         pos = obj.dims.index(newaxis.name)
-#         shape2d = [newaxis.size, np.prod([s for i, s in enumerate(obj.shape) if i!=pos])]
-#         result = np.empty(shape2d)
-#         for i, fp in enumerate(obj.flatten((newaxis.name,), reverse=True, insert=0).values):
-#             res = func(fp, *args, **kwargs)
-#             result[i] = res # access to values
-#         result = result.reshape(newshape)
-#
-#     dima = obj._constructor(result, newaxes, **obj.attrs)
-#
-#     return dima.transpose(obj.dims) # transpose back to original dimensions
-
+# class GroupBy(object):
+#     def __init__(self, a, by):
+#         self.a = a
+#         self.sorter = by.argsort()
+#         self.by = by
+#     def _iter(self):
+#         return itertools.groupby(self.sorter, lambda i : self.by[i])
+#     @property
+#     def groups(self):
+#         return {g:list(vals) for g, vals in self._iter()}
+#     def apply(self, func, *args, **kwargs):
+#         from dimarray import DimArray
+#         axis, vals = zip(*[(lab, func(self.a[list(idx)], *args, **kwargs)) \
+#                          for lab, idx in self._iter()])
+#         return DimArray(np.array(vals), [np.array(axis)])
