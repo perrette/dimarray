@@ -62,11 +62,11 @@ def maybe_encode_values(values, format=None):
 
     # if the format is NETCDF3, uses int32 instead of int64
     if format == "NETCDF3_CLASSIC" and dtype is np.dtype("int64"):
-        warnings.warn("convert int64 into int32 for writing to NETCDF3 format")
+        warnings.warn("convert int64 into int32 for writing to NETCDF3 format", RuntimeWarning)
         dtype = "int32"
     elif format == "NETCDF3_64BIT" and dtype is np.dtype("int64"):
         # it is strange that a warnings also occurs in the _64BIT version !
-        warnings.warn("convert int64 into int32 for writing to NETCDF3 format")
+        warnings.warn("convert int64 into int32 for writing to NETCDF3 format", RuntimeWarning)
         dtype = "int32"
     return encoded, dtype, cf_attrs
 
@@ -97,12 +97,12 @@ class NCTimeVariableWrapper(object):
             try:
                 arr = np.asarray(arr, dtype='datetime64')
             except Exception as error:
-                warnings.warn("Failed to convert string time to datetime64\n"+error.message)
+                warnings.warn("Failed to convert string time to datetime64\n"+str(error), RuntimeWarning)
         else:
             try:
                 arr = decode_cf_datetime(arr, getattr(self.ncvar, 'units',None), getattr(self.ncvar, 'calendar', None))
             except Exception as error:
-                warnings.warn("Failed to convert {} to datetime64\n".format(arr.dtype)+error.message)
+                warnings.warn("Failed to convert {} to datetime64\n".format(arr.dtype)+str(error), RuntimeWarning)
         return arr
     def __getattr__(self, att):
         return getattr(self.ncvar, att)
@@ -175,7 +175,7 @@ class DatasetOnDisk(GetSetDelAttrMixin, NetCDFOnDisk, AbstractDataset):
             except UserWarning as error:
                 print error
             except Exception as error: # indicate file name when issuing error
-                raise IOError("{}\n=> failed to open {} (mode={}, clobber={})".format(error.message, f, mode, clobber)) # easier to handle
+                raise IOError("{}\n=> failed to open {} (mode={}, clobber={})".format(str(error), f, mode, clobber)) # easier to handle
         # assert self._kwargs is not None
         self._kwargs = kwargs
     @property
@@ -487,7 +487,7 @@ class DimArrayOnDisk(GetSetDelAttrMixin, NetCDFVariable, AbstractDimArray):
                     if not np.all(ondisk == inmemory):
                         # assert np.all(ondisk == inmemory)
                         warnings.warn("axes values differ in the netCDF file, try using a numpy array instead, or re-index\
-                                      the dimarray prior to assigning to netCDF")
+                                      the dimarray prior to assigning to netCDF", RuntimeWarning)
 
         # do all the indexing and assignment via IndexedArray class
         # ==> it will set the values via _setvalues_ortho below
@@ -538,7 +538,7 @@ class DimArrayOnDisk(GetSetDelAttrMixin, NetCDFVariable, AbstractDimArray):
 
     def _setvalues_ortho(self, idx_tuple, values, cast=False):
         if cast is True:
-            warnings.warn("`cast` parameter is ignored")
+            warnings.warn("`cast` parameter is ignored", DeprecationWarning)
         # values = maybe_encode_values(values)
         values, nctype, cf_attrs = maybe_encode_values(values)
         self.values[idx_tuple] = values
@@ -592,7 +592,7 @@ class AxisOnDisk(GetSetDelAttrMixin, NetCDFVariable, AbstractAxis):
         else:
             # default, dummy dimension axis
             msg = "'{}' dimension not found, define integer range".format(self._name)
-            warnings.warn(msg)
+            warnings.warn(msg, RuntimeWarning)
             values = np.arange(len(self._ncdim()))
         return values
 
@@ -639,7 +639,7 @@ class AxisOnDisk(GetSetDelAttrMixin, NetCDFVariable, AbstractAxis):
         try:
             self.attrs.update(attrs)
         except Exception as error:
-            warnings.warn(error.message)
+            warnings.warn(str(error), RuntimeWarning)
         self.attrs.update(cf_attrs)
 
     def __getitem__(self, indices):
@@ -776,9 +776,9 @@ class AttrsOnDisk(object):
         try:
             self.obj.setncattr(name, value)
         except TypeError as error:
-            warnings.warn(error.message)
+            warnings.warn(str(error), RuntimeWarning)
             if type(value) is bool:
-                warnings.warn("convert boolean to integer")
+                warnings.warn("convert boolean to integer", RuntimeWarning)
                 self.obj.setncattr(name, int(value))
 
     def __getitem__(self, name):
@@ -1110,7 +1110,7 @@ def _read_multinc(fnames, names=None, axis=None, keys=None, align=False, concate
 
     # Join dataset
     if axis in dimensions:
-        if keys is not None: warnings.warn('keys argument will be ignored.')
+        if keys is not None: warnings.warn('keys argument will be ignored.', RuntimeWarning)
         ds = concatenate_ds(datasets, axis=axis)
 
     else:
