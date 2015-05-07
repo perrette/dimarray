@@ -1,12 +1,9 @@
 """ Old indexing functions ==> imported from indexing.py. 
 In the process of being rewritten.
 """
-import functools
-import copy 
+import warnings
 import numpy as np
-from dimarray.tools import is_DimArray
-from dimarray.config import get_option
-from dimarray.compat.pycompat import iteritems, range
+from dimarray.compat.pycompat import range
 
 #__all__ = ["take", "put", "reindex_axis", "reindex_like"]
 __all__ = []
@@ -36,12 +33,15 @@ _doc_broadcast_arrays = """
 
 def _maybe_convert_datetime64(val):
     if isinstance(val, basestring): 
-        val = np.datetime64(val)
+        try:
+            val = np.datetime64(val)
+        except Exception as error:
+            warnings.warn(error.message)
     return val
 
 def locate_one(values, val, issorted=False, tol=None, side='left'):
     " Locate one value in an axis"
-    if values.dtype.kind == 'M': # datetime64 object
+    if np.issubdtype(values.dtype, np.dtype('datetime64')):
         val = _maybe_convert_datetime64(val)
 
     if tol is not None:

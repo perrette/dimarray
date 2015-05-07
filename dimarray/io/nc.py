@@ -97,9 +97,12 @@ class NCTimeVariableWrapper(object):
             try:
                 arr = np.asarray(arr, dtype='datetime64')
             except Exception as error:
-                warnings.warn("Failed to convert to datetime64\n"+error.message)
+                warnings.warn("Failed to convert string time to datetime64\n"+error.message)
         else:
-            arr = decode_cf_datetime(arr, getattr(self.ncvar, 'units',None), getattr(self.ncvar, 'calendar', None))
+            try:
+                arr = decode_cf_datetime(arr, getattr(self.ncvar, 'units',None), getattr(self.ncvar, 'calendar', None))
+            except Exception as error:
+                warnings.warn("Failed to convert {} to datetime64\n".format(arr.dtype)+error.message)
         return arr
     def __getattr__(self, att):
         return getattr(self.ncvar, att)
