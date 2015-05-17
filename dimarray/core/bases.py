@@ -202,6 +202,9 @@ class AbstractAxes(object):
 class AbstractHasAxes(AbstractHasMetadata):
     """ class to handle things related to axes, such as overloading __getattr__
     """
+    _indexing = None
+    _tol = None # define a tol attribute
+
     @property
     def dims(self):
         return tuple([ax.name for ax in self.axes])
@@ -374,6 +377,39 @@ class AbstractHasAxes(AbstractHasMetadata):
         pos, names = zip(*[self._get_axis_info(x) for x in axes])
         return pos, names
 
+    @property
+    def ix(self):
+        " toggle between position-based and label-based indexing "
+        newindexing = 'label' if self._indexing=='position' else 'position'
+        new = copy.copy(self) # shallow copy, not to verwrite _indexing
+        new._indexing = newindexing
+        return new
+
+    # after xray: add sel, isel, loc, iloc methods
+    def sel(self, **indices):
+        return self.loc[indices]
+
+    def isel(self, **indices):
+        return self.iloc[indices]
+
+    @property
+    def loc(self):
+        return self if self._indexing == 'label' else self.ix
+
+    @property
+    def iloc(self):
+        # return self if self._indexing == 'position' else self.ix
+        return self if self._indexing == 'position' else self.ix
+
+    @property
+    def nloc(self):
+        # nearest neighbor loc
+        if self._tol == np.inf:
+            return self
+        dima = copy.copy(self)
+        dima._tol = np.inf # nearest neighbor search
+        return dima
+
 
 class OpMixin(object):
     """ overload basic operations
@@ -412,7 +448,6 @@ class OpMixin(object):
 
 
 class AbstractDimArray(AbstractHasAxes):
-    _tol = None # define a tol attribute
 
     # @property
     # def tol(self):
@@ -433,7 +468,6 @@ class AbstractDimArray(AbstractHasAxes):
     def is_numeric(self):
         return is_numeric(self.values)
 
-    _indexing = None
     _broadcast = False
 
     # The indexing machinery in functional form, 
@@ -543,39 +577,6 @@ class AbstractDimArray(AbstractHasAxes):
 
     def copy(self):
         raise NotImplementedError()
-
-    @property
-    def ix(self):
-        " toggle between position-based and label-based indexing "
-        newindexing = 'label' if self._indexing=='position' else 'position'
-        new = copy.copy(self) # shallow copy, not to verwrite _indexing
-        new._indexing = newindexing
-        return new
-
-    # after xray: add sel, isel, loc, iloc methods
-    def sel(self, **indices):
-        return self.loc[indices]
-
-    def isel(self, **indices):
-        return self.iloc[indices]
-
-    @property
-    def loc(self):
-        return self if self._indexing == 'label' else self.ix
-
-    @property
-    def iloc(self):
-        # return self if self._indexing == 'position' else self.ix
-        return self if self._indexing == 'position' else self.ix
-
-    @property
-    def nloc(self):
-        # nearest neighbor loc
-        if self._tol == np.inf:
-            return self
-        dima = copy.copy(self)
-        dima._tol = np.inf # nearest neighbor search
-        return dima
 
 class AbstractDataset(AbstractHasAxes):
 
