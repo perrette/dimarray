@@ -41,7 +41,7 @@ def _maybe_convert_datetime64(val):
 
 def locate_one(values, val, issorted=False, tol=None, side='left'):
     " Locate one value in an axis"
-    if np.issubdtype(values.dtype, np.dtype('datetime64')):
+    if values.dtype.kind == 'M': # 'datetime64'
         val = _maybe_convert_datetime64(val)
 
     if tol is not None:

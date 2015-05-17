@@ -46,14 +46,15 @@ def maybe_encode_values(values, format=None):
     if dtype.kind in ('S','O'):
         encoded = np.asarray(values, dtype=object)
         dtype = str
-    elif np.issubdtype(dtype, np.datetime64):
+    elif dtype.kind == 'M': # 'datetime64'
         # values = np.asarray(np.datetime_as_string(values), dtype=object)
         # dtype = str
         encoded, units, calendar = encode_cf_datetime(values)
         dtype = encoded.dtype
         cf_attrs['calendar'] = calendar
         cf_attrs['units'] = units
-    elif np.issubdtype(dtype, np.timedelta64):
+    elif dtype.kind == 'm': # 'timedelta64'
+    # elif np.issubdtype(dtype, np.timedelta64):
         encoded, units = encode_cf_timedelta(values)
         cf_attrs['units'] = units
         dtype = encoded.dtype
