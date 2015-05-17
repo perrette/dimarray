@@ -156,7 +156,7 @@ Since version 0.2, the methods above are a wrapper around :class:dimarray.Datase
 >>> ds.yi = 'metadata-dataset-on-disk'
 >>> ds.close()
 
-
+
 Let's check the result:
 
 >>> ds2 = da.open_nc("/tmp/test.nc", mode="a")
@@ -259,3 +259,5 @@ Append some new slices:
 dimarray: 6 non-null elements (0 null)
 0 / time (6): u'a' to u'f'
 array([ 1,  2,  3,  4,  5, 66])
+
+>>> ds.close()
