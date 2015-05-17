@@ -2,9 +2,9 @@
 """
 from __future__ import absolute_import
 import warnings
+import copy
 from collections import OrderedDict as odict
 import numpy as np
-import copy
 from dimarray.config import get_option
 from dimarray.compat.pycompat import iteritems, zip
 from dimarray.tools import is_numeric
@@ -199,11 +199,35 @@ class AbstractAxes(object):
     __repr__ = repr_axes
     __str__ = str_axes
 
+class Indexable(object):
+    """Object to be indexed
+    """
+    def __init__(self, getitem, setitem, delitem, args=(), **kwargs):
+        self.getitem = getitem
+        self.setitem = setitem
+        self.delitem = delitem
+        self.args = args
+        self.kwargs = kwargs
+    def __getitem__(self, idx):
+        return self.getitem(*self.args, indices=idx, **self.kwargs)
+    def __setitem__(self, idx, item):
+        return self.setitem(*self.args, indices=idx, values=item, **self.kwargs)
+    def __delitem__(self, idx):
+        return self.delitem(indices=idx, *self.args, **self.kwargs)
+
 class AbstractHasAxes(AbstractHasMetadata):
     """ class to handle things related to axes, such as overloading __getattr__
     """
     _indexing = None
     _tol = None # define a tol attribute
+
+    # indexing methods to be overloaded
+    def _getitem(self, indices=None, **kwargs):
+        raise NotImplementedError()
+    def _setitem(self, indices=None, values=None, **kwargs):
+        raise NotImplementedError()
+    def _delitem(self, indices=None, **kwargs):
+        raise NotImplementedError()
 
     @property
     def dims(self):
@@ -379,11 +403,11 @@ class AbstractHasAxes(AbstractHasMetadata):
 
     @property
     def ix(self):
-        " toggle between position-based and label-based indexing "
-        newindexing = 'label' if self._indexing=='position' else 'position'
-        new = copy.copy(self) # shallow copy, not to verwrite _indexing
-        new._indexing = newindexing
-        return new
+        # " toggle between position-based and label-based indexing "
+        # newindexing = 'label' if self._indexing=='position' else 'position'
+        # new = copy.copy(self) # shallow copy, not to verwrite _indexing
+        # new._indexing = newindexing
+        return Indexable(self._getitem, self._setitem, self._delitem, indexing='position' if self._indexing == 'label' else 'label')
 
     # after xray: add sel, isel, loc, iloc methods
     def sel(self, **indices):
@@ -394,21 +418,17 @@ class AbstractHasAxes(AbstractHasMetadata):
 
     @property
     def loc(self):
-        return self if self._indexing == 'label' else self.ix
+        return Indexable(self._getitem, self._setitem, self._delitem, indexing='label')
 
     @property
     def iloc(self):
         # return self if self._indexing == 'position' else self.ix
-        return self if self._indexing == 'position' else self.ix
+        return Indexable(self._getitem, self._setitem, self._delitem, indexing='position')
 
     @property
     def nloc(self):
         # nearest neighbor loc
-        if self._tol == np.inf:
-            return self
-        dima = copy.copy(self)
-        dima._tol = np.inf # nearest neighbor search
-        return dima
+        return Indexable(self._getitem, self._setitem, self._delitem, indexing='label', tol=np.inf)
 
 
 class OpMixin(object):

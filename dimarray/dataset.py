@@ -596,6 +596,8 @@ class Dataset(AbstractDataset, odict, OpMixin, GetSetDelAttrMixin):
             dataset.attrs.update(self.attrs) # keep metadata?
         return dataset
 
+    _getitem = take # for ix, nloc, iloc, loc, sel, isel to work
+
     def take_axis(self, indices, axis=0, indexing=None, mode='raise'):
         """ Analogous to DimArray.take_axis
         """

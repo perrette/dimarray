@@ -245,6 +245,9 @@ class DatasetOnDisk(GetSetDelAttrMixin, NetCDFOnDisk, AbstractDataset):
 
         return data
 
+    # so that loc, iloc, sel, isel, nloc work:
+    _getitem = read 
+
     def __getitem__(self, name):
         if name in self.dims:
             raise KeyError("Use 'axes' property to access dimension variables: {}".format(name))
@@ -532,6 +535,10 @@ class DimArrayOnDisk(GetSetDelAttrMixin, NetCDFVariable, AbstractDimArray):
                            
     __setitem__ = write
     __getitem__ = read
+
+    # so that loc, iloc, sel, isel, nloc work:
+    _getitem = read
+    _setitem = write
 
     def _repr(self, **kwargs):
         assert 'lazy' not in kwargs, "lazy parameter cannot be provided, it is always True"

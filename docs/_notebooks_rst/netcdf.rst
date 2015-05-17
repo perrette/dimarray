@@ -255,7 +255,7 @@ Append some new slices:
 <BLANKLINE>
 
 
->>> print ds['bla'].read()
+>>> ds['bla'].read()
 dimarray: 6 non-null elements (0 null)
 0 / time (6): u'a' to u'f'
 array([ 1,  2,  3,  4,  5, 66])
