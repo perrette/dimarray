@@ -2,7 +2,6 @@
 """
 import unittest
 import numpy as np
-from scipy.interpolate import interp2d
 import dimarray as da
 from dimarray.geo import transform_vectors
 from dimarray.geo.crs import get_crs
@@ -12,7 +11,12 @@ from dimarray.geo.crs import get_crs
 
 
 # class TestPolarStereographicData(unittest.TestCase):
-if __name__ == '__main__':
+def this_is_messy_fix_it():
+    """This is a manual, visual test for vector coordinate transform.
+    Should think of something more robust, to be handled with py.test
+    """
+
+    from scipy.interpolate import interp2d
 
     map0 = {'ellipsoid': u'WGS84',
      'false_easting': 0.0,
@@ -92,3 +96,6 @@ if __name__ == '__main__':
     plt.legend(frameon=False)
     #plt.draw()
     plt.show()
+
+if __name__ == '__main__':
+    this_is_messy_fix_it()

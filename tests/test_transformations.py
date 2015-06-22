@@ -85,7 +85,6 @@ def test_nan(vnan, axis, skipna, transform, use_bottleneck):
     try:
         axis_id, axis_nm = vnan._get_axis_info(axis)
         f1 = getattr(vnan, transform)
-        #f2 = getattr(vnan.to_pandas(), transform)
         if skipna:
             f2 = getattr(vnan.to_MaskedArray(), transform)
         else:
@@ -144,6 +143,14 @@ def test_diff(vnonan):
     v.diff(axis=0, keepaxis=True, scheme='forward')
     v.diff(n=2,axis=('time'), scheme='centered')
 
+try:
+    import pandas
+    PANDAS_INSTALLED = True
+except:
+    PANDAS_INSTALLED = False
+
+@pytest.mark.skipif(not PANDAS_INSTALLED,
+                                        reason="requires pandas")
 def test_vs_pandas_special(vnonan):
 
     #np.random.seed(0)
