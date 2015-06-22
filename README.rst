@@ -1,6 +1,11 @@
 Introduction
 ============
 
+.. image:: https://travis-ci.org/perrette/dimarray.svg?branch=master
+   :target: https://travis-ci.org/perrette/dimarray
+.. image:: https://img.shields.io/pypi/v/dimarray.svg
+   :target: https://pypi.python.org/pypi/dimarray
+
 Numpy array with dimensions
 ---------------------------
 dimarray is a package to handle numpy arrays with labelled dimensions and axes. 
