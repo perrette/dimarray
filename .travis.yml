@@ -1,5 +1,6 @@
 # Based on http://conda.pydata.org/docs/travis.html
 language: python
+sudo : required
 python:
   - "2.7"
 notifications:
