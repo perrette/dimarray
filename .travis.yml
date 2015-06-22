@@ -9,7 +9,7 @@ before_install:
   - sudo apt-get install python-numpy python-matplotlib
   - pip install netcdf4
 #optional dependencies
-  - pip install pandas  # to-pandas
+  # - pip install pandas  # to-pandas
 # cartopy projections ?
 # iris?
 install:
