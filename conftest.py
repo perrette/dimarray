@@ -33,7 +33,8 @@ except ImportError:
     # netCDF4 module is not present
     warnings.warn("cartopy cannot be imported, skip all coordinate transform tests related to cartopy")
     collect_ignore.extend(['dimarray/geo/crs.py','dimarray/geo/projection.py',
-                           'dimarray/geo/tests/test_crs.py','dimarray/compat/cartopy.py',
+                           'dimarray/compat/cartopy.py',
+                           'dimarray/geo/tests/test_crs.py','dimarray/geo/tests/test_crs_vectors.py',
                            'docs/_notebooks_rst/projection.rst'])
 
 try:
