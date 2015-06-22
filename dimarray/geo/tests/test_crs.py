@@ -2,9 +2,11 @@
 """
 from __future__ import division
 
-import unittest
+import unittest # try to follow standardized UniTest format
+import pytest  # skipif marker does require py.test
 import numpy as np
 from numpy.testing import assert_allclose
+import cartopy
 import dimarray as da
 from dimarray.geo.crs import get_crs, Proj4
 from dimarray.geo import GeoArray, transform
@@ -22,6 +24,7 @@ class TestCRS(unittest.TestCase):
         crs = get_crs(self.grid_mapping)
 
         expected = self.proj4_init + ' +no_defs'
+
         self.assertEqual(crs.proj4_init, expected)
 
         ## just in case
@@ -78,6 +81,7 @@ class TestLatitudeLongitude(TestCRS):
     # proj4_init = '+ellps=WGS84 +a=57.2957795131 +proj=eqc +lon_0=0.0'
     proj4_init = '+ellps=WGS84 +proj=lonlat'
 
+@pytest.mark.skipif(cartopy.__version__ < "0.12", reason="minor changes in digit precision from 0.11 to 0.12")
 class TestRotatedPoles(TestCRS):
     # NOTE could fail on earlier cartopy versions, where +to_meter seems to have 3 digits less, annd o_lon_p 0 instead of 0.0
     # check http://pytest.readthedocs.org/en/latest/skipping.html#skipping about how to use @pytest.mark.skipif(...) or xfail
@@ -87,6 +91,7 @@ class TestRotatedPoles(TestCRS):
             grid_north_pole_latitude =90.)
 
     proj4_init = '+ellps=WGS84 +proj=ob_tran +o_proj=latlon +o_lon_p=0.0 +o_lat_p=90.0 +lon_0=180.0 +to_meter=0.0174532925199433'
+    # proj4_init = '+ellps=WGS84 +proj=ob_tran +o_proj=latlon +o_lon_p=0 +o_lat_p=90.0 +lon_0=180.0 +to_meter=0.0174532925199'
 
 
 class TestTransverseMercator(TestCRS):

@@ -837,7 +837,7 @@ def open_nc(file_name, *args, **kwargs):
 
     Informative Display similar to a in-memory Dataset
 
-    >>> ds
+    >>> ds    # doctest: +SKIP
     DatasetOnDisk of 6 variables (NETCDF4)
     0 / y1 (113): -3400000.0 to -600000.0
     1 / x1 (61): -800000.0 to 700000.0

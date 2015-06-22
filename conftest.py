@@ -5,6 +5,7 @@ import warnings
 
 collect_ignore = ["setup.py", "docs/conf.py", "dist", "build", "tests/testing.py", "tests/test_mpl.py", "docs/scripts"]
 collect_ignore.append('docs/_build_rst/dimarray.rst')
+collect_ignore.append('sandbox/numpy_checks.py')
 
 try:
     import netCDF4
@@ -29,6 +30,9 @@ except ImportError:
 # check for cartopy
 try:
     import cartopy
+    if cartopy.__version__ < "0.12":
+        collect_ignore.append('docs/_notebooks_rst/projection.rst')
+
 except ImportError:
     # netCDF4 module is not present
     warnings.warn("cartopy cannot be imported, skip all coordinate transform tests related to cartopy")
@@ -36,6 +40,7 @@ except ImportError:
                            'dimarray/compat/cartopy.py',
                            'dimarray/geo/tests/test_crs.py','dimarray/geo/tests/test_crs_vectors.py',
                            'docs/_notebooks_rst/projection.rst'])
+
 
 try:
     import iris.util
@@ -48,7 +53,8 @@ try:
     import pandas
 except ImportError:
     warnings.warn("pandas cannot be imported, skip tutorial and reshape doc (which involve pandas)")
-    collect_ignore.extend(["docs/_notebooks_rst/tutorial.rst",'docs/_notebooks_rst/reshape.rst'])
+    collect_ignore.extend(["README.rst","docs/_notebooks_rst/tutorial.rst",'docs/_notebooks_rst/reshape.rst'])
+    collect_ignore.append("dimarray/core/dimarraycls.py")  # doctest uses pandas (to_pandas, from_pandas)
 
 # nice dimarray display in error message
 def pytest_assertrepr_compare(op, left, right):
