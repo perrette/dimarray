@@ -1,5 +1,11 @@
 #import unittest
 import pytest
+
+try:
+    import iris.util
+except:
+    pytestmark = pytest.mark.skipif(True, reason="iris is not installed or too old (iris.itil cannot be imported")
+
 from dimarray.geo import GeoArray
 from numpy.testing import assert_allclose
 

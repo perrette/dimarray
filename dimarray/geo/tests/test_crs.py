@@ -6,9 +6,16 @@ import unittest # try to follow standardized UniTest format
 import pytest  # skipif marker does require py.test
 import numpy as np
 from numpy.testing import assert_allclose
-import cartopy
+
+try:
+    import cartopy
+    from dimarray.geo.crs import get_crs, Proj4
+    donottest_if_oldcartopy = pytest.mark.skipif(cartopy.__version__ < "0.12", reason="minor changes in digit precision from 0.11 to 0.12")
+except ImportError:
+    pytestmark = pytest.mark.skipif(True, reason="cartopy is not installed")
+    donottest_if_oldcartopy = lambda x : x
+
 import dimarray as da
-from dimarray.geo.crs import get_crs, Proj4
 from dimarray.geo import GeoArray, transform
 
 class TestCRS(unittest.TestCase):
@@ -81,7 +88,7 @@ class TestLatitudeLongitude(TestCRS):
     # proj4_init = '+ellps=WGS84 +a=57.2957795131 +proj=eqc +lon_0=0.0'
     proj4_init = '+ellps=WGS84 +proj=lonlat'
 
-@pytest.mark.skipif(cartopy.__version__ < "0.12", reason="minor changes in digit precision from 0.11 to 0.12")
+@donottest_if_oldcartopy
 class TestRotatedPoles(TestCRS):
     # NOTE could fail on earlier cartopy versions, where +to_meter seems to have 3 digits less, annd o_lon_p 0 instead of 0.0
     # check http://pytest.readthedocs.org/en/latest/skipping.html#skipping about how to use @pytest.mark.skipif(...) or xfail

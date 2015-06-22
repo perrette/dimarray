@@ -3,8 +3,14 @@
 import os
 from warnings import warn
 import pytest
+
 import numpy as np
 from numpy.testing import assert_equal, assert_almost_equal
+
+try:
+    import netCDF4
+except:
+    pytestmark = pytest.mark.skipif(True, reason="netCDF4 is not installed")
 
 import dimarray  as da
 from dimarray import DimArray, summary_nc, read_nc, open_nc, get_ncfile
@@ -12,6 +18,7 @@ from dimarray.testing import (assert_equal_dimarrays, assert_equal_datasets, ass
                               create_dataset, create_dimarray)
 
 curdir = os.path.dirname(__file__)
+
 
 # parameterize test: 
 # - test writing netcdf files for arrays of various types

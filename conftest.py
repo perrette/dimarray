@@ -12,7 +12,7 @@ try:
 except ImportError:
     # netCDF4 module is not present
     warnings.warn("netCDF4 cannot be imported, skip netCDF4 tests and much of the documentation")
-    collect_ignore.extend(['dimarray/io/nc.py', 'tests/test_nc.py'])
+    collect_ignore.append('dimarray/io/nc.py') 
     collect_ignore.extend(['docs/_notebooks_rst/netcdf.rst',
                            'docs/_notebooks_rst/tutorial.rst',
                            'docs/_notebooks_rst/projection.rst',
@@ -38,7 +38,6 @@ except ImportError:
     warnings.warn("cartopy cannot be imported, skip all coordinate transform tests related to cartopy")
     collect_ignore.extend(['dimarray/geo/crs.py','dimarray/geo/projection.py',
                            'dimarray/compat/cartopy.py',
-                           'dimarray/geo/tests/test_crs.py','dimarray/geo/tests/test_crs_vectors.py',
                            'docs/_notebooks_rst/projection.rst'])
 
 
@@ -47,7 +46,7 @@ try:
 except ImportError:
     # netCDF4 module is not present
     warnings.warn("iris.util cannot be imported, skip all iris tests")
-    collect_ignore.extend(['dimarray/convert/iris.py','dimarray/convert/tests/test_iris.py'])
+    collect_ignore.extend(['dimarray/convert/iris.py'])
 
 try:
     import pandas

@@ -3,8 +3,15 @@
 import unittest
 import numpy as np
 import dimarray as da
+
+import pytest
+try:
+    import cartopy
+    from dimarray.geo.crs import get_crs
+except ImportError:
+    pytestmark = pytest.mark.skipif(True, reason="cartopy is not installed")
+
 from dimarray.geo import transform_vectors
-from dimarray.geo.crs import get_crs
 
 # Test: compute flowline based on an idealized vector field, and check whether 
 # it is conserved upon transformation.
