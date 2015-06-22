@@ -8,6 +8,7 @@ before_install:
   - sudo apt-get install libhdf5-serial-dev netcdf-bin libnetcdf-dev
   - sudo apt-get install python-numpy python-matplotlib
   - pip install netcdf4
+  - pip install pandas  # optional requirement
   - pip install pytest pytest-cov
   - pip install coveralls
 #optional dependencies
