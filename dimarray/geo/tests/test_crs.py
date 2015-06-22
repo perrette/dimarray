@@ -79,13 +79,14 @@ class TestLatitudeLongitude(TestCRS):
     proj4_init = '+ellps=WGS84 +proj=lonlat'
 
 class TestRotatedPoles(TestCRS):
-
+    # NOTE could fail on earlier cartopy versions, where +to_meter seems to have 3 digits less, annd o_lon_p 0 instead of 0.0
+    # check http://pytest.readthedocs.org/en/latest/skipping.html#skipping about how to use @pytest.mark.skipif(...) or xfail
     grid_mapping = dict(
             grid_mapping_name = 'rotated_latitude_longitude',
             grid_north_pole_longitude =0., 
             grid_north_pole_latitude =90.)
 
-    proj4_init = '+ellps=WGS84 +proj=ob_tran +o_proj=latlon +o_lon_p=0 +o_lat_p=90.0 +lon_0=180.0 +to_meter=0.0174532925199'
+    proj4_init = '+ellps=WGS84 +proj=ob_tran +o_proj=latlon +o_lon_p=0.0 +o_lat_p=90.0 +lon_0=180.0 +to_meter=0.0174532925199433'
 
 
 class TestTransverseMercator(TestCRS):

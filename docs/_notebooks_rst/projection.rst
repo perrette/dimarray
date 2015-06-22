@@ -127,9 +127,9 @@ We can use matplotlib's contourf to get a feeling for what that all mean. Below 
 >>> ax = gca() # get plot axis
 >>> ax.set_aspect('equal') # equal aspect ratio
 >>> ax.set_xticks([-500e3,0,500e3]) # ticks every 500 km  # doctest: +SKIP
-[<matplotlib.axis.XTick at 0x7f924d5dc650>,
- <matplotlib.axis.XTick at 0x7f924d66ae90>,
- <matplotlib.axis.XTick at 0x7f924d49d7d0>]
+[<matplotlib.axis.XTick at 0x7f2e17660a50>,
+ <matplotlib.axis.XTick at 0x7f2e176a9650>,
+ <matplotlib.axis.XTick at 0x7f2e174d58d0>]
 
 .. image:: projection_files/figure_16-1.png
 
@@ -138,7 +138,7 @@ We can use matplotlib's contourf to get a feeling for what that all mean. Below 
 And now plotting versus lon and lat (irregular, 2-D grid in this case):
 
 >>> contourf(ds['lon'], ds['lat'], log(clip(v, 1e-3,inf))); colorbar()  # doctest: +SKIP
-<matplotlib.colorbar.Colorbar instance at 0x7f924d3156c8>
+<matplotlib.colorbar.Colorbar instance at 0x7f2e2043e680>
 
 .. image:: projection_files/figure_18-1.png
 
@@ -158,7 +158,7 @@ The :func:`dimarray.geo.crs.get_crs` function returns the most adequate projecti
 
 >>> stere = get_crs(grid_mapping)
 >>> stere # doctest: +SKIP
-<dimarray.geo.crs.PolarStereographic at 0x7f924d6301d0>
+<dimarray.geo.crs.PolarStereographic at 0x7f2e142f1350>
 
 All projection classes defined in dimarray inherit from :class:cartopy.crs.CRS. A few common transformations have a Cartopy equivalent, and are defined as subclass, where possible.
 
@@ -167,7 +167,7 @@ All projection classes defined in dimarray inherit from :class:cartopy.crs.CRS. 
 True
 
 >>> stere.transform_point(-40,71,ccrs.PlateCarree()) # project lon=-40 lat=71 (longlat coordinates) onto our coord system
-(-36349.17592524537, -2082442.8940927587)
+(-36349.17592565123, -2082442.894090307)
 
 So that it is also possible to directly provide a cartopy class (for user more familiar with cartopy than with CF-conventions). Note also that any such class has a :attr:`proj4_init` attribute (see cartopy's doc and source code) which is passed to PROJ.4 when performing the actual transformations:
 
@@ -179,7 +179,7 @@ In some cases they are no cartopy pre-defined classes, nor dimarray. If you figu
 >>> from dimarray.geo.crs import Proj4
 >>> stere2 = Proj4("+ellps=WGS84 +proj=stere +lat_0=90.0 +lon_0=-39.0 +x_0=0.0 +y_0=0.0 +lat_ts=71.0")
 >>> stere2.transform_point(-40,71,ccrs.PlateCarree())
-(-36349.17592524537, -2082442.8940927587)
+(-36349.17592565123, -2082442.894090307)
 
 The :func:`dimarray.geo.get_crs` function takes these various conventions and return the matching CRS instance. 
 
@@ -216,7 +216,7 @@ Double-check against earlier figures, this looks all right:
 
 >>> h = log(clip(vt,1e-3,inf)).contourf(levels=np.linspace(-7.5, 10, 8))  # doctest: +SKIP
 >>> colorbar(h) # doctest: +SKIP
-<matplotlib.colorbar.Colorbar instance at 0x7f924c37ed40>
+<matplotlib.colorbar.Colorbar instance at 0x7f2e20424e60>
 
 .. image:: projection_files/figure_40-1.png
 
@@ -240,9 +240,9 @@ That is the original field on the projection plane.
 >>> ax = gca()
 >>> ax.set_aspect('equal') # equal aspect ratio
 >>> ax.set_xticks([-500e3,0,500e3]) # ticks every 500 km  # doctest: +SKIP
-[<matplotlib.axis.XTick at 0x7f924d4f7450>,
- <matplotlib.axis.XTick at 0x7f924c1c9790>,
- <matplotlib.axis.XTick at 0x7f924b55bdd0>]
+[<matplotlib.axis.XTick at 0x7f2e14168950>,
+ <matplotlib.axis.XTick at 0x7f2e14168110>,
+ <matplotlib.axis.XTick at 0x7f2e134d7650>]
 
 .. image:: projection_files/figure_45-1.png
 
@@ -273,10 +273,10 @@ Transforming vectors in longitude latitude coordinates does not make much sense 
 >>> ax = gca()
 >>> ax.set_aspect('equal') # equal aspect ratio
 >>> ax.set_xticks([-1000e3,0]) # ticks every 1000 km  # doctest: +SKIP
-/home/perrette/anaconda/lib/python2.7/site-packages/numpy/ma/core.py:785: RuntimeWarning: invalid value encountered in greater_equal
+/home/perrette/glacierenv/local/lib/python2.7/site-packages/numpy/ma/core.py:790: RuntimeWarning: invalid value encountered in greater_equal
   return umath.absolute(a) * self.tolerance >= umath.absolute(b)
-[<matplotlib.axis.XTick at 0x7f924c0a6910>,
- <matplotlib.axis.XTick at 0x7f924c0467d0>]
+[<matplotlib.axis.XTick at 0x7f2e1402a650>,
+ <matplotlib.axis.XTick at 0x7f2e14011ed0>]
 
 .. image:: projection_files/figure_50-2.png
 

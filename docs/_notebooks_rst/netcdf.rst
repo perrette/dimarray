@@ -156,7 +156,7 @@ Since version 0.2, the methods above are a wrapper around :class:dimarray.Datase
 >>> ds.yi = 'metadata-dataset-on-disk'
 >>> ds.close()
 
-
+
 Let's check the result:
 
 >>> ds2 = da.open_nc("/tmp/test.nc", mode="a")
@@ -234,26 +234,23 @@ Create a variable with unlimited dimension
 >>> 
 >>> ds = da.open_nc('/tmp/test.nc', 'w')
 >>> ds.axes.append('time', None)
->>> print ds.nc.dimensions['time']  # underlying netCDF4 object
+>>> ds.nc.dimensions['time']  # underlying netCDF4 object
 <type 'netCDF4.Dimension'> (unlimited): name = 'time', size = 0
 <BLANKLINE>
-
 
 Fill-up the variable:
 
 >>> ds['bla'] = da.DimArray([1,2,3,4,5], dims=['time'], axes=[list('abcde')])
->>> print ds.nc.dimensions['time'] # underlying netCDF4 object
+>>> ds.nc.dimensions['time'] # underlying netCDF4 object
 <type 'netCDF4.Dimension'> (unlimited): name = 'time', size = 5
 <BLANKLINE>
-
 
 Append some new slices:
 
 >>> ds['bla'].ix[5] = da.DimArray([66], dims=['time'], axes=[['f']])
->>> print ds.nc.dimensions['time'] # underlying netCDF4 object
+>>> ds.nc.dimensions['time'] # underlying netCDF4 object
 <type 'netCDF4.Dimension'> (unlimited): name = 'time', size = 6
 <BLANKLINE>
-
 
 >>> ds['bla'].read()
 dimarray: 6 non-null elements (0 null)
