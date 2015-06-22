@@ -14,7 +14,8 @@ OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 """
 import numpy as np
 import numpy.ma as ma
-from matplotlib.cbook import is_scalar, dedent
+# from matplotlib.cbook import is_scalar
+from numpy import isscalar as is_scalar
 
 
 def interp(datain,xin,yin,xout,yout,checkbounds=False,masked=False,order=1):
