@@ -2,6 +2,7 @@
 """
 from __future__ import division
 
+import warnings
 import unittest # try to follow standardized UniTest format
 import pytest  # skipif marker does require py.test
 import numpy as np
