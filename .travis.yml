@@ -9,8 +9,6 @@ before_install:
   - sudo apt-get install python-numpy python-matplotlib
   - pip install netcdf4
   # - pip install pandas  # optional requirement
-# install cartopy
-  - pip install cython cartopy Pillow scipy
 # test coverage
   - pip install pytest pytest-cov
   - pip install coveralls

@@ -20,17 +20,12 @@ supporting many I/O formats and axis alignment (or "reindexing")
 in binary operations. It is mostly limited to 2 dimensions (DataFrame), 
 or up to 4 dimensions (Panel, Panel4D).  
 
-`iris`_ looks like a very powerful package to manipulate geospatial data with 
-metadata, netCDF I/O, performing grid transforms etc..., but it is quite a jump 
-from numpy's `ndarray` in term of syntax and requires a bit of learning. 
-
 `dimarray`_, like iris, considers dimension names as a fundamental property
 of an array, and as such supports netCDF I/O format. It makes use of it 
 in binary operations (broadcasting), transforms and indexing. 
 It includes some of the nice features of pandas (e.g. axis alignment, optional
 nan skipping) but extends them to N dimensions, with a behaviour closer 
-to a numpy array. Some geo features are planned (weighted mean for latitude, 
-indexing modulo 360 for longitude, basic regridding) but dimarray should remain broad in scope.
+to a numpy array. 
 
 `xray`_ has many similarities with `dimarray`, but has a stronger focus 
 on following the `Common Data Model`_, i.e. its primary object is the Dataset
@@ -46,6 +41,10 @@ computationally-intensive operations in `dimarray` rely on fast numpy.
 author, so if your primary focus is to work with netCDF, access openDAP 
 data and so on, you may want to go that way. Try it out!
 
+`iris`_ looks like a very powerful package to manipulate geospatial data with 
+metadata, netCDF I/O, performing grid transforms etc..., but it is quite a jump 
+from numpy's `ndarray` in term of syntax and requires a bit of learning. 
+
 `spacegrids`_ is a promising new package with focus on geospatial grids. 
 It intends to streamline a number of operations such as
 derivations, integration, regridding by proposing an algebra on 
@@ -55,10 +54,10 @@ management utility for netCDF files.
 .. _numpy: http://docs.scipy.org/doc/numpy/user
 .. _larry: http://berkeleyanalytics.com/la
 .. _pandas: http://pandas.pydata.org 
-.. _iris: http://scitools.org.uk/iris
 .. _dimarray: dimarray.readthedocs.org
 .. _xray: xray.readthedocs.org
-.. _Common Data Model: http://www.unidata.ucar.edu/software/thredds/current/netcdf-java/CDM
+.. _iris: http://scitools.org.uk/iris
 .. _spacegrids: https://github.com/willo12/spacegrids
+.. _Common Data Model: http://www.unidata.ucar.edu/software/thredds/current/netcdf-java/CDM
 
 .. seealso:: :meth:`DimArray.to_pandas() <dimarray.DimArray.to_pandas>` and :meth:`DimArray.from_pandas() <dimarray.DimArray.from_pandas>`.

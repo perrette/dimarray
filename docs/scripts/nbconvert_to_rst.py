@@ -199,6 +199,10 @@ def main():
                         elif "<matplotlib." in line and not "+SKIP" in code_lines[-1]: # whatever that is a figure
                             code_lines[-1] += ' # doctest: +SKIP' # don't bother with doctets
 
+                        elif "netCDF4" in line and i == len(output_text)-1:  # hack...
+                            output_text[i] += "\n<BLANKLINE>\n" 
+
+
                     # write text output
                     output_lines.extend(output_text)
 
