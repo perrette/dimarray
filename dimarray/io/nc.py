@@ -250,7 +250,10 @@ class DatasetOnDisk(GetSetDelAttrMixin, NetCDFOnDisk, AbstractDataset):
 
     def __getitem__(self, name):
         if name in self.dims:
-            raise KeyError("Use 'axes' property to access dimension variables: {}".format(name))
+            return DimArrayOnDisk(self._ds, name)
+            # raise KeyError("Use 'axes' property to access dimension variables: {}".format(name))
+            # return AxisOnDisk(self._ds, name)
+
         if name not in self.keys():
             raise KeyError("Variable not found in the dataset: {}.\nExisting variables: {}".format(name, self.keys()))
         return DimArrayOnDisk(self._ds, name)
