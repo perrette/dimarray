@@ -13,10 +13,11 @@ python:
 notifications:
   email: false
 before_install:
+  - pip install pip --upgrade
   - pip install netcdf4
   # - pip install pandas  # optional requirement
 # install cartopy
-  - pip install cython scipy Pillow
+  # - pip install cython scipy Pillow
   # - pip install cartopy
 # test coverage
   - pip install pytest pytest-cov
