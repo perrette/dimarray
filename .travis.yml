@@ -1,12 +1,19 @@
 language: python
-sudo : required
+sudo : false
+addons:
+  apt:
+    packages:
+    - libhdf5-serial-dev 
+    - netcdf-bin 
+    - libnetcdf-dev
+    - python-numpy 
+    - python-matplotlib
 python:
   - "2.7"
 notifications:
   email: false
 before_install:
-  - sudo apt-get install libhdf5-serial-dev netcdf-bin libnetcdf-dev
-  - sudo apt-get install python-numpy python-matplotlib
+  - pip install pip -U
   - pip install netcdf4
   # - pip install pandas  # optional requirement
 # test coverage
