@@ -16,7 +16,8 @@ before_install:
   - pip install netcdf4
   # - pip install pandas  # optional requirement
 # install cartopy
-  - pip install cython>=0.15 cartopy Pillow scipy
+  - pip install cython scipy Pillow
+  # - pip install cartopy
 # test coverage
   - pip install pytest pytest-cov
   - pip install coveralls
@@ -27,6 +28,6 @@ before_install:
 install:
   - python setup.py install
 
-script: py.test --cov dimarray
+script: py.test --cov dimarray dimarray tests
 
 after-success: coveralls
