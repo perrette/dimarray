@@ -21,6 +21,6 @@ before_install:
 install:
   - python setup.py install
 
-script: py.test
+script: py.test --cov dimarray
 
 after-success: coveralls
