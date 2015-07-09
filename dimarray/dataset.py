@@ -119,6 +119,13 @@ class Dataset(AbstractDataset, odict, OpMixin, GetSetDelAttrMixin):
 
         self._maybe_delete_axes(axes)
 
+    def __getitem__(self, key):
+        if key not in self.keys() and key in self.dims:
+            # return an Axis as a DimArray variable if indexed with __getitem__
+            return DimArray(self.axes[key], axes=[self.axes[key]], copy=True)
+        else:
+            return super(Dataset, self).__getitem__(key)
+
     def _maybe_delete_axes(self, axes):
         """ delete axes if not found in the dataset """
         # update axes

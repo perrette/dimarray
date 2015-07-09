@@ -124,7 +124,8 @@ def stats_dimarray(self, backcompatibility=True):
 
 def repr_dataset(self, metadata=False):
     # variable names
-    nms = [nm for nm in self.keys() if nm not in self.dims]
+    # nms = [nm for nm in self.keys() if nm not in self.dims]
+    nms = [nm for nm in self.keys()]
 
     # header
     if not isinstance(self, da.Dataset):

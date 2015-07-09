@@ -137,7 +137,7 @@ class TestPolarStereographicData(unittest.TestCase):
         self.vy = grl['surfvely']
         self.lon = grl['lon']
         self.lat = grl['lat']
-        self.mapping = grl['mapping']._metadata()
+        self.mapping = grl['mapping'].attrs
 
     def test_coords(self):
         if self.grl is None: return
