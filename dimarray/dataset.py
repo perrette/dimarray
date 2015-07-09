@@ -16,6 +16,22 @@ from .core.transform import interp_like, _interp_internal_from_weight, _interp_i
 from .core import pandas_obj
 from .core.bases import AbstractDataset, GetSetDelAttrMixin, OpMixin
 
+class DatasetAxes(Axes):
+    """Dataset axes, overloaded to propagate modifications to the individual arrays
+    """
+    def __init__(self, ds):
+        super(DatasetAxes, self).__init__()
+        assert isinstance(ds, Dataset), "DatasetAxes can only be initialized empty with a Dataset"
+        self._ds = ds  # attached dataset
+    def __setitem__(self, key, item):
+        super(DatasetAxes, self).__setitem__(key, item)
+        # also apply the change to the contained DimArrays
+        for k in self._ds.keys():
+            dima = self._ds[k]
+            if key not in dima.dims: 
+                continue
+            dima.axes[key] = self[key]
+
 class Dataset(AbstractDataset, odict, OpMixin, GetSetDelAttrMixin):
 # class Dataset(AbstractDataset, odict):
     """ Container for a set of aligned objects
@@ -44,7 +60,8 @@ class Dataset(AbstractDataset, odict, OpMixin, GetSetDelAttrMixin):
         data = odict(*args, **kwargs)
 
         # Basic initialization
-        self._axes = Axes()
+        #self._axes = Axes()
+        self._axes = DatasetAxes(self)
         self._attrs = odict()
 
         # initialize an ordered dictionary

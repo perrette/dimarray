@@ -6,6 +6,7 @@ import unittest
 import pytest
 import dimarray as da
 from dimarray import Dataset
+from dimarray.testing import assert_equal_axes
 
 
 class TestStructure(unittest.TestCase):
@@ -181,3 +182,32 @@ def test():
     #data
 
     return data
+
+
+@pytest.fixture
+def ax0():
+    return da.Axis([11.,22.,33.], name="dim0")
+@pytest.fixture
+def ax1():
+    return da.Axis(["a","b"], name="dim1")
+@pytest.fixture
+def v0(ax0):
+    return da.DimArray([111., 222., 333.], axes=[ax0])
+@pytest.fixture
+def v1(ax1):
+    return da.DimArray([4, 5], axes=[ax1])
+@pytest.fixture
+def v2(ax0, ax1):
+    return da.DimArray([[1,2],[3,4],[5, 6]], axes=[ax0, ax1])
+@pytest.fixture
+def ds(v0, v1, v2):
+    return da.Dataset(v0=v0, v1=v1, v2=v2)
+
+# Test changing axes properties
+def test_update_axis(ds, ax0):
+    assert isinstance(ds.axes, da.dataset.DatasetAxes)
+    dim0_2 = da.Axis(ax0.values*2, "dim0")
+    ds.axes["dim0"] = dim0_2
+    assert_equal_axes(ds.axes["dim0"], dim0_2)
+    assert_equal_axes(ds["v0"].axes["dim0"], dim0_2)
+    assert_equal_axes(ds["v2"].axes["dim0"], dim0_2)
