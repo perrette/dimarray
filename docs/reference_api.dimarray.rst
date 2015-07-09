@@ -19,9 +19,6 @@ Create a DimArray
 
 -------------------------
 
-.. automethod:: dimarray.DimArray.from_kw
-
-
 .. _ref_api_reshaping:
 
 Modify shape
@@ -39,18 +36,13 @@ Modify shape
 
 -------------------------
 
-.. automethod:: dimarray.DimArray.group
-
--------------------------
-
-.. automethod:: dimarray.DimArray.ungroup
-
--------------------------
-
 .. automethod:: dimarray.DimArray.flatten
 
 -------------------------
 
+.. automethod:: dimarray.DimArray.unflatten
+
+-------------------------
 .. automethod:: dimarray.DimArray.newaxis
 
 -------------------------
