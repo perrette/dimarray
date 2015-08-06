@@ -81,8 +81,9 @@ def hastimeunits(ncvar):
 def istimevariable(ncvar):
     """Return True if a netCDF4 variable represents time
     """
-    return hastimeunits(ncvar) or \
-        (ncvar.size > 0 and isinstance(ncvar[0], basestring) \
+    # return hastimeunits(ncvar) or \
+    return (
+        ncvar.size > 0 and isinstance(ncvar[0], basestring) \
          and re.match('\d\d(\d\d)?-\d\d-\d\d',ncvar[0]))
 
 class NCTimeVariableWrapper(object):
