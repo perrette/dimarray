@@ -284,7 +284,7 @@ class DimArray(AbstractDimArray, OpMixin, GetSetDelAttrMixin):
         # 
         if not isinstance(axes, Axes):
             axes = Axes._init(axes, dims=dims, labels=labels, shape=values.shape if values is not None else None)
-        assert type(axes) is Axes
+        assert isinstance(axes, Axes)
 
         # if values not provided, create empty data, filled with NaNs if dtype is float
         if values is None:

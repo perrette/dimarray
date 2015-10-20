@@ -211,3 +211,11 @@ def test_update_axis(ds, ax0):
     assert_equal_axes(ds.axes["dim0"], dim0_2)
     assert_equal_axes(ds["v0"].axes["dim0"], dim0_2)
     assert_equal_axes(ds["v2"].axes["dim0"], dim0_2)
+
+
+# Test initialization of a DimArray with Dataset axes...
+def test_dataset_axes(ds):
+    shp = list(ax.size for ax in ds.axes)
+    dima = da.DimArray(np.ones(shp), axes=ds.axes)
+    assert_equal_axes(ds.axes[0], dima.axes[0])
+    assert_equal_axes(ds.axes[1], dima.axes[1])
