@@ -214,8 +214,15 @@ def test_update_axis(ds, ax0):
 
 
 # Test initialization of a DimArray with Dataset axes...
-def test_dataset_axes(ds):
+def test_dataset_derived_axes(ds):
     shp = list(ax.size for ax in ds.axes)
     dima = da.DimArray(np.ones(shp), axes=ds.axes)
     assert_equal_axes(ds.axes[0], dima.axes[0])
     assert_equal_axes(ds.axes[1], dima.axes[1])
+
+
+def test_standalone_axis():
+    ds = da.Dataset()
+    ds.axes.append(da.Axis([10,20,30], 'myaxis'))
+    assert ds.keys() == []
+    assert ds.dims == ("myaxis",)

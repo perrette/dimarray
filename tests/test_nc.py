@@ -274,3 +274,18 @@ def test_roundtrip_datetime(axis, tmpdir):
         # TODO: convert axis to datetime
     else:
         assert_equal_dimarrays(actual, expected=a)
+
+
+def test_standalone_axis(tmpdir):
+    # see test in test_dataset.py
+    ds = da.Dataset()
+    ds.axes.append(da.Axis([10,20,30], 'myaxis'))
+    assert ds.keys() == []
+    assert ds.dims == ("myaxis",)
+
+    fname = tmpdir.join("test_standalone_axis.nc").strpath # have test.nc in some temporary directory
+    ds.write_nc(fname)
+    # read again
+    ds = da.read_nc(fname)
+    assert ds.keys() == []
+    assert ds.dims == ("myaxis",)
