@@ -289,3 +289,23 @@ def test_standalone_axis(tmpdir):
     ds = da.read_nc(fname)
     assert ds.keys() == []
     assert ds.dims == ("myaxis",)
+
+def test_redundant_axis(tmpdir):
+    # see test in test_dataset.py
+    ds = da.Dataset()
+    ds["myaxis"] = da.DimArray([10,20,30], da.Axis([10,20,30], 'myaxis'))
+    assert ds.keys() == ["myaxis"]
+    assert ds.dims == ("myaxis",)
+
+    fname = tmpdir.join("test_redundant_axis.nc").strpath # have test.nc in some temporary directory
+    ds.write_nc(fname)
+
+    # read whole dataset: variable not counted as variable
+    ds = da.read_nc(fname)
+    assert ds.keys() == []
+    assert ds.dims == ("myaxis",)
+
+    # specify dimension variable
+    ds = da.read_nc(fname, ["myaxis"])
+    assert ds.keys() == ["myaxis"]
+    assert ds.dims == ("myaxis",)

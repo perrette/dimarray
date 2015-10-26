@@ -343,7 +343,11 @@ class DatasetOnDisk(GetSetDelAttrMixin, NetCDFOnDisk, AbstractDataset):
         if not name:
             raise ValueError("Need to provide variable name")
 
+        kw = self._kwargs.copy() 
+        kw.update(kwargs)
+
         if name not in self._ds.variables.keys():
+
             if np.isscalar(dima):
                 dima = da.DimArray(dima)
             if not isinstance(dima, DimArray):
@@ -352,16 +356,21 @@ class DatasetOnDisk(GetSetDelAttrMixin, NetCDFOnDisk, AbstractDataset):
                 # create Dimension and associated variable
                 for ax in dima.axes:
                     if ax.name not in self.dims:
-                        self.axes.append(ax, **kwargs)
+                        self.axes.append(ax, **kw)
 
-            kw = self._kwargs.copy() 
-            kw.update(kwargs)
             # add _FillValue or missing_value attribute to fill_value
             if 'fill_value' not in kw and hasattr(dima, '_FillValue'):
                 kw['fill_value'] = dima._FillValue
             elif 'fill_value' not in kw and hasattr(dima, 'missing_value'):
                 kw['fill_value'] = dima.missing_value
-            self._ds.createVariable(name, nctype, dima.dims, **kw)
+
+            # if the variable is already present (e.g. as present as variable 
+            # AND dimension in dimarray Dataset), just skip it
+            if  name in self._ds.variables.keys():
+                pass
+                # warnings.warn("dimension variable present both as variable and Axis in DimArra", RuntimeWarning)
+            else:
+                self._ds.createVariable(name, nctype, dima.dims, **kw)
 
         dimaondisk = DimArrayOnDisk(self._ds, name)
         dimaondisk[()] = dima
