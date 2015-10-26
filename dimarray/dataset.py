@@ -242,6 +242,11 @@ class Dataset(AbstractDataset, odict, OpMixin, GetSetDelAttrMixin):
         f, close = _maybe_open_file(f, mode=mode, clobber=clobber,format=format)
         store = DatasetOnDisk(f)
         # store = DatasetOnDisk(f, mode=mode, clobber=clobber, format=format)
+        # first write all axes
+        for ax in self.axes:
+            if ax.name not in store.dims:
+                store.axes.append(ax, **kwargs)
+        # then variables
         for name in self.keys():
             store.write(name, self[name], **kwargs)
         store.attrs.update(self.attrs) # attributes

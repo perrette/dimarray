@@ -227,9 +227,12 @@ class DatasetOnDisk(GetSetDelAttrMixin, NetCDFOnDisk, AbstractDataset):
             pass
         # automatically read all variables to load (except for the dimensions)
         if names is None:
+            dims = self.dims
             names = self.keys()
         elif isinstance(names, basestring):
             return self[names].read(indices=indices, axis=axis, indexing=indexing, tol=tol, keepdims=keepdims)
+        else:
+            dims = []
         # else:
         #     raise TypeError("Expected list or str for 'names=', got {}".format(names))
 
@@ -237,6 +240,12 @@ class DatasetOnDisk(GetSetDelAttrMixin, NetCDFOnDisk, AbstractDataset):
         dict_indices = {dim:tuple_indices[i] for i, dim in enumerate(self.dims)}
 
         data = Dataset()
+
+        # first load dimensions
+        for dim in dims:
+            data.axes.append(self.axes[dim][dict_indices[dim]])
+
+        # then normal variables
         for nm in names:
             data[nm] = self[nm].read(indices={dim:dict_indices[dim] for dim in self[nm].dims}, indexing='position')
         data.attrs.update(self.attrs) # dataset's metadata
