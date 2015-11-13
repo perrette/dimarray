@@ -15,6 +15,7 @@ from .core.align import _check_stack_args, _get_axes, stack, concatenate, _check
 from .core.transform import interp_like, _interp_internal_from_weight, _interp_internal_get_weights, _interp_internal_maybe_sort
 from .core import pandas_obj
 from .core.bases import AbstractDataset, GetSetDelAttrMixin, OpMixin
+from .core.prettyprinting import repr_dataset
 
 class DatasetAxes(Axes):
     """Dataset axes, overloaded to propagate modifications to the individual arrays
@@ -122,6 +123,10 @@ class Dataset(AbstractDataset, odict, OpMixin, GetSetDelAttrMixin):
         """ tuple of axis values contained in the Dataset, consistently with DimArray's `labels`
         """
         return tuple([ax.values for ax in self.axes])
+
+    # add pretty printer for ipython notebook 4, to avoid it just using OrderedDict methods...
+    def _repr_pretty_(self, p, cycle):
+        p.text(repr_dataset(self)) # seems to be enough...
 
     #
     # overload dictionary methods
