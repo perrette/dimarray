@@ -407,7 +407,8 @@ class AbstractHasAxes(AbstractHasMetadata):
         # newindexing = 'label' if self._indexing=='position' else 'position'
         # new = copy.copy(self) # shallow copy, not to verwrite _indexing
         # new._indexing = newindexing
-        return Indexable(self._getitem, self._setitem, self._delitem, indexing='position' if self._indexing == 'label' else 'label')
+        indexing = 'position' if self._indexing != 'position' else 'label'
+        return Indexable(self._getitem, self._setitem, self._delitem, indexing=indexing)
 
     # after xray: add sel, isel, loc, iloc methods
     def sel(self, **indices):
