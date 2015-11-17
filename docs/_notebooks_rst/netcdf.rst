@@ -234,21 +234,21 @@ Create a variable with unlimited dimension
 >>> 
 >>> ds = da.open_nc('/tmp/test.nc', 'w')
 >>> ds.axes.append('time', None)
->>> ds.nc.dimensions['time']  # underlying netCDF4 object
+>>> ds.nc.dimensions['time']  # underlying netCDF4 object # doctest: +SKIP 
 <type 'netCDF4.Dimension'> (unlimited): name = 'time', size = 0
 <BLANKLINE>
 
 Fill-up the variable:
 
 >>> ds['bla'] = da.DimArray([1,2,3,4,5], dims=['time'], axes=[list('abcde')])
->>> ds.nc.dimensions['time'] # underlying netCDF4 object
+>>> ds.nc.dimensions['time'] # underlying netCDF4 object # doctest: +SKIP
 <type 'netCDF4.Dimension'> (unlimited): name = 'time', size = 5
 <BLANKLINE>
 
 Append some new slices:
 
 >>> ds['bla'].ix[5] = da.DimArray([66], dims=['time'], axes=[['f']])
->>> ds.nc.dimensions['time'] # underlying netCDF4 object
+>>> ds.nc.dimensions['time'] # underlying netCDF4 object  # doctest: +SKIP
 <type 'netCDF4.Dimension'> (unlimited): name = 'time', size = 6
 <BLANKLINE>
 
