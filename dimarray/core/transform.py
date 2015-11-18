@@ -987,11 +987,23 @@ def _interp_internal_maybe_sort(obj, axis, issorted):
         obj = obj.sort_axis(axis=axis)
     return obj
 
+def _numpy_interp(x, xp, yp, left=None, right=None):
+    """Compatibility function for numpy interp, since the behaviour changes for certain versions
+    """
+    y = np.interp(x, xp, yp, left=left, right=right)
+
+    # numpy 1.10.1 messes with left...
+    if np.__version__ == '1.10.1' and left is not None:
+        imin = np.argmin(xp, axis=0)
+        y[x == xp[imin]] = yp[imin]
+
+    return y
+
 # get interp weights
 def _interp_internal_get_weights(oldx, newx):
     " compute necessary indices and weights to perform linear interpolation "
-    newindices = np.interp(newx, oldx, np.arange(oldx.size), left=-oldx.size, right=-1)
-    left_idx = newindices == -newx.size # out-of-bounds
+    newindices = _numpy_interp(newx, oldx, np.arange(oldx.size), left=-oldx.size, right=-1)
+    left_idx = newindices == -oldx.size # out-of-bounds
     right_idx = newindices == -1
     lhs_idx = np.asarray(newindices, dtype=int)
     rhs_idx = np.asarray(np.ceil(newindices), dtype=int)
@@ -1086,7 +1098,7 @@ def interp_axis(self, values, axis=0, left=np.nan, right=np.nan, issorted=None):
 
     # use numpy's built-in for ndim == 1
     if obj.ndim <= 1:
-        newval = np.interp(newaxis.values, curaxis.values, obj.values, left=left, right=right)
+        newval = _numpy_interp(newaxis.values, curaxis.values, obj.values, left=left, right=right)
         newaxes = Axes([newaxis])
 
     # otherwise calculate linear weights, and re-use them
