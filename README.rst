@@ -84,11 +84,11 @@ Install
 **Requirements**:
 
 - python 2.7   
-- numpy 1.7 
+- numpy (tested with 1.7, 1.8, 1.9, 1.10.1)
 
 **Optional**:
 
-- netCDF4 1.0.8 (netCDF archiving) (see notes below)
+- netCDF4 (tested with 1.0.8, 1.2.1) (netCDF archiving) (see notes below)
 - matplotlib 1.1 (plotting)
 - pandas 0.11 (interface with pandas)
 - cartopy 0.11 (dimarray.geo.crs)

@@ -44,9 +44,9 @@ with open('README.rst') as file:
 # Track version after pandas' setup.py
 #
 MAJOR = 0
-MINOR = 1
-MICRO = 9
-ISRELEASED = False
+MINOR = 2
+MICRO = 0
+ISRELEASED = True
 VERSION = '%d.%d.%d' % (MAJOR, MINOR, MICRO)
 QUALIFIER = ''
 
