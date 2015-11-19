@@ -2,6 +2,7 @@
 import os, sys
 import re
 from distutils.core import setup, Command as TestCommand
+
 import warnings
 import versioneer
 cmdclass = versioneer.get_cmdclass()
@@ -12,24 +13,16 @@ class MyTests(TestCommand):
     user_options = [('pytest-args=', 'a', "Arguments to pass to py.test")]
 
     def initialize_options(self):
-        TestCommand.initialize_options(self)
-        #self.pytest_args = ['--doctest-modules','--doctest-glob="*rst"']
-        self.pytest_args = []
-
-        # remove pyc files before testing ?
-        # find . -name "*.pyc" -exec rm {} \;
-
+        pass
 
     def finalize_options(self):
-        TestCommand.finalize_options(self)
-        self.test_args = []
-        self.test_suite = True
+        pass
 
-    def run_tests(self):
-        #import here, cause outside the eggs aren't loaded
-        import pytest
-        errno = pytest.main(self.pytest_args)
-        sys.exit(errno)
+    def run(self):
+        import sys,subprocess
+        # errno = subprocess.call([sys.executable, 'runtest.py'])
+        errno = subprocess.call(['py.test'])
+        raise SystemExit(errno)
 
 
 cmdclass.update({'test':MyTests})
@@ -52,13 +45,7 @@ setup(name='dimarray',
       # long_description=long_description,
       url='https://github.com/perrette/dimarray',
       license = "BSD 3-Clause",
-      install_requires = ["numpy>=1.7"],
-      tests_require = ["pytest"],
-      extras_require = {
-          "ncio": ["netCDF4>=1.0.6"],
-          "pandas": ["pandas>=0.11.0"],
-          "plotting": ["matplotlib>=1.1"],
-          },
+      requires = ["numpy(>=1.7)"],
       cmdclass = cmdclass,
       )
 
