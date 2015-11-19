@@ -3,6 +3,8 @@ import os, sys
 import re
 from distutils.core import setup, Command as TestCommand
 import warnings
+import versioneer
+cmdclass = versioneer.get_cmdclass()
 
 class MyTests(TestCommand):
     """ from http://pytest.org/latest/goodpractises.html
@@ -30,97 +32,24 @@ class MyTests(TestCommand):
         sys.exit(errno)
 
 
-with open('README.rst') as file:
-    long_description = file.read()
-
-#
-# Track version after pandas' setup.py
-#
-MAJOR = 0
-MINOR = 2
-MICRO = 1
-ISRELEASED = True
-VERSION = '%d.%d.%d' % (MAJOR, MINOR, MICRO)
-QUALIFIER = ''
-
-FULLVERSION = VERSION
-write_version = True
-
-if not ISRELEASED:
-    import subprocess
-    FULLVERSION += '.dev'
-
-    pipe = None
-    for cmd in ['git','git.cmd']:
-        try:
-            pipe = subprocess.Popen([cmd, "describe", "--always", "--match", "v[0-9]*"],
-                                stdout=subprocess.PIPE)
-            (so,serr) = pipe.communicate()
-            if pipe.returncode == 0:
-                break
-        except:
-            pass
-
-    if pipe is None or pipe.returncode != 0:
-        # no git, or not in git dir
-        if os.path.exists('dimarray/version.py'):
-            warnings.warn("WARNING: Couldn't get git revision, using existing dimarray/version.py")
-            write_version = False
-        else:
-            warnings.warn("WARNING: Couldn't get git revision, using generic version string")
-    else:
-      # have git, in git dir, but may have used a shallow clone (travis does this)
-      rev = so.strip()
-      # makes distutils blow up on Python 2.7
-      if sys.version_info[0] >= 3:
-          rev = rev.decode('ascii')
-
-      if not rev.startswith('v') and re.match("[a-zA-Z0-9]{7,9}",rev):
-          # partial clone, manually construct version string
-          # this is the format before we started using git-describe
-          # to get an ordering on dev version strings.
-          rev ="v%s.dev-%s" % (VERSION, rev)
-
-      # Strip leading v from tags format "vx.y.z" to get th version string
-      FULLVERSION = rev.lstrip('v')
-
-else:
-    FULLVERSION += QUALIFIER
-
+cmdclass.update({'test':MyTests})
 
 # get netcdf datafiles
 datafiles = [(root, [os.path.join(root, f) for f in files])
             for root, dirs, files in os.walk('dimarray/datasets/data')]
 
-def write_version_py(filename=None):
-    cnt = """\
-version = '%s'
-short_version = '%s'
-"""
-    if not filename:
-        #filename = os.path.join(
-        #    os.path.dirname(__file__), 'dimarray', 'version.py')
-        filename = os.path.join('dimarray', 'version.py')
-
-    with open(filename, 'w') as a:
-        a.write(cnt % (FULLVERSION, VERSION))
-
-# Write version.py to dimarray
-if write_version:
-    write_version_py()
-
 #
 #
 #
 setup(name='dimarray',
-      version=FULLVERSION,
+      version=versioneer.get_version(),
       author='Mahe Perrette',
       author_email='mahe.perrette@pik-potsdam.de',
       description='numpy array with labelled dimensions and axes, dimension, NaN handling and netCDF I/O',
       keywords=('labelled array','numpy','larry','pandas','iris'),
       packages = ['dimarray','dimarray.core','dimarray.geo','dimarray.io','dimarray.lib', 'dimarray.compat','dimarray.datasets','dimarray.convert'],
       data_files = datafiles,
-      long_description=long_description,
+      # long_description=long_description,
       url='https://github.com/perrette/dimarray',
       license = "BSD 3-Clause",
       install_requires = ["numpy>=1.7"],
@@ -130,6 +59,6 @@ setup(name='dimarray',
           "pandas": ["pandas>=0.11.0"],
           "plotting": ["matplotlib>=1.1"],
           },
-      cmdclass = {'test':MyTests},
+      cmdclass = cmdclass,
       )
 

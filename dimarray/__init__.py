@@ -16,11 +16,6 @@ from .dataset import Dataset, stack_ds, concatenate_ds
 from .datasets import get_datadir, get_ncfile
 #from lib.transform import interp1d, interp2d, apply_recursive
 
-# need to fix that
-try:
-    from dimarray.version import version as __version__
-except:
-    __version__ = "X.X.X"
 
 try:
     from .io.nc import (read_nc, open_nc, summary_nc,
@@ -32,3 +27,8 @@ except ImportError:
     msg = "Could not import netCDF4's package ==> I/O will not be available in this format"
     print msg
     #warnings.warn(ImportWarning(msg)) 
+
+
+from ._version import get_versions
+__version__ = get_versions()['version']
+del get_versions
