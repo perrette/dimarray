@@ -1,15 +1,8 @@
-#!/usr/bin/env python
-"""
-The version tracking part of this file comes from pandas' setup.py 
-which is under the BSD license
-"""
-#from distutils.core import setup
+#!/usr/bin/env python2.7
 import os, sys
 import re
-from setuptools import setup
-from setuptools.command.test import test as TestCommand 
+from distutils.core import setup, Command as TestCommand
 import warnings
-#import dimarray  # just checking
 
 class MyTests(TestCommand):
     """ from http://pytest.org/latest/goodpractises.html
@@ -45,7 +38,7 @@ with open('README.rst') as file:
 #
 MAJOR = 0
 MINOR = 2
-MICRO = 0
+MICRO = 1
 ISRELEASED = True
 VERSION = '%d.%d.%d' % (MAJOR, MINOR, MICRO)
 QUALIFIER = ''
@@ -130,7 +123,7 @@ setup(name='dimarray',
       long_description=long_description,
       url='https://github.com/perrette/dimarray',
       license = "BSD 3-Clause",
-      install_requires = ["setuptools", "numpy>=1.7"],
+      install_requires = ["numpy>=1.7"],
       tests_require = ["pytest"],
       extras_require = {
           "ncio": ["netCDF4>=1.0.6"],
