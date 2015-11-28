@@ -314,3 +314,90 @@ def test_redundant_axis(tmpdir):
     ds = da.read_nc(fname, ["myaxis"])
     assert ds.keys() == ["myaxis"]
     assert ds.dims == ("myaxis",)
+
+
+# class TestReadMultipleFiles(object):
+#
+#     @classmethod
+#     def setup_class(cls, tmpdir):
+#         # take tests from align
+#         fname1 = tmpdir.join("test_multi1.nc").strpath 
+#         fname2 = tmpdir.join("test_multi2.nc").strpath
+#
+#     @classmethod
+#     def teardown_class(cls):
+#         pass
+
+def test_read_multiple_files(tmpdir):
+    # take tests from align
+    fname1 = tmpdir.join("test_multi1.nc").strpath 
+    fname2 = tmpdir.join("test_multi2.nc").strpath
+
+    # stack, no need to align
+    a = DimArray([1,2,3], dims=['x0'])
+    b = DimArray([11,22,33], dims=['x0'])
+
+    a.write_nc(fname1, 'a', mode='w')
+    b.write_nc(fname2, 'a', mode='w')
+
+    c_got = da.read_nc([fname1, fname2], axis='stackdim', keys=['a','b'])
+
+    c = DimArray([[ 1,  2,  3],
+                  [11, 22, 33]], axes=[['a', 'b'], [0, 1, 2]], dims=['stackdim', 'x0'])
+
+    assert_equal_dimarrays(c_got['a'], c)
+
+    # stack + align
+    a = DimArray([1,2,3], axes=[[0,1,2]], dims=['x0'])
+    b = DimArray([33,11], axes=[[2,0]], dims=['x0'])
+
+    a.write_nc(fname1, 'a', mode='w')
+    b.write_nc(fname2, 'a', mode='w')
+
+    c_got = da.read_nc([fname2, fname1], axis='stackdim', align=True, sort=True, keys=['b','a'])
+
+    c = DimArray([[11., np.nan, 33.],
+                  [ 1.,     2.,  3.]], axes=[['b', 'a'], [0, 1, 2]], dims=['stackdim', 'x0'])
+
+    assert_equal_dimarrays(c_got['a'], c)
+
+    # concatenate 
+    a = DimArray([1,2,3], dims=['x0'])
+    b = DimArray([11,22,33], dims=['x0'])
+
+    a.write_nc(fname1, 'a', mode='w')
+    b.write_nc(fname2, 'a', mode='w')
+
+    c_got = da.read_nc([fname1, fname2], axis='x0')
+
+    c = DimArray([1,  2,  3, 11, 22, 33], axes=[[0, 1, 2, 0, 1, 2]], dims=['x0'])
+
+    assert_equal_dimarrays(c_got['a'], c)
+
+    # concatenate 2-D
+    a = DimArray([[1,   2,   3],
+                  [11, 22,  33]], axes=[[0,1],[0,1,2]])
+
+    b = DimArray([[4,   5,   6],
+                  [44, 55,  66]], axes=[[0,1],[0,1,2]])
+
+    a.write_nc(fname1, 'a', mode='w')
+    b.write_nc(fname2, 'a', mode='w')
+
+    # ...first axis
+    c0_got = da.read_nc([fname1, fname2], axis='x0')
+
+    c0 = DimArray([[ 1,  2,  3],
+                   [11, 22, 33],  
+                   [ 4,  5,  6],  
+                   [44, 55, 66]], axes=[[0,1,0,1],[0,1,2]]) 
+
+    assert_equal_dimarrays(c0_got['a'], c0)
+                  
+    # ...second axis
+    c1_got = da.read_nc([fname1, fname2], axis='x1')
+
+    c1 = DimArray([[ 1,  2,  3,  4,  5,  6],
+                   [11, 22, 33, 44, 55, 66]], axes=[[0,1],[0,1,2,0,1,2]])
+
+    assert_equal_dimarrays(c1_got['a'], c1)

@@ -13,14 +13,14 @@ from dimarray.core.indexing import locate_many
 __all__ = ["broadcast_arrays", "align", "stack", "concatenate"]
 
 def get_dims(*arrays):
-    """ find all dimensions from a variable list of arrays
+    """ find all dimensions from a variable list of arrays (or any object with `axes` attribute)
     Note: not in public API, but used by other modules
     """
     dims = []
     for o in arrays:
-        for dim in o.dims:
-            if dim not in dims:
-                dims.append(dim)
+        for ax in o.axes:
+            if ax.name not in dims:
+                dims.append(ax.name)
     return dims
 
 def _get_axes(*arrays):
@@ -175,12 +175,45 @@ def _common_axis(axes, join):
         com_axis = ax0.intersection(ax1)
     return com_axis
 
+def _get_aligned_axes(arrays, join='outer', axis=None , sort=False, strict=False):
+    """From a list of arrays, or any object with `axes` attributes, 
+    a new list of axes.
+    """
+    # find the dimensions
+    if axis is None:
+        dims = get_dims(*arrays)
+    elif isinstance(axis, basestring):
+        dims = [axis]
+    else:
+        if not isinstance(axis, basestring):
+            raise ValueError("align: axis must be provided as a string")
+
+    axes = Axes()
+
+    for jj, d in enumerate(dims):
+
+        # arrays which have that dimension
+        ii = filter(lambda i: d in arrays[i].dims, range(len(arrays)))
+
+        if strict and len(ii) != len(arrays):
+            raise ValueError("align (strict=True): some arrays lack dimension {}".format(d))
+
+        # common axis to reindex on
+        ax = _common_axis([arrays[i].axes[d] for i in ii], join)
+
+        if sort:
+            ax.sort()
+
+        axes.append(ax)
+
+    return axes
+
 def align(*arrays, **kwargs):
     """Align axes of a list of DimArray arrays by reindexing
 
     Parameters
     ----------
-    array1, array2, ... : variable list of DimArrays
+    array1, array2, ... : variable list of DimArrays or Datasets
     join : {"outer", "inner"}, optional
         method to find the common axis
         "outer" : union of all axes, missing values filled with NaNs
@@ -197,11 +230,11 @@ def align(*arrays, **kwargs):
 
     Returns
     -------
-    aligned_array1, aligned_array2, ... : list of aligned DimArrays
+    aligned_array1, aligned_array2, ... : list of aligned DimArrays (or Dataset)
 
     See Also
     --------
-    `DimArray.reindex`, `DimArray.reindex_like`
+    `DimArray.reindex_axis`, `DimArray.reindex_like`
 
     Examples
     --------
@@ -236,57 +269,39 @@ def align(*arrays, **kwargs):
            [ 4.,  5.]])]
     """
     join = kwargs.pop('join', get_option('align.join'))
-    sort_axis = kwargs.pop('sort', False)
+    sort = kwargs.pop('sort', False)
     axis = kwargs.pop('axis', None)
     strict = kwargs.pop('strict', False)
     if len(kwargs) > 0:
         raise TypeError("align() got unexpected argument(s): "+", ".join(kwargs.keys()))
 
     # convert any scalar to dimarray
-    from dimarray import DimArray
+    from dimarray import DimArray, Dataset
     arrays = list(arrays)
     for i, a in enumerate(arrays):
         if not isinstance(a, DimArray):
             if np.isscalar(a):
                 arrays[i] = DimArray(a)
+            elif isinstance(a, Dataset):
+                pass
             else:
-                raise TypeError("can only align DimArray instances")
+                raise TypeError("can only align DimArray and Dataset instances, got: {}".format(type(a)))
 
-    # find the dimensions
-    if axis is None:
-        dims = get_dims(*arrays)
-    elif isinstance(axis, basestring):
-        dims = [axis]
-    else:
-        if not isinstance(axis, basestring):
-            raise ValueError("align: axis must be provided as a string")
+    # find the common axes
+    axes = _get_aligned_axes(arrays, join=join, sort=sort, strict=strict)
 
-    for jj, d in enumerate(dims):
-
-        # arrays which have that dimension
-        ii = filter(lambda i: d in arrays[i].dims, range(len(arrays)))
-
-        if strict and len(ii) != len(arrays):
-            raise ValueError("align (strict=True): some arrays lack dimension {}".format(d))
-
-        # common axis to reindex on
-        ax = _common_axis([arrays[i].axes[d] for i in ii], join)
-
-        if sort_axis:
-            ax.sort()
-
-        # update arrays
-        for i, o in enumerate(arrays):
-            if i not in ii:
+    # update arrays
+    for i, o in enumerate(arrays):
+        for ax in axes:
+            if ax.name not in o.dims: 
                 continue
-            if np.all(o.axes[d] == ax):
+            if np.all(o.axes[ax.name] == ax):
                 continue
-
-            arrays[i] = o.reindex_axis(ax, axis=d)
+            arrays[i] = o.reindex_axis(ax)
 
     return arrays
 
-_align_axes = align  # for internal use, so that it does not conflict with "align" parameter
+align_ = align  # for internal use, so that it does not conflict with "align" parameter
 
 def _check_stack_args(arrays, keys=None):
     """ generic function to deal with arguments for stacking
@@ -327,7 +342,7 @@ def _check_stack_axis(axis, dims, default='unnamed'):
                 already exist, or use `concatenate`")
     return axis
 
-def stack(arrays, axis=None, keys=None, align=False, sort=False):
+def stack(arrays, axis=None, keys=None, align=False, **kwargs):
     """ stack arrays along a new dimension (raise error if already existing)
 
     Parameters
@@ -339,11 +354,7 @@ def stack(arrays, axis=None, keys=None, align=False, sort=False):
         stack axis values, useful if array is a sequence, or a non-ordered dictionary
     align : bool, optional
         if True, align axes prior to stacking (Default to False)
-    sort : bool, optional
-        if True, aligned axes are sorted (Default to False)
-        NOTE This does *not* affect the stack axis, which 
-        is determined by `arrays`'s order and `keys`. For that
-        purpose see `sort_axis` method.
+    **kwargs : optional key-word arguments passed to align, if align is True
 
     Returns
     -------
@@ -380,7 +391,8 @@ def stack(arrays, axis=None, keys=None, align=False, sort=False):
 
     # re-index axes if needed
     if align:
-        arrays = _align_axes(*arrays, sort=sort, strict=True)
+        kwargs['strict'] = True
+        arrays = align_(*arrays, **kwargs)
 
     # make it a numpy array
     data = [a.values for a in arrays]
@@ -426,7 +438,7 @@ def _concatenate_axes(axes):
     values = np.concatenate([ax.values for ax in axes])
     return Axis(values, axes[0].name)
 
-def concatenate(arrays, axis=0, align=False, sort=False):
+def concatenate(arrays, axis=0, _no_check=False, align=False, **kwargs):
     """ concatenate several DimArrays
 
     Parameters
@@ -438,12 +450,7 @@ def concatenate(arrays, axis=0, align=False, sort=False):
     align : bool, optional
         align secondary axes before joining on the primary
         axis `axis`. Default to False.
-    sort : bool, optional
-        if align is True, sort secondary axes during alignment
-        NOTE This does *not* affect the concatenation axis, which 
-        is determined by `arrays`'s order and `keys`. For that
-        purpose see `sort_axis` method.
-        default to False
+    **kwargs : optional key-word arguments passed to align, if align is True
 
     Returns
     -------
@@ -452,6 +459,7 @@ def concatenate(arrays, axis=0, align=False, sort=False):
     See Also
     --------
     stack: join arrays along a new dimension
+    align: align arrays
 
     Examples
     --------
@@ -492,10 +500,13 @@ def concatenate(arrays, axis=0, align=False, sort=False):
     dim = arrays[0].dims[axis]
 
     # align secondary axes prior to concatenate
+    # TODO: just encourage user to use align outside this function
+    # and remove argument passing
     if align:
+        kwargs['strict'] = True
         for ax in arrays[0].axes:
             if ax.name != dim:
-                arrays = _align_axes(arrays, axis=ax.name, strict=True)
+                arrays = align_(arrays, **kwargs)
 
     values = np.concatenate([a.values for a in arrays], axis=axis)
 
@@ -505,7 +516,7 @@ def concatenate(arrays, axis=0, align=False, sort=False):
     # concatenate axis values
     newaxis = _concatenate_axes([a.axes[axis] for a in arrays])
 
-    if not align:
+    if not align and not _no_check:
         # check that other axes match
         for i,a in enumerate(arrays[1:]):
             if not _get_subaxes(a) == subaxes:

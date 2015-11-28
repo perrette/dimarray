@@ -779,7 +779,8 @@ class Dataset(AbstractDataset, odict, OpMixin, GetSetDelAttrMixin):
             res[k] = self[k]._unary_op(func)
         return res
 
-def stack_ds(datasets, axis, keys=None, align=False, sort=False):
+
+def stack_ds(datasets, axis, keys=None, align=False, **kwargs):
     """ stack dataset along a new dimension
 
     Parameters
@@ -787,8 +788,8 @@ def stack_ds(datasets, axis, keys=None, align=False, sort=False):
     datasets: sequence or dict of datasets
     axis: str, new dimension along which to stack the dataset 
     keys, optional: stack axis values, useful if dataset is a sequence, or a non-ordered dictionary
-    align, optional: if True, align axes (via reindexing) prior to stacking
-    sort, optional: if True, sort aligned axis *prior* to stacking
+    align, optional: if True, align axes (via reindexing) *prior* to stacking
+    **kwargs : optional key-word arguments passed to align, if align is True
 
     Returns
     -------
@@ -821,6 +822,9 @@ def stack_ds(datasets, axis, keys=None, align=False, sort=False):
     dims = _get_dims(*datasets)
     axis = _check_stack_axis(axis, dims) 
 
+    if align:
+        datasets = da.align(*datasets, **kwargs)
+
     # find the list of variables common to all datasets
     variables = None
     for ds in datasets:
@@ -837,13 +841,13 @@ def stack_ds(datasets, axis, keys=None, align=False, sort=False):
     dataset = Dataset()
     for v in variables:
         arrays = [ds[v] for ds in datasets]
-        array = stack(arrays, axis=axis, keys=keys, align=align, sort=sort)
+        array = stack(arrays, axis=axis, keys=keys, align=False)
         dataset[v] = array
 
     return dataset
 
 
-def concatenate_ds(datasets, axis=0, align=False, sort=False):
+def concatenate_ds(datasets, axis=0, align=False, **kwargs):
     """ concatenate two datasets along an existing dimension
 
     Parameters
@@ -851,7 +855,7 @@ def concatenate_ds(datasets, axis=0, align=False, sort=False):
     datasets: sequence of datasets 
     axis: axis along which to concatenate
     align, optional: if True, align secondary axes (via reindexing) prior to concatenating
-    sort, optional: if True, sort secondary aligned axes
+    **kwargs : optional key-word arguments passed to align, if align is True
 
     Returns
     -------
@@ -888,11 +892,14 @@ def concatenate_ds(datasets, axis=0, align=False, sort=False):
         else:
             assert sorted(ds.keys()) == sorted(variables), "variables differ across datasets"
 
+    if align:
+        datasets = da.align(*datasets, **kwargs)
+
     # Compute concatenated dataset
     dataset = Dataset()
     for v in variables:
         arrays = [ds[v] for ds in datasets]
-        array = concatenate(arrays, axis=axis, align=align, sort=sort)
+        array = concatenate(arrays, axis=axis, align=False, _no_check=align)
         dataset[v] = array
 
     return dataset

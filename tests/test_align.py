@@ -93,8 +93,6 @@ def test_stack_fails():
     with pytest.raises(ValueError):
         c_got = stack([a, b], axis='x0')
 
-    # c = DimArray([1,  2,  3, 11, 22, 33], axes=[[0, 1, 2, 0, 1, 2]], dims=['x0'])
-
 def test_concatenate_1d():
     a = DimArray([1,2,3], dims=['x0'])
     b = DimArray([11,22,33], dims=['x0'])

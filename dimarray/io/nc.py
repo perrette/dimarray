@@ -970,13 +970,9 @@ def read_nc(f, names=None, *args, **kwargs):
         only the secondary axes)
         Default to False.
 
-    sort : bool, optional
-        When reading multiple files, used along the `align` parameter to
-        sort the secondary axes *prior* to concatenation / stacking.
-        Note, to sort the concatenation / stacking axis, the files to read
-        should be sorted beforehand, or the sort_axis method can be applied
-        on the result of read_nc.
-        Default to False.
+    **kwargs : optional key-word arguments passed to align, if align is True
+        When reading multiple files, passed to `stack` (new axis) or 
+        This includes: `sort` (False by default) and `join` ('outer' by default)
 
     Returns
     -------
@@ -1078,7 +1074,7 @@ def read_nc(f, names=None, *args, **kwargs):
 
     return obj
 
-def _read_multinc(fnames, names=None, axis=None, keys=None, align=False, sort=False, concatenate_only=False, **kwargs):
+def _read_multinc(fnames, names=None, axis=None, keys=None, align=False, sort=False, join='outer', concatenate_only=False, **kwargs):
     """ read multiple netCDF files 
 
     Parameters
@@ -1094,6 +1090,8 @@ def _read_multinc(fnames, names=None, axis=None, keys=None, align=False, sort=Fa
         if True, reindex axis prior to stacking / concatenating (default to False)
     sort : `bool`, optional
         if True, sort common axes prior to stacking / concatenating (defaut to False)
+    join : `str`, optional
+        join method in align (default to 'outer')
     concatenate_only : `bool`, optional
         if True, only concatenate along existing axis (and raise error if axis not existing) 
 
@@ -1148,7 +1146,7 @@ def _read_multinc(fnames, names=None, axis=None, keys=None, align=False, sort=Fa
 
     # Join dataset
     if axis in dimensions:
-        ds = concatenate_ds(datasets, axis=axis, align=align, sort=sort)
+        ds = concatenate_ds(datasets, axis=axis, align=align, sort=sort, join=join)
         if keys is not None: 
             ds = ds.reindex_axis(keys, axis=axis)
         # elif sort:
@@ -1159,7 +1157,7 @@ def _read_multinc(fnames, names=None, axis=None, keys=None, align=False, sort=Fa
         # use file name as keys by default
         if keys is None:
             keys = [os.path.splitext(fn)[0] for fn in fnames]
-        ds = stack_ds(datasets, axis=axis, keys=keys, align=align, sort=sort)
+        ds = stack_ds(datasets, axis=axis, keys=keys, align=align, sort=sort, join=join)
 
     return ds
 
