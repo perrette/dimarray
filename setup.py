@@ -27,13 +27,6 @@ class MyTests(TestCommand):
 
 cmdclass.update({'test':MyTests})
 
-# get netcdf datafiles
-datafiles = [(root, [os.path.join(root, f) for f in files])
-            for root, dirs, files in os.walk('dimarray/datasets/data')]
-
-#
-#
-#
 setup(name='dimarray',
       version=versioneer.get_version(),
       author='Mahe Perrette',
@@ -41,7 +34,8 @@ setup(name='dimarray',
       description='numpy array with labelled dimensions and axes, dimension, NaN handling and netCDF I/O',
       keywords=('labelled array','numpy','larry','pandas','iris'),
       packages = ['dimarray','dimarray.core','dimarray.geo','dimarray.io','dimarray.lib', 'dimarray.compat','dimarray.datasets','dimarray.convert'],
-      data_files = datafiles,
+      package_data={'dimarray.datasets': ['data/*']},
+
       # long_description=long_description,
       url='https://github.com/perrette/dimarray',
       license = "BSD 3-Clause",
