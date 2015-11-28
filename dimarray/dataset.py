@@ -779,7 +779,7 @@ class Dataset(AbstractDataset, odict, OpMixin, GetSetDelAttrMixin):
             res[k] = self[k]._unary_op(func)
         return res
 
-def stack_ds(datasets, axis, keys=None, align=False):
+def stack_ds(datasets, axis, keys=None, align=False, sort=False):
     """ stack dataset along a new dimension
 
     Parameters
@@ -788,6 +788,7 @@ def stack_ds(datasets, axis, keys=None, align=False):
     axis: str, new dimension along which to stack the dataset 
     keys, optional: stack axis values, useful if dataset is a sequence, or a non-ordered dictionary
     align, optional: if True, align axes (via reindexing) prior to stacking
+    sort, optional: if True, sort aligned axis *prior* to stacking
 
     Returns
     -------
@@ -795,7 +796,7 @@ def stack_ds(datasets, axis, keys=None, align=False):
 
     See Also
     --------
-    concatenate_ds
+    concatenate_ds, stack, sort_axis
 
     Examples
     --------
@@ -836,19 +837,21 @@ def stack_ds(datasets, axis, keys=None, align=False):
     dataset = Dataset()
     for v in variables:
         arrays = [ds[v] for ds in datasets]
-        array = stack(arrays, axis=axis, keys=keys, align=align)
+        array = stack(arrays, axis=axis, keys=keys, align=align, sort=sort)
         dataset[v] = array
 
     return dataset
 
 
-def concatenate_ds(datasets, axis=0):
+def concatenate_ds(datasets, axis=0, align=False, sort=False):
     """ concatenate two datasets along an existing dimension
 
     Parameters
     ----------
     datasets: sequence of datasets 
     axis: axis along which to concatenate
+    align, optional: if True, align secondary axes (via reindexing) prior to concatenating
+    sort, optional: if True, sort secondary aligned axes
 
     Returns
     -------
@@ -858,7 +861,7 @@ def concatenate_ds(datasets, axis=0):
 
     See Also
     --------
-    stack_ds
+    stack_ds, concatenate, sort_axis
 
     Examples
     --------
@@ -889,7 +892,7 @@ def concatenate_ds(datasets, axis=0):
     dataset = Dataset()
     for v in variables:
         arrays = [ds[v] for ds in datasets]
-        array = concatenate(arrays, axis=axis)
+        array = concatenate(arrays, axis=axis, align=align, sort=sort)
         dataset[v] = array
 
     return dataset

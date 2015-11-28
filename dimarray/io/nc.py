@@ -934,13 +934,6 @@ def read_nc(f, names=None, *args, **kwargs):
         For example, scalar items will be left unchanged whatever indices
         are provided.
 
-    axis : 
-        When reading multiple files and align==True :
-            axis along which to join the dimarrays or datasets (if align is True)
-        When reading one file (deprecated: use {name:values} notation instead):
-            if specified and indices is a slice, scalar or an array, assumes 
-            indexing is along this axis.
-
     indexing : {'label', 'position'}, optional
         Indexing mode. 
         - "label": indexing on axis labels (default)
@@ -954,23 +947,36 @@ def read_nc(f, names=None, *args, **kwargs):
     keepdims : bool, optional 
         keep singleton dimensions (default False)
 
-    align : bool, optional
-        if names is a list of files or a regular expression, pass align=True
-        if the arrays from the various files have to be aligned prior to 
-        concatenation. Similar to dimarray.stack and dimarray.stack_ds
-
-        Only when reading multiple files
-
     axis : str, optional
-        axis along which to join the dimarrays or datasets (if align is True)
-
-        Only when reading multiple files and align==True
+        When reading multiple files, axis along which to join
+        the dimarrays or datasets. It the axis already exist, 
+        the resulting arrays will be concatenated, otherwise
+        they will be stacked along a new array (in the sense 
+        of the numpy functions `concatenate` and `stack`)
 
     keys : sequence, optional
-        new axis values. If not provided, file names will be taken instead.
-        It is always possible to use set_axis later.
+        When reading multiple files, keys for the join axis. If the 
+        axis already exists in the dataset, the concatenated dataset/dimarray
+        will be re-indexed along the provided key, otherwise the keys
+        will be used to create a new axis for stacking. In the latter case,
+        keys' length needs to exactly match the number of input files, and 
+        if not provided, file names will be taken instead. Note you may
+        manually rename the axes later, or use the `set_axis` method.
 
-        Only when reading multiple files and align==True
+    align : bool, optional
+        When reading multiple files, passed to `stack` (new axis) or 
+        `concatenate` (existing axis) to reindex all arrays onto common axes.
+        (in `concatenate` mode, the concatenation axis is *not* re-indexed of course, 
+        only the secondary axes)
+        Default to False.
+
+    sort : bool, optional
+        When reading multiple files, used along the `align` parameter to
+        sort the secondary axes *prior* to concatenation / stacking.
+        Note, to sort the concatenation / stacking axis, the files to read
+        should be sorted beforehand, or the sort_axis method can be applied
+        on the result of read_nc.
+        Default to False.
 
     Returns
     -------
@@ -979,7 +985,7 @@ def read_nc(f, names=None, *args, **kwargs):
 
     See Also
     --------
-    DatasetOnDisk.read, stack, concatenate, stack_ds, concatenate_ds,
+    DatasetOnDisk.read, stack, concatenate, stack_ds, concatenate_ds, align,
     DimArray.write_nc, Dataset.write_nc
 
     Examples
@@ -1072,7 +1078,7 @@ def read_nc(f, names=None, *args, **kwargs):
 
     return obj
 
-def _read_multinc(fnames, names=None, axis=None, keys=None, align=False, concatenate_only=False, **kwargs):
+def _read_multinc(fnames, names=None, axis=None, keys=None, align=False, sort=False, concatenate_only=False, **kwargs):
     """ read multiple netCDF files 
 
     Parameters
@@ -1085,7 +1091,9 @@ def _read_multinc(fnames, names=None, axis=None, keys=None, align=False, concate
     keys : sequence, optional
         to be passed to stack_nc, if axis is not part of the dataset
     align : `bool`, optional
-        if True, reindex axis prior to stacking (default to False)
+        if True, reindex axis prior to stacking / concatenating (default to False)
+    sort : `bool`, optional
+        if True, sort common axes prior to stacking / concatenating (defaut to False)
     concatenate_only : `bool`, optional
         if True, only concatenate along existing axis (and raise error if axis not existing) 
 
@@ -1140,14 +1148,18 @@ def _read_multinc(fnames, names=None, axis=None, keys=None, align=False, concate
 
     # Join dataset
     if axis in dimensions:
-        if keys is not None: warnings.warn('keys argument will be ignored.', RuntimeWarning)
-        ds = concatenate_ds(datasets, axis=axis)
+        ds = concatenate_ds(datasets, axis=axis, align=align, sort=sort)
+        if keys is not None: 
+            ds = ds.reindex_axis(keys, axis=axis)
+        # elif sort:
+        #     ds = ds.sort_axis(axis=axis)
+            #warnings.warn('keys argument will be ignored.', RuntimeWarning)
 
     else:
         # use file name as keys by default
         if keys is None:
             keys = [os.path.splitext(fn)[0] for fn in fnames]
-        ds = stack_ds(datasets, axis=axis, keys=keys, align=align)
+        ds = stack_ds(datasets, axis=axis, keys=keys, align=align, sort=sort)
 
     return ds
 
