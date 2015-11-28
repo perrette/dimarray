@@ -1700,7 +1700,7 @@ def array(data, *args, **kwargs):
         broadcast = kwargs.pop('broadcast', True)
 
         if reindex:
-            data = align(*data)
+            data = align(data)
 
         if broadcast:
             data = broadcast_arrays(*data) # make sure the arrays have the same dimension

@@ -316,18 +316,6 @@ def test_redundant_axis(tmpdir):
     assert ds.dims == ("myaxis",)
 
 
-# class TestReadMultipleFiles(object):
-#
-#     @classmethod
-#     def setup_class(cls, tmpdir):
-#         # take tests from align
-#         fname1 = tmpdir.join("test_multi1.nc").strpath 
-#         fname2 = tmpdir.join("test_multi2.nc").strpath
-#
-#     @classmethod
-#     def teardown_class(cls):
-#         pass
-
 def test_read_multiple_files(tmpdir):
     # take tests from align
     fname1 = tmpdir.join("test_multi1.nc").strpath 
@@ -375,11 +363,11 @@ def test_read_multiple_files(tmpdir):
     assert_equal_dimarrays(c_got['a'], c)
 
     # concatenate 2-D
-    a = DimArray([[1,   2,   3],
-                  [11, 22,  33]], axes=[[0,1],[0,1,2]])
+    a = DimArray([[ 1,  2,  3],
+                  [11, 22, 33]], axes=[[0,1],[2,1,0]])
 
-    b = DimArray([[4,   5,   6],
-                  [44, 55,  66]], axes=[[0,1],[0,1,2]])
+    b = DimArray([[44, 55,  66],
+                  [4,   5,   6]], axes=[[1,0],[2,1,0]])
 
     a.write_nc(fname1, 'a', mode='w')
     b.write_nc(fname2, 'a', mode='w')
@@ -389,15 +377,27 @@ def test_read_multiple_files(tmpdir):
 
     c0 = DimArray([[ 1,  2,  3],
                    [11, 22, 33],  
-                   [ 4,  5,  6],  
-                   [44, 55, 66]], axes=[[0,1,0,1],[0,1,2]]) 
+                   [44, 55, 66],  
+                   [4,   5,  6]], axes=[[0,1,1,0],[2,1,0]]) 
 
     assert_equal_dimarrays(c0_got['a'], c0)
                   
+    # axis "x0" is not aligned !
+    with pytest.raises(ValueError):
+        c1_got = da.read_nc([fname1, fname2], axis='x1')
+        print c1_got
+
     # ...second axis
-    c1_got = da.read_nc([fname1, fname2], axis='x1')
+    c1_dima_got = da.read_nc([fname1, fname2], 'a', axis='x1', align=True, sort=True)
+
+    c1_ds_got = da.read_nc([fname1, fname2], axis='x1', align=True, sort=True)
 
     c1 = DimArray([[ 1,  2,  3,  4,  5,  6],
-                   [11, 22, 33, 44, 55, 66]], axes=[[0,1],[0,1,2,0,1,2]])
+                   [11, 22, 33, 44, 55, 66]], axes=[[0,1],[2,1,0,2,1,0]])
 
-    assert_equal_dimarrays(c1_got['a'], c1)
+    assert_equal_dimarrays(c1_dima_got, c1)
+    assert_equal_dimarrays(c1_ds_got['a'], c1)
+
+def test_debug_doc():
+    direc = da.get_datadir()
+    temp = da.read_nc(direc+'/cmip5.*.nc', 'temp', align=True, axis='model')

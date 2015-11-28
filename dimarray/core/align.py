@@ -206,9 +206,11 @@ def _get_aligned_axes(arrays, join='outer', axis=None , sort=False, strict=False
 
         axes.append(ax)
 
+    # assert len(axes) > 0
+
     return axes
 
-def align(*arrays, **kwargs):
+def align(arrays, join='outer', axis=None , sort=False, strict=False):
     """Align axes of a list of DimArray arrays by reindexing
 
     Parameters
@@ -241,13 +243,13 @@ def align(*arrays, **kwargs):
     >>> from dimarray import DimArray, align
     >>> a = DimArray([0,1,2],axes=[[0,1,2]])
     >>> b = DimArray([1,2,3],axes=[[1,2,3]])
-    >>> align(a, b)
+    >>> align([a, b])
     [dimarray: 3 non-null elements (1 null)
     0 / x0 (4): 0 to 3
     array([  0.,   1.,   2.,  nan]), dimarray: 3 non-null elements (1 null)
     0 / x0 (4): 0 to 3
     array([ nan,   1.,   2.,   3.])]
-    >>> align(a, b, join='inner')
+    >>> align([a, b], join='inner')
     [dimarray: 2 non-null elements (0 null)
     0 / x0 (2): 1 to 2
     array([1, 2]), dimarray: 2 non-null elements (0 null)
@@ -258,7 +260,7 @@ def align(*arrays, **kwargs):
      
     >>> a = DimArray([0,1], axes=[[0,1]]) # on 'x0' only
     >>> b = DimArray([[0,1],[2,3.],[4.,5.]], axes=[[0,1,2],[1,2]]) # one more element along the 1st dimension, 2nd dimension ignored
-    >>> align(a, b)
+    >>> align([a, b])
     [dimarray: 2 non-null elements (1 null)
     0 / x0 (3): 0 to 2
     array([  0.,   1.,  nan]), dimarray: 6 non-null elements (0 null)
@@ -268,31 +270,31 @@ def align(*arrays, **kwargs):
            [ 2.,  3.],
            [ 4.,  5.]])]
     """
-    join = kwargs.pop('join', get_option('align.join'))
-    sort = kwargs.pop('sort', False)
-    axis = kwargs.pop('axis', None)
-    strict = kwargs.pop('strict', False)
-    if len(kwargs) > 0:
-        raise TypeError("align() got unexpected argument(s): "+", ".join(kwargs.keys()))
+    # join = kwargs.pop('join', get_option('align.join'))
+    # sort = kwargs.pop('sort', False)
+    # axis = kwargs.pop('axis', None)
+    # strict = kwargs.pop('strict', False)
+    # if len(kwargs) > 0:
+    #     raise TypeError("align() got unexpected argument(s): "+", ".join(kwargs.keys()))
+    if not (isinstance(arrays, list) or isinstance(arrays, tuple)):
+        raise ValueError("align: only accepts list or tuple arguments. Got: {}".format(type(arrays)))
 
     # convert any scalar to dimarray
     from dimarray import DimArray, Dataset
-    arrays = list(arrays)
+    arrays = [a for a in arrays] # convert to list
     for i, a in enumerate(arrays):
-        if not isinstance(a, DimArray):
+        if not isinstance(a, DimArray) and not isinstance(a, Dataset):
             if np.isscalar(a):
                 arrays[i] = DimArray(a)
-            elif isinstance(a, Dataset):
-                pass
             else:
                 raise TypeError("can only align DimArray and Dataset instances, got: {}".format(type(a)))
 
     # find the common axes
-    axes = _get_aligned_axes(arrays, join=join, sort=sort, strict=strict)
+    axes = _get_aligned_axes(arrays, axis=axis, join=join, sort=sort, strict=strict)
 
     # update arrays
-    for i, o in enumerate(arrays):
-        for ax in axes:
+    for ax in axes:
+        for i, o in enumerate(arrays):
             if ax.name not in o.dims: 
                 continue
             if np.all(o.axes[ax.name] == ax):
@@ -392,7 +394,7 @@ def stack(arrays, axis=None, keys=None, align=False, **kwargs):
     # re-index axes if needed
     if align:
         kwargs['strict'] = True
-        arrays = align_(*arrays, **kwargs)
+        arrays = align_(arrays, **kwargs)
 
     # make it a numpy array
     data = [a.values for a in arrays]
@@ -493,7 +495,21 @@ def concatenate(arrays, axis=0, _no_check=False, align=False, **kwargs):
     array([[ 1,  2,  3,  4,  5,  6],
            [11, 22, 33, 44, 55, 66]])
     """
-    assert type(arrays) in (list, tuple), "arrays must be list or tuple, got {}:{}".format(type(arrays), arrays)
+    # input argument check
+    if not type(arrays) in (list, tuple):
+        raise ValueError("arrays must be list or tuple, got {}:{}".format(type(arrays), arrays))
+    arrays = [a for a in arrays]
+
+    from dimarray import DimArray, Dataset
+
+    for i, a in enumerate(arrays):
+        if isinstance(a, Dataset):
+            msg = "\n==>Note: you may use `concatenate_ds` for Datasets"
+            raise ValueError("concatenate: expected DimArray. Got {}".format(type(a))+msg)
+        elif np.isscalar(a):
+            arrays[i] = DimArray(a)
+        if not isinstance(a, DimArray):
+            raise ValueError("concatenate: expected DimArray. Got {}".format(type(a)))
 
     if type(axis) is not int:
         axis = arrays[0].dims.index(axis)
@@ -506,7 +522,7 @@ def concatenate(arrays, axis=0, _no_check=False, align=False, **kwargs):
         kwargs['strict'] = True
         for ax in arrays[0].axes:
             if ax.name != dim:
-                arrays = align_(arrays, **kwargs)
+                arrays = align_(arrays, axis=ax.name, **kwargs)
 
     values = np.concatenate([a.values for a in arrays], axis=axis)
 
@@ -518,11 +534,18 @@ def concatenate(arrays, axis=0, _no_check=False, align=False, **kwargs):
 
     if not align and not _no_check:
         # check that other axes match
-        for i,a in enumerate(arrays[1:]):
-            if not _get_subaxes(a) == subaxes:
-                msg = "First array:\n{}\n".format(subaxes)
-                msg += "{}th array:\n{}\n".format(i,_get_subaxes(a))
-                raise ValueError("contatenate: secondary axes do not match. Align first? (`align=True`)")
+        for ax in subaxes:
+            for a in arrays:
+                if not np.all(a.axes[ax.name].values == ax.values):
+                    raise ValueError("contatenate: secondary axes do not match. Align first? (`align=True`)")
+        # print arrays[0]
+        # for i,a in enumerate(arrays[1:]):
+        #     if not _get_subaxes(a) == subaxes:
+        #         msg = "First array:\n{}\n".format(subaxes)
+        #         msg += "{}th array:\n{}\n".format(i,_get_subaxes(a))
+        #         raise ValueError("contatenate: secondary axes do not match. Align first? (`align=True`)")
+        #     print a
+        # print '==> arrays look ok'
 
     newaxes = subaxes[:axis] + [newaxis] + subaxes[axis:]
 

@@ -53,7 +53,7 @@ def operation(func, o1, o2, reindex=True, broadcast=True, constructor=None):
 
     # Align axes by re-indexing
     if reindex:
-        o1, o2 = align_axes(o1, o2)
+        o1, o2 = align_axes((o1, o2))
 
     # Align dimensions by adding new axes and transposing if necessary
     if broadcast:

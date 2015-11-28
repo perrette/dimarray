@@ -111,7 +111,7 @@ It is also possible to proceed to axis alignment on a sequence of arrays
 >>> from dimarray import align
 >>> x = DimArray([1,2,3],('x0',[1,2,3]))
 >>> y = DimArray([3,4],('x0',[2,4]))
->>> xa, ya = align(x, y)
+>>> xa, ya = align((x, y))
 >>> ya
 dimarray: 2 non-null elements (2 null)
 0 / x0 (4): 1 to 4

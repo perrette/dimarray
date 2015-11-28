@@ -79,7 +79,7 @@ class Dataset(AbstractDataset, odict, OpMixin, GetSetDelAttrMixin):
                 values[i] = self._constructor(values[i])
 
         # Align objects
-        values = align_axes(*values)
+        values = align_axes(values)
 
         # Append object (will automatically update self.axes)
         for key, value in zip(keys, values):
@@ -823,7 +823,7 @@ def stack_ds(datasets, axis, keys=None, align=False, **kwargs):
     axis = _check_stack_axis(axis, dims) 
 
     if align:
-        datasets = da.align(*datasets, **kwargs)
+        datasets = da.align(datasets, strict=True, **kwargs)
 
     # find the list of variables common to all datasets
     variables = None
@@ -893,7 +893,11 @@ def concatenate_ds(datasets, axis=0, align=False, **kwargs):
             assert sorted(ds.keys()) == sorted(variables), "variables differ across datasets"
 
     if align:
-        datasets = da.align(*datasets, **kwargs)
+        # all dataset axes
+        axis_nm = datasets[0].axes[axis].name
+        aligned_dims = [d for d in _get_dims(*datasets) if d != axis_nm]
+        for d in aligned_dims:
+            datasets = da.align(datasets, axis=d, strict=True, **kwargs)
 
     # Compute concatenated dataset
     dataset = Dataset()
