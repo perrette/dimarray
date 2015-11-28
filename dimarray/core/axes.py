@@ -164,6 +164,11 @@ class Axis(GetSetDelAttrMixin, AbstractAxis):
     def weights(self):
         self._weights = None
 
+    def sort(self, *args, **kwargs):
+        # in-place sort
+        self._values.sort(*args, **kwargs)
+        self._monotonic = True
+
     def __getitem__(self, item):
         """ access values elements & return an axis object
         """
@@ -554,6 +559,9 @@ class MultiAxis(Axis):
         if mi.name is not None:
             ax.name = mi.name
         return ax
+
+    def sort(self, *args, **kwargs):
+        raise NotImplementedError()
 
 def _flatten(*list_of_arrays):
     """ flatten a list of arrays ax1, ax2, ... to  a list of tuples [(ax1[0], ax2[0], ax3[0]..), (ax1[0], ax2[0], ax3[1]..), ...]

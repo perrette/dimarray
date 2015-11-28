@@ -186,6 +186,9 @@ def align(*arrays, **kwargs):
         "outer" : union of all axes, missing values filled with NaNs
         "inner" : intersection of all axes
         Default to "outer" (can be changed with `dimarray.set_option('align.join","inner")`)
+    sort : bool, optional
+        Sort the axis prior to aligning.
+        default to False
 
     Returns
     -------
@@ -228,6 +231,7 @@ def align(*arrays, **kwargs):
            [ 4.,  5.]])]
     """
     join = kwargs.pop('join', get_option('align.join'))
+    sort_axis = kwargs.pop('sort', False)
     if len(kwargs) > 0:
         raise TypeError("align() got unexpected argument(s): "+", ".join(kwargs.keys()))
 
@@ -250,20 +254,23 @@ def align(*arrays, **kwargs):
         ii = filter(lambda i: d in arrays[i].dims, range(len(arrays)))
 
         # common axis to reindex on
-        ax_values = _common_axis([arrays[i].axes[d] for i in ii], join)
+        ax = _common_axis([arrays[i].axes[d] for i in ii], join)
+
+        if sort_axis:
+            ax.sort()
 
         # update arrays
         for i, o in enumerate(arrays):
             if i not in ii:
                 continue
-            if np.all(o.axes[d] == ax_values):
+            if np.all(o.axes[d] == ax):
                 continue
 
-            arrays[i] = o.reindex_axis(ax_values, axis=d)
+            arrays[i] = o.reindex_axis(ax, axis=d)
 
     return arrays
 
-align_axes = align  # for internal use, so that it does not conflict with "align" parameter
+_align_axes = align  # for internal use, so that it does not conflict with "align" parameter
 
 def _check_stack_args(arrays, keys=None):
     """ generic function to deal with arguments for stacking
@@ -296,15 +303,15 @@ def _check_stack_axis(axis, dims, default='unnamed'):
                 i+=1
             axis = default+"_{}".format(i)
 
-    elif type(axis) is int:
+    if type(axis) is int:
         raise TypeError("axis must be a str (new axis name)")
 
     if axis in dims:
         raise ValueError("please provide an axis name which does not \
-                already exist")
+                already exist, or use `concatenate`")
     return axis
 
-def stack(arrays, axis=None, keys=None, align=False):
+def stack(arrays, axis=None, keys=None, align=False, sort=False):
     """ stack arrays along a new dimension (raise error if already existing)
 
     Parameters
@@ -316,6 +323,8 @@ def stack(arrays, axis=None, keys=None, align=False):
         stack axis values, useful if array is a sequence, or a non-ordered dictionary
     align : bool, optional
         if True, align axes prior to stacking (Default to False)
+    sort : bool, optional
+        if True, aligned axes are sorted (Default to False)
 
     Returns
     -------
@@ -352,7 +361,7 @@ def stack(arrays, axis=None, keys=None, align=False):
 
     # re-index axes if needed
     if align:
-        arrays = align_axes(*arrays)
+        arrays = _align_axes(*arrays, sort=sort)
 
     # make it a numpy array
     data = [a.values for a in arrays]
