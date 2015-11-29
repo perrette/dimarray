@@ -29,6 +29,6 @@ before_install:
 install:
   - python setup.py install
 
-script: py.test --cov dimarray dimarray tests
+script: py.test --cov dimarray.core --cov dimarray.dataset --cov dimarray.io.nc dimarray tests
 
 after-success: coveralls

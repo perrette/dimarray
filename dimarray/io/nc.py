@@ -18,7 +18,7 @@ from dimarray.core import DimArray, Axis, Axes
 from dimarray.config import get_option
 from dimarray.core.bases import AbstractDimArray, AbstractDataset, AbstractAxis, GetSetDelAttrMixin, AbstractAxes
 # from dimarray.core.metadata import _repr_metadata
-from dimarray.core.prettyprinting import repr_axis, repr_axes, repr_dimarray, repr_dataset, repr_attrs
+from dimarray.prettyprinting import repr_axis, repr_axes, repr_dimarray, repr_dataset, repr_attrs
 
 from .conventions import encode_cf_datetime, decode_cf_datetime
 

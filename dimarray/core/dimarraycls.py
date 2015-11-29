@@ -12,6 +12,7 @@ from collections import OrderedDict as odict
 from dimarray.tools import anynan, pandas_obj, format_doc
 from dimarray.config import get_option
 from dimarray import plotting
+from dimarray.prettyprinting import repr_dimarray
 
 # from .metadata import MetadataBase
 from .bases import AbstractDimArray, GetSetDelAttrMixin, OpMixin
@@ -25,7 +26,6 @@ from . import operation as _operation  # operation between DimArrays
 from . import missingvalues # operation between DimArrays
 # from . import indexing as _indexing
 from . import align as _align
-from .prettyprinting import repr_dimarray
 
 __all__ = ["DimArray", "array"]
 
