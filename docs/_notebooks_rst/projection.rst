@@ -194,7 +194,7 @@ Let's do our first transformation with diamrray and cartopy
 
 
 >>> v = ds['surfvelmag']
->>> vt = transform(v, from_crs=stere, to_crs=ccrs.PlateCarree())
+>>> vt = transform(v, from_crs=stere, to_crs=ccrs.PlateCarree(), bounds_error=False)
 >>> vt
 geoarray: 3208 non-null elements (3685 null)
 0 / y (113): 58.6292691402 to 84.4819014732
@@ -203,7 +203,7 @@ array(...)
 
 The coordinates are quite messy, let's do something better by providing the final domain.
 
->>> vt = transform(v, from_crs=stere, to_crs=ccrs.PlateCarree(), xt=np.arange(-92,10,0.25), yt=np.arange(59,85,0.25))
+>>> vt = transform(v, from_crs=stere, to_crs=ccrs.PlateCarree(), xt=np.arange(-92,10,0.25), yt=np.arange(59,85,0.25), bounds_error=False)
 >>> vt
 geoarray: 20259 non-null elements (22173 null)
 0 / y (104): 59.0 to 84.75
@@ -264,8 +264,8 @@ Transforming vectors in longitude latitude coordinates does not make much sense 
 >>> from dimarray.geo import transform_vectors
 
 
->>> vt = transform(v, from_crs=stere, to_crs=stere_ne)
->>> vxt, vyt = transform_vectors(vx,vy, from_crs=stere, to_crs=stere_ne)
+>>> vt = transform(v, from_crs=stere, to_crs=stere_ne, bounds_error=False)
+>>> vxt, vyt = transform_vectors(vx,vy, from_crs=stere, to_crs=stere_ne, bounds_error=False)
 >>> 
 >>> log(clip(vt,1e-3,inf)).contourf()   # doctest: +SKIP
 >>> streamplot(vxt.x, vxt.y, vxt.values, vyt.values, color='k')   # doctest: +SKIP

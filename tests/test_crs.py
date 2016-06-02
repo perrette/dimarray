@@ -156,18 +156,18 @@ class TestPolarStereographicData(unittest.TestCase):
         assert_allclose(newlat, self.lat)
 
     def test_transform(self):
-        shape = 5,5
+        shape = 5,6
         ni, nj = shape # full globe
         x = np.linspace(-180, 180, nj)
         y = np.linspace(-85, 85, ni)
         a = GeoArray(np.random.randn(*shape), lat=y, lon=x)
 
         # basic transform
-        at = transform(a, to_crs=self.mapping)
+        at = transform(a, to_crs=self.mapping, bounds_error=False)
 
         # multi-dimensional
         a3d = a.newaxis('dummy_axis', [0, 1, 2])
-        a3dt = transform(a3d, to_crs=self.mapping)
+        a3dt = transform(a3d, to_crs=self.mapping, bounds_error=False)
 
         got = a3dt[0]
         expected = at

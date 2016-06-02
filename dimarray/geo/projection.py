@@ -5,7 +5,7 @@ import numpy as np
 from dimarray.geo.geoarray import GeoArray, DimArray, Coordinate, Axis
 from dimarray.geo.geoarray import X, Y, Z, Longitude, Latitude 
 from dimarray import stack
-from dimarray.compat.basemap import interp
+from scipy.interpolate import RegularGridInterpolator
 
 #
 # share private functions
@@ -198,7 +198,7 @@ def _inverse_transform_coords(from_crs, to_crs, xt=None, yt=None, x0=None, y0=No
 #
 #
 def transform(geo_array, to_crs, from_crs=None, \
-        xt=None, yt=None, masked=np.nan):
+        xt=None, yt=None, **kwargs):
     """ Transform scalar field array into a new coordinate system and \
             interpolate values onto a new regular grid
 
@@ -216,15 +216,8 @@ def transform(geo_array, to_crs, from_crs=None, \
     xt, yt : array-like (1-D), optional
         new coordinates to interpolate the array on
         will be deduced as min and max of new coordinates if not provided
-    masked : bool or number, optional
-        If False, interpolated values outside the range of input grid
-        will be clipped to values on boundary of input grid 
-        If True, points outside the range of input grid
-        are set to NaN
-        If masked is set to a number, then
-        points outside the range of xin and yin will be
-        set to that number.
-        Default is nan.
+    **kwargs: passed to scipy.interpolate.RegularGridInterpolator
+        error_bounds (True), method (linear), fill_value (np.nan)
 
     Returns
     -------
@@ -240,6 +233,11 @@ def transform(geo_array, to_crs, from_crs=None, \
         raise TypeError("geo_array must be a DimArray instance")
     if not isinstance(geo_array, GeoArray):
         geo_array = GeoArray(geo_array) 
+
+    # back compat
+    _masked = kwargs.pop('masked', None)
+    if _masked is not None: 
+        warnings.warn('masked is deprecated.', DeprecationWarning)
 
     # find horizontal coordinates
     x0, y0 = _check_horizontal_coordinates(geo_array)
@@ -258,12 +256,17 @@ def transform(geo_array, to_crs, from_crs=None, \
     # Transform coordinates and prepare regular grid for interpolation
     x0_interp, y0_interp, xt, yt = _inverse_transform_coords(from_crs, to_crs, xt, yt, x0, y0)
 
-    if masked is True:
-        masked = np.nan # use NaN instead of MaskedArray
+    _new_points = np.array([y0_interp.flatten(), x0_interp.flatten()]).T
+    def _interp_map(x, y, z):
+        f = RegularGridInterpolator((y, x), z, **kwargs)
+        return f(_new_points).reshape(x0_interp.shape)
+
+
 
     if geo_array.ndim == 2:
         #newvalues = interp(geo_array.values, xt_2d, yt_2d, xt_2dr, yt_2dr)
-        newvalues = interp(geo_array.values, x0.values, y0.values, x0_interp, y0_interp, masked=masked)
+        #newvalues = interp(geo_array.values, x0.values, y0.values, x0_interp, y0_interp, masked=masked)
+        newvalues = _interp_map(x0.values, y0.values, geo_array.values)
         transformed = geo_array._constructor(newvalues, [yt, xt])
 
     else:
@@ -273,7 +276,8 @@ def transform(geo_array, to_crs, from_crs=None, \
         newvalues = []
         for k, suba in obj.iter(axis=0): # iterate over the first dimension
             #newval = interp(suba.values, xt_2d, yt_2d, xt_2dr, yt_2dr)
-            newval = interp(suba.values, x0.values, y0.values, x0_interp, y0_interp, masked=masked)
+            #newval = interp(suba.values, x0.values, y0.values, x0_interp, y0_interp, masked=masked)
+            newval = _interp_map(x0.values, y0.values, suba.values)
             newvalues.append(newval)
 
         # stack the arrays together
@@ -298,7 +302,7 @@ def transform(geo_array, to_crs, from_crs=None, \
 
 
 def transform_vectors(u, v, to_crs, from_crs=None, \
-        xt=None, yt=None, masked=np.nan):
+        xt=None, yt=None, **kwargs):
     """ Transform vector field array into a new coordinate system and \
             interpolate values onto a new regular grid
 
@@ -319,21 +323,19 @@ def transform_vectors(u, v, to_crs, from_crs=None, \
     xt, yt : array-like (1-D), optional
         new coordinates to interpolate the array on
         will be deduced as min and max of new coordinates if not provided
-    masked : bool or number, optional
-        If False, interpolated values outside the range of input grid
-        will be clipped to values on boundary of input grid 
-        If True, points outside the range of input grid
-        are masked (set to NaN)
-        If masked is set to a number, then
-        points outside the range of xin and yin will be
-        set to that number.
-        Default is nan.
+    **kwargs: passed to scipy.interpolate.RegularGridInterpolator
+        error_bounds (True), method (linear), fill_value (np.nan)
 
     Returns
     -------
     transformed : GeoArray
         new 3-D GeoArray transformed and interpolated
     """ 
+    # back compat
+    _masked = kwargs.pop('masked', None)
+    if _masked is not None: 
+        warnings.warn('masked is deprecated.', DeprecationWarning)
+
     if not isinstance(u, DimArray) or not isinstance(v, DimArray):
         raise TypeError("u and v must be DimArray instances")
     if not isinstance(u, GeoArray): 
@@ -359,17 +361,21 @@ def transform_vectors(u, v, to_crs, from_crs=None, \
     # Transform vector components
     x0_2d, y0_2d = np.meshgrid(x0, y0)
 
-    if masked is True:
-        masked = np.nan # use NaN instead of MaskedArray
+    _new_points = np.array([y0_interp.flatten(), x0_interp.flatten()]).T
+    def _interp_map(x, y, z):
+        f = RegularGridInterpolator((y, x), z, **kwargs)
+        return f(_new_points).reshape(x0_interp.shape)
 
     _constructor = u._constructor 
     if u.ndim == 2:
         # First transform vector components onto the new coordinate system
         _ut, _vt = to_crs.transform_vectors(from_crs, x0_2d, y0_2d, u.values, v.values) 
         # Then interpolate onto regular grid
-        _ui = interp(_ut, x0.values, y0.values, x0_interp, y0_interp, masked=masked)
+        #_ui = interp(_ut, x0.values, y0.values, x0_interp, y0_interp, masked=masked)
+        _ui = _interp_map(x0.values, y0.values, _ut)
         ut = _constructor(_ui, [yt, xt])
-        _vi = interp(_vt, x0.values, y0.values, x0_interp, y0_interp, masked=masked)
+        #_vi = interp(_vt, x0.values, y0.values, x0_interp, y0_interp, masked=masked)
+        _vi = _interp_map(x0.values, y0.values, _vt)
         vt = _constructor(_vi, [yt, xt])
 
     else:
@@ -382,8 +388,10 @@ def transform_vectors(u, v, to_crs, from_crs=None, \
             # First transform vector components onto the new coordinate system
             _ut, _vt = to_crs.transform_vectors(from_crs, x0_2d, y0_2d, suba.values[0], suba.values[1]) 
             # Then interpolate onto regular grid
-            _ui = interp(_ut, x0.values, y0.values, x0_interp, y0_interp, masked=masked)
-            _vi = interp(_vt, x0.values, y0.values, x0_interp, y0_interp, masked=masked)
+            #_ui = interp(_ut, x0.values, y0.values, x0_interp, y0_interp, masked=masked)
+            _ui = _interp_map(x0.values, y0.values, _ut)
+            #_vi = interp(_vt, x0.values, y0.values, x0_interp, y0_interp, masked=masked)
+            _vi = _interp_map(x0.values, y0.values, _vt)
             newvalues.append(np.array([_ui, _vi]))
 
         # stack the arrays together
