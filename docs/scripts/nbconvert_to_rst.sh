@@ -1,5 +1,5 @@
 #!/bin/bash
-# convert all ipython notebook to rst format
+# convert all jupyter notebook to rst format
 
 NOTEBOOKDIR=$1
 RSTDIR=$2
@@ -32,7 +32,7 @@ for file in $NOTEBOOKDIR/*ipynb ; do
 
     if [[ $fmt != 3 ]] ; then
         # convert to nbformat 3 prior to parsing...
-        ipython nbconvert --to notebook --nbformat 3 $file
+        jupyter nbconvert --to notebook --nbformat 3 $file
         filetmp=`basename $file`
         filetmp=${filetmp%.ipynb}.v3.ipynb
         filetmp2=$NOTEBOOKDIR/$filetmp
@@ -42,7 +42,7 @@ for file in $NOTEBOOKDIR/*ipynb ; do
         sed -i "s/.v3//" $rstfile
     # if [[ $fmt != 4 ]] ; then
     #     # convert to nbformat 4 prior to parsing...
-    #     ipython nbconvert --to notebook --nbformat 4 $file
+    #     jupyter nbconvert --to notebook --nbformat 4 $file
     #     filetmp=`basename $file`
     #     filetmp=${filetmp%.ipynb}.nbconvert.ipynb
     #     filetmp2=$NOTEBOOKDIR/$filetmp

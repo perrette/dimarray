@@ -111,13 +111,25 @@ They are obviously projection coordinates. 2-dimensional longitude and latitude 
 Examining closer the attributes of 'surfvelmag' variable, a "grid_mapping" attribute is present:
 
 >>> ds['surfvelmag'].attrs # doctest: +SKIP
-OrderedDict([(u'grid_mapping', u'mapping'), (u'reference', u'Joughin I., Smith B.E., Howat I.M., Scambos T., Moon T., "Greenland flow variability from ice-sheet wide velocity mapping", JGlac 56(197), 2010.'), (u'note', u'Ian Joughin notes that "Having any papers that use the data we provided to searise cite this paper [the reference provided] gives us something we can track through ISI and report to NASA to satisfy their metrics requirements, which is a necessary evil to ensure continued production of such data sets.  So ... any publication of results based on this data should cite the above paper."'), (u'long_name', u'Surface Velocity Magnitude'), (u'units', u'meters/year')])
+OrderedDict([(u'grid_mapping', u'mapping'),
+             (u'reference',
+              u'Joughin I., Smith B.E., Howat I.M., Scambos T., Moon T., "Greenland flow variability from ice-sheet wide velocity mapping", JGlac 56(197), 2010.'),
+             (u'note',
+              u'Ian Joughin notes that "Having any papers that use the data we provided to searise cite this paper [the reference provided] gives us something we can track through ISI and report to NASA to satisfy their metrics requirements, which is a necessary evil to ensure continued production of such data sets.  So ... any publication of results based on this data should cite the above paper."'),
+             (u'long_name', u'Surface Velocity Magnitude'),
+             (u'units', u'meters/year')])
 
 "grid_mapping" is a string which points to another variable in the dataset, here "mapping". This is according to CF-conventions. *mapping* is a dummy variable whose attributes contain the information needed to define a coordinate reference system. 
 
 >>> grid_mapping = ds['mapping'].attrs
 >>> grid_mapping # doctest: +SKIP
-OrderedDict([(u'ellipsoid', u'WGS84'), (u'latitude_of_projection_origin', 90.0), (u'straight_vertical_longitude_from_pole', -39.0), (u'standard_parallel', 71.0), (u'false_northing', 0.0), (u'grid_mapping_name', u'polar_stereographic'), (u'false_easting', 0.0)])
+OrderedDict([(u'ellipsoid', u'WGS84'),
+             (u'latitude_of_projection_origin', 90.0),
+             (u'straight_vertical_longitude_from_pole', -39.0),
+             (u'standard_parallel', 71.0),
+             (u'false_northing', 0.0),
+             (u'grid_mapping_name', u'polar_stereographic'),
+             (u'false_easting', 0.0)])
 
 We can use matplotlib's contourf to get a feeling for what that all mean. Below using regular x1, y1 grid, in the projection plane.
 
@@ -127,18 +139,20 @@ We can use matplotlib's contourf to get a feeling for what that all mean. Below 
 >>> ax = gca() # get plot axis
 >>> ax.set_aspect('equal') # equal aspect ratio
 >>> ax.set_xticks([-500e3,0,500e3]) # ticks every 500 km  # doctest: +SKIP
-[<matplotlib.axis.XTick at 0x7f2e17660a50>,
- <matplotlib.axis.XTick at 0x7f2e176a9650>,
- <matplotlib.axis.XTick at 0x7f2e174d58d0>]
+[<matplotlib.axis.XTick at 0x7f31cd8654d0>,
+ <matplotlib.axis.XTick at 0x7f31cd89c8d0>,
+ <matplotlib.axis.XTick at 0x7f31cd6e4350>]/home/perrette/glacierenv/local/lib/python2.7/site-packages/matplotlib/collections.py:590: FutureWarning: elementwise comparison failed; returning scalar instead, but in the future will perform elementwise comparison
+  if self._edgecolors == str('face'):
 
-.. image:: projection_files/figure_16-1.png
+
+.. image:: projection_files/figure_16-2.png
 
 
 
 And now plotting versus lon and lat (irregular, 2-D grid in this case):
 
 >>> contourf(ds['lon'], ds['lat'], log(clip(v, 1e-3,inf))); colorbar()  # doctest: +SKIP
-<matplotlib.colorbar.Colorbar instance at 0x7f2e2043e680>
+<matplotlib.colorbar.Colorbar instance at 0x7f31cd52a950>
 
 .. image:: projection_files/figure_18-1.png
 
@@ -158,7 +172,7 @@ The :func:`dimarray.geo.crs.get_crs` function returns the most adequate projecti
 
 >>> stere = get_crs(grid_mapping)
 >>> stere # doctest: +SKIP
-<dimarray.geo.crs.PolarStereographic at 0x7f2e142f1350>
+<dimarray.geo.crs.PolarStereographic at 0x7f31cc56e1d0>
 
 All projection classes defined in dimarray inherit from :class:cartopy.crs.CRS. A few common transformations have a Cartopy equivalent, and are defined as subclass, where possible.
 
@@ -216,7 +230,7 @@ Double-check against earlier figures, this looks all right:
 
 >>> h = log(clip(vt,1e-3,inf)).contourf(levels=np.linspace(-7.5, 10, 8))  # doctest: +SKIP
 >>> colorbar(h) # doctest: +SKIP
-<matplotlib.colorbar.Colorbar instance at 0x7f2e20424e60>
+<matplotlib.colorbar.Colorbar instance at 0x7f31cc4ed518>
 
 .. image:: projection_files/figure_40-1.png
 
@@ -240,9 +254,9 @@ That is the original field on the projection plane.
 >>> ax = gca()
 >>> ax.set_aspect('equal') # equal aspect ratio
 >>> ax.set_xticks([-500e3,0,500e3]) # ticks every 500 km  # doctest: +SKIP
-[<matplotlib.axis.XTick at 0x7f2e14168950>,
- <matplotlib.axis.XTick at 0x7f2e14168110>,
- <matplotlib.axis.XTick at 0x7f2e134d7650>]
+[<matplotlib.axis.XTick at 0x7f31cd73dad0>,
+ <matplotlib.axis.XTick at 0x7f31cd865550>,
+ <matplotlib.axis.XTick at 0x7f31cb71a890>]
 
 .. image:: projection_files/figure_45-1.png
 
@@ -273,10 +287,10 @@ Transforming vectors in longitude latitude coordinates does not make much sense 
 >>> ax = gca()
 >>> ax.set_aspect('equal') # equal aspect ratio
 >>> ax.set_xticks([-1000e3,0]) # ticks every 1000 km  # doctest: +SKIP
-/home/perrette/glacierenv/local/lib/python2.7/site-packages/numpy/ma/core.py:790: RuntimeWarning: invalid value encountered in greater_equal
+/home/perrette/glacierenv/local/lib/python2.7/site-packages/numpy/ma/core.py:806: RuntimeWarning: invalid value encountered in greater_equal
   return umath.absolute(a) * self.tolerance >= umath.absolute(b)
-[<matplotlib.axis.XTick at 0x7f2e1402a650>,
- <matplotlib.axis.XTick at 0x7f2e14011ed0>]
+[<matplotlib.axis.XTick at 0x7f31cc233250>,
+ <matplotlib.axis.XTick at 0x7f31cc233790>]
 
 .. image:: projection_files/figure_50-2.png
 

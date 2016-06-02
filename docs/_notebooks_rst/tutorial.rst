@@ -358,10 +358,10 @@ dimarray comes with basic plotting facility. For 1-D and 2-D data, it simplies i
 >>> %matplotlib inline # doctest: +SKIP 
 >>> a = dataset['combined_data']
 >>> a.plot() # doctest: +SKIP
-Using matplotlib backend: Qt4Agg
+Using matplotlib backend: TkAgg
 Populating the interactive namespace from numpy and matplotlib
-[<matplotlib.lines.Line2D at 0x7fb04ac30ed0>,
- <matplotlib.lines.Line2D at 0x7fb04ac7e090>]
+[<matplotlib.lines.Line2D at 0x7f729cffdd50>,
+ <matplotlib.lines.Line2D at 0x7f729cffded0>]
 
 .. image:: tutorial_files/figure_80-2.png
 
@@ -380,15 +380,19 @@ In addition, it can also display 2-D data via its methods `contour`, `contourf` 
 >>> c = a.contourf()
 >>> colorbar(c)  # explicit colorbar creation  # doctest: +SKIP
 >>> a.contour(colors='k') # doctest: +SKIP
-<matplotlib.contour.QuadContourSet instance at 0x7fb04aa83560>
+/home/perrette/glacierenv/local/lib/python2.7/site-packages/matplotlib/collections.py:650: FutureWarning: elementwise comparison failed; returning scalar instead, but in the future will perform elementwise comparison
+  if self._edgecolors_original != str('face'):
+<matplotlib.contour.QuadContourSet instance at 0x7f729ce46b00>/home/perrette/glacierenv/local/lib/python2.7/site-packages/matplotlib/collections.py:590: FutureWarning: elementwise comparison failed; returning scalar instead, but in the future will perform elementwise comparison
+  if self._edgecolors == str('face'):
 
-.. image:: tutorial_files/figure_82-1.png
+
+.. image:: tutorial_files/figure_82-3.png
 
 
 
 >>> # plot the data
 >>> a.pcolor(colorbar=True)  # colorbar as keyword argument # doctest: +SKIP
-<matplotlib.collections.QuadMesh at 0x7fb04a95d7d0>
+<matplotlib.collections.QuadMesh at 0x7f729cd3aa10>
 
 .. image:: tutorial_files/figure_83-1.png
 

@@ -94,7 +94,7 @@ array([ nan,  3. ,  3.5,  4. ])
 >>> plt.plot(xl.time, xl.values, '*-',label='left') # doctest: +SKIP
 >>> plt.plot(xr.time, xr.values, '+-',label='right') # doctest: +SKIP
 >>> plt.legend(loc='upper left')   # doctest: +SKIP
-<matplotlib.legend.Legend at 0x7fe5a780f090>
+<matplotlib.legend.Legend at 0x7fc6858ee850>
 
 .. image:: reindexing_files/figure_18-1.png
 
