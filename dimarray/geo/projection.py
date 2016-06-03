@@ -149,7 +149,7 @@ def _inverse_transform_coords(from_crs, to_crs, xt=None, yt=None, x0=None, y0=No
 
     Examples
     --------
-    >>> import cartopy.crs as ccrs
+    >>> from dimarray.compat import cartopy_crs as ccrs
     >>> from_crs = ccrs.NorthPolarStereo(true_scale_latitude=71.)
     >>> to_crs = ccrs.Geodetic()
     >>> xt = np.linspace(-50, 10, 5) # desired lon range

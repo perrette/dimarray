@@ -1,21 +1,20 @@
-""" This file is copied and adapted from cartopy
+""" This file is copied and adapted from cartopy. 
+
+It is designed to be used in place of cartopy.crs
 
 It is copied here until (and if) the pull request fix_issues_339_455
 (commit b9211b6c7f072282818fdc527deccd9bcaa3b5ab)
 has been merged into the master and included in the next release.
 """
-from importlib import import_module
+from __future__ import absolute_import
 import warnings
 import numpy as np
-#import sys
+from cartopy.crs import *
+from cartopy.crs import (sgeom, NorthPolarStereo, SouthPolarStereo, Stereographic)
+                         #RotatedPole, TransverseMercator, Globe, Geodetic, CRS
 
-ccrs = import_module('cartopy.crs', 'cartopy')
-Projection = ccrs.Projection
-sgeom = ccrs.sgeom
-#Projection, sgeom
-#from cartopy.crs import Projection, sgeom
 
-class Stereographic(Projection):
+class FixedStereographic(Stereographic):
     def __init__(self, central_latitude=0.0, central_longitude=0.0,
                  false_easting=0.0, false_northing=0.0,
                  true_scale_latitude=None, 
@@ -36,7 +35,7 @@ class Stereographic(Projection):
                 warnings.warn('It does not make sense to provide both "scale_factor" and "true_scale_latitude"')
             proj4_params.append(('k_0', scale_factor))
 
-        super(Stereographic, self).__init__(proj4_params, globe=globe)
+        CRS.__init__(self, proj4_params, globe=globe)
 
         # TODO: Factor this out, particularly if there are other places using
         # it (currently: Stereographic & Geostationary). (#340)
@@ -86,19 +85,39 @@ class Stereographic(Projection):
         return self._y_limits
 
 
-class NorthPolarStereo(Stereographic):
+class FixedNorthPolarStereo(FixedStereographic):
     def __init__(self, central_longitude=0.0, true_scale_latitude=None, globe=None):
-        super(NorthPolarStereo, self).__init__(
+        FixedStereographic.__init__(self,
             central_latitude=90,
             central_longitude=central_longitude, 
             true_scale_latitude=true_scale_latitude, # None is equivalent to +90
             globe=globe)
 
 
-class SouthPolarStereo(Stereographic):
+class FixedSouthPolarStereo(FixedStereographic):
     def __init__(self, central_longitude=0.0, true_scale_latitude=None, globe=None):
-        super(SouthPolarStereo, self).__init__(
+        FixedStereographic.__init__(self, 
             central_latitude=-90,
             central_longitude=central_longitude, 
             true_scale_latitude=true_scale_latitude, # None is equivalent to -90
             globe=globe)
+
+
+def _apply_fix(version_fixed=999):
+    """Replace Cartopy version with their fixes.
+    """
+    import cartopy
+    from types import ModuleType
+    if not isinstance(cartopy, ModuleType):
+        return # readthedocs's Mock
+    M = cartopy.__version__.split('.')[0]
+    m = cartopy.__version__.split('.')[1]
+    if int(M) == 0 and int(m) < 11:
+        warnings.warn('Projections were only tested for cartopy versions 0.11.x')
+    return int(M) < version_fixed
+
+
+if _apply_fix():
+    Stereographic = FixedStereographic
+    NorthPolarStereo = FixedNorthPolarStereo
+    SouthPolarStereo = FixedSouthPolarStereo

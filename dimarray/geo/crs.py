@@ -33,33 +33,11 @@ import inspect
 import warnings
 import math
 import numpy as np
-import cartopy
-import cartopy.crs as ccrs
-#from cartopy.crs import Projection, Globe
-import dimarray.compat.cartopy as compat_crs
+import dimarray.compat.cartopy_crs as ccrs
 
 from collections import OrderedDict as odict
 
 from dimarray.tools import format_doc, file_an_issue_message
-
-# check cartopy version
-def _check_cartopy_version():
-    from types import ModuleType
-    if not isinstance(cartopy, ModuleType):
-        return # readthedocs's Mock
-    M = cartopy.__version__.split('.')[0]
-    m = cartopy.__version__.split('.')[1]
-    if int(M) == 0 and int(m) < 11:
-        warnings.warn('Projections were only tested for cartopy versions 0.11.x')
-
-    # update Stereographic proejctions
-    if int(M) < 999: # update with proper cartopy version if the pull request 
-        # is accepted
-        ccrs.Stereographic = compat_crs.Stereographic
-        ccrs.NorthPolarStereo = compat_crs.NorthPolarStereo
-        ccrs.SouthPolarStereo = compat_crs.SouthPolarStereo
-
-_check_cartopy_version()
 
 class Globe(ccrs.Globe):
 
@@ -446,7 +424,7 @@ def get_crs(grid_mapping):
 
     Import Cartopy's crs module
 
-    >>> import cartopy.crs as ccrs
+    >>> import dimarray.compat.cartopy_crs as ccrs
 
     Longitude / Latitude coordinates
 
