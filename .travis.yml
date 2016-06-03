@@ -15,7 +15,7 @@ notifications:
 before_install:
   - pip install pip --upgrade
   - pip install netcdf4
-  - pip install scipy  # interp2d
+  - pip install scipy
   # - pip install pandas  # optional requirement
 # install cartopy
   # - pip install cython scipy Pillow
