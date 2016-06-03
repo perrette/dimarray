@@ -37,8 +37,18 @@ except ImportError:
     # netCDF4 module is not present
     warnings.warn("cartopy cannot be imported, skip all coordinate transform tests related to cartopy")
     collect_ignore.extend(['dimarray/geo/crs.py','dimarray/geo/projection.py',
-                           'dimarray/compat/cartopy.py',
+                           'dimarray/compat/cartopy_crs.py',
                            'docs/_notebooks_rst/projection.rst'])
+
+try:
+    import scipy.interpolate
+except ImportError:
+    # scipy.interpolate module is not present
+    warnings.warn("scipy.interpolate cannot be imported, skip scipy.interpolate tests")
+    collect_ignore.append('dimarray/lib/transform.py') 
+    collect_ignore.extend(['docs/_notebooks_rst/transformations.rst',
+                           'docs/_notebooks_rst/projection.rst',
+                           ])
 
 
 try:
