@@ -806,8 +806,8 @@ def stack_ds(datasets, axis, keys=None, align=False, **kwargs):
     --------
     >>> a = DimArray([1,2,3], dims=('dima',))
     >>> b = DimArray([11,22], dims=('dimb',))
-    >>> ds = Dataset({'a':a,'b':b}) # dataset of 2 variables from an experiment
-    >>> ds2 = Dataset({'a':a*2,'b':b*2}) # dataset of 2 variables from a second experiment
+    >>> ds = Dataset(a=a,b=b) # dataset of 2 variables from an experiment
+    >>> ds2 = Dataset(a=a*2,b=b*2) # dataset of 2 variables from a second experiment
     >>> stack_ds([ds, ds2], axis='stackdim', keys=['exp1','exp2'])
     Dataset of 2 variables
     0 / stackdim (2): 'exp1' to 'exp2'
@@ -872,10 +872,10 @@ def concatenate_ds(datasets, axis=0, align=False, **kwargs):
     --------
     >>> a = da.zeros(axes=[list('abc')], dims=('x0',))  # 1-D DimArray
     >>> b = da.zeros(axes=[list('abc'), [1,2]], dims=('x0','x1')) # 2-D DimArray
-    >>> ds = Dataset({'a':a,'b':b}) # dataset of 2 variables from an experiment
+    >>> ds = Dataset(a=a,b=b) # dataset of 2 variables from an experiment
     >>> a2 = da.ones(axes=[list('def')], dims=('x0',)) 
     >>> b2 = da.ones(axes=[list('def'), [1,2]], dims=('x0','x1')) # 2-D DimArray
-    >>> ds2 = Dataset({'a':a2,'b':b2}) # dataset of 2 variables from a second experiment
+    >>> ds2 = Dataset(a=a2,b=b2) # dataset of 2 variables from a second experiment
     >>> concatenate_ds([ds, ds2])
     Dataset of 2 variables
     0 / x0 (6): 'a' to 'f'
