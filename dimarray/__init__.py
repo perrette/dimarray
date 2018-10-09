@@ -15,7 +15,6 @@ from .config import set_option, get_option, print_options, rcParams, rcParamsHel
 from .core import *
 from .dataset import Dataset, stack_ds, concatenate_ds
 from .datasets import get_datadir, get_ncfile
-#from lib.transform import interp1d, interp2d, apply_recursive
 
 
 try:

@@ -1,2 +1,2 @@
-from .transform import interp1d, interp2d, apply_recursive
+from .transform import interp1d, interp2d
 from .stats import percentile
