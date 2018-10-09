@@ -1,4 +1,5 @@
 from __future__ import print_function
+from future.utils import string_types
 import os
 import re
 import glob, copy
@@ -10,7 +11,6 @@ import netCDF4 as nc
 import dimarray as da
 #from geo.data.index import to_slice, _slice3D
 
-from dimarray.compat.pycompat import basestring, zip
 from dimarray.tools import format_doc, isscalar
 from dimarray.dataset import Dataset, concatenate_ds, stack_ds
 from dimarray.core import DimArray, Axis, Axes
@@ -82,7 +82,7 @@ def istimevariable(ncvar):
     """
     # return hastimeunits(ncvar) or \
     return (
-        ncvar.size > 0 and isinstance(ncvar[0], basestring) \
+        ncvar.size > 0 and isinstance(ncvar[0], string_types) \
          and re.match('\d\d(\d\d)?-\d\d-\d\d',ncvar[0]))
 
 class NCTimeVariableWrapper(object):
@@ -228,7 +228,7 @@ class DatasetOnDisk(GetSetDelAttrMixin, NetCDFOnDisk, AbstractDataset):
         if names is None:
             dims = self.dims
             names = self.keys()
-        elif isinstance(names, basestring):
+        elif isinstance(names, string_types):
             return self[names].read(indices=indices, axis=axis, indexing=indexing, tol=tol, keepdims=keepdims)
         else:
             dims = []
@@ -597,7 +597,7 @@ class DimArrayOnDisk(GetSetDelAttrMixin, NetCDFVariable, AbstractDimArray):
 class AxisOnDisk(GetSetDelAttrMixin, NetCDFVariable, AbstractAxis):
     def __init__(self, ds, name):
         self._ds = ds
-        if not isinstance(name, basestring):
+        if not isinstance(name, string_types):
             raise TypeError("only string names allowed")
         self._name = name
 
@@ -731,7 +731,7 @@ class AxesOnDisk(AbstractAxes):
         return len(self._dims)
 
     def __getitem__(self, dim):
-        if not isinstance(dim, basestring):
+        if not isinstance(dim, string_types):
             dim = self.dims[dim]
         elif dim not in self.dims:
             msg = "{} not found in dimensions (dims={}).".format(dim, self.dims)
@@ -745,7 +745,7 @@ and `ds.nc.createVariable`""")
 
     def __setitem__(self, dim, ax):
         " modify existing axis and possibly create new associated variable " 
-        if not isinstance(dim, basestring):
+        if not isinstance(dim, string_types):
             dim = self.dims[dim]
 
         if dim not in self._ds.dimensions.keys():
@@ -774,7 +774,7 @@ and `ds.nc.createVariable`""")
             be provided)
         **kwargs : passed to createVariable (compression parameters)
         """
-        if isinstance(ax, basestring):
+        if isinstance(ax, string_types):
             self._ds.createDimension(ax, size)
             self._dims += (ax,) 
 

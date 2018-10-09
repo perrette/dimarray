@@ -1,6 +1,7 @@
 """ A few functions useful for testing
 """
 from __future__ import print_function
+from future.utils import string_types
 import numpy as np
 from numpy.testing import assert_equal, assert_almost_equal
 import dimarray as da
@@ -32,13 +33,13 @@ def create_array_axis(size, dtype, regular=True, seed=SEED):
         values = np.random.shuffle(values)
     return np.asarray(values, dtype=dtype)
 
-def create_metadata(types=[str, unicode, int, float, list]):
+def create_metadata(types=[int, float, list]+list(string_types)):
     """ return a dictionary of metadata with various types
     """
     meta = {}
     letters = list('abcdefghijklmnopqrstuvwxyz')
     for i, t in enumerate(types):
-        if t in (str, unicode): 
+        if t in string_types: 
             val = t('some string')
         elif t in (list, np.ndarray):
             val = t([1,2])
@@ -65,9 +66,7 @@ def create_dimarray(shape=(2,3), dtype=float, axis_dtypes=float, dims=None, seed
 
     return da.DimArray(values, axes, dims=dims, **meta)
 
-# def create_dataset(seed=SEED, dtypes = ("float", "int","int32", "int64")):
-def create_dataset(seed=SEED, dtypes = ("float", "int","int32", "int64", "str", "unicode")):
-    # a = create_dimarray((2,3,2,1,1), float, (float, int, str, unicode, object), seed=seed)
+def create_dataset(seed=SEED, dtypes = ("float", "int","int32", "int64")+list(string_types)):
     ds = da.Dataset()
     ds['many_axes'] = create_dimarray((2,3,2), float, (float, int, str), seed=seed) # test axis types
     ds['shared_axis'] = ds['many_axes'].ix[0] # shares axes with "many_axes"  # test shared axes

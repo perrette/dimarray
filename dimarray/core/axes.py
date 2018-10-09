@@ -6,6 +6,7 @@ import string
 import copy
 import numpy as np
 
+from future.utils import string_types
 from dimarray.tools import is_DimArray, is_array1d_equiv, format_doc, isscalar
 from dimarray.core.bases import AbstractAxis, AbstractAxes, GetSetDelAttrMixin
 from dimarray.core.indexing import _maybe_cast_type, is_monotonic
@@ -129,7 +130,7 @@ class Axis(GetSetDelAttrMixin, AbstractAxis):
 
     @name.setter
     def name(self, name):
-        if not isinstance(name, basestring):
+        if not isinstance(name, string_types):
             raise TypeError("Axis name must be a string")
         if not name:
             raise ValueError("Axis name cannot be empty")
@@ -602,7 +603,7 @@ class Axes(AbstractAxes, list):
 
     def __getitem__(self, k):
         " get an axis by integer or name "
-        if isinstance(k, basestring):
+        if isinstance(k, string_types):
             dims = [ax.name for ax in self]
             try:
                 k = dims.index(k)
@@ -614,7 +615,7 @@ class Axes(AbstractAxes, list):
     def __setitem__(self, k, newax):
         """ update existing axis, the size cannot be changed
         """
-        if isinstance(k, basestring):
+        if isinstance(k, string_types):
             k = [ax.name for ax in self].index(k)
         curax = list.__getitem__(self, k)
 
@@ -653,7 +654,7 @@ class Axes(AbstractAxes, list):
 
     def _get_idx(self, axis):
         " always return axis integer location "
-        if isinstance(axis, basestring):
+        if isinstance(axis, string_types):
             dims = [ax.name for ax in self]
             try:
                 axis = dims.index(axis)
@@ -736,7 +737,7 @@ def _init_axes(axes=None, dims=None, labels=None, shape=None, check_order=True):
         axes = Axes.from_arrays(axes, dims=dims)
 
     # axes only cointain axis labels
-    elif np.all([type(ax) in (str, unicode) for ax in axes]):
+    elif np.all([type(ax) in string_types for ax in axes]):
         axes = Axes.from_shape(shape, dims=axes)
 
     else:

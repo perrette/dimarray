@@ -2,6 +2,7 @@
 In the process of being rewritten.
 """
 from __future__ import print_function
+from future.utils import string_types
 import warnings
 import numpy as np
 from dimarray.compat.pycompat import range
@@ -33,7 +34,7 @@ _doc_broadcast_arrays = """
 
 
 def _maybe_convert_datetime64(val):
-    if isinstance(val, basestring): 
+    if isinstance(val, string_types): 
         try:
             val = np.datetime64(val)
         except Exception as error:
@@ -331,7 +332,7 @@ def _maybe_cast_type(values, newval):
     elif values.dtype.kind == 'U' and dtype.kind == 'S':
         pass
     elif values.dtype.kind == 'S' and dtype.kind == 'U':
-        values = np.asarray(values, dtype=unicode)
+        values = np.asarray(values, dtype='U')
     else:
         values = np.asarray(values, dtype=object)
 

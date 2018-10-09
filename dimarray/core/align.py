@@ -1,6 +1,7 @@
 """ Functions and dimarray methods associated to array alignment
 """
 from __future__ import print_function
+from future.utils import string_types
 from collections import OrderedDict as odict
 import itertools
 import warnings
@@ -183,10 +184,10 @@ def _get_aligned_axes(arrays, join='outer', axis=None , sort=False, strict=False
     # find the dimensions
     if axis is None:
         dims = get_dims(*arrays)
-    elif isinstance(axis, basestring):
+    elif isinstance(axis, string_types):
         dims = [axis]
     else:
-        if not isinstance(axis, basestring):
+        if not isinstance(axis, string_types):
             raise ValueError("align: axis must be provided as a string")
 
     axes = Axes()

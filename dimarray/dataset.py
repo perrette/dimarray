@@ -3,6 +3,7 @@
 from __future__ import absolute_import
 from collections import OrderedDict as odict
 import warnings, copy
+from future.utils import string_types
 import numpy as np
 
 import dimarray as da  # for the doctest, so that they are testable via py.test
@@ -386,7 +387,7 @@ class Dataset(AbstractDataset, odict, OpMixin, GetSetDelAttrMixin):
         # automatically read all variables to load (except for the dimensions)
         if names is None:
             names = self.keys()
-        elif isinstance(names, basestring):
+        elif isinstance(names, string_types):
             raise TypeError("Please provide a sequence of variables to read.")
 
         tuple_indices = self._get_indices(indices, axis=axis, tol=tol, keepdims=keepdims, indexing=indexing)
@@ -812,8 +813,6 @@ def stack_ds(datasets, axis, keys=None, align=False, **kwargs):
     a: ('stackdim', 'dima')
     b: ('stackdim', 'dimb')
     """
-    #if not isinstance(axis, str): raise TypeError("axis parameter must be str")
-
     # make a sequence of datasets
     datasets, keys = _check_stack_args(datasets, keys) 
 

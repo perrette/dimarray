@@ -2,6 +2,7 @@
 """
 from __future__ import print_function
 from __future__ import absolute_import
+from future.utils import string_types
 import warnings
 import copy
 from collections import OrderedDict as odict
@@ -309,7 +310,7 @@ class AbstractHasAxes(AbstractHasMetadata):
         if isinstance(indices, dict):
             # replace int dimensions with str dimensions
             for k in indices:
-                if not isinstance(k, basestring):
+                if not isinstance(k, string_types):
                     indices[dims[k]] = indices[k]
                     del indices[k] 
                 else:
@@ -374,7 +375,7 @@ class AbstractHasAxes(AbstractHasMetadata):
         if axis is None:
             return None, None
 
-        if type(axis) in (str, unicode):
+        if type(axis) in string_types:
             idx = self.dims.index(axis)
 
         elif type(axis) is int:
