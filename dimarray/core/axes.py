@@ -288,7 +288,7 @@ class Axis(GetSetDelAttrMixin, AbstractAxis):
         #assert isinstance(other, Axis), "can only make the Union of two Axis objects"
         self, other, consistent_kinds = _check_axes_merge(self, other)
         
-        if np.all(self.values == other.values):
+        if self.values.size == other.values.size and np.all(self.values == other.values):
             # TODO: check other attributes 
             return self.copy()
         elif self.values.size == 0:
@@ -320,7 +320,7 @@ class Axis(GetSetDelAttrMixin, AbstractAxis):
         """
         self, other, consistent_kinds = _check_axes_merge(self, other)
 
-        if np.all(self.values == other.values):
+        if self.values.shape == other.values.shape and np.all(self.values == other.values):
             # TODO: check other attributes 
             return self.copy()
         elif self.values.size == 0:
@@ -350,7 +350,7 @@ class Axis(GetSetDelAttrMixin, AbstractAxis):
 
     def __eq__(self, other):
         #return hasattr(other, "name") and hasattr(other, "values") and np.all(other.values == self.values) and self.name == other.name
-        return isinstance(other, Axis) and np.all(other.values == self.values) and self.name == other.name
+        return isinstance(other, Axis) and other.size == self.values.size and np.all(other.values == self.values) and self.name == other.name
 
     def _bounds(self):
         if self.values.size == 0:
