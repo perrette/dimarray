@@ -12,7 +12,6 @@ addons:
     - netcdf-bin 
     - libnetcdf-dev
     - python-numpy 
-    - python-matplotlib
     - python-tox
 install:
   - python setup.py install
