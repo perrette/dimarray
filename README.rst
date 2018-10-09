@@ -91,7 +91,6 @@ Install
 - netCDF4 (tested with 1.0.8, 1.2.1) (netCDF archiving) (see notes below)
 - matplotlib 1.1 (plotting)
 - pandas 0.11 (interface with pandas)
-- cartopy 0.11 (dimarray.geo.crs)
 
 Download the latest version from github and extract from archive
 Then from the dimarray repository type (possibly preceded by sudo):

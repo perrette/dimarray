@@ -31,7 +31,6 @@ or with `ipyhton`
     reference_api.dataset.rst
     reference_api.axes.rst
     reference_api.functions.rst
-    reference_api.geo.rst
     comparison_table.rst
 
 ..    reference_api.dataset.rst
