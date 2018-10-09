@@ -1,5 +1,10 @@
+sudo: false
 language: python
-sudo : false
+python:
+  - "2.7"
+  - "3.5"
+install: pip install tox-travis
+script: tox
 addons:
   apt:
     packages:
@@ -8,28 +13,5 @@ addons:
     - libnetcdf-dev
     - python-numpy 
     - python-matplotlib
-python:
-  - "2.7"
-notifications:
-  email: false
-before_install:
-  - pip install pip --upgrade
-  - pip install netcdf4
-  - pip install scipy
-  # - pip install pandas  # optional requirement
-# install cartopy
-  # - pip install cython scipy Pillow
-  # - pip install cartopy
-# test coverage
-  - pip install pytest pytest-cov
-  - pip install coveralls
-#optional dependencies
-  # - pip install pandas  # to-pandas
-# cartopy projections ?
-# iris?
 install:
   - python setup.py install
-
-script: py.test --cov dimarray.core --cov dimarray.dataset --cov dimarray.io.nc dimarray tests
-
-after-success: coveralls
