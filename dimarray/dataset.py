@@ -476,8 +476,7 @@ class Dataset(AbstractDataset, odict, OpMixin, GetSetDelAttrMixin):
         **kwargs : key-word arguments
             Also reset other axis attributes, which can be single metadata
             or other axis attributes, via using `setattr`
-            This includes special attributes `weights` and `attrs` (the latter
-            reset all attributes)
+            This includes special attribute `attrs` (which reset all attributes)
 
         Returns
         -------

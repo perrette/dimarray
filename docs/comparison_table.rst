@@ -77,9 +77,9 @@ a.all()             a.all()
 a.any()             a.any()             
 a.prod()            a.prod()            
 a.sum()             a.sum()             
-a.mean()            a.mean()            with optional "weights=" parameter to transform into a weighted mean, which is also checked from Axis attribute.
-a.std()             a.std()             idem
-a.var()             a.var()             idem                         
+a.mean()            a.mean()            
+a.std()             a.std()            
+a.var()             a.var()           
 a.argmax()          a.argmax()          in dimarray, returns axis value of max instead of integer position on the axis
 a.argmin()          a.argmin()          idem
 a.cumsum()          a.cumsum()          

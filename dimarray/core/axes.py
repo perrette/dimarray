@@ -96,16 +96,14 @@ class Axis(GetSetDelAttrMixin, AbstractAxis):
     values : numpy array (or list) 
     name : name (attribute)
 
-    weights : [None] associated list of weights 
     tol : [None], if not None, attempt a nearest neighbour search with specified tolerance
     """
-    __metadata_exclude__ = ['values','name','weights']
+    __metadata_exclude__ = ['values','name']
 
-    def __init__(self, values, name="", weights=None, dtype=None, tol=None, **kwargs):
+    def __init__(self, values, name="", dtype=None, tol=None, **kwargs):
         self.name = name or getattr(values, "name", "")
         self._values = _check_axis_values(values, dtype)
         self.name = name 
-        self.weights = weights # additional checks
         self._tol = tol
         self._attrs = odict()
         self._attrs.update(kwargs)
@@ -143,26 +141,6 @@ class Axis(GetSetDelAttrMixin, AbstractAxis):
     def tol(self, val):
         self._tol = val
 
-    @property
-    def weights(self):
-        return self._weights
-
-    @weights.setter
-    def weights(self, _weights):
-        if _weights is None or callable(_weights):
-            pass
-        else:
-            try:
-                _weights = np.asarray(_weights)
-            except:
-                raise TypeError("weight must be array-like or callable, got: {}".format(_weights))
-            if _weights.size != self.size:
-                raise ValueError("weights must have the same size as axis values, got: {} and {} !".format(_weights.size, self.size))
-        self._weights = _weights
-
-    @weights.deleter
-    def weights(self):
-        self._weights = None
 
     def sort(self, *args, **kwargs):
         # in-place sort
@@ -179,11 +157,7 @@ class Axis(GetSetDelAttrMixin, AbstractAxis):
         values = self.values[item]
         if not isinstance(values, np.ndarray):
             return values # if collapsed to scalar, just return it
-        if isinstance(self.weights, np.ndarray):
-            weights = self.weights[item]
-        else:
-            weights = self.weights
-        newaxis = Axis(values, self.name, weights=weights, tol=self.tol, **self.attrs)
+        newaxis = Axis(values, self.name, tol=self.tol, **self.attrs)
         # slices keep the ordering
         if self._monotonic and type(item) is slice:
             newaxis._monotonic = self._monotonic
@@ -229,11 +203,7 @@ class Axis(GetSetDelAttrMixin, AbstractAxis):
         subaxis : Axis instance
         """
         values = self._values.take(indices, mode=mode)
-        if isinstance(self.weights, np.ndarray):
-            weights = self.weights.take(indices, mode=mode)
-        else:
-            weights = self.weights
-        return Axis(values, self.name, weights=weights, tol=self.tol, **self.attrs)
+        return Axis(values, self.name, tol=self.tol, **self.attrs)
 
 
     def set(self, values=None, name=None, inplace=True, **kwargs):
@@ -256,7 +226,7 @@ class Axis(GetSetDelAttrMixin, AbstractAxis):
         **kwargs : key-word arguments
             Also reset other axis attributes, which can be single metadata
             or other axis attributes, via using `setattr`
-            This includes special attributes `weights` and `attrs` (the latter
+            This includes special attributes `attrs` (the latter
             reset all attributes)
 
         Returns
@@ -319,7 +289,7 @@ class Axis(GetSetDelAttrMixin, AbstractAxis):
         self, other, consistent_kinds = _check_axes_merge(self, other)
         
         if np.all(self.values == other.values):
-            # TODO: check other attributes such as weights
+            # TODO: check other attributes 
             return self.copy()
         elif self.values.size == 0:
             return other
@@ -351,7 +321,7 @@ class Axis(GetSetDelAttrMixin, AbstractAxis):
         self, other, consistent_kinds = _check_axes_merge(self, other)
 
         if np.all(self.values == other.values):
-            # TODO: check other attributes such as weights
+            # TODO: check other attributes 
             return self.copy()
         elif self.values.size == 0:
             return Axis([], self.name)
@@ -408,41 +378,6 @@ class Axis(GetSetDelAttrMixin, AbstractAxis):
     def __array__(self): 
         return self.values.__array__
 
-    def _get_weights(self, weights=None):
-        """ return axis weights as a DimArray
-
-        Parameters
-        ----------
-        weights : array-like or callable, optional
-            if provided, will be used instead of self.weights
-            used in weighted transformations (see doc in there)
-        """
-        from .dimarraycls import DimArray
-
-        if weights is None:
-            weights = self.weights
-
-        # no weights
-        if weights is None:
-            weights = np.ones_like(self.values)
-
-        # function of axis
-        elif callable(weights):
-            weights = weights(self.values)
-
-        # same weight for every element
-        elif np.size(weights) == 1:
-            weights = np.zeros_like(self.values) + weights
-
-        # already an array of weights
-        else:
-            weights = np.asarray(weights)
-
-        # index on one dimension
-        ax = Axis(self.values, name=self.name)
-
-        return DimArray(weights, [ax])
-
     def to_pandas(self):
         """ convert to pandas Index
         """
@@ -481,7 +416,6 @@ class MultiAxis(Axis):
         self.axes = Axes(axes)
         self._name = ",".join([ax.name for ax in self.axes])
         self._values = None  # values not computed unless needed
-        self._weights = None  
         self._size = None  
         self._attrs = odict()
 
@@ -502,18 +436,6 @@ class MultiAxis(Axis):
         val = np.empty(aval.shape[0], dtype=object)
         val[:] = zip(*aval.T.tolist()) # pass a list of tuples
         return val 
-
-    @property
-    def weights(self):
-        """ Combine the weights as a product of the individual axis weights
-        """
-        if self._weights is None:
-            #self._weights = self._get_weights()
-            if np.all([ax.weights is None for ax in self.axes]):
-                self._weights = None
-            else:
-                self._weights =_flatten(*[ax._get_weights() for ax in self.axes]).prod(axis=1)
-        return self._weights
 
     @property
     def size(self): 

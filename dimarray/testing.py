@@ -86,7 +86,6 @@ def assert_equal_axes(actual, expected, metadata=True):
     assert actual == expected
     if metadata:
         assert_equal_metadata(actual.attrs, expected.attrs)
-        assert np.all(actual.weights == expected.weights)
 
 def assert_equal_dimarrays(actual, expected, metadata=True, approx=False):
     assert isinstance(expected, da.DimArray)

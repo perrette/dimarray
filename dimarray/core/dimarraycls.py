@@ -946,20 +946,9 @@ mismatch between values and axes""".format(inferred, self.values.shape)
     sum = _transform.sum
     prod = _transform.prod
 
-    # use weighted mean/std/var by default
-    _get_weights = _transform._get_weights
     mean = _transform.mean
     std = _transform.std
     var = _transform.var
-
-    # but provide standard mean just in case
-    _mean = _transform._mean
-    _std = _transform._std
-    _var = _transform._var
-
-    #_mean = _transform.mean
-    #_var = _transform.var
-    #_std = _transform.std
 
     all = _transform.all
     any = _transform.any
@@ -1538,8 +1527,8 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         **kwargs : key-word arguments
             Also reset other axis attributes, which can be single metadata
             or other axis attributes, via using `setattr`
-            This includes special attributes `weights` and `attrs` (the latter
-            reset all attributes)
+            This includes special attribute `attrs` (which
+            resets all attributes)
 
         Returns
         -------
