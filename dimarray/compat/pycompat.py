@@ -6,10 +6,12 @@ if PY3:
     basestring = str
     unicode_type = str
     bytes_type = bytes
-    def iteritems(d):
-        return iter(d.items())
-    def itervalues(d):
-        return iter(d.values())
+    def dictitems(d):
+        return list(d.items())
+    def dictkeys(d):
+        return list(d.keys())
+    def dictvalues(d):
+        return list(d.values())
     range = range
     zip = zip
     from collections import OrderedDict
@@ -18,10 +20,12 @@ else:
     basestring = basestring
     unicode_type = unicode
     bytes_type = str
-    def iteritems(d):
-        return d.iteritems()
-    def itervalues(d):
-        return d.itervalues()
+    def dictitems(d):
+        return d.items()
+    def dictkeys(d):
+        return d.keys()
+    def dictvalues(d):
+        return d.values()
     range = xrange
     from itertools import izip as zip
     try:

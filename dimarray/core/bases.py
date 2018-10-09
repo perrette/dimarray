@@ -2,13 +2,12 @@
 """
 from __future__ import print_function
 from __future__ import absolute_import
-from future.utils import string_types
+from future.utils import string_types, PY2
 import warnings
 import copy
 from collections import OrderedDict as odict
 import numpy as np
 from dimarray.config import get_option
-from dimarray.compat.pycompat import iteritems, zip
 from dimarray.tools import is_numeric
 from dimarray.core.indexing import locate_one, locate_many, locate_slice, expanded_indexer
 from dimarray.prettyprinting import repr_axis, repr_dataset, repr_axes, str_axes, str_dataset, str_dimarray
@@ -28,7 +27,7 @@ class GetSetDelAttrMixin(object):
         elif name not in self.__metadata_include__ \
                 and (name.startswith('_') or name in self.__metadata_exclude__):
             pass # raise error
-        elif hasattr(self, 'dims') and name in self.dims:
+        elif hasattr(type(self), 'dims') and name in self.dims:
             return self.axes[name].values # return axis values
         elif name in self.attrs.keys():
             return self.attrs[name]
@@ -40,7 +39,7 @@ class GetSetDelAttrMixin(object):
                  or name in self.__metadata_exclude__ \
                  or hasattr(self.__class__, name)):
             object.__setattr__(self, name, value) # do nothing special
-        elif hasattr(self, 'axes') and name in self.dims:
+        elif hasattr(type(self), 'axes') and name in self.dims:
             self.axes[name][()] = value # modify axis values
         else:
             self.attrs[name] = value # add as metadata
@@ -53,6 +52,8 @@ class GetSetDelAttrMixin(object):
             del self.attrs[name]
         else:
             return object.__delattr__(self, name)
+
+
 
 # class GetSetDelAttrMixin(object):
 #     pass

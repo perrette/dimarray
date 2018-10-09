@@ -195,7 +195,7 @@ def _get_aligned_axes(arrays, join='outer', axis=None , sort=False, strict=False
     for jj, d in enumerate(dims):
 
         # arrays which have that dimension
-        ii = filter(lambda i: d in arrays[i].dims, range(len(arrays)))
+        ii = [i for i in range(len(arrays)) if d in arrays[i].dims]
 
         if strict and len(ii) != len(arrays):
             raise ValueError("align (strict=True): some arrays lack dimension {}".format(d))

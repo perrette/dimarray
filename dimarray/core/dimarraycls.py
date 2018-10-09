@@ -13,6 +13,7 @@ from dimarray.tools import anynan, pandas_obj, format_doc, isscalar
 from dimarray.config import get_option
 from dimarray import plotting
 from dimarray.prettyprinting import repr_dimarray
+from dimarray.compat.pycompat import dictkeys, dictvalues
 
 # from .metadata import MetadataBase
 from .bases import AbstractDimArray, GetSetDelAttrMixin, OpMixin
@@ -430,9 +431,9 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         # convert dict to sequence if needed
         if _is_dictlike(nested_data):
             if label0 is None:
-                label0 = nested_data.keys()
+                label0 = dictkeys(nested_data)
             if callable(nested_data.values):
-                nested_data = nested_data.values()
+                nested_data = dictvalues(nested_data)
             else:
                 nested_data = nested_data.values
 
@@ -1674,11 +1675,11 @@ def array(data, *args, **kwargs):
         from collections import OrderedDict as odict
 
         d = odict()
-        keys = kwargs.pop('keys', data.keys())
+        keys = kwargs.pop('keys', dictkeys(data))
         for k in keys:
             d[k] = data[k]
 
-        data = d.values()
+        data = dictvalues(d)
         kwargs['keys'] = keys
 
     # sequence: align axes and stack arrays

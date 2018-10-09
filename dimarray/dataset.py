@@ -9,6 +9,7 @@ import numpy as np
 import dimarray as da  # for the doctest, so that they are testable via py.test
 from dimarray.tools import format_doc, isscalar
 from dimarray.config import get_option
+from dimarray.compat.pycompat import dictkeys, dictvalues
 
 from .core import DimArray, array, Axis, Axes
 from .core import align as align_axes, stack, concatenate
@@ -70,8 +71,8 @@ class Dataset(AbstractDataset, odict, OpMixin, GetSetDelAttrMixin):
         super(Dataset, self).__init__()
         #self.data = odict()
 
-        values = data.values()
-        keys = data.keys()
+        values = dictvalues(data)
+        keys = dictkeys(data)
 
         # Check everything is a DimArray
         #for key, value in zip(keys, values):

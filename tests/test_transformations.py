@@ -223,7 +223,7 @@ class TestInterp(unittest.TestCase):
         " test 3-D interp"
         dima_3d = self.dima.newaxis('bla',np.arange(2)).newaxis('bli',np.arange(3)) # should be 10^4 slower
         interpolated = dima_3d.interp_axis(self.newindex, axis=-1)
-        for i in xrange(2):
+        for i in range(2):
             actual = interpolated.ix[i,0]
             expected = dima_3d.ix[i,0].interp_axis(self.newindex) # use np.interp directly
             assert_equal_dimarrays(actual, expected)

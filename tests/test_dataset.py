@@ -175,7 +175,7 @@ def test_dataset_derived_axes(ds):
 def test_append_axis():
     ds = da.Dataset()
     ds.axes.append(da.Axis([10,20,30], 'myaxis'))
-    assert ds.keys() == []
+    assert list(ds.keys()) == []
     assert ds.dims == ("myaxis",)
 
 # Test indexing dataset

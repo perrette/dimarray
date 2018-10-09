@@ -74,7 +74,7 @@ class ReadTest(object):
     def test_csiro(self):
         " manual check for the CSIRO dataset "
         ds = self.ds 
-        assert ds.keys() == [u'tsl', u'temp']
+        assert list(ds.keys()) == [u'tsl', u'temp']
         assert ds.dims == ('time', 'scenario')
         assert ds.scenario[:].tolist() == ['historical', 'rcp26', 'rcp45', 'rcp60', 'rcp85']
         assert_equal( ds.time , np.arange(1850, 2301) )
@@ -112,7 +112,7 @@ class TestReadOpenNC(ReadTest):
 
     def test_indexing(self):
 
-        n0 = len(self.ds.nc.dimensions.values()[0])
+        n0 = len(list(self.ds.nc.dimensions.values())[0])
         boolidx = ([True, False]*n0)[:n0] # every second index is True, starting from the first
         indices = [5, -1, [0, 1, 2], boolidx, (0,1), slice(None), (), slice(2,10,2)]
 
@@ -204,7 +204,7 @@ class TestIO(object):
 
         # position indexing
         with da.open_nc(self.ncfile) as ds_disk:
-            v0 = ds_disk.keys()[0]
+            v0 = list(ds_disk.keys())[0]
             for idx in indices:
                 print(v0, self.ds_var[v0].shape, idx)
                 expected = self.ds_var[v0].ix[idx]
@@ -224,7 +224,7 @@ class TestIO(object):
         labels.append(boolidx)
 
         with da.open_nc(self.ncfile) as ds_disk:
-            v0 = ds_disk.keys()[0]
+            v0 = list(ds_disk.keys())[0]
             for lidx in labels:
                 expected = self.ds_var[v0][lidx]
                 actual = ds_disk[v0][lidx]
@@ -287,21 +287,21 @@ def test_standalone_axis(tmpdir):
     # see test in test_dataset.py
     ds = da.Dataset()
     ds.axes.append(da.Axis([10,20,30], 'myaxis'))
-    assert ds.keys() == []
+    assert list(ds.keys()) == []
     assert ds.dims == ("myaxis",)
 
     fname = tmpdir.join("test_standalone_axis.nc").strpath # have test.nc in some temporary directory
     ds.write_nc(fname)
     # read again
     ds = da.read_nc(fname)
-    assert ds.keys() == []
+    assert list(ds.keys()) == []
     assert ds.dims == ("myaxis",)
 
 def test_redundant_axis(tmpdir):
     # see test in test_dataset.py
     ds = da.Dataset()
     ds["myaxis"] = da.DimArray([10,20,30], da.Axis([10,20,30], 'myaxis'))
-    assert ds.keys() == ["myaxis"]
+    assert list(ds.keys()) == ["myaxis"]
     assert ds.dims == ("myaxis",)
 
     fname = tmpdir.join("test_redundant_axis.nc").strpath # have test.nc in some temporary directory
@@ -309,12 +309,12 @@ def test_redundant_axis(tmpdir):
 
     # read whole dataset: variable not counted as variable
     ds = da.read_nc(fname)
-    assert ds.keys() == []
+    assert list(ds.keys()) == []
     assert ds.dims == ("myaxis",)
 
     # specify dimension variable
     ds = da.read_nc(fname, ["myaxis"])
-    assert ds.keys() == ["myaxis"]
+    assert list(ds.keys()) == ["myaxis"]
     assert ds.dims == ("myaxis",)
 
 
