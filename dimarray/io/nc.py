@@ -1,5 +1,3 @@
-""" NetCDF I/O to access and save geospatial data
-"""
 import os
 import re
 import glob, copy
@@ -12,7 +10,7 @@ import dimarray as da
 #from geo.data.index import to_slice, _slice3D
 
 from dimarray.compat.pycompat import basestring, zip
-from dimarray.tools import format_doc
+from dimarray.tools import format_doc, isscalar
 from dimarray.dataset import Dataset, concatenate_ds, stack_ds
 from dimarray.core import DimArray, Axis, Axes
 from dimarray.config import get_option
@@ -507,7 +505,7 @@ class DimArrayOnDisk(GetSetDelAttrMixin, NetCDFVariable, AbstractDimArray):
                     self.axes[ax.name][idx] = axis
                 else:
                     # dimension variable already written, simple check
-                    ondisk = self.axes[ax.name][idx if not np.isscalar(idx) else [idx]].values
+                    ondisk = self.axes[ax.name][idx if not (np.isscalar(idx) or np.ndim(idx)==0)  else [idx]].values
                     inmemory = axis.values
                     # inmemory, _ = maybe_encode_values(axis.values)
                     if not np.all(ondisk == inmemory):
@@ -591,7 +589,7 @@ class DimArrayOnDisk(GetSetDelAttrMixin, NetCDFVariable, AbstractDimArray):
         axes = []
         for i, ix in enumerate(idx_tuple):
             ax = self.axes[i][ix]
-            if not np.isscalar(ax): # do not include scalar axes
+            if np.ndim(ax) != 0: # do not include scalar axes
                 axes.append(ax)
         return axes
 
@@ -657,10 +655,11 @@ class AxisOnDisk(GetSetDelAttrMixin, NetCDFVariable, AbstractAxis):
 
         if np.isscalar(indices): 
             assert values.size == 1
-            if values.ndim == 0:
+            try:
+                values = np.asscalar(values)
+            except AttributeError:
                 values = values[()]
-            else:
-                values = values[0]
+
 
         ds.variables[name][indices] = values
 
@@ -675,12 +674,15 @@ class AxisOnDisk(GetSetDelAttrMixin, NetCDFVariable, AbstractAxis):
     def __getitem__(self, indices):
         values = self.values[indices]
 
-        # do not produce an Axis object
-        if np.isscalar(values):
-            return values
 
         if isinstance(values, np.ma.MaskedArray):
             values = values.filled(0)
+
+        # do not produce an Axis object
+        if np.isscalar(values):
+            return values
+        elif np.ndim(values) == 0:
+            return np.asscalar(values)
 
         ax = Axis(values, self._name)
 
@@ -883,13 +885,15 @@ def open_nc(file_name, *args, **kwargs):
     >>> ds['surfvelmag'].ix[:10, -1] # load first 10 y1 values, and last x1 value
     dimarray: 10 non-null elements (0 null)
     0 / y1 (10): -3400000.0 to -3175000.0
-    array([ 0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.], dtype=float32)
+    array([0., 0., 0., 0., 0., 0., 0., 0., 0., 0.], dtype=float32)
 
     >>> ds['surfvelmag'].sel(x1=700000, y1=-3400000)
-    0.0
+    dimarray: 1 non-null elements (0 null)
+    array(0., dtype=float32)
 
     >>> ds['surfvelmag'].isel(x1=-1, y1=0)
-    0.0
+    dimarray: 1 non-null elements (0 null)
+    array(0., dtype=float32)
 
     Need to close the Dataset at the end
 

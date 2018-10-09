@@ -20,8 +20,8 @@ Let's use this dimarray as example:
 dimarray: 6 non-null elements (0 null)
 0 / variable (2): 'a' to 'b'
 1 / time (3): 1950 to 1970
-array([[ 1.,  2.,  3.],
-       [ 4.,  5.,  6.]])
+array([[1., 2., 3.],
+       [4., 5., 6.]])
 
 .. _values_and_axes:
 
@@ -31,8 +31,8 @@ values and axes
 Array data are stored in a `values` **attribute**:
 
 >>> a.values
-array([[ 1.,  2.,  3.],
-       [ 4.,  5.,  6.]])
+array([[1., 2., 3.],
+       [4., 5., 6.]])
 
 while its axes are stored in `axes`:
 

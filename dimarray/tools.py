@@ -27,7 +27,7 @@ def pandas_obj(values, *axes):
     except ImportError:
         raise ImportError("install pandas to use this method")
 
-    pandas_classes = [pd.Series, pd.DataFrame, pd.Panel, pd.Panel4D]
+    pandas_classes = [pd.Series, pd.DataFrame, pd.Panel]
 
     n = pd.np.array(values).ndim
     if n > len(pandas_classes):
@@ -53,6 +53,10 @@ def ndindex(indices, pos):
     """
     return (slice(None),)*pos + np.index_exp[indices]
 
+def isscalar(obj):
+    # return np.ndim(obj) == 0
+    return np.isscalar(obj)
+
 def is_DimArray(obj):
     """ avoid import conflict
     """
@@ -72,7 +76,7 @@ def is_array1d_equiv(a):
     else:
         try:
             a = np.asarray(a)
-            res = a.ndim == 1 and ((a[0] is str) or np.isscalar(a[0]))
+            res = a.ndim == 1 and ((a[0] is str) or isscalar(a[0]))
         except:
             res = False
     return res

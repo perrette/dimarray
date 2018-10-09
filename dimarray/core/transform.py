@@ -108,29 +108,29 @@ def apply_along_axis(self, func, axis=None, skipna=False, args=(), **kwargs):
     0 / items (2): 'a' to 'b'
     1 / x0 (2): 0 to 1
     2 / x1 (2): 0 to 1
-    array([[[  0.,   1.],
-            [  2.,   3.]],
+    array([[[ 0.,  1.],
+            [ 2.,  3.]],
     <BLANKLINE>
-           [[ nan,   1.],
-            [  2.,   3.]]])
+           [[nan,  1.],
+            [ 2.,  3.]]])
     >>> c.sum(axis=0)
     dimarray: 3 non-null elements (1 null)
     0 / x0 (2): 0 to 1
     1 / x1 (2): 0 to 1
-    array([[ nan,   2.],
-           [  4.,   6.]])
+    array([[nan,  2.],
+           [ 4.,  6.]])
     >>> c.sum(0, skipna=True)
     dimarray: 4 non-null elements (0 null)
     0 / x0 (2): 0 to 1
     1 / x1 (2): 0 to 1
-    array([[ 0.,  2.],
-           [ 4.,  6.]])
+    array([[0., 2.],
+           [4., 6.]])
     >>> c.median(0)
     dimarray: 3 non-null elements (1 null)
     0 / x0 (2): 0 to 1
     1 / x1 (2): 0 to 1
-    array([[ nan,   1.],
-           [  2.,   3.]])
+    array([[nan,  1.],
+           [ 2.,  3.]])
     """
 
 
@@ -471,35 +471,35 @@ def diff(self, axis=-1, scheme="backward", keepaxis=False, n=1):
     >>> s 
     dimarray: 4 non-null elements (0 null)
     0 / time (4): 1950 to 1953
-    array([  1.,   3.,   6.,  10.])
+    array([ 1.,  3.,  6., 10.])
 
     `diff` reduces axis size by one, by default
 
     >>> s.diff()
     dimarray: 3 non-null elements (0 null)
     0 / time (3): 1951 to 1953
-    array([ 2.,  3.,  4.])
+    array([2., 3., 4.])
 
     The `keepaxis=` parameter fills array with `nan` where necessary to keep the axis unchanged. Default is backward differencing: `diff[i] = v[i] - v[i-1]`.
 
     >>> s.diff(keepaxis=True)
     dimarray: 3 non-null elements (1 null)
     0 / time (4): 1950 to 1953
-    array([ nan,   2.,   3.,   4.])
+    array([nan,  2.,  3.,  4.])
 
     But other schemes are available to control how the new axis is defined: `backward` (default), `forward` and even `centered`
 
     >>> s.diff(keepaxis=True, scheme="forward") # diff[i] = v[i+1] - v[i]
     dimarray: 3 non-null elements (1 null)
     0 / time (4): 1950 to 1953
-    array([  2.,   3.,   4.,  nan])
+    array([ 2.,  3.,  4., nan])
 
     The `keepaxis=True` option is invalid with the `centered` scheme, since every axis value is modified by definition:
 
     >>> s.diff(axis='time', scheme='centered')
     dimarray: 3 non-null elements (0 null)
     0 / time (3): 1950.5 to 1952.5
-    array([ 2.,  3.,  4.])
+    array([2., 3., 4.])
     """
     # If `axis` is None (operations on the flattened array), just returns the numpy array
     if axis is None:
@@ -689,7 +689,7 @@ def interp_axis(self, values, axis=0, left=np.nan, right=np.nan, issorted=None):
     >>> a.interp_axis([1,2,3])
     dimarray: 3 non-null elements (0 null)
     0 / x0 (3): 1 to 3
-    array([ 3. ,  3.5,  4. ])
+    array([3. , 3.5, 4. ])
     
     Axis is not sorted
 
@@ -697,7 +697,7 @@ def interp_axis(self, values, axis=0, left=np.nan, right=np.nan, issorted=None):
     >>> a.interp_axis([1,2,3])
     dimarray: 3 non-null elements (0 null)
     0 / x0 (3): 1 to 3
-    array([ 1.,  2.,  3.])
+    array([1., 2., 3.])
 
     N-Dimensional
 
@@ -706,8 +706,8 @@ def interp_axis(self, values, axis=0, left=np.nan, right=np.nan, issorted=None):
     dimarray: 6 non-null elements (0 null)
     0 / x0 (2): 'a' to 'b'
     1 / x1 (3): 0.5 to 2.0
-    array([[ 1.5,  2.5,  3. ],
-           [ 4.5,  5.5,  6. ]])
+    array([[1.5, 2.5, 3. ],
+           [4.5, 5.5, 6. ]])
 
     Out-of-bound handling (nan by default, but can be changed via left, right)
 
@@ -752,7 +752,7 @@ def interp_like(self, other, **kwargs):
     >>> a.interp_like(b)
     dimarray: 3 non-null elements (0 null)
     0 / x1 (3): 1 to 3
-    array([ 3. ,  3.5,  4. ])
+    array([3. , 3.5, 4. ])
     """
     if hasattr(other, 'axes'):
         axes = other.axes

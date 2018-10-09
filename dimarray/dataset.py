@@ -6,7 +6,7 @@ import warnings, copy
 import numpy as np
 
 import dimarray as da  # for the doctest, so that they are testable via py.test
-from dimarray.tools import format_doc
+from dimarray.tools import format_doc, isscalar
 from dimarray.config import get_option
 
 from .core import DimArray, array, Axis, Axes
@@ -659,7 +659,7 @@ class Dataset(AbstractDataset, odict, OpMixin, GetSetDelAttrMixin):
             newaxis = values
             values = newaxis.values
             axis = newaxis.name
-        elif np.isscalar(values) or type(values) is slice:
+        elif isscalar(values) or type(values) is slice:
             raise TypeError("Please provide list, array-like or Axis object to perform re-indexing")
         else:
             values = np.asarray(values)
@@ -746,17 +746,17 @@ class Dataset(AbstractDataset, odict, OpMixin, GetSetDelAttrMixin):
         dimarray: 4 non-null elements (0 null)
         0 / x0 (2): 0 to 1
         1 / x1 (2): 0 to 1
-        array([[ 1.,  1.],
-               [ 1.,  1.]])
+        array([[1., 1.],
+               [1., 1.]])
         >>> ds += 1
         >>> ds['b']
         dimarray: 4 non-null elements (0 null)
         0 / x0 (2): 0 to 1
         1 / x1 (2): 0 to 1
-        array([[ 1.,  2.],
-               [ 2.,  3.]])
+        array([[1., 2.],
+               [2., 3.]])
         """
-        assert isinstance(other, Dataset) or np.isscalar(other), "can only combine Datasets objects (func={})".format(func.__name__)
+        assert isinstance(other, Dataset) or isscalar(other), "can only combine Datasets objects (func={})".format(func.__name__)
         # align all axes first
         reindex = get_option("op.reindex")
         if reindex and hasattr(other, 'axes') and other.axes != self.axes:

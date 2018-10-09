@@ -25,8 +25,8 @@ Provide a list of axis values (`axes=` parameter) and a list of axis names (`dim
 dimarray: 6 non-null elements (0 null)
 0 / variable (2): 'a' to 'b'
 1 / time (3): 1950 to 1970
-array([[ 1.,  2.,  3.],
-       [ 4.,  5.,  6.]])
+array([[1., 2., 3.],
+       [4., 5., 6.]])
 
 .. _List_of_tuples:
 
@@ -40,8 +40,8 @@ DimArray axes can also be initialized via a list of tuples (axis name, axis valu
 dimarray: 6 non-null elements (0 null)
 0 / variable (2): 'a' to 'b'
 1 / time (3): 1950 to 1970
-array([[ 1.,  2.,  3.],
-       [ 4.,  5.,  6.]])
+array([[1., 2., 3.],
+       [4., 5., 6.]])
 
 .. _Recursive_definition___dict_of_dict:
 

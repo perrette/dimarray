@@ -28,8 +28,8 @@ via `axes` and `dims` parameters.
 dimarray: 6 non-null elements (0 null)
 0 / variable (2): 'a' to 'b'
 1 / time (3): 1950 to 1970
-array([[ 1.,  2.,  3.],
-       [ 4.,  5.,  6.]])
+array([[1., 2., 3.],
+       [4., 5., 6.]])
 
 .. _data_structure:
 
@@ -39,8 +39,8 @@ data structure
 Array data are stored in a `values` **attribute**:
 
 >>> a.values
-array([[ 1.,  2.,  3.],
-       [ 4.,  5.,  6.]])
+array([[1., 2., 3.],
+       [4., 5., 6.]])
 
 while its axes are stored in `axes`
 
@@ -98,7 +98,7 @@ Standard numpy transformations are defined, and now accept axis name:
 >>> a.mean(axis='time')
 dimarray: 2 non-null elements (0 null)
 0 / variable (2): 'a' to 'b'
-array([ 2.,  5.])
+array([2., 5.])
 
 and can ignore **missing values (nans)** if asked to:
 
@@ -107,7 +107,7 @@ and can ignore **missing values (nans)** if asked to:
 >>> a.mean(axis='time', skipna=True)
 dimarray: 2 non-null elements (0 null)
 0 / variable (2): 'a' to 'b'
-array([ 2.5,  5. ])
+array([2.5, 5. ])
 
 .. seealso:: :ref:`page_transformations`
 
@@ -126,7 +126,7 @@ with incomplete sets of items.
 >>> yearly_data + incomplete_yearly_data
 dimarray: 2 non-null elements (1 null)
 0 / year (3): 1950 to 1970
-array([  10.,  101.,   nan])
+array([ 10., 101.,  nan])
 
 .. seealso:: :meth:`reindex_axis <dimarray.DimArray.reindex_axis>`, :meth:`reindex_like <dimarray.DimArray.reindex_like>` and :func:`align_axes <dimarray.align_axes>`
 
@@ -255,8 +255,8 @@ In the above note that new axis values were provided via the parameter `keys=`. 
 dimarray: 5 non-null elements (1 null)
 0 / items (2): 'a' to 'b'
 1 / time (3): 1950 to 1952
-array([[ 11.,  12.,  13.],
-       [ 21.,  nan,  23.]])
+array([[11., 12., 13.],
+       [21., nan, 23.]])
 
 .. seealso:: :ref:`ref_api_join`
 
@@ -272,8 +272,8 @@ Say you have data with NaNs:
 dimarray: 3 non-null elements (3 null)
 0 / items (2): 'a' to 'b'
 1 / time (3): 1950 to 1952
-array([[ 11.,  nan,  nan],
-       [ 21.,  nan,  23.]])
+array([[11., nan, nan],
+       [21., nan, 23.]])
 
 You can drop every column that contains a NaN
 
@@ -281,8 +281,8 @@ You can drop every column that contains a NaN
 dimarray: 2 non-null elements (0 null)
 0 / items (2): 'a' to 'b'
 1 / time (1): 1950 to 1950
-array([[ 11.],
-       [ 21.]])
+array([[11.],
+       [21.]])
 
 or actually control decide to retain only these columns with a minimum number of valid data, here one:
 
@@ -290,8 +290,8 @@ or actually control decide to retain only these columns with a minimum number of
 dimarray: 3 non-null elements (1 null)
 0 / items (2): 'a' to 'b'
 1 / time (2): 1950 to 1952
-array([[ 11.,  nan],
-       [ 21.,  23.]])
+array([[11., nan],
+       [21., 23.]])
 
 .. seealso:: :ref:`ref_api_missingvalues`
 

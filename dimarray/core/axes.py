@@ -5,7 +5,7 @@ import string
 import copy
 import numpy as np
 
-from dimarray.tools import is_DimArray, is_array1d_equiv, format_doc
+from dimarray.tools import is_DimArray, is_array1d_equiv, format_doc, isscalar
 from dimarray.core.bases import AbstractAxis, AbstractAxes, GetSetDelAttrMixin
 from dimarray.core.indexing import _maybe_cast_type, is_monotonic
 
@@ -152,7 +152,7 @@ class Axis(GetSetDelAttrMixin, AbstractAxis):
         """
         if type(item) is slice and item == slice(None):
             return self
-        if not isinstance(item, slice) and not np.isscalar(item):
+        if not isinstance(item, slice) and not isscalar(item):
             item = np.asarray(item) # needed for boolean axes, otherwise problem
         values = self.values[item]
         if not isinstance(values, np.ndarray):
@@ -173,7 +173,7 @@ class Axis(GetSetDelAttrMixin, AbstractAxis):
         array([1, 2, 3])
         >>> a[0] = 1.2  # convert to float
         >>> a.values
-        array([ 1.2,  2. ,  3. ])
+        array([1.2, 2. , 3. ])
         >>> a[0] = 'a'  # convert to object dtype
         >>> a.values
         array(['a', 2.0, 3.0], dtype=object)
@@ -731,7 +731,7 @@ def _init_axes(axes=None, dims=None, labels=None, shape=None, check_order=True):
         axes = Axes(axes)
 
     # axes contains only axis values, with names possibly provided in `dims=`
-    elif np.all([type(ax) in (list, np.ndarray) for ax in axes]):
+    elif np.all([type(ax) in (list, np.ndarray, np.ma.MaskedArray) for ax in axes]):
         axes = Axes.from_arrays(axes, dims=dims)
 
     # axes only cointain axis labels

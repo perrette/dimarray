@@ -36,14 +36,14 @@ But the `axis=` parameter can also be passed explicitly to reduce only a specifi
 >>> a.mean(axis=0) # sum over first axis 
 dimarray: 3 non-null elements (0 null)
 0 / items (3): 2000 to 2002
-array([ 2.5,  3.5,  4.5])
+array([2.5, 3.5, 4.5])
 
 but it is now also possible to indicate axis name:
 
 >>> a.mean(axis='time') # named axis
 dimarray: 3 non-null elements (0 null)
 0 / items (3): 2000 to 2002
-array([ 2.5,  3.5,  4.5])
+array([2.5, 3.5, 4.5])
 
 In addition, one can now provide a tuple to the `axis=` parameter, to reduce several axes at once
 
@@ -78,15 +78,15 @@ Missing values
 dimarray: 5 non-null elements (1 null)
 0 / x0 (2): 0 to 1
 1 / x1 (3): 0 to 2
-array([[  1.,   2.,   3.],
-       [  4.,   5.,  nan]])
+array([[ 1.,  2.,  3.],
+       [ 4.,  5., nan]])
 
 >>> a.sum(axis=0)  # here the nans are not skipped
 dimarray: 2 non-null elements (1 null)
 0 / x1 (3): 0 to 2
-array([  5.,   7.,  nan])
+array([ 5.,  7., nan])
 
 >>> a.sum(axis=0, skipna=True)
 dimarray: 3 non-null elements (0 null)
 0 / x1 (3): 0 to 2
-array([ 5.,  7.,  3.])
+array([5., 7., 3.])

@@ -118,15 +118,15 @@ def transpose(self, *dims):
     dimarray: 6 non-null elements (0 null)
     0 / x0 (2): 0 to 1
     1 / x1 (3): 0 to 2
-    array([[ 0.,  0.,  0.],
-           [ 0.,  0.,  0.]])
+    array([[0., 0., 0.],
+           [0., 0., 0.]])
     >>> a.T       
     dimarray: 6 non-null elements (0 null)
     0 / x1 (3): 0 to 2
     1 / x0 (2): 0 to 1
-    array([[ 0.,  0.],
-           [ 0.,  0.],
-           [ 0.,  0.]])
+    array([[0., 0.],
+           [0., 0.],
+           [0., 0.]])
     >>> (a.T == a.transpose(1,0)).all() and (a.T == a.transpose('x1','x0')).all()
     True
     """
@@ -690,14 +690,14 @@ def flatten(self, *dims, **kwargs):
     >>> v.flatten(('lon','lat'), insert=0).mean(axis=0)
     dimarray: 2 non-null elements (0 null)
     0 / time (2): 1950 to 1955
-    array([  5.5,  17.5])
+    array([ 5.5, 17.5])
 
     is equivalent to:
 
     >>> v.mean(axis=('lon','lat')) 
     dimarray: 2 non-null elements (0 null)
     0 / time (2): 1950 to 1955
-    array([  5.5,  17.5])
+    array([ 5.5, 17.5])
     """
     reverse= kwargs.pop('reverse',False)
     #insert = kwargs.pop('insert', 0)
@@ -856,37 +856,3 @@ class GroupBy(object):
     min = Desc('min', axis=-1)
     max = Desc('max', axis=-1)
     ptp = Desc('ptp', axis=-1)
-
-#_trans = 'mean','std','var','median','sum','prod', 'all','any','min','max','ptp'
-#for op in _trans:
-#    GroupBy.__dict__[op] = Desc(op, axis=-1)
-
-# def groupby(self, *dims):
-#     """ group by one or several variables along which stat functions can be applied
-#
-#     .. note:: EXPERIMENTAL: will probably be removed or renamed in future releases
-#
-#     Parameters
-#     ----------
-#     *dims: variable list of dims to keep, all others are flattened
-#
-#     Returns
-#     -------
-#     GroupBy object
-#
-#     Notes 
-#     -----
-#     this method is experimental and may change in the future
-#
-#     Examples
-#     --------
-#     >>> from dimarray import DimArray
-#     >>> a = DimArray([[1,2,3],[4,5,6]], [('x',[1,2]), ('items',['a','b','c'])])
-#     >>> a = a.newaxis('y',4) # add an axis of length 4
-#     >>> a.groupby('items').mean()
-#     dimarray: 3 non-null elements (0 null)
-#     0 / items (3): 'a' to 'c'
-#     array([ 2.5,  3.5,  4.5])
-#     """
-#     obj = group(self, dims, reverse=True, insert=0).T
-#     return GroupBy(obj, dims)

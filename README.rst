@@ -38,8 +38,8 @@ via its `axes` and `dims` parameters:
 dimarray: 6 non-null elements (0 null)
 0 / variable (2): 'a' to 'b'
 1 / time (3): 1950 to 1970
-array([[ 1.,  2.,  3.],
-       [ 4.,  5.,  6.]])
+array([[1., 2., 3.],
+       [4., 5., 6.]])
 
 Indexing now works on axes
 
@@ -56,15 +56,16 @@ Basic numpy transformations are also in there:
 >>> a.mean(axis='time')
 dimarray: 2 non-null elements (0 null)
 0 / variable (2): 'a' to 'b'
-array([ 2.,  5.])
+array([2., 5.])
 
 Can export to `pandas` for pretty printing:
 
 >>> a.to_pandas()
 time      1950  1960  1970
 variable                  
-a            1     2     3
-b            4     5     6
+a          1.0   2.0   3.0
+b          4.0   5.0   6.0
+
 
 .. _links:
 

@@ -22,7 +22,7 @@ reindex_axis
 >>> a.reindex_axis([1,2,3])
 dimarray: 2 non-null elements (1 null)
 0 / x0 (3): 1 to 3
-array([  3.,  nan,   4.])
+array([ 3., nan,  4.])
 
 Also works with string indices
 
@@ -30,7 +30,7 @@ Also works with string indices
 >>> b.reindex_axis(['b','d'])
 dimarray: 1 non-null elements (1 null)
 0 / x0 (2): 'b' to 'd'
-array([  2.,  nan])
+array([ 2., nan])
 
 It is possible to fill the missing values with the preceding, or following values of the sorted array (see numpy.searchsorted for more ample documentation):
 
@@ -58,9 +58,9 @@ Same as reindex_axis, except that the new axes are searched for in another array
 dimarray: 6 non-null elements (3 null)
 0 / x0 (3): 'a' to 'c'
 1 / x1 (3): 1 to 3
-array([[  1.,   2.,   3.],
-       [  4.,   5.,   6.],
-       [ nan,  nan,  nan]])
+array([[ 1.,  2.,  3.],
+       [ 4.,  5.,  6.],
+       [nan, nan, nan]])
 
 See :meth:`dimarray.DimArray.reindex_like`
 
@@ -74,7 +74,7 @@ Sometimes you do not want one-to-one re-indexing but interpolation. Use the `Dim
 >>> a.interp_axis([0,1,2,3])
 dimarray: 3 non-null elements (1 null)
 0 / x0 (4): 0 to 3
-array([ nan,  3. ,  3.5,  4. ])
+array([nan, 3. , 3.5, 4. ])
 
 >>> import numpy as np
 >>> time=np.linspace(1950,1955,8)
@@ -115,6 +115,6 @@ It is also possible to proceed to axis alignment on a sequence of arrays
 >>> ya
 dimarray: 2 non-null elements (2 null)
 0 / x0 (4): 1 to 4
-array([ nan,   3.,  nan,   4.])
+array([nan,  3., nan,  4.])
 
 See :func:`dimarray.align`

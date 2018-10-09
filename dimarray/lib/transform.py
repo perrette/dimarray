@@ -118,8 +118,8 @@ def interp2d(dim_array, newaxes, dims=(-2, -1), **kwargs):
     dimarray: 6 non-null elements (0 null)
     0 / y (2): 0 to 10
     1 / x (3): 0 to 2
-    array([[ 0.,  0.,  1.],
-           [ 1.,  0.,  0.]])
+    array([[0., 0., 1.],
+           [1., 0., 0.]])
     >>> newx = [0.5, 1.5]
     >>> newy = np.linspace(0,10,5)
     >>> ai = interp2d(a, [newy, newx])
@@ -127,11 +127,11 @@ def interp2d(dim_array, newaxes, dims=(-2, -1), **kwargs):
     dimarray: 10 non-null elements (0 null)
     0 / y (5): 0.0 to 10.0
     1 / x (2): 0.5 to 1.5
-    array([[ 0.   ,  0.5  ],
-           [ 0.125,  0.375],
-           [ 0.25 ,  0.25 ],
-           [ 0.375,  0.125],
-           [ 0.5  ,  0.   ]])
+    array([[0.   , 0.5  ],
+           [0.125, 0.375],
+           [0.25 , 0.25 ],
+           [0.375, 0.125],
+           [0.5  , 0.   ]])
 
     Use dims keyword argument if new axes order does not match array dimensions
     >>> (ai == interp2d(a, [newx, newy], dims=('x','y'))).all()
@@ -144,18 +144,18 @@ def interp2d(dim_array, newaxes, dims=(-2, -1), **kwargs):
     dimarray: 2 non-null elements (4 null)
     0 / y (3): -5 to 10
     1 / x (2): -1 to 1
-    array([[ nan,  nan],
-           [ nan,   0.],
-           [ nan,   0.]])
+    array([[nan, nan],
+           [nan,  0.],
+           [nan,  0.]])
 
     Nearest neighbor interpolation and out-of-bounds extrapolation
     >>> interp2d(a, [newy, newx], method='nearest', bounds_error=False, fill_value=None)
     dimarray: 6 non-null elements (0 null)
     0 / y (3): -5 to 10
     1 / x (2): -1 to 1
-    array([[ 0.,  0.],
-           [ 0.,  0.],
-           [ 1.,  0.]])
+    array([[0., 0.],
+           [0., 0.],
+           [1., 0.]])
     """
     from scipy.interpolate import RegularGridInterpolator
 

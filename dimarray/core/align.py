@@ -246,9 +246,9 @@ def align(arrays, join='outer', axis=None , sort=False, strict=False):
     >>> align([a, b])
     [dimarray: 3 non-null elements (1 null)
     0 / x0 (4): 0 to 3
-    array([  0.,   1.,   2.,  nan]), dimarray: 3 non-null elements (1 null)
+    array([ 0.,  1.,  2., nan]), dimarray: 3 non-null elements (1 null)
     0 / x0 (4): 0 to 3
-    array([ nan,   1.,   2.,   3.])]
+    array([nan,  1.,  2.,  3.])]
     >>> align([a, b], join='inner')
     [dimarray: 2 non-null elements (0 null)
     0 / x0 (2): 1 to 2
@@ -263,12 +263,12 @@ def align(arrays, join='outer', axis=None , sort=False, strict=False):
     >>> align([a, b])
     [dimarray: 2 non-null elements (1 null)
     0 / x0 (3): 0 to 2
-    array([  0.,   1.,  nan]), dimarray: 6 non-null elements (0 null)
+    array([ 0.,  1., nan]), dimarray: 6 non-null elements (0 null)
     0 / x0 (3): 0 to 2
     1 / x1 (2): 1 to 2
-    array([[ 0.,  1.],
-           [ 2.,  3.],
-           [ 4.,  5.]])]
+    array([[0., 1.],
+           [2., 3.],
+           [4., 5.]])]
     """
     # join = kwargs.pop('join', get_option('align.join'))
     # sort = kwargs.pop('sort', False)
@@ -591,7 +591,7 @@ def reindex_axis(self, values, axis=0, fill_value=np.nan, raise_error=False, met
     >>> b.reindex_axis([1,2,3])
     dimarray: 2 non-null elements (1 null)
     0 / x0 (3): 1 to 3
-    array([  3.,  nan,   4.])
+    array([ 3., nan,  4.])
 
     Or replace with anything else, like -9999
 
@@ -675,7 +675,7 @@ def reindex_like(self, other, **kwargs):
     >>> b.reindex_like(c)
     dimarray: 2 non-null elements (1 null)
     0 / x0 (3): 1 to 3
-    array([  3.,  nan,   4.])
+    array([ 3., nan,  4.])
     """
     if hasattr(other, 'axes'):
         axes = other.axes

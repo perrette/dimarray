@@ -9,7 +9,7 @@ import copy
 import warnings
 from collections import OrderedDict as odict
 
-from dimarray.tools import anynan, pandas_obj, format_doc
+from dimarray.tools import anynan, pandas_obj, format_doc, isscalar
 from dimarray.config import get_option
 from dimarray import plotting
 from dimarray.prettyprinting import repr_dimarray
@@ -72,14 +72,14 @@ class DimArray(AbstractDimArray, OpMixin, GetSetDelAttrMixin):
     dimarray: 6 non-null elements (0 null)
     0 / variable (2): 'grl' to 'ant'
     1 / time (3): 1950 to 1970
-    array([[ 1.,  2.,  3.],
-           [ 4.,  5.,  6.]])
+    array([[1., 2., 3.],
+           [4., 5., 6.]])
 
     Array data are stored in a `values` attribute:
 
     >>> a.values
-    array([[ 1.,  2.,  3.],
-           [ 4.,  5.,  6.]])
+    array([[1., 2., 3.],
+           [4., 5., 6.]])
 
     while its axes are stored in `axes`:
 
@@ -117,7 +117,7 @@ class DimArray(AbstractDimArray, OpMixin, GetSetDelAttrMixin):
     >>> a.mean(axis='time')
     dimarray: 2 non-null elements (0 null)
     0 / variable (2): 'grl' to 'ant'
-    array([ 2.,  5.])
+    array([2., 5.])
 
     During an operation, arrays are automatically re-indexed to span the 
     same axis domain, with nan filling if needed
@@ -127,7 +127,7 @@ class DimArray(AbstractDimArray, OpMixin, GetSetDelAttrMixin):
     >>> a+b
     dimarray: 2 non-null elements (1 null)
     0 / x0 (3): 0 to 2
-    array([  0.,   2.,  nan])
+    array([ 0.,  2., nan])
 
     Dimensions are factored (broadcast) when performing an operation
 
@@ -424,7 +424,7 @@ mismatch between values and axes""".format(inferred, self.values.shape)
                 or isinstance(nested_data, np.ndarray):
             return cls(nested_data, dims=dims, labels=labels)
 
-        elif np.isscalar(nested_data):
+        elif isscalar(nested_data):
             return cls(nested_data)
 
         # convert dict to sequence if needed
@@ -586,8 +586,8 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         dimarray: 6 non-null elements (0 null)
         0 / d0 (2): 'a' to 'b'
         1 / d1 (3): 10.0 to 30.0
-        array([[ 1.,  2.,  3.],
-               [ 4.,  5.,  6.]])
+        array([[1., 2., 3.],
+               [4., 5., 6.]])
 
         Indexing via axis values (default)
 
@@ -595,7 +595,7 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         >>> a
         dimarray: 2 non-null elements (0 null)
         0 / d0 (2): 'a' to 'b'
-        array([ 1.,  4.])
+        array([1., 4.])
         >>> b = v.take(10, axis=1)  # take, by axis position
         >>> c = v.take(10, axis='d1')  # take, by axis name
         >>> d = v.take({'d1':10})  # take, by dict {axis name : axis values}
@@ -625,8 +625,8 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         dimarray: 4 non-null elements (0 null)
         0 / d0 (2): 'a' to 'b'
         1 / d1 (2): 10.0 to 20.0
-        array([[ 1.,  2.],
-               [ 4.,  5.]])
+        array([[1., 2.],
+               [4., 5.]])
         >>> b = v.take([10,20], axis='d1')
         >>> np.all(a == b)
         True
@@ -638,8 +638,8 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         dimarray: 4 non-null elements (0 null)
         0 / d0 (2): 'a' to 'b'
         1 / d1 (2): 10.0 to 20.0
-        array([[ 1.,  2.],
-               [ 4.,  5.]])
+        array([[1., 2.],
+               [4., 5.]])
         >>> d = v.take(slice(10,20), axis='d1') # `take` accepts `slice` objects
         >>> np.all(c == d)
         True
@@ -647,8 +647,8 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         dimarray: 2 non-null elements (0 null)
         0 / d0 (2): 'a' to 'b'
         1 / d1 (1): 10.0 to 10.0
-        array([[ 1.],
-               [ 4.]])
+        array([[1.],
+               [4.]])
 
         Keep dimensions 
 
@@ -662,7 +662,7 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         >>> v.take(12, axis="d1", tol=5)
         dimarray: 2 non-null elements (0 null)
         0 / d0 (2): 'a' to 'b'
-        array([ 1.,  4.])
+        array([1., 4.])
 
         # Matlab like multi-indexing
 
@@ -765,7 +765,7 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         if boolarray.ndim != self.ndim:
             raise ValueError("Indexing array dimensions must match indexed array")
         values = self.values[boolarray] # boolean index, just get it, or raise appropriate error
-        if np.isscalar(values):
+        if isscalar(values):
             return values
         idx = np.where(boolarray)
         axes = self._getaxes_broadcast(idx)
@@ -930,12 +930,12 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         >>> DimArray([1.29, 3.11]).apply(np.round, 1)
         dimarray: 2 non-null elements (0 null)
         0 / x0 (2): 0 to 1
-        array([ 1.3,  3.1])
+        array([1.3, 3.1])
 
         >>> DimArray([-1.3, -3.1]).apply(np.abs)
         dimarray: 2 non-null elements (0 null)
         0 / x0 (2): 0 to 1
-        array([ 1.3,  3.1])
+        array([1.3, 3.1])
         """
         return self._constructor(func(self.values, *args, **kwargs), self.axes.copy())
 
@@ -1016,8 +1016,8 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         >>> b = DimArray([[0.,1],[1,2]])
         >>> b
         ... # doctest: +SKIP
-        array([[ 0.,  1.],
-               [ 1.,  2.]])
+        array([[0., 1.],
+               [1., 2.]])
         >>> np.all(b == b)
         True
         >>> np.all(b+2 == b + np.ones(b.shape)*2)
@@ -1042,7 +1042,7 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         >>> a/2
         dimarray: 3 non-null elements (0 null)
         0 / x0 (3): 0 to 2
-        array([ 0.5,  1. ,  1.5])
+        array([0.5, 1. , 1.5])
         >>> a//2
         dimarray: 3 non-null elements (0 null)
         0 / x0 (3): 0 to 2
@@ -1079,7 +1079,7 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         >>> ~a
         dimarray: 2 non-null elements (0 null)
         0 / x0 (2): 0 to 1
-        array([False,  True], dtype=bool)
+        array([False,  True])
         """
         result = _operation.operation(func, self, other, broadcast=get_option('op.broadcast'), reindex=get_option('op.reindex'), constructor=self._constructor)
         return result
@@ -1111,7 +1111,7 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         >>> test
         dimarray: 2 non-null elements (0 null)
         0 / x0 (2): 0 to 1
-        array([ True, False], dtype=bool)
+        array([ True, False])
         >>> test2 = DimArray([1, 2]) == DimArray([1, 1])
         >>> test3 = DimArray([1, 2]) == np.array([1, 1])
         >>> np.all(test2 == test3) and np.all(test == test3)
@@ -1139,7 +1139,7 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         >>> DimArray([1, 2]) != 1
         dimarray: 2 non-null elements (0 null)
         0 / x0 (2): 0 to 1
-        array([False,  True], dtype=bool)
+        array([False,  True])
         """
         eq = self == other
         if isinstance(eq, bool):
@@ -1156,7 +1156,7 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         >>> a < 2
         dimarray: 2 non-null elements (0 null)
         0 / x0 (2): 0 to 1
-        array([ True, False], dtype=bool)
+        array([ True, False])
 
         >>> b = DimArray([1, 2], dims=('x1',))
         >>> try: 
@@ -1414,8 +1414,8 @@ mismatch between values and axes""".format(inferred, self.values.shape)
         dimarray: 6 non-null elements (0 null)
         0 / a (2): 0 to 1
         1 / b (3): 10 to 12
-        array([[ 1.,  2.,  3.],
-               [ 4.,  5.,  6.]])
+        array([[1., 2., 3.],
+               [4., 5., 6.]])
         """
         import json
         jsondict = json.loads(s)
@@ -1646,8 +1646,8 @@ def array(data, *args, **kwargs):
     dimarray: 6 non-null elements (2 null)
     0 / items (2): 'a' to 'b'
     1 / x0 (4): 0.0 to 3.0
-    array([[ 10.,  20.,  30.,  nan],
-           [ nan,   1.,   2.,   3.]])
+    array([[10., 20., 30., nan],
+           [nan,  1.,  2.,  3.]])
 
     Concatenate 2-D data
 
@@ -1663,11 +1663,11 @@ def array(data, *args, **kwargs):
     0 / items (2): 'a' to 'b'
     1 / x0 (2): 0 to 1
     2 / x1 (2): 0 to 1
-    array([[[  0.,   1.],
-            [  2.,   3.]],
+    array([[[ 0.,  1.],
+            [ 2.,  3.]],
     <BLANKLINE>
-           [[ nan,   1.],
-            [  2.,   3.]]])
+           [[nan,  1.],
+            [ 2.,  3.]]])
     """
     # if some kind of dictionary, first transform to list of values and keys
     if isinstance(data, dict):
@@ -1718,8 +1718,8 @@ def empty(axes=None, dims=None, shape=None, dtype=float):
     dimarray: 6 non-null elements (0 null)
     0 / time (2): 2000 to 2001
     1 / items (3): 'a' to 'c'
-    array([[ 3.,  3.,  3.],
-           [ 3.,  3.,  3.]])
+    array([[3., 3., 3.],
+           [3., 3., 3.]])
     >>> b = empty(dims=('time','items'), shape=(2, 3))
 
     See also
@@ -1749,8 +1749,8 @@ def empty_like(a, dtype=None):
     dimarray: 6 non-null elements (0 null)
     0 / time (2): 2000 to 2001
     1 / items (3): 'a' to 'c'
-    array([[ 3.,  3.,  3.],
-           [ 3.,  3.,  3.]])
+    array([[3., 3., 3.],
+           [3., 3., 3.]])
     """
     if dtype is None: dtype = a.dtype
     return empty(a.axes, dtype=dtype)
@@ -1762,8 +1762,8 @@ def nans(axes=None, dims=None, shape=None):
     dimarray: 0 non-null elements (6 null)
     0 / time (2): 0 to 1
     1 / items (3): 0 to 2
-    array([[ nan,  nan,  nan],
-           [ nan,  nan,  nan]])
+    array([[nan, nan, nan],
+           [nan, nan, nan]])
     """
     a = empty(axes, dims, shape, dtype=float)
     a.fill(np.nan)
@@ -1781,8 +1781,8 @@ def ones(axes=None, dims=None, shape=None, dtype=float):
     dimarray: 6 non-null elements (0 null)
     0 / time (2): 0 to 1
     1 / items (3): 0 to 2
-    array([[ 1.,  1.,  1.],
-           [ 1.,  1.,  1.]])
+    array([[1., 1., 1.],
+           [1., 1., 1.]])
     """
     a = empty(axes, dims, shape, dtype=dtype)
     a.fill(1)
@@ -1801,8 +1801,8 @@ def zeros(axes=None, dims=None, shape=None, dtype=float):
     dimarray: 6 non-null elements (0 null)
     0 / time (2): 0 to 1
     1 / items (3): 0 to 2
-    array([[ 0.,  0.,  0.],
-           [ 0.,  0.,  0.]])
+    array([[0., 0., 0.],
+           [0., 0., 0.]])
     """
     a = empty(axes, dims, shape, dtype=dtype)
     a.fill(0)

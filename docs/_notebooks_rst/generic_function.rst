@@ -43,4 +43,4 @@ This function applies to any kind of input array, as long as the "time" dimensio
 >>> time_mean(a)  # average over the full time axis
 dimarray: 2 non-null elements (0 null)
 0 / items (2): 'a' to 'b'
-array([ 2.5,  6.5])
+array([2.5, 6.5])

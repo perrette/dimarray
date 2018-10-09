@@ -249,10 +249,10 @@ def test_format(dim_array, tmpdir):
     dscheck = da.read_nc(fname.replace('.nc','netcdf3.nc'))
     assert_equal_datasets(ds, dscheck)
 
-    # NETCDF3_64bit
-    ds.write_nc(fname.replace('.nc','netcdf3_64b.nc'), mode='w', format='NETCDF3_64BIT')
-    dscheck = da.read_nc(fname.replace('.nc','netcdf3_64b.nc'))
-    assert_equal_datasets(ds, dscheck)
+    # # NETCDF3_64bit
+    # ds.write_nc(fname.replace('.nc','netcdf3_64b.nc'), mode='w', format='NETCDF3_64BIT')
+    # dscheck = da.read_nc(fname.replace('.nc','netcdf3_64b.nc'))
+    # assert_equal_datasets(ds, dscheck)
 
     data = read_nc(fname)
     assert(np.all(data['a'] == a))

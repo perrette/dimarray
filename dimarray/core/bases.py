@@ -485,6 +485,9 @@ class AbstractDimArray(AbstractHasAxes):
     @property
     def size(self):
         return self.values.size
+    @property
+    def item(self):
+        return self.values.item
 
     def is_numeric(self):
         return is_numeric(self.values)
@@ -529,6 +532,9 @@ class AbstractDimArray(AbstractHasAxes):
 
         if np.isscalar(values):
             return values
+        # elif np.ndim(values) == 0:
+        #     return np.asscalar(values)
+
 
         dima = self._constructor(values, axes) # initialize DimArray
         dima.attrs.update(self.attrs) # add attribute
@@ -610,8 +616,6 @@ class AbstractDataset(AbstractHasAxes):
         newdata = self.__class__()
 
         # then apply take in 'position' mode
-        newdata = self.__class__()
-
         axes_dict = {ax.name:ax[ix] for ix, ax in zip(tuple_indices, self.axes) if not np.isscalar(ix)}
         indices_dict = {ax.name:ix for ix, ax in zip(tuple_indices, self.axes)}
 
