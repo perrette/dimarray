@@ -5,7 +5,7 @@ from __future__ import print_function
 from future.utils import string_types
 import warnings
 import numpy as np
-from dimarray.compat.pycompat import range
+from dimarray.compat.pycompat import range, zip
 
 #__all__ = ["take", "put", "reindex_axis", "reindex_like"]
 __all__ = []
@@ -279,7 +279,7 @@ def getaxes_broadcast(obj, indices):
 
         # ...else use a list of tuples
         else:
-            values = zip(*[obj.axes[i].values[indices2[i]] for i in array_ix_pos])
+            values = list(zip(*[obj.axes[i].values[indices2[i]] for i in array_ix_pos]))
             name = ",".join([obj.axes[i].name for i in array_ix_pos])
 
         broadcastaxis = Axis(values, name)

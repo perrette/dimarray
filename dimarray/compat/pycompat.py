@@ -1,4 +1,5 @@
 import sys
+import itertools
 
 PY3 = sys.version_info[0] >= 3
 
@@ -26,6 +27,7 @@ else:
         return d.keys()
     def dictvalues(d):
         return d.values()
+    zip = itertools.izip
     range = xrange
     from itertools import izip as zip
     try:

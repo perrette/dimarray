@@ -60,7 +60,9 @@ class Dataset(AbstractDataset, odict, OpMixin, GetSetDelAttrMixin):
         assert not {'axes','keys'}.issubset(kwargs.keys()) # just to check bugs due to back-compat ==> TO BE REMOVED AFTER DEBUGGING
 
         # check input arguments: same init as odict
-        data = odict(*args, **kwargs)
+        data = odict(*args)
+        for k in sorted(kwargs):
+            data[k] = kwargs[k]  # sorted keys for consistent output
 
         # Basic initialization
         #self._axes = Axes()
@@ -427,7 +429,7 @@ class Dataset(AbstractDataset, odict, OpMixin, GetSetDelAttrMixin):
         --------
         >>> a = DimArray([1,2,3], axes=('time', [1950, 1951, 1952]))
         >>> b = DimArray([[11,22,33],[44,55,66]], axes=[('items',['a','b']), ('time', [1950, 1951, 1952])])
-        >>> ds = Dataset(a=a, b=b)
+        >>> ds = Dataset(([('a',a),('b',b)]))  # keep order for doctest
         >>> ds.mean(axis='time')
         Dataset of 2 variables
         0 / items (2): 'a' to 'b'
@@ -553,7 +555,7 @@ class Dataset(AbstractDataset, odict, OpMixin, GetSetDelAttrMixin):
             ds = self.copy()
 
         if isinstance(mapper, dict):
-            iterkeys = mapper.iteritems()
+            iterkeys = mapper.items()
         else:
             if not callable(mapper):
                 raise TypeError("mapper must be callable")
@@ -577,7 +579,7 @@ class Dataset(AbstractDataset, odict, OpMixin, GetSetDelAttrMixin):
             ds = self.copy()
 
         if isinstance(mapper, dict):
-            iterkeys = mapper.iteritems()
+            iterkeys = mapper.items()
         else:
             if not callable(mapper):
                 raise TypeError("mapper must be callable")

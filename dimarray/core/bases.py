@@ -71,7 +71,7 @@ class AbstractHasMetadata(object):
          
     @attrs.deleter
     def attrs(self):
-        for k in self.attrs.keys():
+        for k in list(self.attrs.keys()):
             del self.attrs[k]
 
     def _repr(self, metadata=False):

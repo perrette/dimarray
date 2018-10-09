@@ -5,8 +5,8 @@ from collections import OrderedDict as odict
 import string
 import copy
 import numpy as np
-
 from future.utils import string_types
+from dimarray.compat.pycompat import zip
 from dimarray.tools import is_DimArray, is_array1d_equiv, format_doc, isscalar
 from dimarray.core.bases import AbstractAxis, AbstractAxes, GetSetDelAttrMixin
 from dimarray.core.indexing import _maybe_cast_type, is_monotonic
@@ -42,7 +42,7 @@ def _check_axis_values(values, dtype=None):
     if values.ndim == 2: 
         try:
             val = np.empty(values.shape[0], dtype=object)
-            val[:] = zip(*values.T.tolist()) # pass a list of tuples
+            val[:] = list(zip(*values.T.tolist())) # pass a list of tuples
             values = val
         except:
             pass
@@ -436,7 +436,7 @@ class MultiAxis(Axis):
 
         aval = _flatten(*[ax.values for ax in self.axes])
         val = np.empty(aval.shape[0], dtype=object)
-        val[:] = zip(*aval.T.tolist()) # pass a list of tuples
+        val[:] = list(zip(*aval.T.tolist())) # pass a list of tuples
         return val 
 
     @property
@@ -495,7 +495,7 @@ def _flatten(*list_of_arrays):
         return list_of_arrays[0]
     kwargs = dict(indexing="ij")
     grd = np.meshgrid(*list_of_arrays, **kwargs)
-    array_of_tuples = np.array(zip(*[g.ravel() for g in grd]))
+    array_of_tuples = np.array(list(zip(*[g.ravel() for g in grd])))
     assert array_of_tuples.shape[1] == len(list_of_arrays), "pb when reshaping: {} and {}".format(array_of_tuples.shape, len(list_of_arrays))
     assert array_of_tuples.shape[0] == np.prod([x.size for x in list_of_arrays]), "pb when reshaping: {} and {}".format(array_of_tuples.shape, np.prod([x.size for x in list_of_arrays]))
     return array_of_tuples
@@ -545,7 +545,7 @@ class Axes(AbstractAxes, list):
         if dims is None: 
             dims = ["x{}".format(i) for i in range(len(arrays))]
 
-        return cls(zip(dims, arrays))
+        return cls(list(zip(dims, arrays)))
 
     @classmethod
     def from_dict(cls, kwaxes, dims=None, shape=None, check_order=True):
