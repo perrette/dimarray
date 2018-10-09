@@ -1,3 +1,4 @@
+from __future__ import print_function
 from __future__ import absolute_import, division
 import warnings
 from collections import OrderedDict as odict
@@ -400,7 +401,7 @@ class Axis(GetSetDelAttrMixin, AbstractAxis):
             try:
                 ax = cls(np.asarray(ax), getattr(ax,'name',defaultname))
             except Exception as error: 
-                print error.message
+                print(error.message)
                 raise TypeError("Cannot convert to Axis object: {}. \nPlease provide an Axis instance or (name, values) tuple".format(type(ax)))
         return ax
 

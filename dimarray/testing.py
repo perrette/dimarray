@@ -1,5 +1,6 @@
 """ A few functions useful for testing
 """
+from __future__ import print_function
 import numpy as np
 from numpy.testing import assert_equal, assert_almost_equal
 import dimarray as da
@@ -119,9 +120,9 @@ def assert_equal_datasets(actual, expected, metadata=True, approx=False):
         try:
             assert_equal_dimarrays(actual[k], expected[k], approx=approx, metadata=metadata)
         except:
-            print actual[k]
-            print expected[k]
-            print k
+            print(actual[k])
+            print(expected[k])
+            print(k)
             raise
     # check the metadata
     if metadata:

@@ -3,6 +3,7 @@
 See rcParams for the options and rcParamsHelp for their meaning.
 dimarray.print_options() provide an overview.
 """
+from __future__ import print_function
 from collections import OrderedDict as odict
 
 class Params(odict):
@@ -66,7 +67,7 @@ def get_option(name):
     return rcParams[name]
 
 def print_options():
-    print "Options description:"
-    print rcParamsHelp
-    print "\nOptions values:"
-    print rcParams
+    print("Options description:")
+    print(rcParamsHelp)
+    print("\nOptions values:")
+    print(rcParams)

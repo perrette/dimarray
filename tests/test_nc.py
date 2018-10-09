@@ -1,5 +1,6 @@
 """ Test module for nc
 """
+from __future__ import print_function
 import os
 from warnings import warn
 import pytest
@@ -77,7 +78,7 @@ class ReadTest(object):
         assert ds.scenario[:].tolist() == ['historical', 'rcp26', 'rcp45', 'rcp60', 'rcp85']
         assert_equal( ds.time , np.arange(1850, 2301) )
         assert ds.time.dtype is np.dtype('int32') 
-        print ds.attrs
+        print(ds.attrs)
         assert ds.model == 'CSIRO-Mk3-6-0' # metadata
         assert ds['tsl'].ndim == 2
         assert ds['tsl'].shape == (451, 5)
@@ -132,7 +133,7 @@ class TestReadOpenNC(ReadTest):
         labels.append((boolidx, boolidx))
 
         for idx, lidx in labels:
-            print "Test labelled index:",idx,':',lidx
+            print("Test labelled index:",idx,':',lidx)
             expected = ds.nc.variables['tsl'][idx] # netCDF4
             actual = ds['tsl'][lidx]
             actual = getattr(actual, "values", actual)
@@ -147,7 +148,7 @@ class TestIO(object):
         cls.tmpdir = '/tmp'
         # cls.ncfile = cls.tmpdir.join("test.nc").strpath # have test.nc in some temporary directory
         cls.ncfile = os.path.join(cls.tmpdir, "test.nc")
-        print "Write test netCDF file to",cls.ncfile
+        print("Write test netCDF file to",cls.ncfile)
         cls.ds_var.write_nc(cls.ncfile, mode='w')
         os.system("ncdump -v str_0d "+cls.ncfile)
 
@@ -192,7 +193,7 @@ class TestIO(object):
         # read each variable individually
         with da.open_nc(self.ncfile) as ds_disk:
             for k in ds_disk.keys():
-                print 'read', k, self.ncfile
+                print('read', k, self.ncfile)
                 assert_equal_dimarrays(ds_disk[k][()], self.ds_var[k])
                 assert_equal_dimarrays(ds_disk[k].read(), self.ds_var[k])
 
@@ -204,7 +205,7 @@ class TestIO(object):
         with da.open_nc(self.ncfile) as ds_disk:
             v0 = ds_disk.keys()[0]
             for idx in indices:
-                print v0, self.ds_var[v0].shape, idx
+                print(v0, self.ds_var[v0].shape, idx)
                 expected = self.ds_var[v0].ix[idx]
                 # actual = ds_disk[v0].read(indices=idx, indexing='position')
                 actual = ds_disk[v0].ix[idx] #.read(indices=idx, indexing='position')
@@ -385,7 +386,7 @@ def test_read_multiple_files(tmpdir):
     # axis "x0" is not aligned !
     with pytest.raises(ValueError):
         c1_got = da.read_nc([fname1, fname2], axis='x1')
-        print c1_got
+        print(c1_got)
 
     # ...second axis
     c1_dima_got = da.read_nc([fname1, fname2], 'a', axis='x1', align=True, sort=True)

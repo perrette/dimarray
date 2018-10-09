@@ -1,3 +1,4 @@
+from __future__ import print_function
 import os
 import re
 import glob, copy
@@ -173,7 +174,7 @@ class DatasetOnDisk(GetSetDelAttrMixin, NetCDFOnDisk, AbstractDataset):
             try:
                 self._ds = nc.Dataset(f, mode=mode, clobber=clobber, diskless=diskless, persist=persist, format=format)
             except UserWarning as error:
-                print error
+                print(error)
             except Exception as error: # indicate file name when issuing error
                 raise IOError("{}\n=> failed to open {} (mode={}, clobber={})".format(str(error), f, mode, clobber)) # easier to handle
         # assert self._kwargs is not None
@@ -734,11 +735,11 @@ class AxesOnDisk(AbstractAxes):
             dim = self.dims[dim]
         elif dim not in self.dims:
             msg = "{} not found in dimensions (dims={}).".format(dim, self.dims)
-            print """An error ocurred? A new dimension can be created via `axes.append(axis)` syntax, 
+            print("""An error ocurred? A new dimension can be created via `axes.append(axis)` syntax, 
 where axis can be a string (unlimited dimension), an Axis instance, 
 or a tuple (name, values).  See help on `axes.append` for more information. 
 Low-level netCDF4 function is also available as `ds.nc.createDimension` 
-and `ds.nc.createVariable`"""
+and `ds.nc.createVariable`""")
             raise KeyError(msg)
         return AxisOnDisk(self._ds, dim)
 
@@ -1177,7 +1178,7 @@ def summary_nc(fname, name=None, metadata=False):
     with DatasetOnDisk(fname) as obj:
         if name is not None:
             obj = obj[name]
-        print(obj.__repr__(metadata=metadata))
+        print((obj.__repr__(metadata=metadata)))
 
 
 def _maybe_open_file(f, mode='r', clobber=None, verbose=False, format=None):
@@ -1229,18 +1230,18 @@ def _maybe_open_file(f, mode='r', clobber=None, verbose=False, format=None):
         try:
             f = nc.Dataset(fname, mode, clobber=clobber, format=format)
         except UserWarning, msg:
-            print msg
+            print(msg)
         except Exception, msg: # raise a weird RuntimeError
             #print "read from",fname
             raise IOError("{} => failed to opend {} in mode {}".format(msg, fname, mode)) # easier to handle
 
         if verbose: 
             if 'r' in mode:
-                print "read from",fname
+                print("read from",fname)
             elif 'a' in mode:
-                print "append to",fname
+                print("append to",fname)
             else:
-                print "write to",fname
+                print("write to",fname)
         close = True
     else:
         close = False # leave it open

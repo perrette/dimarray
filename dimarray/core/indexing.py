@@ -1,6 +1,7 @@
 """ Old indexing functions ==> imported from indexing.py. 
 In the process of being rewritten.
 """
+from __future__ import print_function
 import warnings
 import numpy as np
 from dimarray.compat.pycompat import range
@@ -210,7 +211,7 @@ def broadcast_indices(indices):
 
             # consistency check
             elif size != np.size(ix):
-                print size, np.size(ix)
+                print(size, np.size(ix))
                 raise ValueError("array-indices could not be broadcast on the same shape (got {} and {}, try box[...] or take(..., broadcast_arrays=False) if you intend to sample values along several dimensions independently)".format(size, np.size(ix)))
 
         aindices.append(ix)

@@ -1,3 +1,4 @@
+from __future__ import print_function
 import numpy as np
 from dimarray import DimArray
 from dimarray.testing import assert_equal_dimarrays
@@ -137,7 +138,7 @@ def test_concatenate_2d():
     # axis "x0" is not aligned !
     with pytest.raises(ValueError):
         c1_got = concatenate((a, b), axis=1)
-        print c1_got
+        print(c1_got)
 
     c1_got = concatenate((a, b), axis=1, align=True, sort=True)
     c1_got_ds = concatenate_ds(_make_datasets(a, b), axis=1, align=True, sort=True)

@@ -1,5 +1,6 @@
 """ Functions and dimarray methods associated to array alignment
 """
+from __future__ import print_function
 from collections import OrderedDict as odict
 import itertools
 import warnings
@@ -435,7 +436,7 @@ def _concatenate_axes(axes):
     #assert np.iterable(axes) and axes
     #if not isinstance(axes[0], Axis): raise TypeError()
     if len({ax.name for ax in axes}) != 1: 
-        print axes
+        print(axes)
         raise ValueError("axis names differ!")
     values = np.concatenate([ax.values for ax in axes])
     return Axis(values, axes[0].name)

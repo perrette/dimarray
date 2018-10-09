@@ -1,5 +1,6 @@
 """ Base classes
 """
+from __future__ import print_function
 from __future__ import absolute_import
 import warnings
 import copy
@@ -80,7 +81,7 @@ class AbstractHasMetadata(object):
     __str__ = str_dimarray
 
     def summary(self):
-        print self.summary_repr()
+        print(self.summary_repr())
 
     def summary_repr(self):
         return self._repr(metadata=True)

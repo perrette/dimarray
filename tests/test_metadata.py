@@ -1,5 +1,6 @@
 """ Test metadata
 """
+from __future__ import print_function
 import pytest
 import dimarray as da
 from dimarray.testing import create_metadata
@@ -67,7 +68,7 @@ class AbstractTestGetSetDel(object):
                 delattr(self.obj, k) # dummy integer value i
             except:
                 pass
-            print self.obj.attrs
+            print(self.obj.attrs)
             assert k in self.obj.attrs
 
 class TestDimArray(AbstractTestGetSetDel):

@@ -1,5 +1,6 @@
 """ Test basic dimarray behaviour (copy, attributes)
 """
+from __future__ import print_function
 import pytest
 import numpy as np
 from dimarray import DimArray, Axis
@@ -96,12 +97,12 @@ def test_cast():
         (unicode, str, 'U'),
     ]
     for test in tests:
-        print test
+        print(test)
         a = create_dimarray((5,), dtype=test[0])
         b = create_dimarray((), dtype=test[1])
         # a.ix[0] = b[()]
         # print b
-        print a.dtype.kind, b.dtype.kind
+        print(a.dtype.kind, b.dtype.kind)
         a.put((),b, cast=True, indexing='position')
         # print a
         assert a.dtype.kind == test[2]

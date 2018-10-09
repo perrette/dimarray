@@ -1,8 +1,9 @@
 """ Dimarray module
     ===============
 """
-from __future__ import absolute_import
 
+
+from __future__ import print_function
 import warnings
 from . import core
 from . import config
@@ -25,7 +26,7 @@ try:
 except ImportError:
     _ncio = False
     msg = "Could not import netCDF4's package ==> I/O will not be available in this format"
-    print msg
+    print(msg)
     #warnings.warn(ImportWarning(msg)) 
 
 

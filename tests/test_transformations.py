@@ -1,3 +1,4 @@
+from __future__ import print_function
 import sys
 from warnings import warn
 import unittest
@@ -103,7 +104,7 @@ def test_nan(vnan, axis, skipna, transform, use_bottleneck):
         try:
             import pandas as pd
         except ImportError:
-            print "pandas is not installed, can't test transforms with nan"
+            print("pandas is not installed, can't test transforms with nan")
             return
 
         f2 = getattr(vnan, transform)
@@ -230,26 +231,26 @@ class TestInterp(unittest.TestCase):
     def testDataset(self):
         " make sure the dataset version is consistent "
         c = self.dima.sort_axis()
-        print c.dims
+        print(c.dims)
         c.dims = ('x0_sorted',)
         ds = da.Dataset(a=self.dima, b=self.dima*2, c=c)
 
         actual = ds.interp_axis(self.newindex, axis='x0')
         expected = da.Dataset(**{k:ds[k].interp_axis(self.newindex, axis='x0') if 'x0' in ds[k].dims else ds[k] for k in ds.keys()})
         
-        print 'for a'
-        print self.newindex
-        print actual['a']
-        print expected['a']
-        print 'for b'
-        print actual['b']
-        print expected['b']
-        print 'for c'
-        print c
-        print actual['c']
-        print expected['c']
+        print('for a')
+        print(self.newindex)
+        print(actual['a'])
+        print(expected['a'])
+        print('for b')
+        print(actual['b'])
+        print(expected['b'])
+        print('for c')
+        print(c)
+        print(actual['c'])
+        print(expected['c'])
 
-        print ""
-        print "datasets assert"
+        print("")
+        print("datasets assert")
 
         assert_equal_datasets(actual, expected)
