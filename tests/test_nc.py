@@ -1,6 +1,7 @@
 """ Test module for nc
 """
 from __future__ import print_function
+import future
 import os
 from warnings import warn
 import pytest
@@ -16,7 +17,7 @@ except:
 import dimarray  as da
 from dimarray import DimArray, summary_nc, read_nc, open_nc, get_ncfile
 from dimarray.testing import (assert_equal_dimarrays, assert_equal_datasets, assert_equal_axes,
-                              create_dataset, create_dimarray)
+                              create_dataset, create_dimarray, string_types)
 
 curdir = os.path.dirname(__file__)
 
@@ -33,7 +34,7 @@ def pytest_generate_tests(metafunc):
     if 'ncvar_type' in metafunc.fixturenames:
         metafunc.parametrize("ncvar_type", [int, float, bool])
     if 'ncdim_type' in metafunc.fixturenames:
-        metafunc.parametrize("ncdim_type", [int, float, str, unicode, object])
+        metafunc.parametrize("ncdim_type", (int, float, object)+string_types)
     # if 'ncattr_type' in metafunc.fixturenames:
     #     metafunc.parametrize("ncattr_type", [str, unicode, int, float, list, np.ndarray], indirect=True)
     if 'seed' in metafunc.fixturenames:

@@ -375,7 +375,7 @@ class AbstractHasAxes(AbstractHasMetadata):
         if axis is None:
             return None, None
 
-        if type(axis) in string_types:
+        if isinstance(axis, string_types):
             idx = self.dims.index(axis)
 
         elif type(axis) is int:

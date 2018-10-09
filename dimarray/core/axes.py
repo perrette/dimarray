@@ -737,7 +737,7 @@ def _init_axes(axes=None, dims=None, labels=None, shape=None, check_order=True):
         axes = Axes.from_arrays(axes, dims=dims)
 
     # axes only cointain axis labels
-    elif np.all([type(ax) in string_types for ax in axes]):
+    elif np.all([isinstance(ax,string_types) for ax in axes]):
         axes = Axes.from_shape(shape, dims=axes)
 
     else:

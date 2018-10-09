@@ -91,10 +91,8 @@ def test_cast():
         ('f', 'O', 'O'),
         ('f', str, 'O'),
         ('i', str, 'O'),
-        ('i', unicode, 'O'),
-        ('f', unicode, 'O'),
-        (str, unicode, 'U'),
-        (unicode, str, 'U'),
+        ('S', 'U', 'U'),
+        ('U', 'S', 'U'),
     ]
     for test in tests:
         print(test)

@@ -1,11 +1,16 @@
 """ A few functions useful for testing
 """
-from __future__ import print_function
-from future.utils import string_types
+from __future__ import print_function, unicode_literals
+from future.utils import PY2
 import numpy as np
 from numpy.testing import assert_equal, assert_almost_equal
 import dimarray as da
 from dimarray.tools import anynan
+
+if PY2:
+    string_types = (str, unicode)
+else:
+    string_types = (str,)
 
 SEED = None
 #
@@ -33,7 +38,7 @@ def create_array_axis(size, dtype, regular=True, seed=SEED):
         values = np.random.shuffle(values)
     return np.asarray(values, dtype=dtype)
 
-def create_metadata(types=[int, float, list]+list(string_types)):
+def create_metadata(types=(int, float, list)+string_types):
     """ return a dictionary of metadata with various types
     """
     meta = {}
@@ -66,7 +71,7 @@ def create_dimarray(shape=(2,3), dtype=float, axis_dtypes=float, dims=None, seed
 
     return da.DimArray(values, axes, dims=dims, **meta)
 
-def create_dataset(seed=SEED, dtypes = ("float", "int","int32", "int64")+list(string_types)):
+def create_dataset(seed=SEED, dtypes = ("float", "int","int32", "int64")+tuple(t.__name__ for t in string_types)):
     ds = da.Dataset()
     ds['many_axes'] = create_dimarray((2,3,2), float, (float, int, str), seed=seed) # test axis types
     ds['shared_axis'] = ds['many_axes'].ix[0] # shares axes with "many_axes"  # test shared axes
