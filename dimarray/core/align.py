@@ -134,8 +134,8 @@ def broadcast_arrays(*arrays):
         axes = _get_axes(*arrays)
 
     # fails if axes are not aligned
-    except AssertionError, msg:
-        raise ValueError(msg)
+    except AssertionError as error:
+        raise ValueError(error)
 
     # now broadcast each DimArray along commmon axes
     newarrays = []
@@ -407,7 +407,7 @@ def stack(arrays, axis=None, keys=None, align=False, **kwargs):
     # find common axes
     try: 
         axes = _get_axes(*arrays)
-    except ValueError, msg: 
+    except ValueError as msg: 
         if 'axes are not aligned' in repr(msg):
             msg = 'axes are not aligned\n ==> Try passing `align=True`' 
         raise ValueError(msg)

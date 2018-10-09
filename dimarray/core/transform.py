@@ -12,7 +12,7 @@ except ImportError:
     _hasbottleneck = False
 
 from dimarray.tools import anynan, is_DimArray, format_doc
-from axes import Axis, Axes
+from dimarray.core.axes import Axis, Axes
 
 
 #

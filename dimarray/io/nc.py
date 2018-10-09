@@ -1229,9 +1229,9 @@ def _maybe_open_file(f, mode='r', clobber=None, verbose=False, format=None):
 
         try:
             f = nc.Dataset(fname, mode, clobber=clobber, format=format)
-        except UserWarning, msg:
+        except UserWarning as msg:
             print(msg)
-        except Exception, msg: # raise a weird RuntimeError
+        except Exception as msg: # raise a weird RuntimeError
             #print "read from",fname
             raise IOError("{} => failed to opend {} in mode {}".format(msg, fname, mode)) # easier to handle
 

@@ -6,10 +6,10 @@ import numpy as np
 from collections import OrderedDict
 import functools
 
-from axes import Axis, Axes, MultiAxis
 #from dimarray.tools import is_DimArray
 import dimarray as da
 from dimarray.tools import deprecated_func
+from dimarray.core.axes import Axis, Axes, MultiAxis
 
 #
 # Broadcast

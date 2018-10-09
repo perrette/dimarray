@@ -9,7 +9,7 @@ import numpy as np
 from dimarray.config import get_option
 from dimarray.compat.pycompat import iteritems, zip
 from dimarray.tools import is_numeric
-from .indexing import locate_one, locate_many, locate_slice, expanded_indexer
+from dimarray.core.indexing import locate_one, locate_many, locate_slice, expanded_indexer
 from dimarray.prettyprinting import repr_axis, repr_dataset, repr_axes, str_axes, str_dataset, str_dimarray
 
 class GetSetDelAttrMixin(object):
