@@ -58,8 +58,8 @@ It is possible to define a dimarray as a dictionary of dictionary. The only addi
 ...          'b': {1:111,
 ...                2:222,
 ...                3:333} }
->>> 
->>> DimArray(dict_, dims=['dim1','dim2'])
+>>> a = DimArray(dict_, dims=['dim1','dim2'])
+>>> a.sort_axis(axis=0).sort_axis(axis=1)  # dict keys are not sorted in python !
 dimarray: 6 non-null elements (0 null)
 0 / dim1 (2): 'a' to 'b'
 1 / dim2 (3): 1 to 3

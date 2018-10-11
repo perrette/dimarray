@@ -22,9 +22,9 @@ Read from one netCDF file
 >>> data
 Dataset of 2 variables
 0 / time (451): 1850 to 2300
-1 / scenario (5): u'historical' to u'rcp85'
-tsl: (u'time', u'scenario')
-temp: (u'time', u'scenario')
+1 / scenario (5): 'historical' to 'rcp85'
+tsl: ('time', 'scenario')
+temp: ('time', 'scenario')
 
 Then access the variable of choice
 
@@ -72,7 +72,7 @@ directly relevant to identify the experiment:
 dimarray: 9114 non-null elements (6671 null)
 0 / model (7): 'CSIRO-Mk3-6-0' to 'MPI-ESM-MR'
 1 / time (451): 1850 to 2300
-2 / scenario (5): u'historical' to u'rcp85'
+2 / scenario (5): 'historical' to 'rcp85'
 array(...)
 
 This works on datasets as well
@@ -83,9 +83,9 @@ This works on datasets as well
 Dataset of 2 variables
 0 / model (7): 'CSIRO-Mk3-6-0' to 'MPI-ESM-MR'
 1 / time (451): 1850 to 2300
-2 / scenario (5): u'historical' to u'rcp85'
-tsl: ('model', u'time', u'scenario')
-temp: ('model', u'time', u'scenario')
+2 / scenario (5): 'historical' to 'rcp85'
+tsl: ('model', 'time', 'scenario')
+temp: ('model', 'time', 'scenario')
 
 .. _Write_to_netCDF_:
 
@@ -103,12 +103,12 @@ Let's define some dummy arrays representing temperature in northern and southern
 Let's define a new dataset
 
 >>> from dimarray import Dataset
->>> ds = Dataset({'temperature':temperature, 'global':global_mean})
+>>> ds = Dataset(temperature=temperature, global_mean=global_mean) 
 >>> ds
 Dataset of 2 variables
 0 / time (3): 1951 to 1953
 1 / lat (2): 'north' to 'south'
-global: ('time',)
+global_mean: ('time',)
 temperature: ('lat', 'time')
 
 Saving the dataset to file is pretty simple:
@@ -126,10 +126,10 @@ Just as a check, all three variables seem to be there:
 >>> read_nc('/tmp/test.nc')
 Dataset of 3 variables
 0 / time (3): 1951 to 1953
-1 / lat (2): u'north' to u'south'
-global: (u'time',)
-temperature: (u'lat', u'time')
-climatology: (u'lat',)
+1 / lat (2): 'north' to 'south'
+global_mean: ('time',)
+temperature: ('lat', 'time')
+climatology: ('lat',)
 
 Note that when appending a variable to a netCDF file or to a dataset, its axes must match, otherwise an error will be raised. In that case it may be necessary to reindex an axis (see :ref:`page_reindexing`). When initializing a dataset with bunch of dimarray however, reindexing is performed automatically.
 
@@ -163,32 +163,32 @@ Let's check the result:
 >>> ds2
 DatasetOnDisk of 1 variable (NETCDF4)
 0 / time (2): 2000.0 to 2045.5
-1 / scenario (3): u'a' to u'c'
-myvar: (u'time', u'scenario')
+1 / scenario (3): 'a' to 'c'
+myvar: ('time', 'scenario')
 
 >>> ds2.summary()
 DatasetOnDisk of 1 variable (NETCDF4)
 <BLANKLINE>
 //dimensions:
 0 / time (2): 2000.0 to 2045.5
-    units: u'metadata-dim-in-memory'
-    yo: u'metadata-dim-on-disk'
-1 / scenario (3): u'a' to u'c'
-    ya: u'metadata-var-on-disk'
+    units: 'metadata-dim-in-memory'
+    yo: 'metadata-dim-on-disk'
+1 / scenario (3): 'a' to 'c'
+    ya: 'metadata-var-on-disk'
 <BLANKLINE>
 //variables:
-myvar: (u'time', u'scenario')
-    units: u'myunits'
-    bla: u'bla'
+myvar: ('time', 'scenario')
+    units: 'myunits'
+    bla: 'bla'
 <BLANKLINE>
 //global attributes:
-    yi: u'metadata-dataset-on-disk'
+    yi: 'metadata-dataset-on-disk'
 
 
 >>> ds2['myvar']
 DimArrayOnDisk: 'myvar' (6)
 0 / time (2): 2000.0 to 2045.5
-1 / scenario (3): u'a' to u'c'
+1 / scenario (3): 'a' to 'c'
 
 >>> ds2['myvar'].values  # doctest: +SKIP
 <type 'netCDF4._netCDF4.Variable'>
@@ -202,7 +202,7 @@ filling on, default _FillValue of -9223372036854775806 used
 >>> ds2['myvar'][:]
 dimarray: 6 non-null elements (0 null)
 0 / time (2): 2000.0 to 2045.5
-1 / scenario (3): u'a' to u'c'
+1 / scenario (3): 'a' to 'c'
 array([[1, 2, 3],
        [4, 5, 6]])
 
@@ -210,7 +210,7 @@ array([[1, 2, 3],
 >>> ds2['myvar'][:]
 dimarray: 6 non-null elements (0 null)
 0 / time (2): 2000.0 to 2045.5
-1 / scenario (3): u'a' to u'c'
+1 / scenario (3): 'a' to 'c'
 array([[ 1, 77,  3],
        [ 4,  5,  6]])
 
@@ -218,7 +218,7 @@ array([[ 1, 77,  3],
 >>> ds2['myvar'][:]
 dimarray: 6 non-null elements (0 null)
 0 / time (2): 2000.0 to 2045.5
-1 / scenario (3): u'a' to u'c'
+1 / scenario (3): 'a' to 'c'
 array([[ 1, 77, -1],
        [ 4,  5,  6]])
 
@@ -251,7 +251,7 @@ Append some new slices:
 
 >>> ds['bla'].read()
 dimarray: 6 non-null elements (0 null)
-0 / time (6): u'a' to u'f'
+0 / time (6): 'a' to 'f'
 array([ 1,  2,  3,  4,  5, 66])
 
 >>> ds.close()

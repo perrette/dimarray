@@ -101,7 +101,7 @@ Along-axis transformations use that feature and can flatten any subset of axes p
 >>> v.mean(axis=('lat','lon'))
 dimarray: 2 non-null elements (0 null)
 0 / time (2): 1950 to 1955
-array([  5.5,  17.5])
+array([ 5.5, 17.5])
 
 Any flattened axis can be reshaped back to full n-d array via **`unflatten`**
 
