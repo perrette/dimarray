@@ -1,9 +1,10 @@
 """
 """
-import numpy as np
-from numpy.testing import assert_array_equal
+import copy
 import unittest
 import pytest
+import numpy as np
+from numpy.testing import assert_array_equal
 import dimarray as da
 from dimarray import Dataset
 from dimarray.testing import assert_equal_axes, assert_equal_datasets
@@ -93,6 +94,12 @@ bb: ('d0',)
 
         ds2['bb'] = ds['bb'] + 33 
         assert np.all(ds['bb'] != ds2['bb']), 'shallow copy'
+
+
+    def test_copy2(self):
+        copy.copy(self.ds.axes)
+        copy.deepcopy(self.ds.axes) 
+
 
     def test_reindexing(self):
 

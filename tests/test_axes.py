@@ -1,4 +1,5 @@
 """ Test suite for axes objects """
+import copy
 import pytest
 import numpy as np
 from dimarray import Axis, Axes
@@ -31,6 +32,10 @@ def test_copy(axes):
     axes_n = axes.copy()
     axes_n[0][0] = 'c'
     assert axes != axes_n
+
+def test_copy2(axes):
+    copy.copy(axes)  
+    copy.deepcopy(axes) # this failed before __deepcopy__ was implemented
 
 def test_append(ax0, ax1):
     # test copy/ref behaviour when appending an object

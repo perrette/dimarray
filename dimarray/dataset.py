@@ -26,6 +26,7 @@ class DatasetAxes(Axes):
         super(DatasetAxes, self).__init__()
         assert isinstance(ds, Dataset), "DatasetAxes can only be initialized empty with a Dataset"
         self._ds = ds  # attached dataset
+
     def __setitem__(self, key, item):
         super(DatasetAxes, self).__setitem__(key, item)
         # also apply the change to the contained DimArrays
@@ -34,6 +35,14 @@ class DatasetAxes(Axes):
             if key not in dima.dims: 
                 continue
             dima.axes[key] = self[key]
+
+    def __deepcopy__(self, memo):
+        ' deepcopy interface otherwise fails '
+        new = type(self)(self._ds)
+        for ax in self:
+            list.append(new, copy.deepcopy(ax))
+        return new
+
 
 class Dataset(AbstractDataset, odict, OpMixin, GetSetDelAttrMixin):
 # class Dataset(AbstractDataset, odict):
