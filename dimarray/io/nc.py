@@ -866,11 +866,11 @@ def open_nc(file_name, *args, **kwargs):
     DatasetOnDisk of 6 variables (NETCDF4)
     0 / y1 (113): -3400000.0 to -600000.0
     1 / x1 (61): -800000.0 to 700000.0
-    surfvelmag: (u'y1', u'x1')
-    lat: (u'y1', u'x1')
-    lon: (u'y1', u'x1')
-    surfvely: (u'y1', u'x1')
-    surfvelx: (u'y1', u'x1')
+    surfvelmag: ('y1', 'x1')
+    lat: ('y1', 'x1')
+    lon: ('y1', 'x1')
+    surfvely: ('y1', 'x1')
+    surfvelx: ('y1', 'x1')
     mapping: nan
 
     Load variables with [:] syntax, like netCDF4 package
@@ -908,11 +908,11 @@ def open_nc(file_name, *args, **kwargs):
     Dataset of 6 variables
     0 / y1 (113): -3400000.0 to -600000.0
     1 / x1 (61): -800000.0 to 700000.0
-    surfvelmag: (u'y1', u'x1')
-    lat: (u'y1', u'x1')
-    lon: (u'y1', u'x1')
-    surfvely: (u'y1', u'x1')
-    surfvelx: (u'y1', u'x1')
+    surfvelmag: ('y1', 'x1')
+    lat: ('y1', 'x1')
+    lon: ('y1', 'x1')
+    surfvely: ('y1', 'x1')
+    surfvelx: ('y1', 'x1')
     mapping: nan
     """
     return DatasetOnDisk(file_name, *args, **kwargs)
@@ -1002,9 +1002,9 @@ def read_nc(f, names=None, *args, **kwargs):
     >>> data
     Dataset of 2 variables
     0 / time (451): 1850 to 2300
-    1 / scenario (5): u'historical' to u'rcp85'
-    tsl: (u'time', u'scenario')
-    temp: (u'time', u'scenario')
+    1 / scenario (5): 'historical' to 'rcp85'
+    tsl: ('time', 'scenario')
+    temp: ('time', 'scenario')
     >>> data = read_nc(ncfile,'temp') # only one variable
     >>> data = read_nc(ncfile,'temp', indices={"time":slice(2000,2100), "scenario":"rcp45"})  # load only a chunck of the data
     >>> data = read_nc(ncfile,'temp', indices={"time":1950.3}, tol=0.5)  #  approximate matching, adjust tolerance
@@ -1028,7 +1028,7 @@ def read_nc(f, names=None, *args, **kwargs):
     dimarray: 9114 non-null elements (6671 null)
     0 / model (7): 'CSIRO-Mk3-6-0' to 'MPI-ESM-MR'
     1 / time (451): 1850 to 2300
-    2 / scenario (5): u'historical' to u'rcp85'
+    2 / scenario (5): 'historical' to 'rcp85'
     array(...)
     
     This works on datasets as well:
@@ -1039,9 +1039,9 @@ def read_nc(f, names=None, *args, **kwargs):
     Dataset of 2 variables
     0 / model (7): 'CSIRO-Mk3-6-0' to 'MPI-ESM-MR'
     1 / time (451): 1850 to 2300
-    2 / scenario (5): u'historical' to u'rcp85'
-    tsl: ('model', u'time', u'scenario')
-    temp: ('model', u'time', u'scenario')
+    2 / scenario (5): 'historical' to 'rcp85'
+    tsl: ('model', 'time', 'scenario')
+    temp: ('model', 'time', 'scenario')
     """
     # check for regular expression
     if type(f) is str:
