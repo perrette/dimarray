@@ -75,7 +75,6 @@ Useful links
 Documentation                       http://dimarray.readthedocs.org
 Code on github (bleeding edge)      https://github.com/perrette/dimarray
 Code on pypi   (releases)           https://pypi.python.org/pypi/dimarray
-Mailing List                        http://groups.google.com/group/dimarray
 Issues Tracker                      https://github.com/perrette/dimarray/issues
 ================================    ====================================
 
@@ -126,5 +125,4 @@ Detailled information on Ubuntu: https://code.google.com/p/netcdf4-python/wiki/U
 Contributions
 -------------
 All suggestions for improvement or direct contributions are very welcome.
-You can ask a question or start a discussion on the mailing list
-or open an `issue` on github for precise requests. See `links`_.
+You can open an `issue` on github for specific requests.
