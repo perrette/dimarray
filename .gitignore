@@ -43,3 +43,4 @@ nosetests.xml
 .mr.developer.cfg
 .project
 .pydevproject
+dimarray/_version.py

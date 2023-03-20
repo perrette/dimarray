@@ -1,0 +1,61 @@
+[build-system]
+requires = ["setuptools>=61.0", "setuptools_scm[toml]>=6.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dimarray"
+authors = [
+    {name = "Mahé Perrette", email = "mahe.perrette@gmail.com"},
+]
+description = "numpy array with labelled dimensions and axes, dimension, NaN handling and netCDF I/O"
+readme = "README.rst"
+requires-python = ">=3.7"
+keywords = ['labelled array','numpy','larry','pandas']
+license = {text = "BSD-3-Clause"}
+classifiers = [
+    "Programming Language :: Python :: 3",
+]
+dependencies = [
+    "numpy>=1.7",
+    # 'importlib-metadata; python_version<"3.8"',
+]
+dynamic = ["version"]
+
+[project.optional-dependencies]
+ecosystem = ["pandas"]
+netcdf = ["netCDF4"]
+plot = ["matplotlib"]
+
+[project.urls]
+homepage = "https://github.com/perrette/dimarray"
+documentation = "https://dimarray.readthedocs.io"
+
+[tool.setuptools_scm]
+write_to = "dimarray/_version.py"
+
+[tool.tox]
+legacy_tox_ini = """
+# Tox (https://tox.readthedocs.io/) is a tool for running tests
+# in multiple virtualenvs. This configuration file will run the
+# test suite on all supported python versions. To use it, "pip install tox"
+# and then run "tox" from this directory.
+
+[tox]
+#envlist = ["py37", "py38", "py39", "py310", "py311"]
+envlist = py310
+
+[testenv]
+commands = py.test --cov dimarray tests  --cov-report=term
+
+deps =
+    numpy
+    netCDF4
+    pytest
+    coverage
+    pytest-cov
+    setuptools
+    setuptools_scm
+
+[pytest]
+norecursedirs = .tox
+"""
