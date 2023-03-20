@@ -310,7 +310,7 @@ class AbstractHasAxes(AbstractHasMetadata):
         # should always be a tuple
         if isinstance(indices, dict):
             # replace int dimensions with str dimensions
-            for k in indices:
+            for k in list(indices):
                 if not isinstance(k, string_types):
                     indices[dims[k]] = indices[k]
                     del indices[k] 
@@ -535,8 +535,6 @@ class AbstractDimArray(AbstractHasAxes):
 
         if np.isscalar(values):
             return values
-        # elif np.ndim(values) == 0:
-        #     return np.asscalar(values)
 
 
         dima = self._constructor(values, axes) # initialize DimArray

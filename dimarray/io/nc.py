@@ -657,7 +657,7 @@ class AxisOnDisk(GetSetDelAttrMixin, NetCDFVariable, AbstractAxis):
         if np.isscalar(indices): 
             assert values.size == 1
             try:
-                values = np.asscalar(values)
+                values = np.asarray(values).item()
             except AttributeError:
                 values = values[()]
 
@@ -683,7 +683,7 @@ class AxisOnDisk(GetSetDelAttrMixin, NetCDFVariable, AbstractAxis):
         if np.isscalar(values):
             return values
         elif np.ndim(values) == 0:
-            return np.asscalar(values)
+            return np.asarray(values).item()
 
         ax = Axis(values, self._name)
 

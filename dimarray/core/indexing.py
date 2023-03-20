@@ -381,7 +381,7 @@ def canonicalize_indexer(key, ndim):
         if not isinstance(indexer, slice):
             indexer = np.asarray(indexer)
             if indexer.ndim == 0:
-                indexer = int(np.asscalar(indexer))
+                indexer = int(indexer.item())
             if isinstance(indexer, np.ndarray):
                 if indexer.ndim != 1:
                     raise ValueError('orthogonal array indexing only supports '
