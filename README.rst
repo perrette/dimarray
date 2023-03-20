@@ -1,8 +1,8 @@
 Introduction
 ============
 
-.. image:: https://travis-ci.org/perrette/dimarray.svg?branch=master
-   :target: https://travis-ci.org/perrette/dimarray
+.. image:: https://github.com/perrette/dimarray/actions/workflows/tox.yml/badge.svg
+   :target: https://github.com/perrette/dimarray/actions/workflows/tox.yml
 
 Numpy array with dimensions
 ---------------------------
