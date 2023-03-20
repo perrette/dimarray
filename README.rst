@@ -118,9 +118,10 @@ Notes on installing netCDF4
 - On windows binaries are available: http://www.unidata.ucar.edu/software/netcdf/docs/winbin.html
 
 - From source. Installing the netCDF4 python module from source can be cumbersome, because 
-it depends on netCDF4 and (especially) HDF5 C libraries that need to 
-be compiled with specific flags (http://unidata.github.io/netcdf4-python). 
-Detailled information on Ubuntu: https://code.google.com/p/netcdf4-python/wiki/UbuntuInstall
+  it depends on netCDF4 and (especially) HDF5 C libraries that need to 
+  be compiled with specific flags (http://unidata.github.io/netcdf4-python). 
+  Detailled information on Ubuntu: https://code.google.com/p/netcdf4-python/wiki/UbuntuInstall
+
 
 Contributions
 -------------
