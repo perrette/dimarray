@@ -2,8 +2,6 @@
     ===============
 """
 
-
-from __future__ import print_function
 import warnings
 from . import core
 from . import config

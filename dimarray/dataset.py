@@ -1,9 +1,6 @@
 """ collection of base obeje
 """
-from __future__ import absolute_import
-from collections import OrderedDict as odict
 import warnings, copy
-from future.utils import string_types
 import numpy as np
 
 import dimarray as da  # for the doctest, so that they are testable via py.test
@@ -44,8 +41,7 @@ class DatasetAxes(Axes):
         return new
 
 
-class Dataset(AbstractDataset, odict, OpMixin, GetSetDelAttrMixin):
-# class Dataset(AbstractDataset, odict):
+class Dataset(AbstractDataset, dict, OpMixin, GetSetDelAttrMixin):
     """ Container for a set of aligned objects
     
     >>> ds = da.Dataset()
@@ -68,19 +64,18 @@ class Dataset(AbstractDataset, odict, OpMixin, GetSetDelAttrMixin):
         """
         assert not {'axes','keys'}.issubset(kwargs.keys()) # just to check bugs due to back-compat ==> TO BE REMOVED AFTER DEBUGGING
 
-        # check input arguments: same init as odict
-        data = odict(*args)
+        # check input arguments: same init as dict
+        data = dict(*args)
         for k in sorted(kwargs):
             data[k] = kwargs[k]  # sorted keys for consistent output
 
         # Basic initialization
         #self._axes = Axes()
         self._axes = DatasetAxes(self)
-        self._attrs = odict()
+        self._attrs = dict()
 
         # initialize an ordered dictionary
         super(Dataset, self).__init__()
-        #self.data = odict()
 
         values = dictvalues(data)
         keys = dictkeys(data)
@@ -231,7 +226,7 @@ class Dataset(AbstractDataset, odict, OpMixin, GetSetDelAttrMixin):
             self._maybe_delete_axes(_maybe_obsolete_axes)
 
     def copy(self):
-        ds2 = super(Dataset, self).copy() # odict method, copy axes but not metadata
+        ds2 = super(Dataset, self).copy() # dict method, copy axes but not metadata
         ds2.attrs.update(self.attrs)
         return ds2
 
@@ -306,7 +301,7 @@ class Dataset(AbstractDataset, odict, OpMixin, GetSetDelAttrMixin):
             keys = self.keys()
 
         # align all variables to the same dimensions
-        data = odict()
+        data = dict()
 
         for k in keys:
             data[k] = self[k].reshape(self.dims).broadcast(self.axes)
@@ -399,7 +394,7 @@ class Dataset(AbstractDataset, odict, OpMixin, GetSetDelAttrMixin):
         # automatically read all variables to load (except for the dimensions)
         if names is None:
             names = self.keys()
-        elif isinstance(names, string_types):
+        elif isinstance(names, str):
             raise TypeError("Please provide a sequence of variables to read.")
 
         tuple_indices = self._get_indices(indices, axis=axis, tol=tol, keepdims=keepdims, indexing=indexing)
@@ -422,7 +417,7 @@ class Dataset(AbstractDataset, odict, OpMixin, GetSetDelAttrMixin):
         if axis is not None: axis = self.axes[axis].name
         kwargs['axis'] = axis
 
-        d = self.to_odict()
+        d = self.to_dict()
         for k in self.keys():
             if axis is not None and axis not in self[k].dims: 
                 continue
@@ -465,7 +460,8 @@ class Dataset(AbstractDataset, odict, OpMixin, GetSetDelAttrMixin):
     def to_odict(self):
         """ export to ordered dict
         """
-        return odict([(nm, self[nm]) for nm in self.keys()])
+        warnings.warn("Deprecated. Use to_dict", FutureWarning)
+        return self.to_dict()
 
     def set_axis(self, values=None, axis=0, name=None, inplace=True, **kwargs):
         """ Set axis values, name and attributes of the Dataset

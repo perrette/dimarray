@@ -1,8 +1,6 @@
 """ Old indexing functions ==> imported from indexing.py. 
 In the process of being rewritten.
 """
-from __future__ import print_function
-from future.utils import string_types
 import warnings
 import numpy as np
 from dimarray.compat.pycompat import range, zip
@@ -34,7 +32,7 @@ _doc_broadcast_arrays = """
 
 
 def _maybe_convert_datetime64(val):
-    if isinstance(val, string_types): 
+    if isinstance(val, str): 
         try:
             val = np.datetime64(val)
         except Exception as error:

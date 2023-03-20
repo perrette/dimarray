@@ -1,11 +1,7 @@
-from __future__ import print_function
-from __future__ import absolute_import, division
 import warnings
-from collections import OrderedDict as odict
 import string
 import copy
 import numpy as np
-from future.utils import string_types
 from dimarray.compat.pycompat import zip
 from dimarray.tools import is_DimArray, is_array1d_equiv, format_doc, isscalar
 from dimarray.core.bases import AbstractAxis, AbstractAxes, GetSetDelAttrMixin
@@ -107,7 +103,7 @@ class Axis(GetSetDelAttrMixin, AbstractAxis):
         self._values = _check_axis_values(values, dtype)
         self.name = name 
         self._tol = tol
-        self._attrs = odict()
+        self._attrs = dict()
         self._attrs.update(kwargs)
         self._monotonic = None
 
@@ -130,7 +126,7 @@ class Axis(GetSetDelAttrMixin, AbstractAxis):
 
     @name.setter
     def name(self, name):
-        if not isinstance(name, string_types):
+        if not isinstance(name, str):
             raise TypeError("Axis name must be a string")
         if not name:
             raise ValueError("Axis name cannot be empty")
@@ -419,7 +415,7 @@ class MultiAxis(Axis):
         self._name = ",".join([ax.name for ax in self.axes])
         self._values = None  # values not computed unless needed
         self._size = None  
-        self._attrs = odict()
+        self._attrs = dict()
 
     @property
     def values(self):
@@ -603,7 +599,7 @@ class Axes(AbstractAxes, list):
 
     def __getitem__(self, k):
         " get an axis by integer or name "
-        if isinstance(k, string_types):
+        if isinstance(k, str):
             dims = [ax.name for ax in self]
             try:
                 k = dims.index(k)
@@ -615,7 +611,7 @@ class Axes(AbstractAxes, list):
     def __setitem__(self, k, newax):
         """ update existing axis, the size cannot be changed
         """
-        if isinstance(k, string_types):
+        if isinstance(k, str):
             k = [ax.name for ax in self].index(k)
         curax = list.__getitem__(self, k)
 
@@ -654,7 +650,7 @@ class Axes(AbstractAxes, list):
 
     def _get_idx(self, axis):
         " always return axis integer location "
-        if isinstance(axis, string_types):
+        if isinstance(axis, str):
             dims = [ax.name for ax in self]
             try:
                 axis = dims.index(axis)
@@ -709,7 +705,7 @@ def _init_axes(axes=None, dims=None, labels=None, shape=None, check_order=True):
 
     elif isinstance(axes, dict):
         kwaxes = axes
-        if isinstance(kwaxes, odict) and dims is None:
+        if isinstance(kwaxes, dict) and dims is None:
             dims = kwaxes.keys()
         axes = Axes.from_dict(kwaxes, dims=dims, shape=shape, check_order=check_order)
         return axes
@@ -737,7 +733,7 @@ def _init_axes(axes=None, dims=None, labels=None, shape=None, check_order=True):
         axes = Axes.from_arrays(axes, dims=dims)
 
     # axes only cointain axis labels
-    elif np.all([isinstance(ax,string_types) for ax in axes]):
+    elif np.all([isinstance(ax,str) for ax in axes]):
         axes = Axes.from_shape(shape, dims=axes)
 
     else:

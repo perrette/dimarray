@@ -2,12 +2,9 @@
 
 """ array with physical dimensions (named and valued axes)
 """
-from __future__ import absolute_import
-
 import numpy as np
 import copy
 import warnings
-from collections import OrderedDict as odict
 
 from dimarray.tools import anynan, pandas_obj, format_doc, isscalar
 from dimarray.config import get_option
@@ -247,7 +244,7 @@ class DimArray(AbstractDimArray, OpMixin, GetSetDelAttrMixin):
         if hasattr(values, "axes") and axes is None:
             axes = values.axes
 
-        self._attrs = odict(getattr(values, "attrs", {}))
+        self._attrs = dict(getattr(values, "attrs", {}))
 
         # default options
         if _indexing is None: _indexing = get_option('indexing.by')
@@ -1323,24 +1320,11 @@ mismatch between values and axes""".format(inferred, self.values.shape)
 #        return DataFrame(a.values, index=index, columns=columns)
 
 
-    # Split along an axis
-    def to_odict(self, axis=0):
-        """ Return a dictionary of DimArray
-
-        .. deprecated:: 1.9
-        """
-        warnings.warn('yo',category=DeprecationWarning)
-
-        d = odict()
-        for k, val in self.iter(axis):
-            d[k] = val
-        return d
-
     def to_jsondict(self):
         """ return a dictionary representation of a DimArray, which is suitable 
         for conversion to json format
         """
-        jsondict = odict([
+        jsondict = dict([
             ('values', self.values.tolist()),
             ('dims', list(self.dims)),
             ('labels', [ax.values.tolist() for ax in self.axes]),
@@ -1672,9 +1656,8 @@ def array(data, *args, **kwargs):
     """
     # if some kind of dictionary, first transform to list of values and keys
     if isinstance(data, dict):
-        from collections import OrderedDict as odict
 
-        d = odict()
+        d = dict()
         keys = kwargs.pop('keys', dictkeys(data))
         for k in keys:
             d[k] = data[k]

@@ -1,11 +1,7 @@
 """ Base classes
 """
-from __future__ import print_function
-from __future__ import absolute_import
-from future.utils import string_types, PY2
 import warnings
 import copy
-from collections import OrderedDict as odict
 import numpy as np
 from dimarray.config import get_option
 from dimarray.tools import is_numeric
@@ -311,7 +307,7 @@ class AbstractHasAxes(AbstractHasMetadata):
         if isinstance(indices, dict):
             # replace int dimensions with str dimensions
             for k in list(indices):
-                if not isinstance(k, string_types):
+                if not isinstance(k, str):
                     indices[dims[k]] = indices[k]
                     del indices[k] 
                 else:
@@ -376,7 +372,7 @@ class AbstractHasAxes(AbstractHasMetadata):
         if axis is None:
             return None, None
 
-        if isinstance(axis, string_types):
+        if isinstance(axis, str):
             idx = self.dims.index(axis)
 
         elif type(axis) is int:

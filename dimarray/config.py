@@ -3,10 +3,7 @@
 See rcParams for the options and rcParamsHelp for their meaning.
 dimarray.print_options() provide an overview.
 """
-from __future__ import print_function
-from collections import OrderedDict as odict
-
-class Params(odict):
+class Params(dict):
     """ class to make user interface easier, e.g. displays all parameter values
     """
     def __repr__(self): 

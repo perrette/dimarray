@@ -1,6 +1,5 @@
 """ Plotting methods for dimarray class
 """
-from __future__ import division
 import numpy as np
 from dimarray.tools import anynan
 

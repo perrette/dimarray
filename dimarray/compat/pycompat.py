@@ -15,7 +15,6 @@ if PY3:
         return list(d.values())
     range = range
     zip = zip
-    from collections import OrderedDict
 else:
     # Python 2
     basestring = basestring
@@ -30,7 +29,3 @@ else:
     zip = itertools.izip
     range = xrange
     from itertools import izip as zip
-    try:
-        from collections import OrderedDict
-    except ImportError:
-        from ordereddict import OrderedDict

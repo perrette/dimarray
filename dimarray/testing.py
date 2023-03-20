@@ -1,16 +1,11 @@
 """ A few functions useful for testing
 """
-from __future__ import print_function, unicode_literals
-from future.utils import PY2
 import numpy as np
 from numpy.testing import assert_equal, assert_almost_equal
 import dimarray as da
 from dimarray.tools import anynan
 
-if PY2:
-    string_types = (str, unicode)
-else:
-    string_types = (str,)
+string_types = (str,)
 
 SEED = None
 #

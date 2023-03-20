@@ -2,7 +2,6 @@
 
 Note: functions with self as first arguments are used as DimArray methods
 """
-from future.utils import string_types
 import numpy as np
 from collections import OrderedDict
 import functools
@@ -367,7 +366,7 @@ def newaxis(self, name, values=None, pos=0):
     array([[1, 1],
            [2, 2]])
     """
-    assert isinstance(name, string_types), "name must be string"
+    assert isinstance(name, str), "name must be string"
     if name in self.dims:
         raise ValueError("dimension already present: "+name)
 
@@ -556,7 +555,7 @@ def reshape(self, *newdims, **kwargs):
 
     # Remove unwanted singleton dimensions, if any
     for dim in o.dims:
-        assert isinstance(dim, string_types), "newdims must be a tuple of axis names (`str`)"
+        assert isinstance(dim, str), "newdims must be a tuple of axis names (`str`)"
         if dim not in newdims_unflattened:
             o = o.squeeze(dim)
 
