@@ -1,4 +1,3 @@
-from __future__ import print_function
 import numpy as np
 from dimarray import DimArray
 from dimarray.testing import assert_equal_dimarrays

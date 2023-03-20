@@ -41,11 +41,15 @@ legacy_tox_ini = """
 # and then run "tox" from this directory.
 
 [tox]
-#envlist = ["py37", "py38", "py39", "py310", "py311"]
-envlist = py310
+envlist =
+	py37
+	py38
+	py39
+	py310
+	py311
 
 [testenv]
-commands = py.test --cov dimarray tests  --cov-report=term
+commands = pytest --cov dimarray tests  --cov-report=term
 
 deps =
     numpy

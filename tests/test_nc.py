@@ -1,7 +1,5 @@
 """ Test module for nc
 """
-from __future__ import print_function
-import future
 import os
 from warnings import warn
 import pytest

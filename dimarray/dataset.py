@@ -226,7 +226,7 @@ class Dataset(AbstractDataset, dict, OpMixin, GetSetDelAttrMixin):
             self._maybe_delete_axes(_maybe_obsolete_axes)
 
     def copy(self):
-        ds2 = super(Dataset, self).copy() # dict method, copy axes but not metadata
+        ds2 = Dataset({k : v for k, v in self.items()})
         ds2.attrs.update(self.attrs)
         return ds2
 

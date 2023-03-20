@@ -1,6 +1,5 @@
 """ Test basic dimarray behaviour (copy, attributes)
 """
-from __future__ import print_function
 import pytest
 import numpy as np
 from dimarray import DimArray, Axis

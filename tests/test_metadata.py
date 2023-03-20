@@ -1,6 +1,5 @@
 """ Test metadata
 """
-from __future__ import print_function
 import pytest
 import dimarray as da
 from dimarray.testing import create_metadata

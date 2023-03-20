@@ -27,6 +27,5 @@ except ImportError:
     #warnings.warn(ImportWarning(msg)) 
 
 
-from ._version import get_versions
-__version__ = get_versions()['version']
-del get_versions
+from pathlib import Path
+__version__ = open(Path(__file__).parent / "_version.py").read()
