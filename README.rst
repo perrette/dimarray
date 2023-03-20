@@ -83,8 +83,8 @@ Install
 
 **Requirements**:
 
-- python >= 2.7, 3
-- numpy (tested with 1.7, 1.8, 1.9, 1.10.1, 1.15)
+- python >= 3.7
+- numpy (latest test with version 1.21.5)
 
 **Optional**:
 
